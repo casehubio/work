@@ -9,3 +9,4 @@
 | [2026-04-21-mdp01-filter-that-grew-into-contract.md](2026-04-21-mdp01-filter-that-grew-into-contract.md) | 2026-04-21 | Three epics shipped; confidence-gating grew into a filter engine and a shared CaseHub contract |
 | [2026-04-22-mdp01-substrate-and-what-grows.md](2026-04-22-mdp01-substrate-and-what-grows.md) | 2026-04-22 | Extracting quarkus-work-api/core as a generic work substrate; semantic skill matching with LangChain4j |
 | [2026-04-24-mdp01-primitive-and-orchestrator.md](2026-04-24-mdp01-primitive-and-orchestrator.md) | 2026-04-24 | Why subprocess spawning belongs in CaseHub, not quarkus-work — and what happens when AI agents lose cross-project context |
+| [2026-04-27-mdp01-slas-signals-connectors.md](2026-04-27-mdp01-slas-signals-connectors.md) | 2026-04-27 | Business-hours SLA, notifications module, and casehub-connectors as a standalone reusable connector library |
