@@ -378,7 +378,8 @@ JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home
 | 2 | #103 | Notifications — Slack/Teams/webhook on lifecycle events | ✅ complete | #140 ✅ SPI+dispatcher+CRUD, #141 ✅ HTTP/Slack/Teams channels |
 | ✅ | #104 | SLA Compliance Reporting — breach rates, actor performance | ✅ complete | `casehub-work-reports` optional module; sla-breaches, actors, throughput, queue-health; 73 tests (68 H2 + 5 PostgreSQL) |
 | ✅ | #106 | Multi-Instance Tasks — M-of-N parallel completion | ✅ complete | `MultiInstanceSpawnService`, `MultiInstanceCoordinator`, `MultiInstanceGroupPolicy`; `InstanceAssignmentStrategy` SPI + 3 impls; threaded inbox via `scanRoots()`; `GET /workitems/{id}/instances`; V20+V21 migrations |
-| — | #92 | Distributed WorkItems — clustering + federation | future | #93 (SSE) implementable now |
+| — | #147 | Project Refinement — architecture and doc improvements | open | #148 DESIGN.md split, #149 WorkItemService decompose, #150 broadcaster SPI (unblocks #93), #151 Flyway convention, #152 examples split |
+| — | #92 | Distributed WorkItems — clustering + federation | future | #93 (SSE) implementable now; blocked on #150 (broadcaster SPI) |
 | — | #79 | External System Integrations | blocked | CaseHub/Qhorus not stable |
 | — | #39 | ProvenanceLink (PROV-O causal graph) | blocked | Awaiting #79 |
 | ✅ | #100 | AI-Native Features — confidence gating, semantic routing | complete | #112–#126 all done |
