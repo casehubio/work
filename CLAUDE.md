@@ -86,7 +86,7 @@ A `WorkItem` is a unit of work requiring human attention or judgment. It is deli
 - CaseHub has its own `Task` class — a CMMN-style case work unit
 Using `WorkItem` avoids naming conflicts and accurately describes what WorkItems manages: work that waits for a person.
 
-**See the full glossary:** `ARC42STORIES.MD` § §13 Glossary
+**See the full glossary:** `ARC42STORIES.MD §13` — Glossary
 
 ---
 
