@@ -44,7 +44,7 @@ import io.casehub.work.runtime.service.WorkItemService;
  * <ul>
  * <li>{@code credit-scoring-system} — creates the loan review WorkItem (provenance from credit-engine)</li>
  * <li>{@code officer-alice} — claims, starts, suspends (awaiting payslips), resumes, and delegates</li>
- * <li>{@code supervisor-bob} — claims, starts, and completes with rationale and policy reference</li>
+ * <li>{@code supervisor-bob} — accepts delegation, starts, and completes with rationale and policy reference</li>
  * <li>{@code compliance-carol} — adds a SOUND peer attestation (dual-control)</li>
  * </ul>
  *
@@ -150,10 +150,10 @@ public class CreditDecisionScenario {
                 .orElseThrow(() -> new IllegalStateException("No delegation ledger entry found"));
         // causedByEntryId linking deferred — ObservabilitySupplement not yet in casehub-ledger
 
-        // Step 7: supervisor-bob claims the delegated WorkItem
-        final String description7 = "supervisor-bob claims the delegated WorkItem";
+        // Step 7: supervisor-bob accepts the delegation
+        final String description7 = "supervisor-bob accepts the delegated WorkItem";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 7, total, description7);
-        workItemService.claim(wi.id, ACTOR_BOB);
+        workItemService.acceptDelegation(wi.id, ACTOR_BOB);
         steps.add(new StepLog(7, description7, wi.id));
 
         // Step 8: supervisor-bob starts the WorkItem

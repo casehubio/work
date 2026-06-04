@@ -213,6 +213,8 @@ public class LedgerEventCapture {
             Map.entry("completed", new String[] { "CompleteWorkItem", "WorkItemCompleted", "Resolver" }),
             Map.entry("rejected", new String[] { "RejectWorkItem", "WorkItemRejected", "Resolver" }),
             Map.entry("delegated", new String[] { "DelegateWorkItem", "WorkItemDelegated", "Delegator" }),
+            Map.entry("delegation_accepted", new String[] { "AcceptDelegation", "WorkItemDelegationAccepted", "Delegatee" }),
+            Map.entry("delegation_declined", new String[] { "DeclineDelegation", "WorkItemDelegationDeclined", "Delegatee" }),
             Map.entry("released", new String[] { "ReleaseWorkItem", "WorkItemReleased", "Assignee" }),
             Map.entry("suspended", new String[] { "SuspendWorkItem", "WorkItemSuspended", "Assignee" }),
             Map.entry("resumed", new String[] { "ResumeWorkItem", "WorkItemResumed", "Assignee" }),
