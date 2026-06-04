@@ -28,6 +28,7 @@ import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemPriority;
 import io.casehub.work.runtime.repository.AuditEntryStore;
+import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.runtime.service.WorkItemService;
 
 /**
@@ -141,7 +142,7 @@ public class CreditDecisionScenario {
         // Step 6: officer-alice delegates to supervisor-bob (complex case)
         final String description6 = "officer-alice delegates to supervisor-bob for final decision";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 6, total, description6);
-        workItemService.delegate(wi.id, ACTOR_ALICE, ACTOR_BOB);
+        workItemService.delegate(wi.id, ACTOR_ALICE, ACTOR_BOB, DeclineTarget.POOL);
         steps.add(new StepLog(6, description6, wi.id));
 
         // Set causedByEntryId on the delegation entry — linking it to the resume entry
