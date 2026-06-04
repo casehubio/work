@@ -24,6 +24,7 @@ import io.casehub.work.runtime.model.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
+import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
@@ -145,7 +146,7 @@ class LedgerIntegrationTest {
     void delegate_writesLedgerEntry() {
         final var item = workItemService.create(basicRequest("Delegate test"));
         workItemService.claim(item.id, "alice");
-        workItemService.delegate(item.id, "alice", "bob");
+        workItemService.delegate(item.id, "alice", "bob", DeclineTarget.POOL);
 
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
         assertThat(entries).hasSize(3);
