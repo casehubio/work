@@ -1,12 +1,14 @@
 # HANDOFF — 2026-06-03
 
+*Updated: #243, #244, #245, #239, #241 closed since last session — removed from backlog.*
+
 ## Last Session
 
 Cleanup session. Closed `issue-235-sxs-sweep` (squashed 11→5 commits, landed ADR-0005 on main). Discovered a previous session had left local main in a mid-squash state (staged WorkItemCallerRef files, local history diverged from remote). Forensics via `backup/pre-squash-main-20260602` revealed what happened. Fixed by resetting to `origin/main` and cherry-picking only the genuinely new commit (the ADR). Added main branch health checks to `work-end`, `git-squash`, and `handover` skills to prevent recurrence. Added entry worthiness gate to `write-content/forms/diary.md` to prevent time-space narration.
 
 ## Immediate Next Step
 
-Pick next issue from the backlog — `#243` and `#244` are the obvious quick pair (`WorkItemStatus.isTerminal()` missing EXPIRED; ESCALATED in terminal but never set).
+Pick next issue from the backlog — `#191` (extract persistence-memory module) or `#236` (VocabularyScope → Path-based hierarchy) are the obvious next candidates.
 
 ## What's Left
 
@@ -17,14 +19,9 @@ Pick next issue from the backlog — `#243` and `#244` are the obvious quick pai
 
 | # | Description | Scale | Complexity | Notes |
 |---|-------------|-------|------------|-------|
-| #243 | bug: `WorkItemStatus.isTerminal()` missing EXPIRED | XS | Low | Pair with #244 |
-| #244 | bug: `WorkItemStatus.ESCALATED` in `isTerminal()` but never set | XS | Low | Pair with #243 |
-| #245 | bug: `WorkItemStatus.DELEGATED` never set; DelegationState disconnected | S | Med | |
-| #239 | fix: update `GroupMembershipProvider` callers for `Set<GroupMember>` SPI | S | Low | platform#45 dependency |
-| #241 | feat: public read API for WorkItem by ID | S | Low | |
 | #191 | feat: extract persistence-memory module from testing/ | M | Low | |
 | #236 | feat: replace `VocabularyScope` enum with Path-based scope hierarchy | M | Low | |
-| #240 | design: human task lifecycle alignment | L | High | prereq for #245 likely |
+| #240 | design: human task lifecycle alignment | L | High | |
 
 ## References
 
