@@ -194,7 +194,7 @@ class WorkItemNativeIT {
                 .body("{\"to\":\"bob\"}")
                 .when().put("/workitems/{id}/delegate", id)
                 .then().statusCode(200)
-                .body("status", equalTo("PENDING"))
+                .body("status", equalTo("DELEGATED"))
                 .body("assigneeId", equalTo("bob"));
     }
 
