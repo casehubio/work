@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import io.casehub.work.api.DeclineTarget;
+import io.casehub.work.api.Outcome;
 import io.casehub.work.runtime.model.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemStatus;
 
@@ -65,10 +66,10 @@ public record WorkItemResponse(
          */
         String outcome,
         /**
-         * Permitted outcome names snapshotted from the template at instantiation.
+         * Permitted outcomes snapshotted from the template at instantiation (name, displayName, condition).
          * Null means no constraint — any outcome (or none) is accepted.
          */
-        List<String> permittedOutcomes,
+        List<Outcome> permittedOutcomes,
         /**
          * JSON Schema for payload; snapshotted from template at instantiation.
          * Null if no template or no schema.

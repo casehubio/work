@@ -1,0 +1,9 @@
+branch: issue-177-outcomes-and-patch
+project-sha: fe48a35d4d1ce5200a1356b1825d99e0e2eab625
+date: 2026-06-05
+issue: 177
+issue-repo: casehubio/work
+covers: 177,199
+flyway-next-v: none
+design-repo: project
+design-section-hashes:

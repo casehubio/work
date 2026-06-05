@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.preferences.MapPreferences;
 import io.casehub.work.api.AssignmentDecision;
+import io.casehub.work.runtime.filter.JexlConditionEvaluator;
 import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.PolicyDecision;
 import io.casehub.work.api.ValidationMode;
@@ -252,6 +253,10 @@ class WorkItemServiceTest {
                 new CapabilityValidator(ValidationMode.PERMISSIVE, () -> java.util.Set.of()));
         // Empty preferences → DeclineTarget.POOL by default
         service.preferenceProvider = scope -> new MapPreferences(Map.of());
+        // Wire OutcomeValidator — @Inject field, not in constructor
+        final OutcomeValidator outcomeValidator = new OutcomeValidator();
+        outcomeValidator.conditionEvaluator = new JexlConditionEvaluator();
+        service.outcomeValidator = outcomeValidator;
     }
 
     private WorkItemCreateRequest basicRequest() {

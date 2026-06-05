@@ -1,8 +1,10 @@
 package io.casehub.work.runtime.event;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import io.casehub.work.api.Outcome;
 import io.casehub.work.runtime.model.OutcomeCodecs;
 import io.casehub.work.runtime.model.WorkItem;
 
@@ -67,7 +69,10 @@ public final class WorkItemContextBuilder {
         map.put("callerRef", workItem.callerRef);
         map.put("parentId", workItem.parentId != null ? workItem.parentId.toString() : null);
         map.put("templateId", workItem.templateId != null ? workItem.templateId.toString() : null);
-        map.put("permittedOutcomes", OutcomeCodecs.decodePermittedOutcomes(workItem.permittedOutcomes));
+        // Expose as List<String> (names only) for backward compat with existing filter rule expressions
+        final List<Outcome> permittedDefs = OutcomeCodecs.decodePermittedOutcomes(workItem.permittedOutcomes);
+        map.put("permittedOutcomes",
+                permittedDefs == null ? null : permittedDefs.stream().map(Outcome::name).toList());
         map.put("outcome", workItem.outcome);
         map.put("inputDataSchema", workItem.inputDataSchema);
         map.put("outputDataSchema", workItem.outputDataSchema);

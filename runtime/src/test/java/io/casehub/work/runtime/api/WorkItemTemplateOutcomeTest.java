@@ -93,8 +93,9 @@ class WorkItemTemplateOutcomeTest {
                 .statusCode(201)
                 .body("templateId", equalTo(templateId))
                 .body("permittedOutcomes", hasSize(2))
-                .body("permittedOutcomes[0]", equalTo("approved"))
-                .body("permittedOutcomes[1]", equalTo("needs-revision"));
+                .body("permittedOutcomes[0].name", equalTo("approved"))
+                .body("permittedOutcomes[0].displayName", equalTo("Approved"))
+                .body("permittedOutcomes[1].name", equalTo("needs-revision"));
     }
 
     @Test

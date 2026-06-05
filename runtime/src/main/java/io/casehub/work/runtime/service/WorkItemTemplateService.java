@@ -254,7 +254,7 @@ public class WorkItemTemplateService {
                 .claimDeadlineBusinessHours(template.defaultClaimBusinessHours)
                 .expiresAtBusinessHours(template.defaultExpiryBusinessHours)
                 .templateId(template.id)
-                .permittedOutcomes(parseOutcomeNames(template.outcomes))
+                .permittedOutcomes(OutcomeCodecs.decodeOutcomes(template.outcomes))
                 .inputDataSchema(template.inputDataSchema)
                 .outputDataSchema(template.outputDataSchema)
                 .excludedUsers(template.excludedUsers)
@@ -312,24 +312,9 @@ public class WorkItemTemplateService {
         return "excludedGroups=[\"" + template.excludedGroups.trim() + "\"] resolved to " + added + " actor(s)";
     }
 
-    /** @see OutcomeCodecs#parseOutcomeNames */
-    public static List<String> parseOutcomeNames(final String outcomesJson) {
-        return OutcomeCodecs.parseOutcomeNames(outcomesJson);
-    }
-
     /** @see OutcomeCodecs#encodeOutcomes */
     public static String encodeOutcomes(final List<Outcome> outcomes) {
         return OutcomeCodecs.encodeOutcomes(outcomes);
-    }
-
-    /** @see OutcomeCodecs#encodePermittedOutcomes */
-    public static String encodePermittedOutcomes(final List<String> names) {
-        return OutcomeCodecs.encodePermittedOutcomes(names);
-    }
-
-    /** @see OutcomeCodecs#decodePermittedOutcomes */
-    public static List<String> decodePermittedOutcomes(final String permittedOutcomesJson) {
-        return OutcomeCodecs.decodePermittedOutcomes(permittedOutcomesJson);
     }
 
     /** @see OutcomeCodecs#decodeOutcomes */

@@ -17,6 +17,7 @@ import io.casehub.work.api.SpawnResult;
 import io.casehub.work.api.SpawnedChild;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
+import io.casehub.work.runtime.model.OutcomeCodecs;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemRelation;
@@ -132,7 +133,7 @@ public class WorkItemSpawnService implements SpawnPort {
                     .claimDeadlineBusinessHours(template.defaultClaimBusinessHours)
                     .expiresAtBusinessHours(template.defaultExpiryBusinessHours)
                     .templateId(template.id)
-                    .permittedOutcomes(WorkItemTemplateService.parseOutcomeNames(template.outcomes))
+                    .permittedOutcomes(OutcomeCodecs.decodeOutcomes(template.outcomes))
                     .inputDataSchema(template.inputDataSchema)
                     .outputDataSchema(template.outputDataSchema)
                     .excludedUsers(templateExpander.expandExcludedUsers(template))

@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import io.casehub.work.api.Outcome;
+
 
 public final class WorkItemCreateRequest {
 
@@ -28,7 +30,7 @@ public final class WorkItemCreateRequest {
     public final Integer claimDeadlineBusinessHours;
     public final Integer expiresAtBusinessHours;
     public final UUID templateId;
-    public final List<String> permittedOutcomes;
+    public final List<Outcome> permittedOutcomes;
     public final String inputDataSchema;
     public final String outputDataSchema;
     public final String excludedUsers;
@@ -147,7 +149,7 @@ public final class WorkItemCreateRequest {
         private Integer claimDeadlineBusinessHours;
         private Integer expiresAtBusinessHours;
         private UUID templateId;
-        private List<String> permittedOutcomes;
+        private List<Outcome> permittedOutcomes;
         private String inputDataSchema;
         private String outputDataSchema;
         private String excludedUsers;
@@ -205,7 +207,7 @@ public final class WorkItemCreateRequest {
         public Builder claimDeadlineBusinessHours(final Integer v)    { this.claimDeadlineBusinessHours = v; return this; }
         public Builder expiresAtBusinessHours(final Integer v)        { this.expiresAtBusinessHours = v; return this; }
         public Builder templateId(final UUID v)                       { this.templateId = v; return this; }
-        public Builder permittedOutcomes(final List<String> v)        { this.permittedOutcomes = v; return this; }
+        public Builder permittedOutcomes(final List<Outcome> v)        { this.permittedOutcomes = v; return this; }
         public Builder inputDataSchema(final String v)                { this.inputDataSchema = v; return this; }
         public Builder outputDataSchema(final String v)               { this.outputDataSchema = v; return this; }
         public Builder excludedUsers(final String v)                  { this.excludedUsers = v; return this; }

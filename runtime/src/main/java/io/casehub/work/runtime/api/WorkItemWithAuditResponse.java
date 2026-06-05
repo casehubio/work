@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import io.casehub.work.api.DeclineTarget;
+import io.casehub.work.api.Outcome;
 import io.casehub.work.runtime.model.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemStatus;
 
@@ -54,7 +55,7 @@ public record WorkItemWithAuditResponse(
         /** Named outcome recorded at completion; null until COMPLETED. */
         String outcome,
         /** Permitted outcome names snapshotted from the template; null means no constraint. */
-        List<String> permittedOutcomes,
+        List<Outcome> permittedOutcomes,
         /** JSON Schema for payload; snapshotted from template at instantiation. Null if unconstrained. */
         String inputDataSchema,
         /** JSON Schema for resolution; snapshotted from template at instantiation. Null if unconstrained. */

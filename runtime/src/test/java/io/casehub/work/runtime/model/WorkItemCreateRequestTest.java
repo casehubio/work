@@ -8,6 +8,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.Outcome;
+
 import org.junit.jupiter.api.Test;
 
 class WorkItemCreateRequestTest {
@@ -38,7 +40,7 @@ class WorkItemCreateRequestTest {
                 .claimDeadlineBusinessHours(8)
                 .expiresAtBusinessHours(40)
                 .templateId(templateId)
-                .permittedOutcomes(List.of("approved", "rejected"))
+                .permittedOutcomes(List.of(new Outcome("approved", "Approved", null), new Outcome("rejected", "Rejected", null)))
                 .inputDataSchema("{\"type\":\"object\"}")
                 .outputDataSchema("{\"type\":\"object\"}")
                 .excludedUsers("charlie")
@@ -64,7 +66,7 @@ class WorkItemCreateRequestTest {
         assertEquals(8, req.claimDeadlineBusinessHours);
         assertEquals(40, req.expiresAtBusinessHours);
         assertEquals(templateId, req.templateId);
-        assertEquals(List.of("approved", "rejected"), req.permittedOutcomes);
+        assertEquals(List.of(new Outcome("approved", "Approved", null), new Outcome("rejected", "Rejected", null)), req.permittedOutcomes);
         assertEquals("{\"type\":\"object\"}", req.inputDataSchema);
         assertEquals("{\"type\":\"object\"}", req.outputDataSchema);
         assertEquals("charlie", req.excludedUsers);
@@ -142,7 +144,7 @@ class WorkItemCreateRequestTest {
                 .claimDeadlineBusinessHours(8)
                 .expiresAtBusinessHours(40)
                 .templateId(templateId)
-                .permittedOutcomes(List.of("approved"))
+                .permittedOutcomes(List.of(new Outcome("approved", null, null)))
                 .inputDataSchema("{\"type\":\"object\"}")
                 .outputDataSchema("{\"type\":\"object\"}")
                 .excludedUsers("charlie")
@@ -170,7 +172,7 @@ class WorkItemCreateRequestTest {
         assertEquals(8, copy.claimDeadlineBusinessHours);
         assertEquals(40, copy.expiresAtBusinessHours);
         assertEquals(templateId, copy.templateId);
-        assertEquals(List.of("approved"), copy.permittedOutcomes);
+        assertEquals(List.of(new Outcome("approved", null, null)), copy.permittedOutcomes);
         assertEquals("{\"type\":\"object\"}", copy.inputDataSchema);
         assertEquals("{\"type\":\"object\"}", copy.outputDataSchema);
         assertEquals("charlie", copy.excludedUsers);

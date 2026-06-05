@@ -118,6 +118,75 @@ class WorkItemOutcomeValidationTest {
                 .body("outcome", equalTo("any-value-accepted"));
     }
 
+    // ── Conditional outcomes (#177) ──────────────────────────────────────────
+
+    @Test
+    void complete_withConditionSatisfied_returns200() {
+        // Condition checks actorId — actor "alice" matches "alice"
+        final String templateId = given().contentType(ContentType.JSON)
+                .body("""
+                        {"name":"Conditional Template","candidateGroups":"reviewers",
+                         "outcomes":[{"name":"approved","displayName":"Approved","condition":"actorId == 'alice'"}],
+                         "createdBy":"admin"}
+                        """)
+                .post("/workitem-templates")
+                .then().statusCode(201).extract().path("id");
+
+        final String id = given().contentType(ContentType.JSON)
+                .body("{\"createdBy\":\"system\"}")
+                .post("/workitem-templates/" + templateId + "/instantiate")
+                .then().statusCode(201).extract().path("id");
+
+        given().put("/workitems/" + id + "/claim?claimant=alice").then().statusCode(200);
+        given().put("/workitems/" + id + "/start?actor=alice").then().statusCode(200);
+
+        given().contentType(ContentType.JSON)
+                .body("{\"outcome\":\"approved\"}")
+                .put("/workitems/" + id + "/complete?actor=alice")
+                .then()
+                .statusCode(200)
+                .body("outcome", org.hamcrest.Matchers.equalTo("approved"));
+    }
+
+    @Test
+    void complete_withConditionNotSatisfied_returns400() {
+        // Condition checks actorId — actor "bob" does NOT match "alice"
+        final String templateId = given().contentType(ContentType.JSON)
+                .body("""
+                        {"name":"Conditional Template 2","candidateGroups":"reviewers",
+                         "outcomes":[{"name":"approved","displayName":"Approved","condition":"actorId == 'alice'"}],
+                         "createdBy":"admin"}
+                        """)
+                .post("/workitem-templates")
+                .then().statusCode(201).extract().path("id");
+
+        final String id = given().contentType(ContentType.JSON)
+                .body("{\"createdBy\":\"system\"}")
+                .post("/workitem-templates/" + templateId + "/instantiate")
+                .then().statusCode(201).extract().path("id");
+
+        given().put("/workitems/" + id + "/claim?claimant=bob").then().statusCode(200);
+        given().put("/workitems/" + id + "/start?actor=bob").then().statusCode(200);
+
+        given().contentType(ContentType.JSON)
+                .body("{\"outcome\":\"approved\"}")
+                .put("/workitems/" + id + "/complete?actor=bob")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void complete_withNoCondition_stillValidatedByName_returns400() {
+        // Outcome without condition — name validation still enforced
+        final String id = workItemReadyToComplete("approved", "rejected");
+
+        given().contentType(ContentType.JSON)
+                .body("{\"outcome\":\"not-in-list\"}")
+                .put("/workitems/" + id + "/complete?actor=alice")
+                .then()
+                .statusCode(400);
+    }
+
     @Test
     void complete_withNoOutcome_whenNoPermittedDeclared_returns200() {
         // Existing behaviour preserved — no outcome required when template has no outcomes

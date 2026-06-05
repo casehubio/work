@@ -15,6 +15,7 @@ import io.casehub.work.api.MultiInstanceConfig;
 import io.casehub.work.api.MultiInstanceContext;
 import io.casehub.work.api.OnThresholdReached;
 import io.casehub.work.api.ParentRole;
+import io.casehub.work.runtime.model.OutcomeCodecs;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemRelation;
@@ -155,7 +156,7 @@ public class MultiInstanceSpawnService {
                 .callerRef(callerRef)
                 .expiresAtBusinessHours(isCoordinator ? null : template.defaultExpiryBusinessHours)
                 .templateId(template.id)
-                .permittedOutcomes(WorkItemTemplateService.parseOutcomeNames(template.outcomes))
+                .permittedOutcomes(OutcomeCodecs.decodeOutcomes(template.outcomes))
                 .inputDataSchema(template.inputDataSchema)
                 .outputDataSchema(template.outputDataSchema)
                 .excludedUsers(expandedExcludedUsers)
@@ -179,7 +180,7 @@ public class MultiInstanceSpawnService {
                 .claimDeadlineBusinessHours(template.defaultClaimBusinessHours)
                 .expiresAtBusinessHours(template.defaultExpiryBusinessHours)
                 .templateId(template.id)
-                .permittedOutcomes(WorkItemTemplateService.parseOutcomeNames(template.outcomes))
+                .permittedOutcomes(OutcomeCodecs.decodeOutcomes(template.outcomes))
                 .inputDataSchema(template.inputDataSchema)
                 .outputDataSchema(template.outputDataSchema)
                 .excludedUsers(expandedExcludedUsers)

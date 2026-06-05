@@ -57,6 +57,9 @@ public class WorkItemService {
     FormSchemaValidationService schemaValidator;
 
     @Inject
+    OutcomeValidator outcomeValidator;
+
+    @Inject
     Event<WorkItemLifecycleEvent> lifecycleEvent;
 
     @Inject
@@ -104,7 +107,7 @@ public class WorkItemService {
         item.callerRef = request.callerRef;
         item.followUpDate = request.followUpDate;
         item.templateId = request.templateId;
-        item.permittedOutcomes = WorkItemTemplateService.encodePermittedOutcomes(request.permittedOutcomes);
+        item.permittedOutcomes = WorkItemTemplateService.encodeOutcomes(request.permittedOutcomes);
         item.inputDataSchema = request.inputDataSchema;
         item.outputDataSchema = request.outputDataSchema;
         item.excludedUsers = request.excludedUsers;
@@ -288,7 +291,7 @@ public class WorkItemService {
         if (item.status != WorkItemStatus.IN_PROGRESS) {
             throw new IllegalStateException("Cannot complete WorkItem in status: " + item.status);
         }
-        validateOutcome(item, outcome);
+        outcomeValidator.validate(item, outcome, resolution, null, actorId);
         if (item.outputDataSchema != null) {
             final List<String> violations = schemaValidator.validate(item.outputDataSchema, resolution);
             if (!violations.isEmpty()) {
@@ -315,7 +318,7 @@ public class WorkItemService {
         if (item.status != WorkItemStatus.ASSIGNED && item.status != WorkItemStatus.IN_PROGRESS) {
             throw new IllegalStateException("Cannot reject WorkItem in status: " + item.status);
         }
-        validateOutcome(item, outcome);
+        outcomeValidator.validate(item, outcome, null, reason, actorId);
         item.status = WorkItemStatus.REJECTED;
         item.completedAt = Instant.now();
         item.outcome = outcome;
@@ -346,7 +349,7 @@ public class WorkItemService {
         if (item.status != WorkItemStatus.IN_PROGRESS) {
             throw new IllegalStateException("Cannot complete WorkItem in status: " + item.status);
         }
-        validateOutcome(item, outcome);
+        outcomeValidator.validate(item, outcome, resolution, null, actorId);
         if (item.outputDataSchema != null) {
             final List<String> violations = schemaValidator.validate(item.outputDataSchema, resolution);
             if (!violations.isEmpty()) {
@@ -369,35 +372,6 @@ public class WorkItemService {
     }
 
     /**
-     * Validate the outcome name against the WorkItem's permitted outcomes list.
-     * No-op when the WorkItem has no permitted outcomes (unconstrained).
-     * Throws {@link IllegalArgumentException} when the outcome is absent or not in the list.
-     */
-    private void validateOutcome(final WorkItem item, final String outcome) {
-        if (item.permittedOutcomes == null) {
-            return; // no constraint — any outcome (or none) is accepted
-        }
-        if (outcome == null || outcome.isBlank()) {
-            throw new IllegalArgumentException(
-                    "outcome is required — this WorkItem was created from a template that declares named outcomes");
-        }
-        if (outcome.length() > 255) {
-            throw new IllegalArgumentException(
-                    "outcome exceeds maximum length of 255 characters");
-        }
-        final List<String> permitted = WorkItemTemplateService.decodePermittedOutcomes(item.permittedOutcomes);
-        if (permitted == null) {
-            // permittedOutcomes is non-null but failed to decode — data integrity error, not a caller error
-            throw new IllegalStateException(
-                    "permittedOutcomes on WorkItem " + item.id + " is non-null but failed to decode — data integrity error");
-        }
-        if (!permitted.contains(outcome)) {
-            throw new IllegalArgumentException(
-                    "outcome '" + outcome + "' is not permitted; allowed values: " + permitted);
-        }
-    }
-
-    /**
      * Reject a WorkItem with an explicit rationale and named outcome for ledger capture.
      *
      * @param id the WorkItem UUID
@@ -413,7 +387,7 @@ public class WorkItemService {
         if (item.status != WorkItemStatus.ASSIGNED && item.status != WorkItemStatus.IN_PROGRESS) {
             throw new IllegalStateException("Cannot reject WorkItem in status: " + item.status);
         }
-        validateOutcome(item, outcome);
+        outcomeValidator.validate(item, outcome, null, reason, actorId);
         item.status = WorkItemStatus.REJECTED;
         item.completedAt = Instant.now();
         item.outcome = outcome;

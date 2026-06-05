@@ -9,6 +9,7 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
@@ -17,7 +18,10 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.casehub.work.api.Outcome;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
@@ -32,6 +36,7 @@ import io.casehub.work.runtime.service.WorkItemTemplateValidationService;
  * GET    /workitem-templates/{id}                    — get a single template
  * DELETE /workitem-templates/{id}                    — delete a template
  * PUT    /workitem-templates/{id}                    — update (replace) a template
+ * PATCH  /workitem-templates/{id}                    — partial update (JSON Merge Patch, RFC 7396)
  * POST   /workitem-templates/{id}/instantiate        — create a WorkItem from the template
  * </pre>
  */
@@ -39,6 +44,8 @@ import io.casehub.work.runtime.service.WorkItemTemplateValidationService;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class WorkItemTemplateResource {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Inject
     WorkItemTemplateService templateService;
@@ -381,6 +388,160 @@ public class WorkItemTemplateResource {
     }
 
     /**
+     * Partially update a WorkItemTemplate (JSON Merge Patch — RFC 7396).
+     *
+     * <p>
+     * Fields present in the patch are applied (null clears the field); fields absent are left unchanged.
+     * {@code createdBy} is not patchable — authorship is immutable.
+     *
+     * @param id    the template UUID
+     * @param patch the merge-patch document
+     * @return 200 OK with the updated template, 400 if validation fails,
+     *         404 if not found, 409 if name conflicts with another template
+     */
+    @PATCH
+    @Path("/{id}")
+    @Consumes("application/merge-patch+json")
+    @Transactional
+    public Response patchTemplate(@PathParam("id") final UUID id, final JsonNode patch) {
+        if (patch == null || !patch.isObject()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", "patch body must be a JSON object")).build();
+        }
+
+        final WorkItemTemplate t = templateService.findById(id).orElse(null);
+        if (t == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(Map.of("error", "Template not found")).build();
+        }
+
+        // name — special: required when present, conflict check
+        if (patch.has("name")) {
+            final JsonNode nameNode = patch.get("name");
+            if (nameNode.isNull()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(Map.of("error", "name is required when provided in a PATCH")).build();
+            }
+            final String newName = nameNode.asText();
+            if (!newName.equals(t.name) && templateService.findByName(newName).isPresent()) {
+                return Response.status(Response.Status.CONFLICT)
+                        .entity(Map.of("error", "template with name '" + newName + "' already exists")).build();
+            }
+            t.name = newName;
+        }
+
+        // String fields
+        if (patch.has("description"))          t.description = textOrNull(patch, "description");
+        if (patch.has("category"))             t.category = textOrNull(patch, "category");
+        if (patch.has("candidateGroups"))      t.candidateGroups = textOrNull(patch, "candidateGroups");
+        if (patch.has("candidateUsers"))       t.candidateUsers = textOrNull(patch, "candidateUsers");
+        if (patch.has("requiredCapabilities")) t.requiredCapabilities = textOrNull(patch, "requiredCapabilities");
+        if (patch.has("defaultPayload"))       t.defaultPayload = textOrNull(patch, "defaultPayload");
+        if (patch.has("labelPaths"))           t.labelPaths = textOrNull(patch, "labelPaths");
+        if (patch.has("parentRole"))           t.parentRole = textOrNull(patch, "parentRole");
+        if (patch.has("assignmentStrategy"))   t.assignmentStrategy = textOrNull(patch, "assignmentStrategy");
+        if (patch.has("onThresholdReached"))   t.onThresholdReached = textOrNull(patch, "onThresholdReached");
+        if (patch.has("excludedUsers"))        t.excludedUsers = textOrNull(patch, "excludedUsers");
+        if (patch.has("excludedGroups"))       t.excludedGroups = textOrNull(patch, "excludedGroups");
+        if (patch.has("scope"))                t.scope = textOrNull(patch, "scope");
+
+        // Integer fields — use intValue() not asInt() (asInt() returns 0 on null)
+        if (patch.has("defaultExpiryHours"))
+            t.defaultExpiryHours = patch.get("defaultExpiryHours").isNull() ? null : patch.get("defaultExpiryHours").intValue();
+        if (patch.has("defaultClaimHours"))
+            t.defaultClaimHours = patch.get("defaultClaimHours").isNull() ? null : patch.get("defaultClaimHours").intValue();
+        if (patch.has("defaultExpiryBusinessHours"))
+            t.defaultExpiryBusinessHours = patch.get("defaultExpiryBusinessHours").isNull() ? null : patch.get("defaultExpiryBusinessHours").intValue();
+        if (patch.has("defaultClaimBusinessHours"))
+            t.defaultClaimBusinessHours = patch.get("defaultClaimBusinessHours").isNull() ? null : patch.get("defaultClaimBusinessHours").intValue();
+        if (patch.has("instanceCount"))
+            t.instanceCount = patch.get("instanceCount").isNull() ? null : patch.get("instanceCount").intValue();
+        if (patch.has("requiredCount"))
+            t.requiredCount = patch.get("requiredCount").isNull() ? null : patch.get("requiredCount").intValue();
+
+        // Boolean field — use booleanValue() not asBoolean() (asBoolean() returns false on null)
+        if (patch.has("allowSameAssignee"))
+            t.allowSameAssignee = patch.get("allowSameAssignee").isNull() ? null : patch.get("allowSameAssignee").booleanValue();
+
+        // priority — enum; null clears, invalid value → 400
+        if (patch.has("priority")) {
+            final JsonNode priorityNode = patch.get("priority");
+            if (priorityNode.isNull()) {
+                t.priority = null;
+            } else {
+                try {
+                    t.priority = io.casehub.work.runtime.model.WorkItemPriority.valueOf(priorityNode.asText());
+                } catch (final IllegalArgumentException e) {
+                    return Response.status(Response.Status.BAD_REQUEST)
+                            .entity(Map.of("error", "invalid priority value: " + priorityNode.asText())).build();
+                }
+            }
+        }
+
+        // outcomes — deserialize List<Outcome>, then encode; null clears
+        if (patch.has("outcomes")) {
+            final JsonNode outcomesNode = patch.get("outcomes");
+            if (outcomesNode.isNull()) {
+                t.outcomes = null;
+            } else {
+                try {
+                    final List<Outcome> outcomes = MAPPER.convertValue(
+                            outcomesNode, new TypeReference<List<Outcome>>() {});
+                    t.outcomes = WorkItemTemplateService.encodeOutcomes(outcomes);
+                } catch (final Exception e) {
+                    return Response.status(Response.Status.BAD_REQUEST)
+                            .entity(Map.of("error", "invalid outcomes: " + e.getMessage())).build();
+                }
+            }
+        }
+
+        // inputDataSchema — must be JSON object or null
+        if (patch.has("inputDataSchema")) {
+            final JsonNode schemaNode = patch.get("inputDataSchema");
+            if (schemaNode.isNull()) {
+                t.inputDataSchema = null;
+            } else if (!schemaNode.isObject()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(Map.of("error", "inputDataSchema must be a JSON object, not a "
+                                + schemaNode.getNodeType().name().toLowerCase())).build();
+            } else {
+                t.inputDataSchema = schemaNode.toString();
+            }
+        }
+
+        // outputDataSchema — same as inputDataSchema
+        if (patch.has("outputDataSchema")) {
+            final JsonNode schemaNode = patch.get("outputDataSchema");
+            if (schemaNode.isNull()) {
+                t.outputDataSchema = null;
+            } else if (!schemaNode.isObject()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(Map.of("error", "outputDataSchema must be a JSON object, not a "
+                                + schemaNode.getNodeType().name().toLowerCase())).build();
+            } else {
+                t.outputDataSchema = schemaNode.toString();
+            }
+        }
+
+        // createdBy is intentionally not patchable — silently ignored if present
+
+        try {
+            WorkItemTemplateValidationService.validate(t);
+        } catch (final IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", e.getMessage())).build();
+        }
+
+        return Response.ok(toResponse(t)).build();
+    }
+
+    /** Precondition: caller must check {@code patch.has(field)} before calling. */
+    private static String textOrNull(final JsonNode patch, final String field) {
+        final JsonNode node = patch.get(field);
+        return (node == null || node.isNull()) ? null : node.asText();
+    }
+
+    /**
      * Create a WorkItem from a template.
      *
      * <p>
@@ -437,7 +598,7 @@ public class WorkItemTemplateResource {
         m.put("assignmentStrategy", t.assignmentStrategy);
         m.put("onThresholdReached", t.onThresholdReached);
         m.put("allowSameAssignee", t.allowSameAssignee);
-        m.put("outcomes", WorkItemTemplateService.decodeOutcomes(t.outcomes));
+        m.put("outcomes", t.outcomes == null ? null : WorkItemTemplateService.decodeOutcomes(t.outcomes));
         m.put("inputDataSchema", t.inputDataSchema);
         m.put("outputDataSchema", t.outputDataSchema);
         m.put("excludedUsers", t.excludedUsers);
