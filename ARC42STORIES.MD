@@ -1182,6 +1182,10 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 
 `runtime/src/main/java/io/casehub/work/runtime/service/WorkItemService.java` — `@ApplicationScoped` application service that owns all status transition logic and calls `WorkItemStore` and audit services; no transition logic lives in the entity or REST layer.
 
+`runtime/src/main/java/io/casehub/work/runtime/service/OutcomeValidator.java` — `@ApplicationScoped` bean that encapsulates named-outcome validation and JEXL condition evaluation at completion/rejection time; injected by `WorkItemService`, keeping lifecycle transition logic separate from constraint evaluation.
+
+`api/src/main/java/io/casehub/work/api/Outcome.java` — 3-field record `(name, displayName, condition)` where `condition` is a nullable JEXL expression; snapshotted onto `WorkItem.permittedOutcomes` at instantiation as full objects, not just name strings.
+
 `runtime/src/main/java/io/casehub/work/runtime/repository/WorkItemQuery.java` — composable value object carrying scan criteria; assignment fields combine with OR, all other fields combine with AND; backends translate to their native query language.
 
 `api/src/main/java/io/casehub/work/api/Capability.java` — record type enforcing kebab-case format at construction; throws `MalformedCapabilityException` on violation so format errors fail fast at system boundaries.
@@ -1205,6 +1209,10 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 **Why Capability as a value type rather than validated String:** Capability (ADR-0003) enforces kebab-case format at construction time; a plain String accepts any value including misspellings that silently produce empty candidate pools. Tradeoff: callers must parse Strings to Capability at system boundaries (REST layer, config); existing String-typed fields required migration.
 
 **Why group membership snapshot at WorkItem creation (ADR-0005):** `excludedGroups` on `WorkItemTemplate` is expanded to actor IDs at instantiation time via `GroupMembershipProvider`. Late resolution would produce non-deterministic exclusion when group membership changes mid-lifecycle. Tradeoff: the snapshot reflects membership at creation time; changes to group membership after creation do not affect the item's exclusion list.
+
+**Why conditions are evaluated at completion time, not at instantiation (ADR-0006):** `Outcome.condition` JEXL expressions can reference completion-time context (`resolution`, `actorId`, `reason`) that is not known at instantiation. Evaluating at instantiation to pre-filter `permittedOutcomes` would lose all runtime context. The full `List<Outcome>` (with conditions) is snapshotted at instantiation — consistent with schema snapshotting — and evaluated per-outcome at `complete()` / `reject()` time by `OutcomeValidator`.
+
+**Why JEXL as the condition expression language (ADR-0007):** `runtime.filter.JexlConditionEvaluator` was already present and used for filter rules, with an established `silent(true).strict(false)` profile and the same `workItem.*` context map. Reusing it means zero new Maven dependencies and one expression syntax for template authors. Tradeoff: `silent(true)` swallows both false conditions and broken expressions identically — syntax validation at template creation time is deferred.
 
 #### Pattern Introduced
 
@@ -1251,6 +1259,7 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 
 What this layer adds:
 - **REST resources** — 7 JAX-RS resource classes under `/workitems`; each sub-resource delegates to the service layer with no business logic in the resource method
+- **PATCH /workitem-templates/{id}** — JSON Merge Patch (RFC 7396) partial update; absent fields unchanged, null clears; handles 25 fields across String/Integer/Boolean type patterns with special deserialization for `name`, `priority` (enum), `outcomes` (`List<Outcome>`), and JSON Schema fields
 - **Enforced builder** — `WorkItemCreateRequest` final class with private constructor reachable only via `Builder.build()`; positional construction is structurally impossible
 - **Exception mappers** — `OptimisticLockException` → HTTP 409 Conflict; `MalformedCapabilityException` → HTTP 400; `UnknownCapabilityException` → HTTP 400
 
