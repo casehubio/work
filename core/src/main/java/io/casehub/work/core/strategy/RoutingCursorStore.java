@@ -10,6 +10,13 @@ package io.casehub.work.core.strategy;
  * <p>
  * Implementations must be atomic under concurrent access — the default JPA implementation
  * uses {@code @Transactional(REQUIRES_NEW)} with {@code @Version}-based OCC.
+ *
+ * <p>
+ * <strong>CDI backend activation:</strong><br>
+ * Tier 0: {@code @DefaultBean} (no-op) — {@code casehub-work-core}.<br>
+ * Tier 1: {@code @ApplicationScoped} (JPA/SQL, default) — {@code casehub-work} runtime.<br>
+ * Tier 3: {@code @Alternative @Priority(100)} (in-memory, ephemeral) — {@code casehub-work-persistence-memory}.<br>
+ * No Tier 2 (MongoDB) exists yet (tracked as casehubio/work#253).
  */
 public interface RoutingCursorStore {
 

@@ -10,19 +10,14 @@ import io.casehub.work.issuetracker.model.WorkItemIssueLink;
  * Store SPI for {@link WorkItemIssueLink} persistence.
  *
  * <p>
- * Replaces direct Panache static calls in
- * {@link io.casehub.work.issuetracker.webhook.WebhookEventHandler} and
- * {@link io.casehub.work.issuetracker.service.IssueLinkService} with an
- * injectable seam, enabling full unit testing without CDI or a database.
+ * Replaces direct Panache static calls with an injectable seam, enabling
+ * full unit testing without CDI or a database.
  *
  * <p>
- * The default implementation ({@link jpa.JpaIssueLinkStore}) uses Hibernate ORM
- * with Panache. The in-memory alternative is provided in
- * {@code casehub-work-testing} for application-level tests.
- *
- * <p>
- * Custom implementations register as {@code @ApplicationScoped @Alternative
- * @Priority(1)} CDI beans.
+ * <strong>CDI backend activation:</strong><br>
+ * Tier 1: {@code @ApplicationScoped} (JPA/SQL, default) — {@code casehub-work-issue-tracker}.<br>
+ * Tier 3: {@code @Alternative @Priority(100)} (in-memory, ephemeral) — {@code casehub-work-persistence-memory}.<br>
+ * No Tier 2 (MongoDB) exists yet (tracked as casehubio/work#253).
  */
 public interface IssueLinkStore {
 

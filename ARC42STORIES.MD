@@ -143,7 +143,7 @@ C4Container
     Container(core, "casehub-work-core", "Jandex library", "WorkBroker, LeastLoadedStrategy, ClaimFirstStrategy, RoundRobinStrategy, CapabilityValidator")
     Container(runtime, "casehub-work", "Quarkus extension", "WorkItem entity, WorkItemService, JpaWorkItemStore, AuditEntryStore, Flyway V1–V34")
     Container(deploy, "casehub-work-deployment", "Quarkus deployment", "Build-time processors, feature registration, native config")
-    Container(testing, "casehub-work-testing", "Test library", "InMemoryWorkItemStore, InMemoryAuditEntryStore, InMemoryWorkItemNoteStore, InMemoryIssueLinkStore")
+    Container(pmem, "casehub-work-persistence-memory", "In-memory persistence", "InMemoryWorkItemStore, InMemoryAuditEntryStore, InMemoryWorkItemNoteStore, InMemoryIssueLinkStore @Alternative @Priority(100)")
   }
 
   Container_Boundary(b4, "Layer: L4 Label System") {
@@ -178,7 +178,7 @@ C4Container
 | `core/` | `casehub-work-core` | Jandex library | WorkBroker, LeastLoadedStrategy, ClaimFirstStrategy, RoundRobinStrategy, CapabilityValidator; used by casehub-engine without pulling in JPA or REST |
 | `runtime/` | `casehub-work` | Quarkus extension | WorkItem + AuditEntry entities, WorkItemService, WorkItemAssignmentService, ExpiryLifecycleService, REST resources (7), Flyway V1–V34 at `db/work/migration/` |
 | `deployment/` | `casehub-work-deployment` | Quarkus deployment | Build-time processor, feature registration, `casehub.work.*` native config |
-| `testing/` | `casehub-work-testing` | Test library | InMemoryWorkItemStore, InMemoryAuditEntryStore, InMemoryWorkItemNoteStore, InMemoryIssueLinkStore |
+| `persistence-memory/` | `casehub-work-persistence-memory` | In-memory persistence | InMemoryWorkItemStore, InMemoryAuditEntryStore, InMemoryWorkItemNoteStore, InMemoryIssueLinkStore, InMemoryRoutingCursorStore — `@Alternative @Priority(100)` (Tier 3) |
 | `queues/` | `casehub-work-queues` | Optional extension | LabelVocabulary, MANUAL/INFERRED label persistence, FilterEngine (JEXL/JQ/Lambda), FilterChain, QueueView, WorkItemQueueEventBroadcaster SPI |
 | `queues-dashboard/` | `casehub-work-queues-dashboard` | Optional extension | SSE queue dashboard UI |
 | `ledger/` | `casehub-work-ledger` | Optional extension | WorkItemLedgerEntry (JOINED from LedgerEntry), LedgerEventCapture @Observes, EigenTrust; depends on `casehub-ledger` |
@@ -1190,7 +1190,7 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 
 `api/src/main/java/io/casehub/work/api/Capability.java` — record type enforcing kebab-case format at construction; throws `MalformedCapabilityException` on violation so format errors fail fast at system boundaries.
 
-`testing/src/main/java/io/casehub/work/testing/InMemoryWorkItemStore.java` — `@Alternative @Priority(1)` in-memory implementation of `WorkItemStore` for unit tests; requires no datasource or Quarkus boot.
+`persistence-memory/src/main/java/io/casehub/work/memory/InMemoryWorkItemStore.java` — `@Alternative @Priority(100)` (Tier 3) thread-safe in-memory implementation of `WorkItemStore` for tests and ephemeral deployment; requires no datasource or Quarkus boot.
 
 #### Key Wiring
 
@@ -1221,7 +1221,7 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 #### Pattern Anchor
 
 `runtime/src/main/java/io/casehub/work/runtime/repository/jpa/JpaWorkItemStore.java` — `@ApplicationScoped` JPA default
-`testing/src/main/java/io/casehub/work/testing/InMemoryWorkItemStore.java` — `@Alternative @Priority(1)` test override
+`persistence-memory/src/main/java/io/casehub/work/memory/InMemoryWorkItemStore.java` — `@Alternative @Priority(100)` (Tier 3) ephemeral override
 
 #### Gotchas
 
@@ -1795,7 +1795,7 @@ Full decision records: `docs/adr/`
 | SLA correctness | WorkItem with `expiresAt` in the past transitions to EXPIRED within one `ExpiryCleanupJob` cycle | `ExpiryLifecycleServiceTest` verifies EXPIRED transition; scheduler interval configurable via `casehub.work.cleanup.expiry-check-seconds` |
 | SLA breach exhaustion | Chained policy with two failing branches sets WorkItem to ESCALATED (terminal) | `ExpiryLifecycleServiceTest.checkExpired_chainedExhaustion` |
 | Isolation | Core extension compiles and passes unit tests without `casehub-ledger`, `casehub-qhorus`, or `casehub-engine` on the classpath | `mvn verify -pl runtime` with no optional modules present |
-| Zero-datasource unit tests | `WorkItemServiceTest` runs without Quarkus boot in under 1 s | `InMemoryWorkItemStore @Alternative @Priority(1)` in `casehub-work-testing`; no `@QuarkusTest` annotation required |
+| Zero-datasource unit tests | `WorkItemServiceTest` runs without Quarkus boot in under 1 s | `InMemoryWorkItemStore @Alternative @Priority(100)` in `casehub-work-persistence-memory`; no `@QuarkusTest` annotation required |
 | Native image correctness | All 25 `@QuarkusIntegrationTest` tests pass against GraalVM 25 native binary | `mvn verify -Pnative -pl integration-tests` |
 | Concurrent claim safety | Two simultaneous claim requests on different nodes produce one ASSIGNED and one HTTP 409 Conflict | `WorkItemResourceTest` with concurrent claim simulation; `@Version` on WorkItem triggers `OptimisticLockException` |
 

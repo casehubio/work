@@ -10,9 +10,11 @@ import io.casehub.work.runtime.model.AuditEntry;
  * Replaces {@code AuditEntryRepository} — aligned with KV store terminology.
  *
  * <p>
- * <strong>CDI backend activation (three-tier priority ladder):</strong><br>
- * {@code @DefaultBean} (mock/in-memory) &lt; {@code @ApplicationScoped} (JPA/SQL primary) &lt;
- * {@code @Alternative @Priority(1)} (NoSQL secondary, beats JPA when co-deployed).
+ * <strong>CDI backend activation (four-tier priority ladder):</strong><br>
+ * Tier 0: {@code @DefaultBean} (no-op fallback) — not applicable to this SPI.<br>
+ * Tier 1: {@code @ApplicationScoped} (JPA/SQL, default) — {@code casehub-work} runtime.<br>
+ * Tier 2: {@code @Alternative @Priority(1)} (MongoDB) — {@code casehub-work-persistence-mongodb}.<br>
+ * Tier 3: {@code @Alternative @Priority(100)} (in-memory, ephemeral) — {@code casehub-work-persistence-memory}.<br>
  * Adding a backend module to the classpath activates it automatically — no consumer changes.
  * See the platform
  * <a href="https://github.com/casehubio/garden/blob/main/docs/protocols/universal/persistence-backend-cdi-priority.md">persistence-backend-cdi-priority</a>

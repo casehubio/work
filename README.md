@@ -123,7 +123,7 @@ Three systems in the Quarkus ecosystem define "task":
 | Artifact | Status | Purpose |
 |---|---|---|
 | `casehub-work` | Core | WorkItem model, JPA storage, REST API, lifecycle engine, CDI events, labels, vocabulary |
-| `casehub-work-testing` | Core | `InMemoryWorkItemStore` + `InMemoryAuditEntryStore` for unit tests without a datasource |
+| `casehub-work-persistence-memory` | Core | Thread-safe in-memory stores (`@Priority(100)`) for tests, demos, and ephemeral deployment — no datasource required |
 | `casehub-work-queues` | Optional | Label-based work queues — JEXL/JQ/Lambda filters, FilterChain, QueueView, soft assignment, queue lifecycle events (ADDED/REMOVED/CHANGED) |
 | `casehub-work-ledger` | Optional | Accountability — command/event ledger, SHA-256/MMR hash chain, peer attestation, EigenTrust reputation scoring |
 | `casehub-work-persistence-mongodb` | Optional | MongoDB `WorkItemStore` + `AuditEntryStore`. Drop-in replacement for JPA defaults |

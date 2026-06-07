@@ -78,7 +78,7 @@ beyond the PostgreSQL datasource already required by the core extension.</descri
     </dependency>
     <dependency>
       <groupId>io.casehub</groupId>
-      <artifactId>casehub-work-testing</artifactId>
+      <artifactId>casehub-work-persistence-memory</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>

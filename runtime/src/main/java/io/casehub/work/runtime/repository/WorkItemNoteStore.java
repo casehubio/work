@@ -10,9 +10,10 @@ import io.casehub.work.runtime.model.WorkItemNote;
  * SPI for persisting {@link WorkItemNote} records.
  *
  * <p>
- * The default implementation uses JPA/Panache. Alternatives (MongoDB, in-memory)
- * override via CDI {@code @Alternative @Priority(1)}, consistent with the rest of
- * the WorkItems storage layer.
+ * <strong>CDI backend activation:</strong><br>
+ * Tier 1: {@code @ApplicationScoped} (JPA/SQL, default) — {@code casehub-work} runtime.<br>
+ * Tier 3: {@code @Alternative @Priority(100)} (in-memory, ephemeral) — {@code casehub-work-persistence-memory}.<br>
+ * No Tier 2 (MongoDB) exists yet (tracked as casehubio/work#253).
  */
 public interface WorkItemNoteStore {
 
