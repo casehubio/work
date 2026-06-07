@@ -10,9 +10,11 @@
     <version>0.2-SNAPSHOT</version>
   </parent>
 
-  <artifactId>casehub-work-testing</artifactId>
-  <name>CaseHub Work - Testing</name>
-  <description>In-memory repository implementations for use in unit tests of applications that embed CaseHub Work. No datasource or Flyway required.</description>
+  <artifactId>casehub-work-persistence-memory</artifactId>
+  <name>CaseHub Work - In-Memory Persistence</name>
+  <description>In-memory store implementations for CaseHub Work. Thread-safe, ephemeral (data lost on
+restart). Tier 3 in the CDI priority ladder — beats JPA and MongoDB when on the classpath.
+Use for tests, demos, and local evaluation without a datasource.</description>
 
   <dependencies>
     <dependency>
@@ -30,39 +32,39 @@
       <artifactId>jakarta.enterprise.cdi-api</artifactId>
       <scope>provided</scope>
     </dependency>
-    <!-- Testing of the testing module itself -->
+    <!-- Testing of the persistence-memory module itself -->
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-junit5</artifactId>
       <scope>test</scope>
     </dependency>
-        <dependency>
+    <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform</artifactId>
       <scope>test</scope>
     </dependency>
-<dependency>
+    <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
 
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>io.smallrye</groupId>
-                <artifactId>jandex-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>make-index</id>
-                        <goals>
-                            <goal>jandex</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.smallrye</groupId>
+        <artifactId>jandex-maven-plugin</artifactId>
+        <version>3.3.1</version>
+        <executions>
+          <execution>
+            <id>make-index</id>
+            <goals>
+              <goal>jandex</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

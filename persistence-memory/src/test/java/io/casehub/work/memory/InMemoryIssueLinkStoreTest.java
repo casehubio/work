@@ -1,4 +1,4 @@
-package io.casehub.work.testing;
+package io.casehub.work.memory;
 
 import io.casehub.work.issuetracker.model.WorkItemIssueLink;
 import org.junit.jupiter.api.BeforeEach;
@@ -163,6 +163,33 @@ class InMemoryIssueLinkStoreTest {
 
         assertThat(store.findById(b.id)).isPresent();
         assertThat(store.findByWorkItemId(workItemId)).hasSize(1);
+    }
+
+    // ── concurrency ───────────────────────────────────────────────────────────
+
+    @Test
+    void save_concurrentWrites_nothingLost() throws Exception {
+        final int threads = 8;
+        final int perThread = 100;
+        final var latch = new java.util.concurrent.CountDownLatch(1);
+        final var executor = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        final var futures = new java.util.ArrayList<java.util.concurrent.Future<?>>();
+        final UUID workItemId = UUID.randomUUID();
+
+        for (int t = 0; t < threads; t++) {
+            final int threadNum = t;
+            futures.add(executor.submit(() -> {
+                try { latch.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                for (int i = 0; i < perThread; i++) {
+                    store.save(link(workItemId, "github", "owner/repo#" + threadNum + "-" + i));
+                }
+            }));
+        }
+        latch.countDown();
+        for (var f : futures) { f.get(5, java.util.concurrent.TimeUnit.SECONDS); }
+        executor.shutdown();
+
+        assertThat(store.findByWorkItemId(workItemId)).hasSize(threads * perThread);
     }
 
     // ── clear ─────────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
-package io.casehub.work.testing;
+package io.casehub.work.memory;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,33 +16,27 @@ import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
 
 /**
- * In-memory implementation of {@link WorkItemStore} for use in tests of
- * applications that embed CaseHub Work. No datasource or Flyway configuration
- * is required.
+ * In-memory implementation of {@link WorkItemStore} for ephemeral deployments
+ * and tests. No datasource or Flyway configuration required.
  *
  * <p>
- * Activate by including {@code quarkus-work-testing} on the test classpath. CDI
- * selects this bean over the default Panache implementation via {@code @Alternative}
- * and {@code @Priority(1)}.
+ * Tier 3 in the CDI priority ladder — {@code @Alternative @Priority(100)} beats
+ * both JPA (Tier 1) and MongoDB (Tier 2) when on the classpath.
  *
  * <p>
- * <strong>Not thread-safe</strong> — designed for single-threaded test use only.
- *
- * <p>
- * Call {@link #clear()} in a {@code @BeforeEach} method to isolate tests from one
- * another.
+ * Thread-safe. Data is ephemeral (lost on restart). Objects returned from the
+ * store are shared references — concurrent field-level mutations to the same
+ * object without calling {@link #put} are not guaranteed to be visible across
+ * threads.
  */
 @ApplicationScoped
 @Alternative
-@Priority(1)
+@Priority(100)
 public class InMemoryWorkItemStore implements WorkItemStore {
 
-    // NOT thread-safe — designed for single-threaded test use
-    private final Map<UUID, WorkItem> store = new LinkedHashMap<>();
+    private final Map<UUID, WorkItem> store = new ConcurrentHashMap<>();
 
-    /**
-     * Clears all stored WorkItems. Call in {@code @BeforeEach} to isolate tests.
-     */
+    /** Removes all stored WorkItems. Available for test isolation ({@code @BeforeEach}) and administrative reset. */
     public void clear() {
         store.clear();
     }
@@ -88,11 +82,7 @@ public class InMemoryWorkItemStore implements WorkItemStore {
                 .toList();
     }
 
-    /**
-     * Returns a mutable copy of all stored items, for convenience in tests.
-     *
-     * @return list of all work items
-     */
+    /** Returns a copy of all stored items, for test inspection and administrative use. */
     public List<WorkItem> findAll() {
         return new ArrayList<>(store.values());
     }

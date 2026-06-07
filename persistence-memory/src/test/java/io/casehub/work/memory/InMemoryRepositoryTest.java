@@ -1,4 +1,4 @@
-package io.casehub.work.testing;
+package io.casehub.work.memory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -205,6 +205,33 @@ class InMemoryRepositoryTest {
     }
 
     // =========================================================================
+    // WorkItemStore — concurrency
+    // =========================================================================
+
+    @Test
+    void put_concurrentWrites_nothingLost() throws Exception {
+        final int threads = 8;
+        final int perThread = 100;
+        final var latch = new java.util.concurrent.CountDownLatch(1);
+        final var executor = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        final var futures = new java.util.ArrayList<java.util.concurrent.Future<?>>();
+
+        for (int t = 0; t < threads; t++) {
+            futures.add(executor.submit(() -> {
+                try { latch.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                for (int i = 0; i < perThread; i++) {
+                    workItemStore.put(workItem(WorkItemStatus.PENDING));
+                }
+            }));
+        }
+        latch.countDown();
+        for (var f : futures) { f.get(5, java.util.concurrent.TimeUnit.SECONDS); }
+        executor.shutdown();
+
+        assertThat(workItemStore.findAll()).hasSize(threads * perThread);
+    }
+
+    // =========================================================================
     // AuditEntryStore
     // =========================================================================
 
@@ -260,6 +287,34 @@ class InMemoryRepositoryTest {
 
         assertThat(result).extracting(e -> e.event)
                 .containsExactly("CREATED", "ASSIGNED", "COMPLETED");
+    }
+
+    // =========================================================================
+    // AuditEntryStore — concurrency
+    // =========================================================================
+
+    @Test
+    void append_concurrentWrites_nothingLost() throws Exception {
+        final int threads = 8;
+        final int perThread = 50;
+        final UUID workItemId = UUID.randomUUID();
+        final var latch = new java.util.concurrent.CountDownLatch(1);
+        final var executor = java.util.concurrent.Executors.newFixedThreadPool(threads);
+        final var futures = new java.util.ArrayList<java.util.concurrent.Future<?>>();
+
+        for (int t = 0; t < threads; t++) {
+            futures.add(executor.submit(() -> {
+                try { latch.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                for (int i = 0; i < perThread; i++) {
+                    auditStore.append(auditEntry(workItemId, "EVENT"));
+                }
+            }));
+        }
+        latch.countDown();
+        for (var f : futures) { f.get(5, java.util.concurrent.TimeUnit.SECONDS); }
+        executor.shutdown();
+
+        assertThat(auditStore.findByWorkItemId(workItemId)).hasSize(threads * perThread);
     }
 
     // =========================================================================

@@ -19,7 +19,6 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <module>core</module>
     <module>runtime</module>
     <module>deployment</module>
-    <module>testing</module>
     <module>flow</module>
     <module>ledger</module>
     <module>notifications</module>
@@ -29,6 +28,7 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <module>examples</module>
     <module>flow-examples</module>
     <module>persistence-mongodb</module>
+    <module>persistence-memory</module>
     <module>issue-tracker</module>
     <module>ai</module>
     <module>reports</module>

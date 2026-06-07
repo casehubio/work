@@ -1,8 +1,8 @@
-package io.casehub.work.testing;
+package io.casehub.work.memory;
 
 import java.time.Instant;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -16,33 +16,25 @@ import io.casehub.work.issuetracker.model.WorkItemIssueLink;
 import io.casehub.work.issuetracker.repository.IssueLinkStore;
 
 /**
- * In-memory implementation of {@link IssueLinkStore} for use in tests of
- * applications that embed CaseHub Work with the issue-tracker module. No
- * datasource or Flyway configuration is required.
+ * In-memory implementation of {@link IssueLinkStore} for ephemeral deployments
+ * and tests. No datasource or Flyway configuration required.
  *
  * <p>
- * Activate by including {@code casehub-work-testing} on the test classpath
- * alongside {@code casehub-work-issue-tracker}. CDI selects this bean over
- * the default JPA implementation via {@code @Alternative} and {@code @Priority(1)}.
+ * Tier 3 in the CDI priority ladder — {@code @Alternative @Priority(100)} beats
+ * JPA (Tier 1) when on the classpath. No Tier 2 (MongoDB) exists for this SPI
+ * yet (tracked as casehubio/work#253).
  *
  * <p>
- * <strong>Not thread-safe</strong> — designed for single-threaded test use only.
- *
- * <p>
- * Call {@link #clear()} in a {@code @BeforeEach} method to isolate tests from
- * one another.
+ * Thread-safe. Data is ephemeral (lost on restart).
  */
 @ApplicationScoped
 @Alternative
-@Priority(1)
+@Priority(100)
 public class InMemoryIssueLinkStore implements IssueLinkStore {
 
-    // NOT thread-safe — designed for single-threaded test use
-    private final Map<UUID, WorkItemIssueLink> store = new LinkedHashMap<>();
+    private final Map<UUID, WorkItemIssueLink> store = new ConcurrentHashMap<>();
 
-    /**
-     * Clears all stored links. Call in {@code @BeforeEach} to isolate tests.
-     */
+    /** Removes all stored links. Available for test isolation ({@code @BeforeEach}) and administrative reset. */
     public void clear() {
         store.clear();
     }

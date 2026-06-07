@@ -1,4 +1,4 @@
-package io.casehub.work.testing;
+package io.casehub.work.memory;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -10,18 +10,18 @@ import jakarta.enterprise.inject.Alternative;
 import io.casehub.work.core.strategy.RoutingCursorStore;
 
 /**
- * In-memory {@link RoutingCursorStore} for use in tests.
+ * In-memory {@link RoutingCursorStore} for ephemeral deployments and tests.
  *
  * <p>
- * Thread-safe, no datasource or Flyway required. Activated automatically when on
- * the test classpath via {@code @Alternative @Priority(1)}, overriding
- * {@code JpaRoutingCursorStore}.
+ * Tier 3 in the CDI priority ladder — {@code @Alternative @Priority(100)} beats
+ * JPA (Tier 1) when on the classpath. No Tier 2 (MongoDB) exists for this SPI
+ * yet (tracked as casehubio/work#253).
  *
  * <p>
- * Call {@link #reset()} in {@code @BeforeEach} to clear cursor state between tests.
+ * Thread-safe (lock-free CAS loop). Data is ephemeral (lost on restart).
  */
 @Alternative
-@Priority(1)
+@Priority(100)
 @ApplicationScoped
 public class InMemoryRoutingCursorStore implements RoutingCursorStore {
 
@@ -39,7 +39,7 @@ public class InMemoryRoutingCursorStore implements RoutingCursorStore {
         }
     }
 
-    /** Reset all cursors — call in {@code @BeforeEach} for test isolation. */
+    /** Resets all cursors. Available for test isolation ({@code @BeforeEach}) and administrative reset. */
     public void reset() {
         cursors.clear();
     }

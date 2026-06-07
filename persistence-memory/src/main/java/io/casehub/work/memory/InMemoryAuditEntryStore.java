@@ -1,10 +1,11 @@
-package io.casehub.work.testing;
+package io.casehub.work.memory;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -15,35 +16,31 @@ import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.AuditQuery;
 
 /**
- * In-memory implementation of {@link AuditEntryStore} for use in tests of
- * applications that embed CaseHub Work. No datasource or Flyway configuration
- * is required.
+ * In-memory implementation of {@link AuditEntryStore} for ephemeral deployments
+ * and tests. No datasource or Flyway configuration required.
  *
  * <p>
- * Activate by including {@code quarkus-work-testing} on the test classpath. CDI
- * selects this bean over the default Panache implementation via {@code @Alternative}
- * and {@code @Priority(1)}.
+ * Tier 3 in the CDI priority ladder — {@code @Alternative @Priority(100)} beats
+ * both JPA (Tier 1) and MongoDB (Tier 2) when on the classpath.
  *
  * <p>
- * <strong>Not thread-safe</strong> — designed for single-threaded test use only.
+ * Thread-safe. Data is ephemeral (lost on restart).
  *
  * <p>
- * Call {@link #clear()} in a {@code @BeforeEach} method to isolate tests from one
- * another.
+ * <strong>Known limitation:</strong> Category filter in {@link AuditQuery} is
+ * silently ignored — the filter requires access to the parent WorkItem's category,
+ * which would create an inter-store dependency.
  */
 @ApplicationScoped
 @Alternative
-@Priority(1)
+@Priority(100)
 public class InMemoryAuditEntryStore implements AuditEntryStore {
 
-    // NOT thread-safe — designed for single-threaded test use
-    private final List<AuditEntry> entries = new ArrayList<>();
+    private final ConcurrentHashMap<UUID, CopyOnWriteArrayList<AuditEntry>> store = new ConcurrentHashMap<>();
 
-    /**
-     * Clears all stored entries. Call in {@code @BeforeEach} to isolate tests.
-     */
+    /** Removes all stored entries. Available for test isolation ({@code @BeforeEach}) and administrative reset. */
     public void clear() {
-        entries.clear();
+        store.clear();
     }
 
     /**
@@ -61,7 +58,7 @@ public class InMemoryAuditEntryStore implements AuditEntryStore {
         if (entry.occurredAt == null) {
             entry.occurredAt = Instant.now();
         }
-        entries.add(entry);
+        store.computeIfAbsent(entry.workItemId, k -> new CopyOnWriteArrayList<>()).add(entry);
     }
 
     /**
@@ -69,8 +66,11 @@ public class InMemoryAuditEntryStore implements AuditEntryStore {
      */
     @Override
     public List<AuditEntry> findByWorkItemId(final UUID workItemId) {
+        final List<AuditEntry> entries = store.get(workItemId);
+        if (entries == null) {
+            return List.of();
+        }
         return entries.stream()
-                .filter(e -> workItemId.equals(e.workItemId))
                 .sorted(Comparator.comparing(e -> e.occurredAt))
                 .toList();
     }
@@ -84,7 +84,8 @@ public class InMemoryAuditEntryStore implements AuditEntryStore {
      */
     @Override
     public List<AuditEntry> query(final AuditQuery query) {
-        return entries.stream()
+        return store.values().stream()
+                .flatMap(List::stream)
                 .filter(e -> query.actorId() == null || query.actorId().equals(e.actor))
                 .filter(e -> query.event() == null || query.event().equals(e.event))
                 .filter(e -> query.from() == null || !e.occurredAt.isBefore(query.from()))
@@ -100,7 +101,8 @@ public class InMemoryAuditEntryStore implements AuditEntryStore {
      */
     @Override
     public long count(final AuditQuery query) {
-        return entries.stream()
+        return store.values().stream()
+                .flatMap(List::stream)
                 .filter(e -> query.actorId() == null || query.actorId().equals(e.actor))
                 .filter(e -> query.event() == null || query.event().equals(e.event))
                 .filter(e -> query.from() == null || !e.occurredAt.isBefore(query.from()))

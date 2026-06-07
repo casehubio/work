@@ -1,7 +1,9 @@
-package io.casehub.work.testing;
+package io.casehub.work.memory;
 
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.Comparator;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,21 +17,25 @@ import io.casehub.work.runtime.model.WorkItemNote;
 import io.casehub.work.runtime.repository.WorkItemNoteStore;
 
 /**
- * In-memory implementation of {@link WorkItemNoteStore} for use in tests.
- * No datasource or Flyway configuration required.
+ * In-memory implementation of {@link WorkItemNoteStore} for ephemeral deployments
+ * and tests. No datasource or Flyway configuration required.
  *
  * <p>
- * Activate by including {@code quarkus-work-testing} on the test classpath.
- * Call {@link #clear()} in {@code @BeforeEach} to isolate tests.
+ * Tier 3 in the CDI priority ladder — {@code @Alternative @Priority(100)} beats
+ * JPA (Tier 1) when on the classpath. No Tier 2 (MongoDB) exists for this SPI
+ * yet (tracked as casehubio/work#253).
+ *
+ * <p>
+ * Thread-safe. Data is ephemeral (lost on restart).
  */
 @ApplicationScoped
 @Alternative
-@Priority(1)
+@Priority(100)
 public class InMemoryWorkItemNoteStore implements WorkItemNoteStore {
 
-    private final Map<UUID, WorkItemNote> store = new LinkedHashMap<>();
+    private final Map<UUID, WorkItemNote> store = new ConcurrentHashMap<>();
 
-    /** Clears all stored notes. Call in {@code @BeforeEach} to isolate tests. */
+    /** Removes all stored notes. Available for test isolation ({@code @BeforeEach}) and administrative reset. */
     public void clear() {
         store.clear();
     }
@@ -40,7 +46,7 @@ public class InMemoryWorkItemNoteStore implements WorkItemNoteStore {
             note.id = UUID.randomUUID();
         }
         if (note.createdAt == null) {
-            note.createdAt = java.time.Instant.now();
+            note.createdAt = Instant.now();
         }
         store.put(note.id, note);
         return note;
@@ -55,7 +61,7 @@ public class InMemoryWorkItemNoteStore implements WorkItemNoteStore {
     public List<WorkItemNote> findByWorkItemId(final UUID workItemId) {
         return store.values().stream()
                 .filter(n -> workItemId.equals(n.workItemId))
-                .sorted(java.util.Comparator.comparing(n -> n.createdAt))
+                .sorted(Comparator.comparing(n -> n.createdAt))
                 .toList();
     }
 
@@ -70,7 +76,7 @@ public class InMemoryWorkItemNoteStore implements WorkItemNoteStore {
         return store.remove(noteId) != null;
     }
 
-    /** Returns all notes, for test inspection. */
+    /** Returns all notes, for test inspection and administrative use. */
     public List<WorkItemNote> findAll() {
         return new ArrayList<>(store.values());
     }
