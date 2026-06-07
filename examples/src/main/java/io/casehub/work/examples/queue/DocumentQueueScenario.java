@@ -13,7 +13,7 @@ import jakarta.ws.rs.core.MediaType;
 import org.jboss.logging.Logger;
 
 import io.casehub.ledger.runtime.model.ActorTrustScore;
-import io.casehub.ledger.runtime.service.TrustGateService;
+import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
 import io.casehub.ledger.runtime.service.TrustScoreJob;
 import io.casehub.work.examples.QueueScenarioResponse;
 import io.casehub.work.examples.StepLog;
@@ -84,7 +84,7 @@ public class DocumentQueueScenario {
     TrustScoreJob trustScoreJob;
 
     @Inject
-    TrustGateService trustGateService;
+    ActorTrustScoreRepository trustScoreRepository;
 
     /**
      * Run the document review queue scenario end to end and return the full ledger, audit
@@ -249,11 +249,11 @@ public class DocumentQueueScenario {
         // ----------------------------------------------------------------
         // Fetch trust scores
         // ----------------------------------------------------------------
-        final ActorTrustScoreResponse bobTrust = trustGateService.findScore(ACTOR_BOB)
+        final ActorTrustScoreResponse bobTrust = trustScoreRepository.findByActorId(ACTOR_BOB)
                 .map(this::toResponse)
                 .orElseThrow(() -> new IllegalStateException("Trust score not found for " + ACTOR_BOB));
 
-        final ActorTrustScoreResponse aliceTrust = trustGateService.findScore(ACTOR_ALICE)
+        final ActorTrustScoreResponse aliceTrust = trustScoreRepository.findByActorId(ACTOR_ALICE)
                 .map(this::toResponse)
                 .orElseThrow(() -> new IllegalStateException("Trust score not found for " + ACTOR_ALICE));
 
