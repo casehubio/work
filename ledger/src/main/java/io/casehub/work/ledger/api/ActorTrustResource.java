@@ -14,7 +14,7 @@ import jakarta.ws.rs.core.Response;
 
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.model.ActorTrustScore;
-import io.casehub.ledger.runtime.service.TrustGateService;
+import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
 import io.casehub.work.ledger.api.dto.ActorTrustScoreResponse;
 
 /**
@@ -30,7 +30,7 @@ import io.casehub.work.ledger.api.dto.ActorTrustScoreResponse;
 public class ActorTrustResource {
 
     @Inject
-    TrustGateService trustGateService;
+    ActorTrustScoreRepository trustScoreRepository;
 
     @Inject
     LedgerConfig config;
@@ -53,7 +53,7 @@ public class ActorTrustResource {
                     .entity(Map.of("error", "Trust scoring is not enabled"))
                     .build();
         }
-        return trustGateService.findScore(actorId)
+        return trustScoreRepository.findByActorId(actorId)
                 .map(score -> Response.ok(toResponse(score)).build())
                 .orElse(Response.status(Response.Status.NOT_FOUND)
                         .entity(Map.of("error", "No trust score computed for: " + actorId))
