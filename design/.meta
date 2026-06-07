@@ -1,9 +1,0 @@
-branch: issue-191-persistence-memory
-project-sha: 85ef799b11df3e2b2cda2286e72db4ebab937933
-date: 2026-06-06
-issue: 191
-issue-repo: casehubio/work
-covers: 191
-flyway-next-v: none
-design-repo: project
-design-section-hashes:
