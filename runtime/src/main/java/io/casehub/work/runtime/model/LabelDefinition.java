@@ -28,6 +28,9 @@ public class LabelDefinition extends PanacheEntityBase {
     @Id
     public UUID id;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /** The full label path, e.g. {@code legal/contracts/nda}. NOT NULL enforced at DB level — converter null path is unreachable. */
     @Column(nullable = false, length = 500)
     @Convert(converter = PathAttributeConverter.class)

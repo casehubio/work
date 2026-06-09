@@ -52,6 +52,9 @@ public class WorkItemNote extends PanacheEntityBase {
     @Id
     public UUID id;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /** The WorkItem this note is attached to. Cascade-deleted with the WorkItem. */
     @Column(name = "work_item_id", nullable = false)
     public UUID workItemId;

@@ -59,6 +59,9 @@ public class WorkItem extends PanacheEntityBase {
     @Column(nullable = false)
     public Long version = 0L;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     // -------------------------------------------------------------------------
     // Core descriptive fields
     // -------------------------------------------------------------------------

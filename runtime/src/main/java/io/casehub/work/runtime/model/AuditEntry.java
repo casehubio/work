@@ -27,6 +27,9 @@ public class AuditEntry extends PanacheEntityBase {
     @Id
     public UUID id;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /** Foreign key referencing the {@link WorkItem} this entry belongs to. */
     @Column(name = "work_item_id", nullable = false)
     public UUID workItemId;

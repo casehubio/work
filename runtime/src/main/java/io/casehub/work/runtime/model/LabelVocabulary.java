@@ -26,6 +26,9 @@ public class LabelVocabulary extends PanacheEntityBase {
     @Id
     public UUID id;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /** Scope of this vocabulary. */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

@@ -74,6 +74,9 @@ public class WorkItemSpawnGroup extends PanacheEntityBase {
     @Column(nullable = false)
     public Long version = 0L;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /** instanceCount from MultiInstanceConfig; null for non-multi-instance groups. */
     @Column(name = "instance_count")
     public Integer instanceCount;

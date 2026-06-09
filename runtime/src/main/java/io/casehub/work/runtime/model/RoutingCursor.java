@@ -5,6 +5,7 @@ import java.time.Instant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
@@ -21,11 +22,16 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity
 @Table(name = "routing_cursor")
+@IdClass(RoutingCursorId.class)
 public class RoutingCursor extends PanacheEntityBase {
 
     @Id
     @Column(name = "pool_hash", length = 64, nullable = false, updatable = false)
     public String poolHash;
+
+    @Id
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
 
     @Column(name = "last_index", nullable = false)
     public int lastIndex = -1;

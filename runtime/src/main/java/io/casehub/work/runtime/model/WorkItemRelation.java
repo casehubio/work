@@ -48,6 +48,9 @@ public class WorkItemRelation extends PanacheEntityBase {
     @Id
     public UUID id;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /** The WorkItem where the relation originates. */
     @Column(name = "source_id", nullable = false)
     public UUID sourceId;

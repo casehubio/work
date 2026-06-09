@@ -47,12 +47,15 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity
 @Table(name = "work_item_template",
-       uniqueConstraints = @UniqueConstraint(name = "uq_work_item_template_name", columnNames = "name"))
+       uniqueConstraints = @UniqueConstraint(name = "uq_work_item_template_name_tenant", columnNames = {"name", "tenancy_id"}))
 public class WorkItemTemplate extends PanacheEntityBase {
 
     /** Primary key — UUID assigned on first persist. */
     @Id
     public UUID id;
+
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
 
     /** Human-readable name; used as the WorkItem title if no override is provided. */
     @Column(nullable = false, length = 255)

@@ -61,6 +61,9 @@ public class WorkItemSchedule extends PanacheEntityBase {
     @Column(nullable = false)
     public Long version = 0L;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /** Human-readable name for this schedule. */
     @Column(nullable = false, length = 255)
     public String name;
