@@ -27,7 +27,6 @@ import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
-import io.casehub.work.runtime.repository.WorkItemRelationStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
 import io.quarkus.logging.Log;
 
@@ -54,9 +53,6 @@ public class LedgerEventCapture {
 
     @Inject
     WorkItemStore workItemStore;
-
-    @Inject
-    WorkItemRelationStore relationStore;
 
     @Inject
     CurrentPrincipal currentPrincipal;
@@ -153,7 +149,7 @@ public class LedgerEventCapture {
         // PART_OF links (child → parent) are persisted before SPAWNED fires, so they
         // are visible here within the same transaction.
         if ("spawned".equals(eventSuffix(event.type()))) {
-            relationStore.findByTargetAndType(event.workItemId(), WorkItemRelationType.PART_OF)
+            WorkItemRelation.findByTargetAndType(event.workItemId(), WorkItemRelationType.PART_OF)
                     .forEach(rel -> ledgerRepo.findEarliestByWorkItemId(rel.sourceId)
                             .ifPresent(childCreatedEntry -> {
                                 if ("WorkItemCreated".equals(childCreatedEntry.eventType)
