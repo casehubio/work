@@ -203,6 +203,7 @@ filtering or dropping commits that touch these paths.
 | `ARC42STORIES.MD` | Primary architecture record |
 | `docs/MODULES.md` | Module ownership and structural constraints |
 | `docs/ECOSYSTEM.md` | Cross-project conventions (packaging, versioning, fork workflow) |
+| `docs/protocols/` | Standing architectural rules (multi-tenancy conventions, store patterns) |
 
 ## Work Tracking
 
