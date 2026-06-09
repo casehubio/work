@@ -22,6 +22,7 @@ import io.casehub.work.api.ChildSpec;
 import io.casehub.work.api.SpawnRequest;
 import io.casehub.work.api.SpawnResult;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
+import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.service.WorkItemNotFoundException;
 import io.casehub.work.runtime.service.WorkItemSpawnService;
 
@@ -41,6 +42,9 @@ public class WorkItemSpawnResource {
 
     @Inject
     WorkItemSpawnService spawnService;
+
+    @Inject
+    WorkItemSpawnGroupStore spawnGroupStore;
 
     /** Request body for a single child spec within a spawn call. */
     public record SpawnChildRequest(String templateId, String callerRef, Map<String, Object> overrides) {
@@ -126,7 +130,7 @@ public class WorkItemSpawnResource {
     @GET
     @Path("/{id}/spawn-groups")
     public List<Map<String, Object>> listSpawnGroups(@PathParam("id") final UUID parentId) {
-        return WorkItemSpawnGroup.findByParentId(parentId).stream()
+        return spawnGroupStore.findByParentId(parentId).stream()
                 .map(g -> Map.<String, Object> of(
                         "id", g.id.toString(),
                         "parentId", g.parentId.toString(),
@@ -150,7 +154,7 @@ public class WorkItemSpawnResource {
             @PathParam("id") final UUID parentId,
             @PathParam("groupId") final UUID groupId,
             @QueryParam("cancelChildren") final boolean cancelChildren) {
-        final WorkItemSpawnGroup group = WorkItemSpawnGroup.findById(groupId);
+        final WorkItemSpawnGroup group = spawnGroupStore.get(groupId).orElse(null);
         if (group == null || !group.parentId.equals(parentId)) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity(Map.of("error", "Spawn group not found")).build();

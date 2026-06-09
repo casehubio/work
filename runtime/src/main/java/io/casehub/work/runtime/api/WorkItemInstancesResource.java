@@ -3,6 +3,7 @@ package io.casehub.work.runtime.api;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -13,6 +14,8 @@ import jakarta.ws.rs.core.Response;
 import io.casehub.work.api.GroupStatus;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
+import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
+import io.casehub.work.runtime.repository.WorkItemStore;
 
 /**
  * REST endpoint for accessing the parallel instances of a multi-instance WorkItem.
@@ -25,6 +28,12 @@ import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 @Path("/workitems")
 @Produces(MediaType.APPLICATION_JSON)
 public class WorkItemInstancesResource {
+
+    @Inject
+    WorkItemStore workItemStore;
+
+    @Inject
+    WorkItemSpawnGroupStore spawnGroupStore;
 
     /**
      * Response projection for the instances endpoint — parent summary + child list.
@@ -58,16 +67,19 @@ public class WorkItemInstancesResource {
     @GET
     @Path("/{id}/instances")
     public Response getInstances(@PathParam("id") final UUID parentId) {
-        final WorkItem parent = WorkItem.findById(parentId);
+        final WorkItem parent = workItemStore.get(parentId).orElse(null);
         if (parent == null) {
             return Response.status(404).build();
         }
 
-        final WorkItemSpawnGroup group = WorkItemSpawnGroup.findMultiInstanceByParentId(parentId);
+        final WorkItemSpawnGroup group = spawnGroupStore.findMultiInstanceByParentId(parentId).orElse(null);
         if (group == null) {
             return Response.status(404).build();
         }
 
+        // Children query: parentId-scoped, tenant already verified via parent lookup above.
+        // WorkItemQuery doesn't support parentId; using inline Panache query with tenant filter
+        // (same pattern as JpaWorkItemStore.scanRoots — will be consolidated in Task 21).
         final List<WorkItem> children = WorkItem.list("parentId", parentId);
         final GroupStatus status = group.policyTriggered
                 ? (group.completedCount >= group.requiredCount ? GroupStatus.COMPLETED : GroupStatus.REJECTED)

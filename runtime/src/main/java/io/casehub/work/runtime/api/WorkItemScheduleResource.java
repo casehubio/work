@@ -18,6 +18,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import io.casehub.work.runtime.model.WorkItemSchedule;
+import io.casehub.work.runtime.repository.WorkItemScheduleStore;
 import io.casehub.work.runtime.service.WorkItemScheduleService;
 
 /**
@@ -38,6 +39,9 @@ public class WorkItemScheduleResource {
 
     @Inject
     WorkItemScheduleService scheduleService;
+
+    @Inject
+    WorkItemScheduleStore scheduleStore;
 
     /**
      * @param name human-readable schedule name (required)
@@ -88,7 +92,7 @@ public class WorkItemScheduleResource {
     /** List all schedules ordered by name. */
     @GET
     public List<Map<String, Object>> list() {
-        return WorkItemSchedule.listAllByName().stream().map(this::toResponse).toList();
+        return scheduleStore.scanAll().stream().map(this::toResponse).toList();
     }
 
     /** Get a single schedule by ID; 404 if not found. */
@@ -105,7 +109,7 @@ public class WorkItemScheduleResource {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") final UUID id) {
-        return WorkItemSchedule.deleteById(id) ? Response.noContent().build() : notFound();
+        return scheduleStore.delete(id) ? Response.noContent().build() : notFound();
     }
 
     /**

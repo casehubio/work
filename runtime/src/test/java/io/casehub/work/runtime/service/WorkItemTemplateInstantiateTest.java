@@ -71,6 +71,7 @@ class WorkItemTemplateInstantiateTest {
         t.candidateGroups = "reviewers";
         t.createdBy = "admin";
         t.instanceCount = instanceCount;
+        t.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
         t.persist();
         return t;
     }

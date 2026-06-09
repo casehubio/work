@@ -225,9 +225,4 @@ public class WorkItemTemplate extends PanacheEntityBase {
             createdAt = Instant.now();
         }
     }
-
-    /** Return all templates, ordered by name ascending. */
-    public static List<WorkItemTemplate> listAllByName() {
-        return list("ORDER BY name ASC");
-    }
 }

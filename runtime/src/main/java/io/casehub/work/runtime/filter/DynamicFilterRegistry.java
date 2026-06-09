@@ -7,8 +7,11 @@ import java.util.Objects;
 import java.util.Set;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.casehub.work.runtime.repository.FilterRuleStore;
 
 /**
  * Registry of DB-persisted filter rules (dynamic — CRUD via REST at /filter-rules).
@@ -19,13 +22,16 @@ public class DynamicFilterRegistry {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    @Inject
+    FilterRuleStore filterRuleStore;
+
     /**
      * Returns all enabled dynamic filter definitions from the database.
      *
      * @return enabled filter definitions
      */
     public List<FilterDefinition> allEnabled() {
-        return FilterRule.allEnabled().stream()
+        return filterRuleStore.allEnabled().stream()
                 .map(this::toDefinition)
                 .filter(Objects::nonNull)
                 .toList();

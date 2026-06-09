@@ -36,6 +36,7 @@ import io.casehub.work.runtime.model.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.model.WorkItemStatus;
 import io.casehub.work.runtime.repository.AuditEntryStore;
+import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
 
 @ApplicationScoped
@@ -49,6 +50,9 @@ public class WorkItemService {
     private final ExclusionPolicy exclusionPolicy;
     private final BlockedAttemptAuditService blockedAuditService;
     private final CapabilityValidator capabilityValidator;
+
+    @Inject
+    WorkItemSpawnGroupStore spawnGroupStore;
 
     @Inject
     EntityManager em;
@@ -187,7 +191,7 @@ public class WorkItemService {
         // has @Version and would otherwise participate in persistAndFlush(), racing with
         // the async MultiInstanceCoordinator updating the same version column.
         if (item.parentId != null) {
-            final WorkItemSpawnGroup group = WorkItemSpawnGroup.findMultiInstanceByParentId(item.parentId);
+            final WorkItemSpawnGroup group = spawnGroupStore.findMultiInstanceByParentId(item.parentId).orElse(null);
             if (group != null) {
                 em.detach(group);
                 if (!group.allowSameAssignee) {

@@ -9,12 +9,17 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.AuditQuery;
 
 /**
  * Default JPA/Panache implementation of {@link AuditEntryStore}.
+ *
+ * <p>Every query is scoped to the current tenant via {@link CurrentPrincipal#tenancyId()}.
+ * The {@link #append} method stamps {@code tenancyId} from the principal on insert when
+ * the entity does not already carry one.
  */
 @ApplicationScoped
 public class JpaAuditEntryStore implements AuditEntryStore {
@@ -22,14 +27,21 @@ public class JpaAuditEntryStore implements AuditEntryStore {
     @Inject
     EntityManager em;
 
+    @Inject
+    CurrentPrincipal currentPrincipal;
+
     @Override
     public void append(final AuditEntry entry) {
+        if (entry.tenancyId == null) {
+            entry.tenancyId = currentPrincipal.tenancyId();
+        }
         entry.persist();
     }
 
     @Override
     public List<AuditEntry> findByWorkItemId(final UUID workItemId) {
-        return AuditEntry.list("workItemId = ?1 ORDER BY occurredAt ASC", workItemId);
+        return AuditEntry.list("workItemId = ?1 AND tenancyId = ?2 ORDER BY occurredAt ASC",
+                workItemId, currentPrincipal.tenancyId());
     }
 
     @Override
@@ -56,6 +68,9 @@ public class JpaAuditEntryStore implements AuditEntryStore {
 
         final List<String> predicates = new ArrayList<>();
 
+        // Tenant isolation — always first
+        predicates.add("a.tenancyId = :tenancyId");
+
         if (query.actorId() != null && !query.actorId().isBlank()) {
             predicates.add("a.actor = :actorId");
         }
@@ -69,8 +84,8 @@ public class JpaAuditEntryStore implements AuditEntryStore {
             predicates.add("a.event = :event");
         }
         if (query.category() != null && !query.category().isBlank()) {
-            // Subquery to filter by WorkItem category — no JOIN on the main query
-            predicates.add("a.workItemId IN (SELECT w.id FROM WorkItem w WHERE w.category = :category)");
+            // Subquery to filter by WorkItem category — tenant-scoped subquery
+            predicates.add("a.workItemId IN (SELECT w.id FROM WorkItem w WHERE w.category = :category AND w.tenancyId = :tenancyId)");
         }
 
         if (!predicates.isEmpty()) {
@@ -85,6 +100,9 @@ public class JpaAuditEntryStore implements AuditEntryStore {
     }
 
     private void applyParams(final jakarta.persistence.Query q, final AuditQuery query) {
+        // Tenant isolation — always applied
+        q.setParameter("tenancyId", currentPrincipal.tenancyId());
+
         if (query.actorId() != null && !query.actorId().isBlank()) {
             q.setParameter("actorId", query.actorId());
         }

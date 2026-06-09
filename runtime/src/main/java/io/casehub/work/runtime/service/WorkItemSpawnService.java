@@ -25,7 +25,10 @@ import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.AuditEntryStore;
+import io.casehub.work.runtime.repository.WorkItemRelationStore;
+import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.runtime.repository.WorkItemTemplateStore;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
 
 /**
@@ -48,17 +51,25 @@ public class WorkItemSpawnService implements SpawnPort {
     private final WorkItemService workItemService;
     private final AuditEntryStore auditStore;
     private final TemplateExpander templateExpander;
+    private final WorkItemRelationStore relationStore;
+    private final WorkItemSpawnGroupStore spawnGroupStore;
+    private final WorkItemTemplateStore templateStore;
 
     @Inject
     Event<WorkItemLifecycleEvent> lifecycleEvent;
 
     @Inject
     public WorkItemSpawnService(final WorkItemStore workItemStore, final WorkItemService workItemService,
-            final AuditEntryStore auditStore, final TemplateExpander templateExpander) {
+            final AuditEntryStore auditStore, final TemplateExpander templateExpander,
+            final WorkItemRelationStore relationStore, final WorkItemSpawnGroupStore spawnGroupStore,
+            final WorkItemTemplateStore templateStore) {
         this.workItemStore = workItemStore;
         this.workItemService = workItemService;
         this.auditStore = auditStore;
         this.templateExpander = templateExpander;
+        this.relationStore = relationStore;
+        this.spawnGroupStore = spawnGroupStore;
+        this.templateStore = templateStore;
     }
 
     /**
@@ -89,11 +100,11 @@ public class WorkItemSpawnService implements SpawnPort {
         }
 
         // Idempotency check
-        final WorkItemSpawnGroup existing = WorkItemSpawnGroup.findByParentAndKey(
-                request.parentId(), request.idempotencyKey());
+        final WorkItemSpawnGroup existing = spawnGroupStore.findByParentAndKey(
+                request.parentId(), request.idempotencyKey()).orElse(null);
         if (existing != null) {
             final String createdByMarker = "system:spawn:" + existing.id;
-            final List<SpawnedChild> existingChildren = WorkItemRelation
+            final List<SpawnedChild> existingChildren = relationStore
                     .findByTargetAndType(request.parentId(), WorkItemRelationType.PART_OF)
                     .stream()
                     .filter(r -> createdByMarker.equals(r.createdBy))
@@ -109,15 +120,14 @@ public class WorkItemSpawnService implements SpawnPort {
         final WorkItemSpawnGroup group = new WorkItemSpawnGroup();
         group.parentId = request.parentId();
         group.idempotencyKey = request.idempotencyKey();
-        group.persist();
+        spawnGroupStore.put(group);
 
         // Spawn each child
         final List<SpawnedChild> spawnedChildren = new ArrayList<>();
         for (final ChildSpec spec : request.children()) {
-            final WorkItemTemplate template = WorkItemTemplate.findById(spec.templateId());
-            if (template == null) {
-                throw new IllegalArgumentException("WorkItemTemplate not found: " + spec.templateId());
-            }
+            final WorkItemTemplate template = templateStore.get(spec.templateId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "WorkItemTemplate not found: " + spec.templateId()));
 
             final WorkItemCreateRequest createRequest = WorkItemCreateRequest.builder()
                     .title(template.name)
@@ -147,7 +157,7 @@ public class WorkItemSpawnService implements SpawnPort {
             relation.targetId = request.parentId();
             relation.relationType = WorkItemRelationType.PART_OF;
             relation.createdBy = "system:spawn:" + group.id;
-            relation.persist();
+            relationStore.put(relation);
 
             spawnedChildren.add(new SpawnedChild(child.id, spec.callerRef()));
         }
@@ -179,14 +189,12 @@ public class WorkItemSpawnService implements SpawnPort {
     @Override
     @Transactional
     public void cancelGroup(final UUID groupId, final boolean cascadeChildren) {
-        final WorkItemSpawnGroup group = WorkItemSpawnGroup.findById(groupId);
-        if (group == null) {
-            throw new WorkItemNotFoundException(groupId);
-        }
+        final WorkItemSpawnGroup group = spawnGroupStore.get(groupId)
+                .orElseThrow(() -> new WorkItemNotFoundException(groupId));
 
         if (cascadeChildren) {
             final String createdByMarker = "system:spawn:" + groupId;
-            WorkItemRelation.findByTargetAndType(group.parentId, WorkItemRelationType.PART_OF)
+            relationStore.findByTargetAndType(group.parentId, WorkItemRelationType.PART_OF)
                     .stream()
                     .filter(r -> createdByMarker.equals(r.createdBy))
                     .forEach(r -> workItemStore.get(r.sourceId).ifPresent(child -> {
@@ -197,7 +205,7 @@ public class WorkItemSpawnService implements SpawnPort {
                     }));
         }
 
-        group.delete();
+        spawnGroupStore.delete(groupId);
     }
 
     /**

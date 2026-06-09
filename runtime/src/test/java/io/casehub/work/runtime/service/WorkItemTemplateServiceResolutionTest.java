@@ -202,6 +202,7 @@ class WorkItemTemplateServiceResolutionTest {
         final WorkItemTemplate t = new WorkItemTemplate();
         t.name = name;
         t.createdBy = "test";
+        t.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
         WorkItemTemplate.persist(t);
         return t;
     }

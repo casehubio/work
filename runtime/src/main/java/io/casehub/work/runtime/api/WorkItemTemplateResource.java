@@ -50,6 +50,9 @@ public class WorkItemTemplateResource {
     @Inject
     WorkItemTemplateService templateService;
 
+    @Inject
+    io.casehub.work.runtime.repository.WorkItemTemplateStore templateStore;
+
     /**
      * Request body for creating a new template.
      *
@@ -256,7 +259,7 @@ public class WorkItemTemplateResource {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(Map.of("error", e.getMessage())).build();
         }
-        t.persist();
+        templateStore.put(t);
 
         return Response.status(Response.Status.CREATED).entity(toResponse(t)).build();
     }
@@ -268,7 +271,7 @@ public class WorkItemTemplateResource {
      */
     @GET
     public List<Map<String, Object>> listTemplates() {
-        return WorkItemTemplate.listAllByName().stream().map(this::toResponse).toList();
+        return templateStore.scanAll().stream().map(this::toResponse).toList();
     }
 
     /**
@@ -293,13 +296,13 @@ public class WorkItemTemplateResource {
      * Does NOT delete WorkItems previously instantiated from this template.
      *
      * @param id the template UUID
-     * @return 204 No Content on success, 404 if not found
+     * @return 204 No Content on success, 404 if not found or not owned by current tenant
      */
     @DELETE
     @Path("/{id}")
     @Transactional
     public Response deleteTemplate(@PathParam("id") final UUID id) {
-        return WorkItemTemplate.deleteById(id)
+        return templateStore.delete(id)
                 ? Response.noContent().build()
                 : Response.status(Response.Status.NOT_FOUND)
                         .entity(Map.of("error", "Template not found")).build();

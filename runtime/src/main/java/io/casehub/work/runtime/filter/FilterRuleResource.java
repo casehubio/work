@@ -39,6 +39,9 @@ public class FilterRuleResource {
     @Inject
     PermanentFilterRegistry permanentRegistry;
 
+    @Inject
+    io.casehub.work.runtime.repository.FilterRuleStore filterRuleStore;
+
     /** Request body for creating a dynamic filter rule. */
     public record CreateFilterRuleRequest(
             String name,
@@ -74,7 +77,7 @@ public class FilterRuleResource {
                 ? String.join(",", req.events())
                 : "ADD,UPDATE,REMOVE";
         rule.actionsJson = req.actionsJson() != null ? req.actionsJson() : "[]";
-        rule.persist();
+        filterRuleStore.put(rule);
         return Response.status(201).entity(toResponse(rule)).build();
     }
 
@@ -85,7 +88,9 @@ public class FilterRuleResource {
      */
     @GET
     public List<Map<String, Object>> list() {
-        return FilterRule.<FilterRule> listAll().stream().map(this::toResponse).toList();
+        return filterRuleStore.scanAll().stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     /**
@@ -97,9 +102,9 @@ public class FilterRuleResource {
     @GET
     @Path("/{id}")
     public Response get(@PathParam("id") final UUID id) {
-        final FilterRule rule = FilterRule.findById(id);
-        return rule != null ? Response.ok(toResponse(rule)).build()
-                : Response.status(404).entity(Map.of("error", "Not found")).build();
+        return filterRuleStore.get(id)
+                .map(rule -> Response.ok(toResponse(rule)).build())
+                .orElse(Response.status(404).entity(Map.of("error", "Not found")).build());
     }
 
     /**
@@ -112,7 +117,7 @@ public class FilterRuleResource {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") final UUID id) {
-        return FilterRule.deleteById(id) ? Response.noContent().build()
+        return filterRuleStore.delete(id) ? Response.noContent().build()
                 : Response.status(404).entity(Map.of("error", "Not found")).build();
     }
 

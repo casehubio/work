@@ -37,8 +37,10 @@ import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemRootView;
 import io.casehub.work.runtime.model.WorkItemStatus;
 import io.casehub.work.runtime.repository.AuditEntryStore;
+import io.casehub.work.runtime.repository.WorkItemLinkStore;
 import io.casehub.work.runtime.repository.WorkItemNoteStore;
 import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.runtime.repository.WorkItemRelationStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
 import io.casehub.work.runtime.service.InboxSummaryBuilder;
 import io.casehub.work.runtime.service.LabelNotFoundException;
@@ -62,6 +64,12 @@ public class WorkItemResource {
 
     @Inject
     WorkItemNoteStore noteStore;
+
+    @Inject
+    WorkItemRelationStore relationStore;
+
+    @Inject
+    WorkItemLinkStore linkStore;
 
     @Inject
     WorkItemEventBroadcaster broadcaster;
@@ -592,7 +600,7 @@ public class WorkItemResource {
     @GET
     @Path("/{id}/children")
     public List<WorkItemResponse> children(@PathParam("id") final UUID parentId) {
-        return WorkItemRelation.findByTargetAndType(parentId, WorkItemRelationType.PART_OF)
+        return relationStore.findByTargetAndType(parentId, WorkItemRelationType.PART_OF)
                 .stream()
                 .map(r -> workItemStore.get(r.sourceId).orElse(null))
                 .filter(wi -> wi != null)
@@ -614,7 +622,7 @@ public class WorkItemResource {
     @GET
     @Path("/{id}/parent")
     public Response parent(@PathParam("id") final UUID childId) {
-        return WorkItemRelation.findBySourceAndType(childId, WorkItemRelationType.PART_OF)
+        return relationStore.findBySourceAndType(childId, WorkItemRelationType.PART_OF)
                 .stream().findFirst()
                 .flatMap(r -> workItemStore.get(r.targetId))
                 .map(wi -> Response.ok(WorkItemMapper.toResponse(wi)).build())
@@ -667,7 +675,7 @@ public class WorkItemResource {
         link.title = request.title();
         link.relationType = request.relationType();
         link.linkedBy = request.linkedBy() != null ? request.linkedBy() : "unknown";
-        link.persist();
+        linkStore.put(link);
         return Response.status(Response.Status.CREATED).entity(toLinkResponse(link)).build();
     }
 
@@ -684,8 +692,8 @@ public class WorkItemResource {
             @PathParam("id") final UUID id,
             @QueryParam("type") final String type) {
         final List<WorkItemLink> links = (type != null && !type.isBlank())
-                ? WorkItemLink.findByWorkItemIdAndType(id, type)
-                : WorkItemLink.findByWorkItemId(id);
+                ? linkStore.findByWorkItemIdAndType(id, type)
+                : linkStore.findByWorkItemId(id);
         return links.stream().map(this::toLinkResponse).toList();
     }
 
@@ -705,12 +713,12 @@ public class WorkItemResource {
     public Response deleteLink(
             @PathParam("id") final UUID id,
             @PathParam("linkId") final UUID linkId) {
-        final WorkItemLink link = WorkItemLink.findById(linkId);
-        if (link == null || !link.workItemId.equals(id)) {
+        final java.util.Optional<WorkItemLink> linkOpt = linkStore.get(linkId);
+        if (linkOpt.isEmpty() || !linkOpt.get().workItemId.equals(id)) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity(Map.of("error", "Link not found")).build();
         }
-        link.delete();
+        linkStore.delete(linkId);
         return Response.noContent().build();
     }
 

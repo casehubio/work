@@ -4,15 +4,24 @@ import java.util.List;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelDefinition;
 import io.casehub.work.runtime.model.LabelVocabulary;
 import io.casehub.work.runtime.model.VocabularyScope;
+import io.casehub.work.runtime.repository.LabelDefinitionStore;
+import io.casehub.work.runtime.repository.LabelVocabularyStore;
 
 @ApplicationScoped
 public class LabelVocabularyService {
+
+    @Inject
+    LabelDefinitionStore labelDefinitionStore;
+
+    @Inject
+    LabelVocabularyStore labelVocabularyStore;
 
     /**
      * Returns true if a label declared in {@code definitionScope} is accessible
@@ -58,7 +67,7 @@ public class LabelVocabularyService {
      */
     @Transactional
     public boolean isDeclared(final Path path) {
-        return !LabelDefinition.findByPath(path).isEmpty();
+        return !labelDefinitionStore.findByPath(path).isEmpty();
     }
 
     /**
@@ -81,9 +90,9 @@ public class LabelVocabularyService {
      */
     @Transactional
     public List<LabelDefinition> listAccessible(final VocabularyScope callerScope) {
-        return LabelVocabulary.<LabelVocabulary> listAll().stream()
+        return labelVocabularyStore.scanAll().stream()
                 .filter(v -> isScopeAccessible(v.scope, callerScope))
-                .flatMap(v -> LabelDefinition.findByVocabularyId(v.id).stream())
+                .flatMap(v -> labelDefinitionStore.findByVocabularyId(v.id).stream())
                 .toList();
     }
 
@@ -92,8 +101,10 @@ public class LabelVocabularyService {
      */
     @Transactional
     public LabelVocabulary findGlobalVocabulary() {
-        return LabelVocabulary.<LabelVocabulary> find("scope", VocabularyScope.GLOBAL)
-                .firstResult();
+        return labelVocabularyStore.scanAll().stream()
+                .filter(v -> v.scope == VocabularyScope.GLOBAL)
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -103,9 +114,10 @@ public class LabelVocabularyService {
     @Transactional
     public LabelVocabulary findOrCreateVocabulary(final VocabularyScope scope, final String ownerId,
             final String name) {
-        LabelVocabulary existing = LabelVocabulary
-                .<LabelVocabulary> find("scope = ?1 and ownerId = ?2", scope, ownerId)
-                .firstResult();
+        LabelVocabulary existing = labelVocabularyStore.scanAll().stream()
+                .filter(v -> v.scope == scope && ownerId.equals(v.ownerId))
+                .findFirst()
+                .orElse(null);
         if (existing != null) {
             return existing;
         }
@@ -113,7 +125,6 @@ public class LabelVocabularyService {
         vocab.scope = scope;
         vocab.ownerId = ownerId;
         vocab.name = name;
-        vocab.persist();
-        return vocab;
+        return labelVocabularyStore.put(vocab);
     }
 }

@@ -3,6 +3,7 @@ package io.casehub.work.runtime.api;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,6 +22,7 @@ import jakarta.ws.rs.core.Response;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
+import io.casehub.work.runtime.repository.WorkItemRelationStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
 
 /**
@@ -49,6 +51,9 @@ public class WorkItemRelationResource {
 
     @Inject
     WorkItemStore workItemStore;
+
+    @Inject
+    WorkItemRelationStore relationStore;
 
     /**
      * Request body for adding a relation.
@@ -105,7 +110,7 @@ public class WorkItemRelationResource {
         }
 
         // Duplicate detection
-        if (WorkItemRelation.findExisting(sourceId, targetId, request.relationType()) != null) {
+        if (relationStore.findExisting(sourceId, targetId, request.relationType()).isPresent()) {
             return Response.status(Response.Status.CONFLICT)
                     .entity(Map.of("error", "Relation already exists")).build();
         }
@@ -115,7 +120,7 @@ public class WorkItemRelationResource {
         rel.targetId = targetId;
         rel.relationType = request.relationType();
         rel.createdBy = request.createdBy() != null ? request.createdBy() : "unknown";
-        rel.persist();
+        relationStore.put(rel);
 
         return Response.status(Response.Status.CREATED).entity(toResponse(rel)).build();
     }
@@ -128,7 +133,7 @@ public class WorkItemRelationResource {
      */
     @GET
     public List<Map<String, Object>> listOutgoing(@PathParam("id") final UUID sourceId) {
-        return WorkItemRelation.findBySourceId(sourceId).stream().map(this::toResponse).toList();
+        return relationStore.findBySourceId(sourceId).stream().map(this::toResponse).toList();
     }
 
     /**
@@ -140,7 +145,7 @@ public class WorkItemRelationResource {
     @GET
     @Path("/incoming")
     public List<Map<String, Object>> listIncoming(@PathParam("id") final UUID targetId) {
-        return WorkItemRelation.findByTargetId(targetId).stream().map(this::toResponse).toList();
+        return relationStore.findByTargetId(targetId).stream().map(this::toResponse).toList();
     }
 
     /**
@@ -157,12 +162,12 @@ public class WorkItemRelationResource {
             @PathParam("id") final UUID sourceId,
             @PathParam("relationId") final UUID relationId) {
 
-        final WorkItemRelation rel = WorkItemRelation.findById(relationId);
-        if (rel == null || !rel.sourceId.equals(sourceId)) {
+        final Optional<WorkItemRelation> relOpt = relationStore.get(relationId);
+        if (relOpt.isEmpty() || !relOpt.get().sourceId.equals(sourceId)) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity(Map.of("error", "Relation not found")).build();
         }
-        rel.delete();
+        relationStore.delete(relationId);
         return Response.noContent().build();
     }
 
@@ -195,7 +200,7 @@ public class WorkItemRelationResource {
                 break; // already-existing cycle in the graph (shouldn't happen, but safe)
             }
             final UUID next = current;
-            current = WorkItemRelation.findBySourceAndType(next, WorkItemRelationType.PART_OF)
+            current = relationStore.findBySourceAndType(next, WorkItemRelationType.PART_OF)
                     .stream().findFirst()
                     .map(r -> r.targetId)
                     .orElse(null);

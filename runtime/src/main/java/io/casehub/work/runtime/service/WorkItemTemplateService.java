@@ -47,6 +47,9 @@ public class WorkItemTemplateService {
     @Inject
     TemplateExpander templateExpander;
 
+    @Inject
+    io.casehub.work.runtime.repository.WorkItemTemplateStore templateStore;
+
     /**
      * Instantiate a {@link WorkItemTemplate} into a new PENDING {@link WorkItem}.
      *
@@ -359,11 +362,11 @@ public class WorkItemTemplateService {
      * Find a template by ID.
      *
      * @param templateId the UUID
-     * @return the template, or empty if not found
+     * @return the template, or empty if not found or if the template belongs to a different tenant
      */
     @Transactional
     public Optional<WorkItemTemplate> findById(final UUID templateId) {
-        return Optional.ofNullable(WorkItemTemplate.findById(templateId));
+        return templateStore.get(templateId);
     }
 
     /**
@@ -371,14 +374,10 @@ public class WorkItemTemplateService {
      *
      * @param name the template name to look up
      * @return the matching template, or empty if none found
-     * @throws IllegalStateException if more than one template shares this name — a
-     *         configuration error; the operator must deduplicate before the ref is usable.
-     *         A DB-level UNIQUE constraint is the correct long-term enforcement
-     *         (tracked as casehubio/work#174).
      */
     @Transactional
     public Optional<WorkItemTemplate> findByName(final String name) {
-        return WorkItemTemplate.find("name", name).firstResultOptional();
+        return templateStore.getByName(name);
     }
 
     /**

@@ -13,6 +13,8 @@ import io.casehub.work.api.WorkItemGroupLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
+import io.casehub.work.runtime.repository.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 
 @ApplicationScoped
@@ -20,6 +22,12 @@ public class MultiInstanceGroupPolicy {
 
     @Inject
     WorkItemService workItemService;
+
+    @Inject
+    WorkItemStore workItemStore;
+
+    @Inject
+    WorkItemSpawnGroupStore spawnGroupStore;
 
     @Inject
     Event<WorkItemGroupLifecycleEvent> groupEvent;
@@ -45,11 +53,11 @@ public class MultiInstanceGroupPolicy {
      */
     @Transactional
     public WorkItemGroupLifecycleEvent process(final UUID childId, final WorkItemStatus childStatus) {
-        final WorkItem child = WorkItem.findById(childId);
+        final WorkItem child = workItemStore.get(childId).orElse(null);
         if (child == null)
             return null;
 
-        final WorkItemSpawnGroup group = WorkItemSpawnGroup.findMultiInstanceByParentId(child.parentId);
+        final WorkItemSpawnGroup group = spawnGroupStore.findMultiInstanceByParentId(child.parentId).orElse(null);
         if (group == null)
             return null;
         if (group.policyTriggered)
@@ -132,7 +140,7 @@ public class MultiInstanceGroupPolicy {
     }
 
     private WorkItemGroupLifecycleEvent buildGroupEvent(final WorkItemSpawnGroup group, final GroupStatus status) {
-        final WorkItem parent = WorkItem.findById(group.parentId);
+        final WorkItem parent = workItemStore.get(group.parentId).orElse(null);
         return WorkItemGroupLifecycleEvent.of(
                 group.parentId, group.id,
                 group.instanceCount, group.requiredCount,

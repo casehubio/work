@@ -59,14 +59,4 @@ public class LabelDefinition extends PanacheEntityBase {
         }
         createdAt = Instant.now();
     }
-
-    /** Find all definitions for a given vocabulary. */
-    public static List<LabelDefinition> findByVocabularyId(final UUID vocabularyId) {
-        return find("vocabularyId", vocabularyId).list();
-    }
-
-    /** Find by exact path across all vocabularies. */
-    public static List<LabelDefinition> findByPath(final Path path) {
-        return find("path", path).list();
-    }
 }

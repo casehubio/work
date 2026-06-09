@@ -57,13 +57,4 @@ public class FilterRule extends PanacheEntityBase {
             createdAt = Instant.now();
         }
     }
-
-    /**
-     * Returns all enabled filter rules, ordered by creation time ascending.
-     *
-     * @return list of enabled FilterRule entities
-     */
-    public static List<FilterRule> allEnabled() {
-        return list("enabled = true ORDER BY createdAt ASC");
-    }
 }

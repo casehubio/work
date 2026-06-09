@@ -9,11 +9,17 @@ import jakarta.transaction.Transactional;
 
 import org.jboss.logging.Logger;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.core.strategy.RoutingCursorStore;
 import io.casehub.work.runtime.model.RoutingCursor;
+import io.casehub.work.runtime.model.RoutingCursorId;
 
 /**
  * JPA-backed {@link RoutingCursorStore}.
+ *
+ * <p>
+ * All cursors are tenant-scoped via {@link CurrentPrincipal#tenancyId()}.
+ * The composite primary key ({@code poolHash + tenancyId}) is used for find-or-create.
  *
  * <p>
  * {@code acquireNext()} is non-transactional so it can retry by calling
@@ -29,6 +35,9 @@ public class JpaRoutingCursorStore implements RoutingCursorStore {
 
     @Inject
     JpaRoutingCursorStore self;
+
+    @Inject
+    CurrentPrincipal currentPrincipal;
 
     @Override
     public int acquireNext(final String poolHash, final int poolSize) {
@@ -48,12 +57,17 @@ public class JpaRoutingCursorStore implements RoutingCursorStore {
     /**
      * Single atomic attempt: find-or-create cursor, advance index, persist.
      * Runs in its own {@code REQUIRES_NEW} transaction; callers handle retries.
+     * Tenant-scoped: uses composite key (poolHash + tenancyId) for lookup.
      */
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public int doAcquire(final String poolHash, final int poolSize) {
-        RoutingCursor cursor = RoutingCursor.findById(poolHash);
+        final String tenancyId = currentPrincipal.tenancyId();
+        final RoutingCursorId id = new RoutingCursorId(poolHash, tenancyId);
+
+        RoutingCursor cursor = RoutingCursor.findById(id);
         if (cursor == null) {
             cursor = new RoutingCursor(poolHash);
+            cursor.tenancyId = tenancyId;
             cursor.persist();
             RoutingCursor.flush();
         }

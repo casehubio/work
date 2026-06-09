@@ -15,6 +15,8 @@ import org.quartz.CronExpression;
 
 import io.casehub.work.runtime.model.WorkItemSchedule;
 import io.casehub.work.runtime.model.WorkItemTemplate;
+import io.casehub.work.runtime.repository.WorkItemScheduleStore;
+import io.casehub.work.runtime.repository.WorkItemTemplateStore;
 import io.quarkus.scheduler.Scheduled;
 
 /**
@@ -44,6 +46,12 @@ public class WorkItemScheduleService {
 
     @Inject
     WorkItemTemplateService templateService;
+
+    @Inject
+    WorkItemScheduleStore scheduleStore;
+
+    @Inject
+    WorkItemTemplateStore templateStore;
 
     /**
      * Background job: find all due active schedules and instantiate their templates.
@@ -94,7 +102,7 @@ public class WorkItemScheduleService {
     /** Read the due schedules in a short-lived transaction. */
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public List<WorkItemSchedule> findDueSchedules() {
-        return WorkItemSchedule.findDue(Instant.now());
+        return scheduleStore.findDue(Instant.now());
     }
 
     /**
@@ -112,11 +120,11 @@ public class WorkItemScheduleService {
      */
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public void fireSchedule(final UUID scheduleId) throws Exception {
-        final WorkItemSchedule schedule = WorkItemSchedule.findById(scheduleId);
+        final WorkItemSchedule schedule = scheduleStore.get(scheduleId).orElse(null);
         if (schedule == null)
             return;
 
-        final WorkItemTemplate template = WorkItemTemplate.findById(schedule.templateId);
+        final WorkItemTemplate template = templateStore.get(schedule.templateId).orElse(null);
         if (template == null) {
             LOG.warnf("Schedule %s references missing template %s — skipping", scheduleId, schedule.templateId);
             return;
@@ -151,8 +159,7 @@ public class WorkItemScheduleService {
         s.createdBy = createdBy;
         s.active = true;
         s.nextFireAt = nextFireAt;
-        s.persist();
-        return s;
+        return scheduleStore.put(s);
     }
 
     /**
@@ -162,7 +169,7 @@ public class WorkItemScheduleService {
      */
     @Transactional
     public Optional<WorkItemSchedule> setActive(final UUID id, final boolean active) throws Exception {
-        final WorkItemSchedule s = WorkItemSchedule.findById(id);
+        final WorkItemSchedule s = scheduleStore.get(id).orElse(null);
         if (s == null)
             return Optional.empty();
         s.active = active;
@@ -175,7 +182,7 @@ public class WorkItemScheduleService {
     /** Find a schedule by ID. */
     @Transactional
     public Optional<WorkItemSchedule> findById(final UUID id) {
-        return Optional.ofNullable(WorkItemSchedule.findById(id));
+        return scheduleStore.get(id);
     }
 
     /**
@@ -185,10 +192,9 @@ public class WorkItemScheduleService {
      */
     @Transactional
     public void forceDue(final UUID scheduleId) {
-        final WorkItemSchedule s = WorkItemSchedule.findById(scheduleId);
-        if (s != null) {
+        scheduleStore.get(scheduleId).ifPresent(s -> {
             s.nextFireAt = Instant.now().minusSeconds(1);
-        }
+        });
     }
 
     // ── Pure static helpers — unit-testable without CDI ───────────────────────
