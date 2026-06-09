@@ -9,3 +9,6 @@
 | 0005 | [Group Membership Snapshot at WorkItem Creation](0005-group-membership-snapshot-at-workitem-creation.md) | Accepted | 2026-06-02 |
 | 0006 | [Evaluate outcome conditions at completion time, not at instantiation](0006-evaluate-outcome-conditions-at-completion-time.md) | Accepted | 2026-06-06 |
 | 0007 | [Use JEXL as the condition expression language for outcomes](0007-jexl-as-outcome-condition-language.md) | Accepted | 2026-06-06 |
+| 0008 | [Application-level tenant filtering](0008-application-level-tenant-filtering.md) | Accepted | 2026-06-09 |
+| 0009 | [TenantContextRunner for async and background work](0009-tenant-context-runner-async-pattern.md) | Accepted | 2026-06-09 |
+| 0010 | [Cross-tenant access via type-safe CDI qualifier](0010-cross-tenant-type-safe-qualifier.md) | Accepted | 2026-06-09 |
