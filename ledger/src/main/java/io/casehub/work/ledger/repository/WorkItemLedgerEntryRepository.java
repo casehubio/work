@@ -18,6 +18,9 @@ import io.casehub.work.ledger.model.WorkItemLedgerEntry;
  * return concrete {@link WorkItemLedgerEntry} instances rather than the base type.
  * Alias methods ({@code findByWorkItemId}, {@code findLatestByWorkItemId}) delegate to the
  * base {@code findBySubjectId} / {@code findLatestBySubjectId} with typed results.
+ *
+ * <p>All queries are tenant-scoped. The implementation resolves the tenant from
+ * {@link io.casehub.platform.api.identity.CurrentPrincipal#tenancyId()}.
  */
 public interface WorkItemLedgerEntryRepository extends LedgerEntryRepository {
 
@@ -48,32 +51,4 @@ public interface WorkItemLedgerEntryRepository extends LedgerEntryRepository {
      * @return the earliest typed entry, or empty if no entries exist
      */
     Optional<WorkItemLedgerEntry> findEarliestByWorkItemId(UUID workItemId);
-
-    /**
-     * Persist a new attestation and return the saved instance.
-     * Overrides to be explicitly available on this typed interface.
-     *
-     * @param attestation the attestation to persist; must not be {@code null}
-     * @return the persisted attestation
-     */
-    @Override
-    LedgerAttestation saveAttestation(LedgerAttestation attestation);
-
-    /**
-     * Return all attestations for the given ledger entry, ordered by occurrence time ascending.
-     *
-     * @param ledgerEntryId the ledger entry UUID
-     * @return ordered list of attestations; empty if none exist
-     */
-    @Override
-    List<LedgerAttestation> findAttestationsByEntryId(UUID ledgerEntryId);
-
-    /**
-     * Return all attestations for the given set of ledger entry IDs, grouped by entry ID.
-     *
-     * @param entryIds the set of ledger entry UUIDs
-     * @return map from entry ID to its attestations; empty map if {@code entryIds} is empty
-     */
-    @Override
-    Map<UUID, List<LedgerAttestation>> findAttestationsForEntries(Set<UUID> entryIds);
 }

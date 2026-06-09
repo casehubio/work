@@ -17,6 +17,7 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Response;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
 import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
@@ -48,6 +49,9 @@ public class LedgerResource {
     WorkItemStore workItemStore;
 
     @Inject
+    CurrentPrincipal currentPrincipal;
+
+    @Inject
     LedgerConfig config;
 
     /**
@@ -65,7 +69,7 @@ public class LedgerResource {
 
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(workItemId);
         return entries.stream()
-                .map(e -> LedgerMapper.toResponse(e, ledgerRepo.findAttestationsByEntryId(e.id)))
+                .map(e -> LedgerMapper.toResponse(e, ledgerRepo.findAttestationsByEntryId(e.id, currentPrincipal.tenancyId())))
                 .toList();
     }
 
@@ -114,7 +118,7 @@ public class LedgerResource {
         provenance.sourceEntityType = request.sourceEntityType();
         provenance.sourceEntitySystem = request.sourceEntitySystem();
         creationEntry.attach(provenance);
-        ledgerRepo.save(creationEntry);
+        ledgerRepo.save(creationEntry, currentPrincipal.tenancyId());
 
         return Response.ok().build();
     }
@@ -145,7 +149,7 @@ public class LedgerResource {
         }
 
         // Verify the entry exists and belongs to this WorkItem
-        final WorkItemLedgerEntry entry = ledgerRepo.findEntryById(entryId)
+        final WorkItemLedgerEntry entry = ledgerRepo.findEntryById(entryId, currentPrincipal.tenancyId())
                 .filter(e -> e instanceof WorkItemLedgerEntry)
                 .map(e -> (WorkItemLedgerEntry) e)
                 .filter(e -> workItemId.equals(e.subjectId))
@@ -166,7 +170,7 @@ public class LedgerResource {
         attestation.evidence = request.evidence();
         attestation.confidence = request.confidence();
 
-        ledgerRepo.saveAttestation(attestation);
+        ledgerRepo.saveAttestation(attestation, currentPrincipal.tenancyId());
 
         return Response.status(Response.Status.CREATED).build();
     }

@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.casehub.platform.api.identity.ActorTypeResolver;
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
@@ -26,6 +27,7 @@ import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
+import io.casehub.work.runtime.repository.WorkItemRelationStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
 import io.quarkus.logging.Log;
 
@@ -52,6 +54,12 @@ public class LedgerEventCapture {
 
     @Inject
     WorkItemStore workItemStore;
+
+    @Inject
+    WorkItemRelationStore relationStore;
+
+    @Inject
+    CurrentPrincipal currentPrincipal;
 
     @Inject
     LedgerConfig config;
@@ -138,14 +146,14 @@ public class LedgerEventCapture {
             entry.digest = LedgerMerkleTree.leafHash(entry);
         }
 
-        ledgerRepo.save(entry);
+        ledgerRepo.save(entry, currentPrincipal.tenancyId());
 
         // Causal chain: when SPAWNED fires on the parent, point each child's CREATED
         // ledger entry at this parent SPAWNED entry via causedByEntryId.
         // PART_OF links (child → parent) are persisted before SPAWNED fires, so they
         // are visible here within the same transaction.
         if ("spawned".equals(eventSuffix(event.type()))) {
-            WorkItemRelation.findByTargetAndType(event.workItemId(), WorkItemRelationType.PART_OF)
+            relationStore.findByTargetAndType(event.workItemId(), WorkItemRelationType.PART_OF)
                     .forEach(rel -> ledgerRepo.findEarliestByWorkItemId(rel.sourceId)
                             .ifPresent(childCreatedEntry -> {
                                 if ("WorkItemCreated".equals(childCreatedEntry.eventType)
