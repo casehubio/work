@@ -19,6 +19,9 @@ public class WorkItemQueueState extends PanacheEntityBase {
     @Column(name = "work_item_id")
     public UUID workItemId;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /**
      * When {@code true}, the assigned user has indicated they are willing to release
      * this WorkItem back to the queue so another actor may claim it.

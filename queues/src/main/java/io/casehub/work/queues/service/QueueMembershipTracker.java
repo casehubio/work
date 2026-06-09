@@ -5,9 +5,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import io.casehub.work.queues.model.WorkItemQueueMembership;
+import io.casehub.work.queues.repository.QueueMembershipStore;
 
 /**
  * Persistent store of last-known queue membership per WorkItem.
@@ -68,6 +70,9 @@ import io.casehub.work.queues.model.WorkItemQueueMembership;
 @ApplicationScoped
 class QueueMembershipTracker {
 
+    @Inject
+    QueueMembershipStore membershipStore;
+
     /**
      * Return the last-known queue membership for the given WorkItem.
      *
@@ -81,7 +86,7 @@ class QueueMembershipTracker {
      */
     @Transactional
     Map<UUID, String> getBefore(final UUID workItemId) {
-        return WorkItemQueueMembership.findByWorkItemId(workItemId).stream()
+        return membershipStore.findByWorkItemId(workItemId).stream()
                 .collect(Collectors.toMap(m -> m.queueViewId, m -> m.queueName));
     }
 
@@ -103,13 +108,13 @@ class QueueMembershipTracker {
      */
     @Transactional
     void update(final UUID workItemId, final Map<UUID, String> after) {
-        WorkItemQueueMembership.deleteByWorkItemId(workItemId);
+        membershipStore.deleteByWorkItemId(workItemId);
         after.forEach((queueViewId, queueName) -> {
             final WorkItemQueueMembership row = new WorkItemQueueMembership();
             row.workItemId = workItemId;
             row.queueViewId = queueViewId;
             row.queueName = queueName;
-            row.persist();
+            membershipStore.put(row);
         });
     }
 }

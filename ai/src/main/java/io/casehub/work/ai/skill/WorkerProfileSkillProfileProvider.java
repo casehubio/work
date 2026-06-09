@@ -5,7 +5,9 @@ import java.util.Set;
 import java.util.function.Function;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
+import io.casehub.work.ai.repository.WorkerSkillProfileStore;
 import io.casehub.work.api.SkillProfile;
 import io.casehub.work.api.SkillProfileProvider;
 
@@ -19,21 +21,26 @@ import io.casehub.work.api.SkillProfileProvider;
 @ApplicationScoped
 public class WorkerProfileSkillProfileProvider implements SkillProfileProvider {
 
+    @Inject
+    WorkerSkillProfileStore profileStore;
+
     private final Function<String, Optional<WorkerSkillProfile>> finder;
 
-    /** CDI constructor — uses Panache finder. */
+    /** CDI constructor — delegates to injected store. */
     public WorkerProfileSkillProfileProvider() {
-        this.finder = workerId -> Optional.ofNullable(WorkerSkillProfile.findById(workerId));
+        this.finder = null; // CDI path uses profileStore directly
     }
 
-    /** Test constructor — injectable finder for unit testing without Panache. */
+    /** Test constructor — injectable finder for unit testing without CDI. */
     WorkerProfileSkillProfileProvider(final Function<String, Optional<WorkerSkillProfile>> finder) {
         this.finder = finder;
     }
 
     @Override
     public SkillProfile getProfile(final String workerId, final Set<String> capabilities) {
-        return finder.apply(workerId)
+        final Function<String, Optional<WorkerSkillProfile>> lookup =
+                finder != null ? finder : profileStore::get;
+        return lookup.apply(workerId)
                 .map(p -> SkillProfile.ofNarrative(p.narrative != null ? p.narrative : ""))
                 .orElse(SkillProfile.ofNarrative(""));
     }

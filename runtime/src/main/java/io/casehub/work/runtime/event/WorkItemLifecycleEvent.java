@@ -52,12 +52,13 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
     private final String rationale;
     private final String planRef;
     private final String outcome;
+    private final String tenancyId;
     private final WorkItem workItem;
 
     private WorkItemLifecycleEvent(final String type, final String sourceUri, final String subject,
             final UUID workItemId, final WorkItemStatus status, final Instant occurredAt,
             final String actor, final String detail, final String rationale, final String planRef,
-            final String outcome, final WorkItem workItem) {
+            final String outcome, final String tenancyId, final WorkItem workItem) {
         this.type = type;
         this.sourceUri = sourceUri;
         this.subject = subject;
@@ -69,6 +70,7 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
         this.rationale = rationale;
         this.planRef = planRef;
         this.outcome = outcome;
+        this.tenancyId = tenancyId;
         this.workItem = workItem;
     }
 
@@ -87,7 +89,7 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
                 "/workitems/" + workItem.id,
                 workItem.id.toString(),
                 workItem.id, workItem.status, Instant.now(),
-                actor, detail, null, null, workItem.outcome, workItem);
+                actor, detail, null, null, workItem.outcome, workItem.tenancyId, workItem);
     }
 
     /**
@@ -109,7 +111,7 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
                 "/workitems/" + workItem.id,
                 workItem.id.toString(),
                 workItem.id, workItem.status, Instant.now(),
-                actor, detail, rationale, planRef, workItem.outcome, workItem);
+                actor, detail, rationale, planRef, workItem.outcome, workItem.tenancyId, workItem);
     }
 
     /**
@@ -126,9 +128,9 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
     public static WorkItemLifecycleEvent fromWire(final String type, final String sourceUri,
             final String subject, final UUID workItemId, final WorkItemStatus status,
             final Instant occurredAt, final String actor, final String detail,
-            final String rationale, final String planRef, final String outcome) {
+            final String rationale, final String planRef, final String outcome, final String tenancyId) {
         return new WorkItemLifecycleEvent(type, sourceUri, subject, workItemId, status,
-                occurredAt, actor, detail, rationale, planRef, outcome, null);
+                occurredAt, actor, detail, rationale, planRef, outcome, tenancyId, null);
     }
 
     // ---- Existing accessors preserved (same names as old record components) ----
@@ -211,6 +213,15 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
     @JsonProperty("outcome")
     public String outcome() {
         return outcome;
+    }
+
+    /**
+     * The tenancy ID of the WorkItem this event belongs to.
+     * Server-side only — never serialised to SSE clients.
+     */
+    @JsonIgnore
+    public String tenancyId() {
+        return tenancyId;
     }
 
     // ---- WorkLifecycleEvent abstract method implementations ----

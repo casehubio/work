@@ -26,6 +26,9 @@ public class WorkerSkillProfile extends PanacheEntityBase {
     @Column(name = "worker_id", nullable = false)
     public String workerId;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     @Column(name = "narrative", columnDefinition = "TEXT")
     public String narrative;
 

@@ -12,6 +12,7 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemStatus;
@@ -23,13 +24,17 @@ public class ReportService {
     @Inject
     EntityManager em;
 
+    @Inject
+    CurrentPrincipal currentPrincipal;
+
     @CacheResult(cacheName = "reports")
     public SlaBreachReport slaBreaches(final Instant from, final Instant to,
             final String category, final WorkItemPriority priority) {
         final Instant now = Instant.now();
 
         final StringBuilder jpql = new StringBuilder(
-                "SELECT w FROM WorkItem w WHERE w.expiresAt IS NOT NULL AND (")
+                "SELECT w FROM WorkItem w WHERE w.tenancyId = :tenancyId")
+                .append(" AND w.expiresAt IS NOT NULL AND (")
                 .append("(w.status IN :activeStatuses AND w.expiresAt < :now)")
                 .append(" OR ")
                 .append("(w.status IN :terminalStatuses")
@@ -51,6 +56,7 @@ public class ReportService {
 
         final TypedQuery<WorkItem> q = em.createQuery(jpql.toString(), WorkItem.class);
         q.setHint("jakarta.persistence.query.timeout", 30_000);
+        q.setParameter("tenancyId", currentPrincipal.tenancyId());
         q.setParameter("now", now);
         q.setParameter("activeStatuses", List.of(
                 WorkItemStatus.PENDING, WorkItemStatus.ASSIGNED, WorkItemStatus.IN_PROGRESS,
@@ -109,7 +115,8 @@ public class ReportService {
         // avg(completedAt - assignedAt) for items completed by this actor
         final StringBuilder avgJpql = new StringBuilder(
                 "SELECT w.assignedAt, w.completedAt FROM WorkItem w"
-                        + " WHERE w.assigneeId = :actorId"
+                        + " WHERE w.tenancyId = :tenancyId"
+                        + " AND w.assigneeId = :actorId"
                         + " AND w.completedAt IS NOT NULL AND w.assignedAt IS NOT NULL");
         if (from != null) {
             avgJpql.append(" AND w.completedAt >= :from");
@@ -122,6 +129,7 @@ public class ReportService {
         }
 
         final TypedQuery<Object[]> avgQ = em.createQuery(avgJpql.toString(), Object[].class);
+        avgQ.setParameter("tenancyId", currentPrincipal.tenancyId());
         avgQ.setParameter("actorId", actorId);
         if (from != null) {
             avgQ.setParameter("from", from);
@@ -147,7 +155,8 @@ public class ReportService {
         // byCategory via GROUP BY — no N+1
         final StringBuilder catJpql = new StringBuilder(
                 "SELECT w.category, COUNT(w) FROM WorkItem w"
-                        + " WHERE w.assigneeId = :actorId"
+                        + " WHERE w.tenancyId = :tenancyId"
+                        + " AND w.assigneeId = :actorId"
                         + " AND w.status = :completed");
         if (from != null) {
             catJpql.append(" AND w.completedAt >= :from");
@@ -161,6 +170,7 @@ public class ReportService {
         catJpql.append(" GROUP BY w.category");
 
         final TypedQuery<Object[]> catQ = em.createQuery(catJpql.toString(), Object[].class);
+        catQ.setParameter("tenancyId", currentPrincipal.tenancyId());
         catQ.setParameter("actorId", actorId);
         catQ.setParameter("completed", WorkItemStatus.COMPLETED);
         if (from != null) {
@@ -201,7 +211,8 @@ public class ReportService {
 
         // overdueCount
         final StringBuilder overdueJpql = new StringBuilder(
-                "SELECT COUNT(w) FROM WorkItem w WHERE w.expiresAt IS NOT NULL"
+                "SELECT COUNT(w) FROM WorkItem w WHERE w.tenancyId = :tenancyId"
+                        + " AND w.expiresAt IS NOT NULL"
                         + " AND w.expiresAt < :now AND w.status IN :activeStatuses");
         if (category != null && !category.isBlank()) {
             overdueJpql.append(" AND w.category = :category");
@@ -211,6 +222,7 @@ public class ReportService {
         }
 
         final TypedQuery<Long> overdueQ = em.createQuery(overdueJpql.toString(), Long.class);
+        overdueQ.setParameter("tenancyId", currentPrincipal.tenancyId());
         overdueQ.setParameter("now", now);
         overdueQ.setParameter("activeStatuses", activeStatuses);
         if (category != null && !category.isBlank()) {
@@ -223,7 +235,8 @@ public class ReportService {
 
         // criticalOverdueCount
         final StringBuilder critJpql = new StringBuilder(
-                "SELECT COUNT(w) FROM WorkItem w WHERE w.expiresAt IS NOT NULL"
+                "SELECT COUNT(w) FROM WorkItem w WHERE w.tenancyId = :tenancyId"
+                        + " AND w.expiresAt IS NOT NULL"
                         + " AND w.expiresAt < :now AND w.status IN :activeStatuses"
                         + " AND w.priority = :critical");
         if (category != null && !category.isBlank()) {
@@ -231,6 +244,7 @@ public class ReportService {
         }
 
         final TypedQuery<Long> critQ = em.createQuery(critJpql.toString(), Long.class);
+        critQ.setParameter("tenancyId", currentPrincipal.tenancyId());
         critQ.setParameter("now", now);
         critQ.setParameter("activeStatuses", activeStatuses);
         critQ.setParameter("critical", WorkItemPriority.URGENT);
@@ -241,7 +255,8 @@ public class ReportService {
 
         // pending items: count, oldest, avg age
         final StringBuilder pendingJpql = new StringBuilder(
-                "SELECT w.createdAt FROM WorkItem w WHERE w.status = :pending");
+                "SELECT w.createdAt FROM WorkItem w WHERE w.tenancyId = :tenancyId"
+                        + " AND w.status = :pending");
         if (category != null && !category.isBlank()) {
             pendingJpql.append(" AND w.category = :category");
         }
@@ -250,6 +265,7 @@ public class ReportService {
         }
 
         final TypedQuery<Instant> pendingQ = em.createQuery(pendingJpql.toString(), Instant.class);
+        pendingQ.setParameter("tenancyId", currentPrincipal.tenancyId());
         pendingQ.setParameter("pending", WorkItemStatus.PENDING);
         if (category != null && !category.isBlank()) {
             pendingQ.setParameter("category", category);
@@ -273,7 +289,8 @@ public class ReportService {
     private long countAuditEvents(final String actorId, final String event,
             final Instant from, final Instant to, final String category) {
         final StringBuilder jpql = new StringBuilder(
-                "SELECT COUNT(a) FROM AuditEntry a WHERE a.actor = :actorId AND a.event = :event");
+                "SELECT COUNT(a) FROM AuditEntry a WHERE a.tenancyId = :tenancyId"
+                        + " AND a.actor = :actorId AND a.event = :event");
         if (from != null) {
             jpql.append(" AND a.occurredAt >= :from");
         }
@@ -282,10 +299,11 @@ public class ReportService {
         }
         if (category != null && !category.isBlank()) {
             jpql.append(" AND a.workItemId IN"
-                    + " (SELECT w.id FROM WorkItem w WHERE w.category = :category)");
+                    + " (SELECT w.id FROM WorkItem w WHERE w.tenancyId = :tenancyId AND w.category = :category)");
         }
 
         final TypedQuery<Long> q = em.createQuery(jpql.toString(), Long.class);
+        q.setParameter("tenancyId", currentPrincipal.tenancyId());
         q.setParameter("actorId", actorId);
         q.setParameter("event", event);
         if (from != null) {
@@ -305,13 +323,15 @@ public class ReportService {
             final Instant to, final WorkItemStatus status) {
         final String jpql = "SELECT CAST(date_trunc('day', w." + field + ") AS LocalDate), COUNT(w)"
                 + " FROM WorkItem w"
-                + " WHERE w." + field + " >= :from AND w." + field + " <= :to"
+                + " WHERE w.tenancyId = :tenancyId"
+                + " AND w." + field + " >= :from AND w." + field + " <= :to"
                 + (status != null ? " AND w.status = :status" : "")
                 + " GROUP BY CAST(date_trunc('day', w." + field + ") AS LocalDate)"
                 + " ORDER BY CAST(date_trunc('day', w." + field + ") AS LocalDate)";
 
         final TypedQuery<Object[]> q = em.createQuery(jpql, Object[].class);
         q.setHint("jakarta.persistence.query.timeout", 30_000);
+        q.setParameter("tenancyId", currentPrincipal.tenancyId());
         q.setParameter("from", from);
         q.setParameter("to", to);
         if (status != null) {
@@ -323,13 +343,15 @@ public class ReportService {
     private List<Object[]> queryDayBucketsCompleted(final Instant from, final Instant to) {
         final String jpql = "SELECT CAST(date_trunc('day', w.completedAt) AS LocalDate), COUNT(w)"
                 + " FROM WorkItem w"
-                + " WHERE w.completedAt >= :from AND w.completedAt <= :to"
+                + " WHERE w.tenancyId = :tenancyId"
+                + " AND w.completedAt >= :from AND w.completedAt <= :to"
                 + " AND w.status IN :terminalStatuses"
                 + " GROUP BY CAST(date_trunc('day', w.completedAt) AS LocalDate)"
                 + " ORDER BY CAST(date_trunc('day', w.completedAt) AS LocalDate)";
 
         final TypedQuery<Object[]> q = em.createQuery(jpql, Object[].class);
         q.setHint("jakarta.persistence.query.timeout", 30_000);
+        q.setParameter("tenancyId", currentPrincipal.tenancyId());
         q.setParameter("from", from);
         q.setParameter("to", to);
         q.setParameter("terminalStatuses", List.of(

@@ -28,6 +28,9 @@ public class WorkItemFilter extends PanacheEntityBase {
     @Id
     public UUID id;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     @Column(nullable = false, length = 255)
     public String name;
 

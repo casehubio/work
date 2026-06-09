@@ -25,6 +25,7 @@ import jakarta.ws.rs.core.Response;
 
 import org.jboss.resteasy.reactive.RestStreamElementType;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.event.WorkItemEventBroadcaster;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
@@ -73,6 +74,9 @@ public class WorkItemResource {
 
     @Inject
     WorkItemEventBroadcaster broadcaster;
+
+    @Inject
+    CurrentPrincipal currentPrincipal;
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -449,7 +453,7 @@ public class WorkItemResource {
     public Multi<WorkItemLifecycleEvent> streamEvents(
             @QueryParam("workItemId") final UUID workItemId,
             @QueryParam("type") final String type) {
-        return broadcaster.stream(workItemId, type);
+        return broadcaster.stream(workItemId, type, currentPrincipal.tenancyId());
     }
 
     /**
@@ -466,7 +470,7 @@ public class WorkItemResource {
     @Produces(MediaType.SERVER_SENT_EVENTS)
     @RestStreamElementType(MediaType.APPLICATION_JSON)
     public Multi<WorkItemLifecycleEvent> streamWorkItemEvents(@PathParam("id") final UUID id) {
-        return broadcaster.stream(id, null);
+        return broadcaster.stream(id, null, currentPrincipal.tenancyId());
     }
 
     // ── Notes ─────────────────────────────────────────────────────────────────

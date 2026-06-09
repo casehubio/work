@@ -63,7 +63,7 @@ class PostgresQueueBroadcasterIT {
     @Test
     void queueEvent_reachesStream() throws Exception {
         final List<WorkItemQueueEvent> received = new CopyOnWriteArrayList<>();
-        broadcaster.stream(null).subscribe().with(received::add);
+        broadcaster.stream(null, "test-tenant").subscribe().with(received::add);
 
         fireCommit(UUID.randomUUID(), UUID.randomUUID(), QueueEventType.ADDED);
 
@@ -76,7 +76,7 @@ class PostgresQueueBroadcasterIT {
         final UUID workItemId = UUID.randomUUID();
         final UUID queueId = UUID.randomUUID();
         final List<WorkItemQueueEvent> received = new CopyOnWriteArrayList<>();
-        broadcaster.stream(null).subscribe().with(received::add);
+        broadcaster.stream(null, "test-tenant").subscribe().with(received::add);
 
         fireCommit(workItemId, queueId, QueueEventType.ADDED);
 
@@ -90,7 +90,7 @@ class PostgresQueueBroadcasterIT {
     @Test
     void allQueueEventTypes_deliveredCorrectly() throws Exception {
         final List<QueueEventType> types = new CopyOnWriteArrayList<>();
-        broadcaster.stream(null).subscribe().with(e -> types.add(e.eventType()));
+        broadcaster.stream(null, "test-tenant").subscribe().with(e -> types.add(e.eventType()));
 
         fireCommit(UUID.randomUUID(), UUID.randomUUID(), QueueEventType.ADDED);
         fireCommit(UUID.randomUUID(), UUID.randomUUID(), QueueEventType.CHANGED);
@@ -108,7 +108,7 @@ class PostgresQueueBroadcasterIT {
     void stream_filterByQueueViewId_onlyTargetDelivered() throws Exception {
         final UUID targetQueue = UUID.randomUUID();
         final List<WorkItemQueueEvent> received = new CopyOnWriteArrayList<>();
-        broadcaster.stream(targetQueue).subscribe().with(received::add);
+        broadcaster.stream(targetQueue, "test-tenant").subscribe().with(received::add);
 
         fireCommit(UUID.randomUUID(), UUID.randomUUID(), QueueEventType.ADDED); // noise
         fireCommit(UUID.randomUUID(), targetQueue, QueueEventType.ADDED);        // target
@@ -126,13 +126,13 @@ class PostgresQueueBroadcasterIT {
     void rolledBackTransaction_eventDoesNotReachStream() throws Exception {
         final UUID markerQueue = UUID.randomUUID();
         final List<WorkItemQueueEvent> received = new CopyOnWriteArrayList<>();
-        broadcaster.stream(markerQueue).subscribe().with(received::add);
+        broadcaster.stream(markerQueue, "test-tenant").subscribe().with(received::add);
 
         // Fire event inside a transaction that we then roll back.
         // AFTER_SUCCESS means pg_notify fires only on commit — rollback suppresses it.
         tx.begin();
         queueEvents.fire(new WorkItemQueueEvent(
-                UUID.randomUUID(), markerQueue, "rollback-test", QueueEventType.ADDED));
+                UUID.randomUUID(), markerQueue, "rollback-test", QueueEventType.ADDED, "test-tenant"));
         tx.rollback();
 
         Thread.sleep(500);
@@ -144,7 +144,7 @@ class PostgresQueueBroadcasterIT {
     private void fireCommit(final UUID workItemId, final UUID queueViewId,
             final QueueEventType type) throws Exception {
         tx.begin();
-        queueEvents.fire(new WorkItemQueueEvent(workItemId, queueViewId, "test-queue", type));
+        queueEvents.fire(new WorkItemQueueEvent(workItemId, queueViewId, "test-queue", type, "test-tenant"));
         tx.commit();
     }
 }

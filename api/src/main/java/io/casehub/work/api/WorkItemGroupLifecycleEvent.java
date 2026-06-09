@@ -21,12 +21,13 @@ public final class WorkItemGroupLifecycleEvent {
     private final int rejectedCount;
     private final GroupStatus groupStatus;
     private final String callerRef;
+    private final String tenancyId;
     private final Instant occurredAt;
 
     private WorkItemGroupLifecycleEvent(final UUID parentId, final UUID groupId,
             final int instanceCount, final int requiredCount,
             final int completedCount, final int rejectedCount,
-            final GroupStatus groupStatus, final String callerRef) {
+            final GroupStatus groupStatus, final String callerRef, final String tenancyId) {
         this.parentId = parentId;
         this.groupId = groupId;
         this.instanceCount = instanceCount;
@@ -35,6 +36,7 @@ public final class WorkItemGroupLifecycleEvent {
         this.rejectedCount = rejectedCount;
         this.groupStatus = groupStatus;
         this.callerRef = callerRef;
+        this.tenancyId = tenancyId;
         this.occurredAt = Instant.now();
     }
 
@@ -49,14 +51,15 @@ public final class WorkItemGroupLifecycleEvent {
      * @param rejectedCount number of instances that were rejected
      * @param groupStatus the current {@link GroupStatus}
      * @param callerRef opaque caller reference echoed from parent WorkItem
+     * @param tenancyId the tenancy ID from the parent WorkItem
      * @return a new WorkItemGroupLifecycleEvent
      */
     public static WorkItemGroupLifecycleEvent of(final UUID parentId, final UUID groupId,
             final int instanceCount, final int requiredCount,
             final int completedCount, final int rejectedCount,
-            final GroupStatus groupStatus, final String callerRef) {
+            final GroupStatus groupStatus, final String callerRef, final String tenancyId) {
         return new WorkItemGroupLifecycleEvent(parentId, groupId, instanceCount, requiredCount,
-                completedCount, rejectedCount, groupStatus, callerRef);
+                completedCount, rejectedCount, groupStatus, callerRef, tenancyId);
     }
 
     /**
@@ -113,6 +116,13 @@ public final class WorkItemGroupLifecycleEvent {
      */
     public String callerRef() {
         return callerRef;
+    }
+
+    /**
+     * @return the tenancy ID from the parent WorkItem
+     */
+    public String tenancyId() {
+        return tenancyId;
     }
 
     /**

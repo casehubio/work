@@ -43,6 +43,9 @@ public class WorkItemQueueMembership extends PanacheEntityBase {
     @Id
     public UUID id;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /** The WorkItem that is a member of the queue. */
     @Column(name = "work_item_id", nullable = false)
     public UUID workItemId;

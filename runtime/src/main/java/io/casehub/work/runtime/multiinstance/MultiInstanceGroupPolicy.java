@@ -146,6 +146,7 @@ public class MultiInstanceGroupPolicy {
                 group.instanceCount, group.requiredCount,
                 group.completedCount, group.rejectedCount,
                 status,
-                parent != null ? parent.callerRef : null);
+                parent != null ? parent.callerRef : null,
+                parent != null ? parent.tenancyId : null);
     }
 }

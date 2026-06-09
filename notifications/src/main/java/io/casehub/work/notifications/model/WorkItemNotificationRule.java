@@ -39,6 +39,9 @@ public class WorkItemNotificationRule extends PanacheEntityBase {
     @Id
     public UUID id;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /**
      * The notification channel to use — matched against
      * {@link io.casehub.work.api.NotificationChannel#channelType()}.

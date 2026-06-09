@@ -6,6 +6,7 @@ import jakarta.inject.Inject;
 
 import org.jboss.logging.Logger;
 
+import io.casehub.work.ai.repository.EscalationSummaryStore;
 import io.casehub.work.api.WorkEventType;
 import io.casehub.work.api.WorkLifecycleEvent;
 
@@ -26,6 +27,9 @@ public class EscalationSummaryObserver {
     @Inject
     EscalationSummaryService summaryService;
 
+    @Inject
+    EscalationSummaryStore summaryStore;
+
     /**
      * React to escalation events and generate a summary.
      *
@@ -39,7 +43,7 @@ public class EscalationSummaryObserver {
         try {
             final Object source = event.source();
             if (source instanceof io.casehub.work.runtime.model.WorkItem wi) {
-                summaryService.buildSummary(wi.id, type.name()).persist();
+                summaryStore.put(summaryService.buildSummary(wi.id, type.name()));
             }
         } catch (final Exception e) {
             LOG.warnf("Failed to generate escalation summary for event %s: %s",

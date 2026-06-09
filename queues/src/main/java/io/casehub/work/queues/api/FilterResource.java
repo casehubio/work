@@ -20,6 +20,7 @@ import jakarta.ws.rs.core.Response;
 import io.casehub.work.queues.model.FilterAction;
 import io.casehub.work.queues.model.FilterScope;
 import io.casehub.work.queues.model.WorkItemFilter;
+import io.casehub.work.queues.repository.WorkItemFilterStore;
 import io.casehub.work.queues.service.ExpressionDescriptor;
 import io.casehub.work.queues.service.FilterEngine;
 import io.casehub.work.queues.service.FilterEvaluatorRegistry;
@@ -39,6 +40,9 @@ public class FilterResource {
     @Inject
     FilterEngine filterEngine;
 
+    @Inject
+    WorkItemFilterStore filterStore;
+
     public record CreateFilterRequest(String name, FilterScope scope, String ownerId,
             String conditionLanguage, String conditionExpression, List<FilterAction> actions) {
     }
@@ -54,7 +58,7 @@ public class FilterResource {
     @GET
     @Transactional
     public List<Map<String, Object>> list() {
-        return WorkItemFilter.<WorkItemFilter> listAll().stream()
+        return filterStore.scanAll().stream()
                 .map(f -> Map.<String, Object> of(
                         "id", f.id, "name", f.name, "scope", f.scope,
                         "conditionLanguage", f.conditionLanguage, "active", f.active))
@@ -77,7 +81,7 @@ public class FilterResource {
         f.conditionExpression = req.conditionExpression();
         f.actions = WorkItemFilter.serializeActions(req.actions() != null ? req.actions() : List.of());
         f.active = true;
-        f.persist();
+        filterStore.put(f);
         return Response.status(201)
                 .entity(Map.of("id", f.id, "name", f.name, "active", f.active))
                 .build();
@@ -87,7 +91,7 @@ public class FilterResource {
     @Path("/{id}")
     @Transactional
     public Response update(@PathParam("id") final UUID id, final CreateFilterRequest req) {
-        final WorkItemFilter f = WorkItemFilter.findById(id);
+        final WorkItemFilter f = filterStore.get(id).orElse(null);
         if (f == null) {
             return Response.status(404).entity(Map.of("error", "Not found")).build();
         }
@@ -107,7 +111,7 @@ public class FilterResource {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") final UUID id) {
-        final WorkItemFilter f = WorkItemFilter.findById(id);
+        final WorkItemFilter f = filterStore.get(id).orElse(null);
         if (f == null) {
             return Response.status(404).entity(Map.of("error", "Not found")).build();
         }

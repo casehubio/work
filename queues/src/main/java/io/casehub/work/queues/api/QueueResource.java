@@ -18,9 +18,11 @@ import jakarta.ws.rs.core.Response;
 
 import org.jboss.resteasy.reactive.RestStreamElementType;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.queues.event.WorkItemQueueEvent;
 import io.casehub.work.queues.model.FilterScope;
 import io.casehub.work.queues.model.QueueView;
+import io.casehub.work.queues.repository.QueueViewStore;
 import io.casehub.work.queues.service.ExpressionDescriptor;
 import io.casehub.work.queues.service.FilterEvaluatorRegistry;
 import io.casehub.work.queues.service.WorkItemQueueEventBroadcaster;
@@ -40,10 +42,16 @@ public class QueueResource {
     WorkItemStore workItemStore;
 
     @Inject
+    QueueViewStore queueViewStore;
+
+    @Inject
     WorkItemQueueEventBroadcaster queueEventBroadcaster;
 
     @Inject
     FilterEvaluatorRegistry evaluatorRegistry;
+
+    @Inject
+    CurrentPrincipal currentPrincipal;
 
     /**
      * Request body for creating a new queue view.
@@ -68,7 +76,7 @@ public class QueueResource {
     @GET
     @Transactional
     public List<Map<String, Object>> list() {
-        return QueueView.<QueueView> listAll().stream()
+        return queueViewStore.scanAll().stream()
                 .map(q -> Map.<String, Object> of(
                         "id", q.id, "name", q.name, "labelPattern", q.labelPattern, "scope", q.scope))
                 .toList();
@@ -94,7 +102,7 @@ public class QueueResource {
         q.additionalConditions = req.additionalConditions();
         q.sortField = req.sortField() != null ? req.sortField() : "createdAt";
         q.sortDirection = req.sortDirection() != null ? req.sortDirection() : "ASC";
-        q.persist();
+        queueViewStore.put(q);
         return Response.status(201)
                 .entity(Map.of("id", q.id, "name", q.name, "labelPattern", q.labelPattern)).build();
     }
@@ -111,7 +119,7 @@ public class QueueResource {
     @Path("/{id}")
     @Transactional
     public Response query(@PathParam("id") final UUID id) {
-        final QueueView q = QueueView.findById(id);
+        final QueueView q = queueViewStore.get(id).orElse(null);
         if (q == null) {
             return Response.status(404).entity(Map.of("error", "Queue view not found")).build();
         }
@@ -159,11 +167,9 @@ public class QueueResource {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") final UUID id) {
-        final QueueView q = QueueView.findById(id);
-        if (q == null) {
+        if (!queueViewStore.delete(id)) {
             return Response.status(404).entity(Map.of("error", "Not found")).build();
         }
-        q.delete();
         return Response.noContent().build();
     }
 
@@ -183,6 +189,6 @@ public class QueueResource {
     @Produces(MediaType.SERVER_SENT_EVENTS)
     @RestStreamElementType(MediaType.APPLICATION_JSON)
     public Multi<WorkItemQueueEvent> streamQueueEvents(@PathParam("id") final UUID queueViewId) {
-        return queueEventBroadcaster.stream(queueViewId);
+        return queueEventBroadcaster.stream(queueViewId, currentPrincipal.tenancyId());
     }
 }

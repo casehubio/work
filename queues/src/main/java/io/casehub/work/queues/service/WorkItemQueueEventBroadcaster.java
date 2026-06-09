@@ -19,10 +19,11 @@ import io.smallrye.mutiny.Multi;
 public interface WorkItemQueueEventBroadcaster {
 
     /**
-     * Returns a hot stream of queue events, optionally filtered to a single queue.
+     * Returns a hot stream of queue events, filtered by tenant and optionally by queue.
      *
      * @param queueViewId if non-null, only events for this queue are emitted
+     * @param tenancyId tenant scope — required, never null; only events for this tenant are emitted
      * @return hot {@link Multi} of matching {@link WorkItemQueueEvent} instances
      */
-    Multi<WorkItemQueueEvent> stream(UUID queueViewId);
+    Multi<WorkItemQueueEvent> stream(UUID queueViewId, String tenancyId);
 }

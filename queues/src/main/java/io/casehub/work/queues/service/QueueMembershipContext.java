@@ -120,7 +120,7 @@ final class QueueMembershipContext {
      * @param wi the WorkItem after {@code FilterEngine.evaluate()}; {@code wi.labels}
      *        reflects the post-evaluation label set
      * @param allQueues the complete list of {@link QueueView}s to evaluate membership against;
-     *        typically {@code QueueView.listAll()} from the caller
+     *        typically {@code queueViewStore.scanAll()} from the caller
      * @param emit event sink — receives one {@link WorkItemQueueEvent} per queue change;
      *        in production this is {@code queueEventBus::fire}; in tests a list collector
      * @return the post-evaluate queue membership (queueViewId → queueName) to store in the tracker
@@ -140,14 +140,14 @@ final class QueueMembershipContext {
         // REMOVED: in queue before, not after — item permanently left this queue
         before.forEach((id, name) -> {
             if (!after.containsKey(id)) {
-                emit.accept(new WorkItemQueueEvent(workItemId, id, name, QueueEventType.REMOVED));
+                emit.accept(new WorkItemQueueEvent(workItemId, id, name, QueueEventType.REMOVED, wi.tenancyId));
             }
         });
 
         // ADDED: not in queue before, is after — item newly entered this queue
         after.forEach((id, name) -> {
             if (!before.containsKey(id)) {
-                emit.accept(new WorkItemQueueEvent(workItemId, id, name, QueueEventType.ADDED));
+                emit.accept(new WorkItemQueueEvent(workItemId, id, name, QueueEventType.ADDED, wi.tenancyId));
             }
         });
 
@@ -157,7 +157,7 @@ final class QueueMembershipContext {
             if (after.containsKey(id)) {
                 // Use the current queue name (after) in case it was renamed
                 emit.accept(new WorkItemQueueEvent(
-                        workItemId, id, after.get(id), QueueEventType.CHANGED));
+                        workItemId, id, after.get(id), QueueEventType.CHANGED, wi.tenancyId));
             }
         });
 

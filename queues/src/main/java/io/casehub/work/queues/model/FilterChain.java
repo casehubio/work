@@ -28,6 +28,9 @@ public class FilterChain extends PanacheEntityBase {
     @Id
     public UUID id;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /** The filter whose label applications this chain tracks. */
     @Column(name = "filter_id", nullable = false)
     public UUID filterId;

@@ -44,7 +44,7 @@ class PostgresQueueBroadcasterFilterTest {
         final List<WorkItemQueueEvent> received = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
-        broadcaster.stream(null).subscribe().with(e -> {
+        broadcaster.stream(null, "test-tenant").subscribe().with(e -> {
             received.add(e);
             latch.countDown();
         });
@@ -61,8 +61,8 @@ class PostgresQueueBroadcasterFilterTest {
         final List<WorkItemQueueEvent> sub1 = new CopyOnWriteArrayList<>();
         final List<WorkItemQueueEvent> sub2 = new CopyOnWriteArrayList<>();
 
-        broadcaster.stream(null).subscribe().with(e -> { sub1.add(e); latch.countDown(); });
-        broadcaster.stream(null).subscribe().with(e -> { sub2.add(e); latch.countDown(); });
+        broadcaster.stream(null, "test-tenant").subscribe().with(e -> { sub1.add(e); latch.countDown(); });
+        broadcaster.stream(null, "test-tenant").subscribe().with(e -> { sub2.add(e); latch.countDown(); });
 
         broadcaster.emit(event(UUID.randomUUID(), UUID.randomUUID(), QueueEventType.ADDED));
 
@@ -77,7 +77,7 @@ class PostgresQueueBroadcasterFilterTest {
         final CountDownLatch latch = new CountDownLatch(3);
         final UUID queueId = UUID.randomUUID();
 
-        broadcaster.stream(null).subscribe().with(e -> {
+        broadcaster.stream(null, "test-tenant").subscribe().with(e -> {
             types.add(e.eventType());
             latch.countDown();
         });
@@ -100,7 +100,7 @@ class PostgresQueueBroadcasterFilterTest {
         final List<WorkItemQueueEvent> received = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
-        broadcaster.stream(targetQueue).subscribe().with(e -> {
+        broadcaster.stream(targetQueue, "test-tenant").subscribe().with(e -> {
             received.add(e);
             latch.countDown();
         });
@@ -118,7 +118,7 @@ class PostgresQueueBroadcasterFilterTest {
         final CountDownLatch latch = new CountDownLatch(2);
         final List<WorkItemQueueEvent> received = new CopyOnWriteArrayList<>();
 
-        broadcaster.stream(null).subscribe().with(e -> {
+        broadcaster.stream(null, "test-tenant").subscribe().with(e -> {
             received.add(e);
             latch.countDown();
         });
@@ -136,7 +136,7 @@ class PostgresQueueBroadcasterFilterTest {
         final List<QueueEventType> types = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(3);
 
-        broadcaster.stream(queueId).subscribe().with(e -> {
+        broadcaster.stream(queueId, "test-tenant").subscribe().with(e -> {
             types.add(e.eventType());
             latch.countDown();
         });
@@ -162,6 +162,6 @@ class PostgresQueueBroadcasterFilterTest {
 
     private WorkItemQueueEvent event(final UUID workItemId, final UUID queueViewId,
             final QueueEventType type) {
-        return new WorkItemQueueEvent(workItemId, queueViewId, "test-queue", type);
+        return new WorkItemQueueEvent(workItemId, queueViewId, "test-queue", type, "test-tenant");
     }
 }

@@ -17,6 +17,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import io.casehub.work.queues.model.WorkItemQueueState;
+import io.casehub.work.queues.repository.QueueStateStore;
 import io.casehub.work.runtime.api.WorkItemMapper;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItemStatus;
@@ -37,6 +38,9 @@ public class QueueStateResource {
 
     @Inject
     WorkItemStore workItemStore;
+
+    @Inject
+    QueueStateStore stateStore;
 
     @Inject
     WorkItemService workItemService;
@@ -104,7 +108,7 @@ public class QueueStateResource {
 
         if (wi.status == WorkItemStatus.ASSIGNED) {
             // Soft pickup — only allowed when assignee has flagged relinquishable
-            final var state = WorkItemQueueState.<WorkItemQueueState> findByIdOptional(id).orElse(null);
+            final var state = stateStore.get(id).orElse(null);
             if (state == null || !state.relinquishable) {
                 return Response.status(409)
                         .entity(Map.of("error",
@@ -137,7 +141,7 @@ public class QueueStateResource {
         if (workItemStore.get(id).isEmpty()) {
             return Response.status(404).entity(Map.of("error", "WorkItem not found: " + id)).build();
         }
-        final WorkItemQueueState state = WorkItemQueueState.findOrCreate(id);
+        final WorkItemQueueState state = stateStore.findOrCreate(id);
         state.relinquishable = req.relinquishable();
         return Response.ok(Map.of("workItemId", id, "relinquishable", state.relinquishable)).build();
     }

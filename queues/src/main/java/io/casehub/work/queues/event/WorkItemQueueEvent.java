@@ -19,10 +19,12 @@ import java.util.UUID;
  * @param queueViewId the UUID of the affected {@link io.casehub.work.queues.model.QueueView}
  * @param queueName human-readable name of the queue, for logging and display
  * @param eventType whether the WorkItem was added, removed, or changed within the queue
+ * @param tenancyId the tenancy ID from the WorkItem
  */
 public record WorkItemQueueEvent(
         UUID workItemId,
         UUID queueViewId,
         String queueName,
-        QueueEventType eventType) {
+        QueueEventType eventType,
+        String tenancyId) {
 }

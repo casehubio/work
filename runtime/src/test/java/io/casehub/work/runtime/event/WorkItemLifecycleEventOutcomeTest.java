@@ -51,7 +51,7 @@ class WorkItemLifecycleEventOutcomeTest {
                 id, WorkItemStatus.COMPLETED,
                 java.time.Instant.now(),
                 "alice", null, null, null,
-                "approved");
+                "approved", "test-tenant");
 
         assertThat(event.outcome()).isEqualTo("approved");
     }

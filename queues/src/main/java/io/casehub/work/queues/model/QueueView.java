@@ -22,6 +22,9 @@ public class QueueView extends PanacheEntityBase {
     @Id
     public UUID id;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     /** Human-readable name for this queue view. */
     @Column(nullable = false, length = 255)
     public String name;

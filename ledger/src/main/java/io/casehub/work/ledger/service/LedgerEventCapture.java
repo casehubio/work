@@ -62,6 +62,9 @@ public class LedgerEventCapture {
     WorkItemRelationStore relationStore;
 
     @Inject
+    CurrentPrincipal currentPrincipal;
+
+    @Inject
     LedgerConfig config;
 
     @Inject

@@ -28,6 +28,9 @@ public class EscalationSummary extends PanacheEntityBase {
     @Column(nullable = false)
     public UUID id;
 
+    @Column(name = "tenancy_id", nullable = false)
+    public String tenancyId;
+
     @Column(name = "work_item_id", nullable = false)
     public UUID workItemId;
 

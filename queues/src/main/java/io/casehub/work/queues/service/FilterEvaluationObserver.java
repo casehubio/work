@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 
 import io.casehub.work.queues.event.WorkItemQueueEvent;
 import io.casehub.work.queues.model.QueueView;
+import io.casehub.work.queues.repository.QueueViewStore;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.repository.WorkItemStore;
 
@@ -86,6 +87,9 @@ public class FilterEvaluationObserver {
     WorkItemStore workItemStore;
 
     @Inject
+    QueueViewStore queueViewStore;
+
+    @Inject
     Event<WorkItemQueueEvent> queueEventBus;
 
     @Inject
@@ -104,7 +108,7 @@ public class FilterEvaluationObserver {
             final Map<UUID, String> before = tracker.getBefore(wi.id);
 
             // 2. Fetch all QueueViews once — used by resolve() for pattern matching
-            final List<QueueView> allQueues = QueueView.listAll();
+            final List<QueueView> allQueues = queueViewStore.scanAll();
 
             // 3. Short-lived context — no CDI scope; GC-eligible after resolve() returns
             final QueueMembershipContext ctx = new QueueMembershipContext(wi.id, before);

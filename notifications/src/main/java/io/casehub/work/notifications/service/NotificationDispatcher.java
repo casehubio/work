@@ -19,6 +19,7 @@ import jakarta.transaction.Transactional;
 import io.casehub.work.api.NotificationChannel;
 import io.casehub.work.api.NotificationPayload;
 import io.casehub.work.notifications.model.WorkItemNotificationRule;
+import io.casehub.work.notifications.repository.NotificationRuleStore;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
 
@@ -50,6 +51,9 @@ public class NotificationDispatcher {
     private static final ExecutorService EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
     @Inject
+    NotificationRuleStore ruleStore;
+
+    @Inject
     Instance<NotificationChannel> channels;
 
     /**
@@ -69,7 +73,7 @@ public class NotificationDispatcher {
         // Load rules in a new transaction (AFTER_SUCCESS means we're outside the original tx)
         final List<WorkItemNotificationRule> candidates;
         try {
-            candidates = WorkItemNotificationRule.findEnabledForEventType(eventTypeName);
+            candidates = ruleStore.findEnabledForEventType(eventTypeName);
         } catch (final Exception e) {
             LOG.warning("Failed to load notification rules for " + eventTypeName + ": " + e.getMessage());
             return;

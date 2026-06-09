@@ -2,6 +2,7 @@ package io.casehub.work.ai.skill;
 
 import java.util.List;
 
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -14,6 +15,8 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import io.casehub.work.ai.repository.WorkerSkillProfileStore;
+
 /**
  * REST API for managing worker skill profiles.
  *
@@ -25,6 +28,9 @@ import jakarta.ws.rs.core.Response;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class WorkerSkillProfileResource {
+
+    @Inject
+    WorkerSkillProfileStore profileStore;
 
     record ProfileRequest(String workerId, String narrative) {
     }
@@ -41,14 +47,15 @@ public class WorkerSkillProfileResource {
         if (request == null || request.workerId() == null || request.workerId().isBlank()) {
             throw new WebApplicationException("workerId is required", 400);
         }
-        final WorkerSkillProfile existing = WorkerSkillProfile.findById(request.workerId());
-        if (existing == null) {
+        final var existing = profileStore.get(request.workerId());
+        if (existing.isEmpty()) {
             final var profile = new WorkerSkillProfile();
             profile.workerId = request.workerId();
             profile.narrative = request.narrative();
-            profile.persist();
+            profileStore.put(profile);
         } else {
-            existing.narrative = request.narrative();
+            existing.get().narrative = request.narrative();
+            profileStore.put(existing.get());
         }
         return Response.status(201).build();
     }
@@ -60,7 +67,7 @@ public class WorkerSkillProfileResource {
      */
     @GET
     public List<WorkerSkillProfile> listAll() {
-        return WorkerSkillProfile.listAll();
+        return profileStore.scanAll();
     }
 
     /**
@@ -72,11 +79,8 @@ public class WorkerSkillProfileResource {
     @GET
     @Path("/{workerId}")
     public WorkerSkillProfile get(@PathParam("workerId") final String workerId) {
-        final WorkerSkillProfile profile = WorkerSkillProfile.findById(workerId);
-        if (profile == null) {
-            throw new WebApplicationException(404);
-        }
-        return profile;
+        return profileStore.get(workerId)
+                .orElseThrow(() -> new WebApplicationException(404));
     }
 
     /**
@@ -89,7 +93,7 @@ public class WorkerSkillProfileResource {
     @Path("/{workerId}")
     @Transactional
     public Response delete(@PathParam("workerId") final String workerId) {
-        final boolean deleted = WorkerSkillProfile.deleteById(workerId);
+        final boolean deleted = profileStore.delete(workerId);
         return deleted ? Response.noContent().build() : Response.status(404).build();
     }
 }

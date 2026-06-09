@@ -20,5 +20,5 @@ import io.casehub.work.api.SlaBreachContext;
  * }
  * </pre>
  */
-public record SlaBreachEvent(SlaBreachContext context, BreachDecision decision) {
+public record SlaBreachEvent(SlaBreachContext context, BreachDecision decision, String tenancyId) {
 }

@@ -16,6 +16,11 @@ import io.casehub.work.runtime.model.WorkItemStatus;
  * JPA entity is excluded — it is not available on receiving nodes, and SSE clients never see
  * it (it is {@code @JsonIgnore} in the event class). Converting back to a lifecycle event
  * uses {@link WorkItemLifecycleEvent#fromWire}.
+ *
+ * <p>
+ * {@code tenancyId} is included in the wire format for server-to-server relay (broadcaster
+ * filtering), but is NOT exposed to SSE clients ({@code @JsonIgnore} in
+ * {@link WorkItemLifecycleEvent}).
  */
 public record WorkItemEventPayload(
         @JsonProperty("type") String type,
@@ -28,7 +33,8 @@ public record WorkItemEventPayload(
         @JsonProperty("detail") String detail,
         @JsonProperty("rationale") String rationale,
         @JsonProperty("planRef") String planRef,
-        @JsonProperty("outcome") String outcome) {
+        @JsonProperty("outcome") String outcome,
+        @JsonProperty("tenancyId") String tenancyId) {
 
     /** Convert from a live lifecycle event for publishing to the PostgreSQL channel. */
     static WorkItemEventPayload from(final WorkItemLifecycleEvent event) {
@@ -36,12 +42,12 @@ public record WorkItemEventPayload(
                 event.type(), event.sourceUri(), event.subject(),
                 event.workItemId(), event.status(), event.occurredAt(),
                 event.actor(), event.detail(), event.rationale(), event.planRef(),
-                event.outcome());
+                event.outcome(), event.tenancyId());
     }
 
     /** Reconstruct a lifecycle event from a received wire payload. */
     WorkItemLifecycleEvent toEvent() {
         return WorkItemLifecycleEvent.fromWire(type, source, subject,
-                workItemId, status, occurredAt, actor, detail, rationale, planRef, outcome);
+                workItemId, status, occurredAt, actor, detail, rationale, planRef, outcome, tenancyId);
     }
 }

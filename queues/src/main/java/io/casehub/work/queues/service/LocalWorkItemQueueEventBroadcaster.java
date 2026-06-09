@@ -28,8 +28,12 @@ public class LocalWorkItemQueueEventBroadcaster implements WorkItemQueueEventBro
     }
 
     @Override
-    public Multi<WorkItemQueueEvent> stream(final UUID queueViewId) {
+    public Multi<WorkItemQueueEvent> stream(final UUID queueViewId, final String tenancyId) {
         Multi<WorkItemQueueEvent> source = processor.toHotStream();
+
+        // Tenant filter is always applied first — never null
+        source = source.filter(e -> tenancyId.equals(e.tenancyId()));
+
         if (queueViewId != null) {
             source = source.filter(e -> queueViewId.equals(e.queueViewId()));
         }

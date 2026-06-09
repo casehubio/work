@@ -10,6 +10,8 @@ import jakarta.transaction.Transactional;
 import io.casehub.work.queues.model.FilterAction;
 import io.casehub.work.queues.model.FilterChain;
 import io.casehub.work.queues.model.WorkItemFilter;
+import io.casehub.work.queues.repository.FilterChainStore;
+import io.casehub.work.queues.repository.WorkItemFilterStore;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemLabel;
@@ -44,6 +46,12 @@ public class FilterEngineImpl implements FilterEngine {
     @Inject
     WorkItemStore workItemStore;
 
+    @Inject
+    WorkItemFilterStore filterStore;
+
+    @Inject
+    FilterChainStore chainStore;
+
     /**
      * Evaluates all active filters against the given WorkItem.
      *
@@ -74,12 +82,12 @@ public class FilterEngineImpl implements FilterEngine {
             passes++;
 
             // Saved filters (JEXL, JQ)
-            for (final WorkItemFilter filter : WorkItemFilter.findActive()) {
+            for (final WorkItemFilter filter : filterStore.findActive()) {
                 final WorkItemExpressionEvaluator evaluator = registry.find(filter.conditionDescriptor());
                 if (evaluator != null && evaluator.evaluate(workItem, filter.conditionDescriptor())) {
                     changed |= applyActions(workItem, filter.parseActions(), filter.id.toString());
                     // Maintain inverse index: record this WorkItem in the filter's chain
-                    final FilterChain chain = FilterChain.findOrCreateForFilter(filter.id);
+                    final FilterChain chain = chainStore.findOrCreateForFilter(filter.id);
                     chain.workItems.add(workItem.id);
                 }
             }
@@ -115,7 +123,7 @@ public class FilterEngineImpl implements FilterEngine {
     @Override
     @Transactional
     public void cascadeDelete(final UUID filterId) {
-        final FilterChain chain = FilterChain.findByFilterId(filterId);
+        final FilterChain chain = chainStore.findByFilterId(filterId).orElse(null);
         if (chain == null) {
             return;
         }
@@ -145,14 +153,14 @@ public class FilterEngineImpl implements FilterEngine {
             changed = false;
             passes++;
 
-            for (final WorkItemFilter filter : WorkItemFilter.findActive()) {
+            for (final WorkItemFilter filter : filterStore.findActive()) {
                 if (filter.id.equals(excludeFilterId)) {
                     continue; // skip the filter being deleted
                 }
                 final WorkItemExpressionEvaluator evaluator = registry.find(filter.conditionDescriptor());
                 if (evaluator != null && evaluator.evaluate(workItem, filter.conditionDescriptor())) {
                     changed |= applyActions(workItem, filter.parseActions(), filter.id.toString());
-                    final FilterChain fc = FilterChain.findOrCreateForFilter(filter.id);
+                    final FilterChain fc = chainStore.findOrCreateForFilter(filter.id);
                     fc.workItems.add(workItem.id);
                 }
             }

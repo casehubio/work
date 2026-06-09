@@ -10,7 +10,8 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
 import io.casehub.work.runtime.config.WorkItemsConfig;
-import io.casehub.work.runtime.model.RoutingCursor;
+import io.casehub.work.runtime.repository.CrossTenant;
+import io.casehub.work.runtime.repository.CrossTenantRoutingCursorStore;
 import io.quarkus.scheduler.Scheduled;
 
 /**
@@ -31,6 +32,10 @@ public class RoutingCursorCleanupJob {
 
     @Inject
     WorkItemsConfig config;
+
+    @Inject
+    @CrossTenant
+    CrossTenantRoutingCursorStore crossTenantCursorStore;
 
     /**
      * Runs on the configured cron schedule. Deletes cursor rows not accessed within
@@ -55,7 +60,7 @@ public class RoutingCursorCleanupJob {
     @Transactional
     public void cleanup() {
         final Instant cutoff = Instant.now().minus(config.routing().cursor().ttlDays(), ChronoUnit.DAYS);
-        final long deleted = RoutingCursor.delete("lastAccessed < ?1", cutoff);
+        final long deleted = crossTenantCursorStore.cleanupStale(cutoff);
         if (deleted > 0) {
             LOG.infof("Deleted %d stale routing_cursor rows (last_accessed < %s)", deleted, cutoff);
         }

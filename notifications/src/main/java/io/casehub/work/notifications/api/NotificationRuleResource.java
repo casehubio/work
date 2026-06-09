@@ -3,8 +3,10 @@ package io.casehub.work.notifications.api;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -19,6 +21,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import io.casehub.work.notifications.model.WorkItemNotificationRule;
+import io.casehub.work.notifications.repository.NotificationRuleStore;
 
 /**
  * REST CRUD for {@link WorkItemNotificationRule}.
@@ -35,6 +38,9 @@ import io.casehub.work.notifications.model.WorkItemNotificationRule;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class NotificationRuleResource {
+
+    @Inject
+    NotificationRuleStore ruleStore;
 
     public record CreateRuleRequest(
             String channelType,
@@ -70,7 +76,7 @@ public class NotificationRuleResource {
         rule.category = req.category();
         rule.secret = req.secret();
         rule.enabled = req.enabled() == null || req.enabled();
-        rule.persist();
+        ruleStore.put(rule);
 
         return Response.created(URI.create("/workitem-notification-rules/" + rule.id))
                 .entity(toResponse(rule)).build();
@@ -82,20 +88,20 @@ public class NotificationRuleResource {
     public List<Map<String, Object>> list(
             @QueryParam("channelType") final String channelType) {
         final List<WorkItemNotificationRule> rules = channelType != null
-                ? WorkItemNotificationRule.list("channelType = ?1 ORDER BY createdAt ASC", channelType)
-                : WorkItemNotificationRule.findAllEnabled();
+                ? ruleStore.scanAll().stream()
+                        .filter(r -> channelType.equals(r.channelType))
+                        .toList()
+                : ruleStore.findAllEnabled();
         return rules.stream().map(this::toResponse).toList();
     }
 
     @GET
     @Path("/{id}")
     public Response getById(@PathParam("id") final UUID id) {
-        final WorkItemNotificationRule rule = WorkItemNotificationRule.findById(id);
-        if (rule == null) {
-            return Response.status(Response.Status.NOT_FOUND)
-                    .entity(Map.of("error", "Rule not found")).build();
-        }
-        return Response.ok(toResponse(rule)).build();
+        return ruleStore.get(id)
+                .map(rule -> Response.ok(toResponse(rule)).build())
+                .orElse(Response.status(Response.Status.NOT_FOUND)
+                        .entity(Map.of("error", "Rule not found")).build());
     }
 
     // ── Update ────────────────────────────────────────────────────────────────
@@ -104,11 +110,12 @@ public class NotificationRuleResource {
     @Path("/{id}")
     @Transactional
     public Response update(@PathParam("id") final UUID id, final CreateRuleRequest req) {
-        final WorkItemNotificationRule rule = WorkItemNotificationRule.findById(id);
-        if (rule == null) {
+        final Optional<WorkItemNotificationRule> existing = ruleStore.get(id);
+        if (existing.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity(Map.of("error", "Rule not found")).build();
         }
+        final WorkItemNotificationRule rule = existing.get();
         if (req.channelType() != null && !req.channelType().isBlank()) {
             rule.channelType = req.channelType();
         }
@@ -127,7 +134,7 @@ public class NotificationRuleResource {
         if (req.enabled() != null) {
             rule.enabled = req.enabled();
         }
-        rule.persist();
+        ruleStore.put(rule);
         return Response.ok(toResponse(rule)).build();
     }
 
@@ -137,12 +144,11 @@ public class NotificationRuleResource {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") final UUID id) {
-        final WorkItemNotificationRule rule = WorkItemNotificationRule.findById(id);
-        if (rule == null) {
+        final boolean deleted = ruleStore.delete(id);
+        if (!deleted) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity(Map.of("error", "Rule not found")).build();
         }
-        rule.delete();
         return Response.noContent().build();
     }
 

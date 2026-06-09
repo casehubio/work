@@ -8,6 +8,7 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.casehub.work.queues.event.WorkItemQueueEvent;
 import io.casehub.work.queues.model.QueueView;
+import io.casehub.work.queues.repository.QueueViewStore;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
 
@@ -40,13 +41,16 @@ public class WorkItemQueueMetrics {
     @Inject
     WorkItemStore workItemStore;
 
+    @Inject
+    QueueViewStore queueViewStore;
+
     /**
      * Observes queue events and lazily registers a depth gauge for each new queue.
      * Micrometer deduplicates registrations — calling this multiple times for the
      * same queue name is safe.
      */
     public void onQueueEvent(@Observes final WorkItemQueueEvent event) {
-        final QueueView queue = QueueView.findById(event.queueViewId());
+        final QueueView queue = queueViewStore.get(event.queueViewId()).orElse(null);
         if (queue == null)
             return;
 

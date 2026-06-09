@@ -3,11 +3,14 @@ package io.casehub.work.ai.escalation;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+
+import io.casehub.work.ai.repository.EscalationSummaryStore;
 
 /**
  * REST endpoint for reading escalation summaries.
@@ -24,6 +27,9 @@ import jakarta.ws.rs.core.MediaType;
 @Produces(MediaType.APPLICATION_JSON)
 public class EscalationSummaryResource {
 
+    @Inject
+    EscalationSummaryStore summaryStore;
+
     /**
      * List all escalation summaries for a WorkItem, ordered by generatedAt descending.
      *
@@ -33,6 +39,6 @@ public class EscalationSummaryResource {
     @GET
     @Path("/{id}/escalation-summaries")
     public List<EscalationSummary> list(@PathParam("id") final UUID id) {
-        return EscalationSummary.findByWorkItemId(id);
+        return summaryStore.findByWorkItemId(id);
     }
 }

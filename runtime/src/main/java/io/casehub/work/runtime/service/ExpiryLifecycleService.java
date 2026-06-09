@@ -85,7 +85,7 @@ public class ExpiryLifecycleService {
             try {
                 final SlaBreachContext ctx = buildBreachContext(item, BreachType.COMPLETION_EXPIRED, now);
                 final BreachDecision leaf = executeBreachDecision(item, slaBreachPolicy.onBreach(ctx), ctx, now);
-                slaBreachEventBus.fire(new SlaBreachEvent(ctx, leaf));
+                slaBreachEventBus.fire(new SlaBreachEvent(ctx, leaf, item.tenancyId));
             } catch (final BreachExecutionFailed e) {
                 LOG.errorf("SLA breach policy misconfigured for WorkItem %s — skipping this tick: %s",
                         item.id, e.getMessage());
@@ -116,7 +116,7 @@ public class ExpiryLifecycleService {
 
                 final SlaBreachContext ctx = buildBreachContext(item, BreachType.CLAIM_EXPIRED, now);
                 final BreachDecision leaf = executeBreachDecision(item, slaBreachPolicy.onBreach(ctx), ctx, now);
-                slaBreachEventBus.fire(new SlaBreachEvent(ctx, leaf));
+                slaBreachEventBus.fire(new SlaBreachEvent(ctx, leaf, item.tenancyId));
             } catch (final BreachExecutionFailed e) {
                 LOG.errorf("SLA breach policy misconfigured for WorkItem %s (claim) — skipping: %s",
                         item.id, e.getMessage());

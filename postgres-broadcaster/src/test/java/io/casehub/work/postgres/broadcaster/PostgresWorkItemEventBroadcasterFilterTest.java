@@ -46,7 +46,7 @@ class PostgresWorkItemEventBroadcasterFilterTest {
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
-        broadcaster.stream(null, null).subscribe().with(e -> {
+        broadcaster.stream(null, null, "test-tenant").subscribe().with(e -> {
             received.add(e);
             latch.countDown();
         });
@@ -63,8 +63,8 @@ class PostgresWorkItemEventBroadcasterFilterTest {
         final List<WorkItemLifecycleEvent> sub1 = new CopyOnWriteArrayList<>();
         final List<WorkItemLifecycleEvent> sub2 = new CopyOnWriteArrayList<>();
 
-        broadcaster.stream(null, null).subscribe().with(e -> { sub1.add(e); latch.countDown(); });
-        broadcaster.stream(null, null).subscribe().with(e -> { sub2.add(e); latch.countDown(); });
+        broadcaster.stream(null, null, "test-tenant").subscribe().with(e -> { sub1.add(e); latch.countDown(); });
+        broadcaster.stream(null, null, "test-tenant").subscribe().with(e -> { sub2.add(e); latch.countDown(); });
 
         broadcaster.emit(event("ASSIGNED", UUID.randomUUID()));
 
@@ -79,7 +79,7 @@ class PostgresWorkItemEventBroadcasterFilterTest {
         final List<String> types = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(3);
 
-        broadcaster.stream(null, null).subscribe().with(e -> {
+        broadcaster.stream(null, null, "test-tenant").subscribe().with(e -> {
             types.add(e.type());
             latch.countDown();
         });
@@ -102,7 +102,7 @@ class PostgresWorkItemEventBroadcasterFilterTest {
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
-        broadcaster.stream(target, null).subscribe().with(e -> {
+        broadcaster.stream(target, null, "test-tenant").subscribe().with(e -> {
             received.add(e);
             latch.countDown();
         });
@@ -120,7 +120,7 @@ class PostgresWorkItemEventBroadcasterFilterTest {
         final CountDownLatch latch = new CountDownLatch(2);
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
 
-        broadcaster.stream(null, null).subscribe().with(e -> {
+        broadcaster.stream(null, null, "test-tenant").subscribe().with(e -> {
             received.add(e);
             latch.countDown();
         });
@@ -139,7 +139,7 @@ class PostgresWorkItemEventBroadcasterFilterTest {
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(1);
 
-        broadcaster.stream(null, "completed").subscribe().with(e -> {
+        broadcaster.stream(null, "completed", "test-tenant").subscribe().with(e -> {
             received.add(e);
             latch.countDown();
         });
@@ -158,7 +158,7 @@ class PostgresWorkItemEventBroadcasterFilterTest {
         final CountDownLatch latch = new CountDownLatch(1);
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
 
-        broadcaster.stream(null, "CREATED").subscribe().with(e -> {
+        broadcaster.stream(null, "CREATED", "test-tenant").subscribe().with(e -> {
             received.add(e);
             latch.countDown();
         });
@@ -176,7 +176,7 @@ class PostgresWorkItemEventBroadcasterFilterTest {
         final CountDownLatch latch = new CountDownLatch(1);
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
 
-        broadcaster.stream(target, "completed").subscribe().with(e -> {
+        broadcaster.stream(target, "completed", "test-tenant").subscribe().with(e -> {
             received.add(e);
             latch.countDown();
         });
