@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -37,9 +38,10 @@ import io.casehub.work.runtime.repository.WorkItemStore;
 
 /**
  * Handles expiry evaluation, SLA breach policy dispatch, and claim deadline breach processing.
- * Called by {@link ExpiryCleanupJob} and {@link ClaimDeadlineJob}; also provides
- * {@link #computeNewClaimDeadline} for use by lifecycle transitions that return a
- * WorkItem to the pool (release, delegate).
+ * Called by {@link ExpiryTimerJob} and {@link ClaimDeadlineTimerJob} (per-item Quartz timers),
+ * and by the batch {@link #checkExpired()} / {@link #checkClaimDeadlines()} methods (retained
+ * for startup recovery and tests). Also provides {@link #computeNewClaimDeadline} for use
+ * by lifecycle transitions that return a WorkItem to the pool (release, delegate).
  */
 @ApplicationScoped
 public class ExpiryLifecycleService {
@@ -73,10 +75,13 @@ public class ExpiryLifecycleService {
     @Inject
     WorkItemAssignmentService assignmentService;
 
+    @Inject
+    WorkItemTimerService timerService;
+
     /**
      * Marks all WorkItems whose {@code expiresAt} has passed and delegates the
      * breach decision to {@link SlaBreachPolicy}.
-     * Called by {@link ExpiryCleanupJob} on each scheduled tick.
+     * Retained for startup recovery and tests. Per-item timers are now the primary mechanism.
      */
     @Transactional
     public void checkExpired() {
@@ -97,7 +102,7 @@ public class ExpiryLifecycleService {
     /**
      * Processes WorkItems whose {@code claimDeadline} has passed — accumulates unclaimed time,
      * then delegates the breach decision to {@link SlaBreachPolicy}.
-     * Called by {@link ClaimDeadlineJob} on each scheduled tick.
+     * Retained for startup recovery and tests. Per-item timers are now the primary mechanism.
      */
     @Transactional
     public void checkClaimDeadlines() {
@@ -137,6 +142,68 @@ public class ExpiryLifecycleService {
         return claimSlaPolicy.computePoolDeadline(buildClaimSlaContext(item, now));
     }
 
+    // ── Per-item methods (called by Quartz timer jobs) ─────────────────────
+
+    /**
+     * Expires a single WorkItem if it is still eligible (non-terminal and past its {@code expiresAt}).
+     * Called by {@link ExpiryTimerJob} when the per-item Quartz timer fires.
+     *
+     * <p>This is the single-item counterpart of {@link #checkExpired()}. It performs the same
+     * breach-decision logic but targets exactly one WorkItem by ID, avoiding the batch scan.
+     */
+    @Transactional
+    public void expireItem(final UUID workItemId) {
+        workItemStore.get(workItemId).ifPresent(item -> {
+            final Instant now = Instant.now();
+            if (!item.status.isTerminal() && item.expiresAt != null && !item.expiresAt.isAfter(now)) {
+                try {
+                    final SlaBreachContext ctx = buildBreachContext(item, BreachType.COMPLETION_EXPIRED, now);
+                    final BreachDecision leaf = executeBreachDecision(item, slaBreachPolicy.onBreach(ctx), ctx, now);
+                    slaBreachEventBus.fire(new SlaBreachEvent(ctx, leaf, item.tenancyId));
+                } catch (final BreachExecutionFailed e) {
+                    LOG.errorf("SLA breach policy misconfigured for WorkItem %s — skipping: %s",
+                            item.id, e.getMessage());
+                    writeAudit(item, "BREACH_POLICY_MISCONFIGURED", e.getMessage(), now);
+                }
+            }
+        });
+    }
+
+    /**
+     * Processes a single WorkItem's claim deadline if it is still eligible
+     * (non-terminal and past its {@code claimDeadline}).
+     * Called by {@link ClaimDeadlineTimerJob} when the per-item Quartz timer fires.
+     *
+     * <p>This is the single-item counterpart of {@link #checkClaimDeadlines()}. It performs
+     * the same time-accumulation and breach-decision logic but targets exactly one WorkItem.
+     */
+    @Transactional
+    public void processClaimDeadline(final UUID workItemId) {
+        workItemStore.get(workItemId).ifPresent(item -> {
+            final Instant now = Instant.now();
+            if (!item.status.isTerminal() && item.claimDeadline != null && !item.claimDeadline.isAfter(now)) {
+                try {
+                    // Time accumulation always happens, regardless of policy decision
+                    if (item.lastReturnedToPoolAt != null) {
+                        item.accumulatedUnclaimedSeconds += Duration.between(item.lastReturnedToPoolAt, now).toSeconds();
+                    }
+                    item.lastReturnedToPoolAt = now;
+
+                    // CLAIM_EXPIRED lifecycle event is a factual record of the deadline passing
+                    fireLifecycleEvent("CLAIM_EXPIRED", item);
+
+                    final SlaBreachContext ctx = buildBreachContext(item, BreachType.CLAIM_EXPIRED, now);
+                    final BreachDecision leaf = executeBreachDecision(item, slaBreachPolicy.onBreach(ctx), ctx, now);
+                    slaBreachEventBus.fire(new SlaBreachEvent(ctx, leaf, item.tenancyId));
+                } catch (final BreachExecutionFailed e) {
+                    LOG.errorf("SLA breach policy misconfigured for WorkItem %s (claim) — skipping: %s",
+                            item.id, e.getMessage());
+                    writeAudit(item, "BREACH_POLICY_MISCONFIGURED", e.getMessage(), now);
+                }
+            }
+        });
+    }
+
     // ── Decision execution ───────────────────────────────────────────────────
 
     /**
@@ -171,6 +238,7 @@ public class ExpiryLifecycleService {
         item.completedAt = now;
         item.resolution = fail.reason();
         workItemStore.put(item);
+        timerService.cancelClaimDeadline(item.id);
         writeAudit(item, "EXPIRED", fail.reason(), now);
         fireLifecycleEvent("EXPIRED", item);
         return fail;
@@ -202,6 +270,14 @@ public class ExpiryLifecycleService {
         assignmentService.assign(item, AssignmentTrigger.SLA_ESCALATED);
 
         workItemStore.put(item);
+        if (ctx.breachType() == BreachType.COMPLETION_EXPIRED) {
+            timerService.rescheduleExpiry(item.id, item.expiresAt);
+            if (item.claimDeadline != null) {
+                timerService.scheduleClaimDeadline(item.id, item.tenancyId, item.claimDeadline);
+            }
+        } else {
+            timerService.rescheduleClaimDeadline(item.id, item.claimDeadline);
+        }
         // SLA_REASSIGNED: item is still active (PENDING with new candidateGroups).
         // Distinct from "ESCALATED" which means the item reached ESCALATED terminal status.
         writeAudit(item, "SLA_REASSIGNED", null, now);
@@ -213,6 +289,7 @@ public class ExpiryLifecycleService {
         item.status = WorkItemStatus.ESCALATED;
         item.completedAt = now;
         workItemStore.put(item);
+        timerService.cancelClaimDeadline(item.id);
         writeAudit(item, "ESCALATED", reason, now);
         fireLifecycleEvent("ESCALATED", item);
         return new BreachDecision.Exhausted(reason);
@@ -227,6 +304,11 @@ public class ExpiryLifecycleService {
             item.claimDeadline = now.plus(extend.by());
         }
         workItemStore.put(item);
+        if (ctx.breachType() == BreachType.COMPLETION_EXPIRED) {
+            timerService.rescheduleExpiry(item.id, item.expiresAt);
+        } else {
+            timerService.rescheduleClaimDeadline(item.id, item.claimDeadline);
+        }
         writeAudit(item, "SLA_EXTENDED", null, now);
         // No lifecycle event — deadline extension is not a status transition
         return extend;

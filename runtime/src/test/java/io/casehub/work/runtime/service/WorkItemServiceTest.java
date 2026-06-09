@@ -2,6 +2,7 @@ package io.casehub.work.runtime.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -250,7 +251,8 @@ class WorkItemServiceTest {
                 new io.casehub.work.core.policy.ContinuationPolicy(),
                 (userId, excluded) -> PolicyDecision.ALLOW,
                 new BlockedAttemptAuditService(auditStore),
-                new CapabilityValidator(ValidationMode.PERMISSIVE, () -> java.util.Set.of()));
+                new CapabilityValidator(ValidationMode.PERMISSIVE, () -> java.util.Set.of()),
+                mock(WorkItemTimerService.class));
         // Empty preferences → DeclineTarget.POOL by default
         service.preferenceProvider = scope -> new MapPreferences(Map.of());
         // Wire OutcomeValidator — @Inject field, not in constructor
@@ -1291,7 +1293,8 @@ class WorkItemServiceTest {
                 new io.casehub.work.core.policy.ContinuationPolicy(),
                 (userId, excluded) -> PolicyDecision.ALLOW,
                 new BlockedAttemptAuditService(auditStore),
-                new CapabilityValidator(ValidationMode.PERMISSIVE, () -> java.util.Set.of()));
+                new CapabilityValidator(ValidationMode.PERMISSIVE, () -> java.util.Set.of()),
+                mock(WorkItemTimerService.class));
         WorkItem wi = svc.create(basicRequest());
         assertThat(wi.claimDeadline).isNull();
     }

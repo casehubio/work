@@ -50,6 +50,7 @@ public class WorkItemService {
     private final ExclusionPolicy exclusionPolicy;
     private final BlockedAttemptAuditService blockedAuditService;
     private final CapabilityValidator capabilityValidator;
+    private final WorkItemTimerService timerService;
 
     @Inject
     WorkItemSpawnGroupStore spawnGroupStore;
@@ -80,7 +81,8 @@ public class WorkItemService {
             final ClaimSlaPolicy claimSlaPolicy,
             final ExclusionPolicy exclusionPolicy,
             final BlockedAttemptAuditService blockedAuditService,
-            final CapabilityValidator capabilityValidator) {
+            final CapabilityValidator capabilityValidator,
+            final WorkItemTimerService timerService) {
         this.workItemStore = workItemStore;
         this.auditStore = auditStore;
         this.config = config;
@@ -89,6 +91,7 @@ public class WorkItemService {
         this.exclusionPolicy = exclusionPolicy;
         this.blockedAuditService = blockedAuditService;
         this.capabilityValidator = capabilityValidator;
+        this.timerService = timerService;
     }
 
     @Transactional
@@ -174,6 +177,12 @@ public class WorkItemService {
         }
         assignmentService.assign(item, AssignmentTrigger.CREATED);
         final WorkItem saved = workItemStore.put(item);
+        if (saved.expiresAt != null) {
+            timerService.scheduleExpiry(saved.id, saved.tenancyId, saved.expiresAt);
+        }
+        if (saved.claimDeadline != null) {
+            timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
+        }
         audit(saved.id, "CREATED", request.createdBy, request.auditDetail);
         if (lifecycleEvent != null) {
             lifecycleEvent.fire(WorkItemLifecycleEvent.of("CREATED", saved, request.createdBy, null));
@@ -221,6 +230,7 @@ public class WorkItemService {
         item.assigneeId = claimantId;
         item.assignedAt = now;
         final WorkItem saved = workItemStore.put(item);
+        timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "ASSIGNED", claimantId, null);
         if (lifecycleEvent != null) {
             lifecycleEvent.fire(WorkItemLifecycleEvent.of("ASSIGNED", saved, claimantId, null));
@@ -258,6 +268,8 @@ public class WorkItemService {
         item.completedAt = Instant.now();
         item.resolution = resolution;
         final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "COMPLETED", actorId, null);
         if (lifecycleEvent != null) {
             final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("COMPLETED", saved, actorId, resolution);
@@ -279,6 +291,8 @@ public class WorkItemService {
         item.status = WorkItemStatus.REJECTED;
         item.completedAt = Instant.now();
         final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "REJECTED", actorId, reason);
         if (lifecycleEvent != null) {
             final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("REJECTED", saved, actorId, reason);
@@ -307,6 +321,8 @@ public class WorkItemService {
         item.resolution = resolution;
         item.outcome = outcome;
         final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "COMPLETED", actorId, null);
         if (lifecycleEvent != null) {
             final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("COMPLETED", saved, actorId, resolution);
@@ -327,6 +343,8 @@ public class WorkItemService {
         item.completedAt = Instant.now();
         item.outcome = outcome;
         final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "REJECTED", actorId, reason);
         if (lifecycleEvent != null) {
             final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("REJECTED", saved, actorId, reason);
@@ -365,6 +383,8 @@ public class WorkItemService {
         item.resolution = resolution;
         item.outcome = outcome;
         final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "COMPLETED", actorId, null);
         if (lifecycleEvent != null) {
             final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of(
@@ -396,6 +416,8 @@ public class WorkItemService {
         item.completedAt = Instant.now();
         item.outcome = outcome;
         final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "REJECTED", actorId, reason);
         if (lifecycleEvent != null) {
             final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of(
@@ -439,6 +461,7 @@ public class WorkItemService {
         item.lastReturnedToPoolAt = null;
         item.delegationDeclineTarget = declineTarget;
         final WorkItem saved = workItemStore.put(item);
+        timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "DELEGATED", actorId, "to:" + saved.assigneeId);
         if (lifecycleEvent != null) {
             lifecycleEvent.fire(WorkItemLifecycleEvent.of("DELEGATED", saved, actorId, "to:" + toAssigneeId));
@@ -506,6 +529,9 @@ public class WorkItemService {
         }
 
         final WorkItem saved = workItemStore.put(item);
+        if (saved.claimDeadline != null) {
+            timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
+        }
         audit(saved.id, "DELEGATION_DECLINED", actorId, null);
         if (lifecycleEvent != null) {
             lifecycleEvent.fire(WorkItemLifecycleEvent.of("DELEGATION_DECLINED", saved, actorId, null));
@@ -539,6 +565,9 @@ public class WorkItemService {
         item.claimDeadline = claimSlaPolicy.computePoolDeadline(buildClaimSlaContext(item, now));
         assignmentService.assign(item, AssignmentTrigger.RELEASED);
         final WorkItem saved = workItemStore.put(item);
+        if (saved.claimDeadline != null) {
+            timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
+        }
         audit(saved.id, "RELEASED", actorId, null);
         if (lifecycleEvent != null) {
             lifecycleEvent.fire(WorkItemLifecycleEvent.of("RELEASED", saved, actorId, null));
@@ -556,6 +585,8 @@ public class WorkItemService {
         item.status = WorkItemStatus.SUSPENDED;
         item.suspendedAt = Instant.now();
         final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "SUSPENDED", actorId, reason);
         if (lifecycleEvent != null) {
             lifecycleEvent.fire(WorkItemLifecycleEvent.of("SUSPENDED", saved, actorId, reason));
@@ -573,6 +604,12 @@ public class WorkItemService {
         item.priorStatus = null;
         item.suspendedAt = null;
         final WorkItem saved = workItemStore.put(item);
+        if (saved.expiresAt != null) {
+            timerService.scheduleExpiry(saved.id, saved.tenancyId, saved.expiresAt);
+        }
+        if (saved.claimDeadline != null) {
+            timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
+        }
         audit(saved.id, "RESUMED", actorId, null);
         if (lifecycleEvent != null) {
             lifecycleEvent.fire(WorkItemLifecycleEvent.of("RESUMED", saved, actorId, null));
@@ -589,6 +626,8 @@ public class WorkItemService {
         item.status = WorkItemStatus.CANCELLED;
         item.completedAt = Instant.now();
         final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "CANCELLED", actorId, reason);
         if (lifecycleEvent != null) {
             final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("CANCELLED", saved, actorId, reason);
@@ -614,6 +653,7 @@ public class WorkItemService {
         item.expiresAt = newExpiresAt;
         item.updatedAt = Instant.now();
         final WorkItem saved = workItemStore.put(item);
+        timerService.rescheduleExpiry(saved.id, newExpiresAt);
         audit(saved.id, "DEADLINE_EXTENDED", actorId, null);
         if (lifecycleEvent != null) {
             lifecycleEvent.fire(WorkItemLifecycleEvent.of("DEADLINE_EXTENDED", saved, actorId, null));

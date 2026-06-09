@@ -1,6 +1,7 @@
 package io.casehub.work.runtime.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import java.lang.annotation.Annotation;
 import java.time.Duration;
@@ -179,6 +180,7 @@ class ExpiryLifecycleServiceTest {
                 id -> 0,
                 new WorkBroker(),
                 (userId, excluded) -> PolicyDecision.ALLOW);
+        service.timerService = mock(WorkItemTimerService.class);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

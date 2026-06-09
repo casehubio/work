@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.model.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemPriority;
-import io.casehub.work.runtime.service.ExpiryCleanupJob;
+import io.casehub.work.runtime.service.ExpiryLifecycleService;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.response.Response;
@@ -34,7 +34,7 @@ class EscalationSummaryResourceTest {
     WorkItemService workItemService;
 
     @Inject
-    ExpiryCleanupJob expiryCleanupJob;
+    ExpiryLifecycleService expiryLifecycleService;
 
     @BeforeEach
     @Transactional
@@ -64,7 +64,7 @@ class EscalationSummaryResourceTest {
     @Test
     @SuppressWarnings("unchecked")
     void list_afterExpiry_summaryPersistedWithNullText() {
-        // Create WorkItem with past expiresAt so ExpiryCleanupJob fires on it
+        // Create WorkItem with past expiresAt so expiry check fires on it
         final WorkItemCreateRequest req = WorkItemCreateRequest.builder()
                 .title("Approve expense claim")
                 .description("Team offsite expenses Q2")
@@ -77,7 +77,7 @@ class EscalationSummaryResourceTest {
         final var wi = workItemService.create(req);
 
         // Trigger the expiry job — fires EXPIRED event → observer → summary
-        expiryCleanupJob.checkExpired();
+        expiryLifecycleService.checkExpired();
 
         // Allow the AFTER_SUCCESS observer transaction to commit by calling GET
         final Response list = given()

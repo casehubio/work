@@ -21,26 +21,19 @@ import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * Integration tests for the lifecycle engine jobs.
+ * Integration tests for the lifecycle engine.
  *
  * <p>
  * The Quarkus scheduler is disabled in test application.properties so that jobs do not
- * fire automatically. Tests invoke {@link ExpiryCleanupJob#checkExpired()} and
- * {@link ClaimDeadlineJob#checkUnclaimedPastDeadline()} directly.
- *
- * <p>
- * These are RED-phase tests: they will not compile until
- * {@code ExpiryCleanupJob} and {@code ClaimDeadlineJob} production classes exist.
+ * fire automatically. Tests invoke {@link ExpiryLifecycleService#checkExpired()} and
+ * {@link ExpiryLifecycleService#checkClaimDeadlines()} directly.
  */
 @QuarkusTest
 @TestTransaction
 class LifecycleEngineTest {
 
     @Inject
-    ExpiryCleanupJob expiryJob;
-
-    @Inject
-    ClaimDeadlineJob claimDeadlineJob;
+    ExpiryLifecycleService expiryLifecycleService;
 
     @Inject
     WorkItemStore workItemStore;
@@ -83,13 +76,13 @@ class LifecycleEngineTest {
     }
 
     // -------------------------------------------------------------------------
-    // ExpiryCleanupJob — active statuses all transition to EXPIRED
+    // Expiry — active statuses all transition to EXPIRED
     // -------------------------------------------------------------------------
 
     @Test
     void expiry_pendingItemPastDeadline_transitionsToExpired() {
         WorkItem wi = createExpiredItem(WorkItemStatus.PENDING);
-        expiryJob.checkExpired();
+        expiryLifecycleService.checkExpired();
         WorkItem reloaded = workItemStore.get(wi.id).orElseThrow();
         assertThat(reloaded.status).isEqualTo(WorkItemStatus.EXPIRED);
     }
@@ -97,7 +90,7 @@ class LifecycleEngineTest {
     @Test
     void expiry_assignedItemPastDeadline_transitionsToExpired() {
         WorkItem wi = createExpiredItem(WorkItemStatus.ASSIGNED);
-        expiryJob.checkExpired();
+        expiryLifecycleService.checkExpired();
         WorkItem reloaded = workItemStore.get(wi.id).orElseThrow();
         assertThat(reloaded.status).isEqualTo(WorkItemStatus.EXPIRED);
     }
@@ -105,7 +98,7 @@ class LifecycleEngineTest {
     @Test
     void expiry_inProgressItemPastDeadline_transitionsToExpired() {
         WorkItem wi = createExpiredItem(WorkItemStatus.IN_PROGRESS);
-        expiryJob.checkExpired();
+        expiryLifecycleService.checkExpired();
         WorkItem reloaded = workItemStore.get(wi.id).orElseThrow();
         assertThat(reloaded.status).isEqualTo(WorkItemStatus.EXPIRED);
     }
@@ -113,7 +106,7 @@ class LifecycleEngineTest {
     @Test
     void expiry_suspendedItemPastDeadline_transitionsToExpired() {
         WorkItem wi = createExpiredItem(WorkItemStatus.SUSPENDED);
-        expiryJob.checkExpired();
+        expiryLifecycleService.checkExpired();
         WorkItem reloaded = workItemStore.get(wi.id).orElseThrow();
         assertThat(reloaded.status).isEqualTo(WorkItemStatus.EXPIRED);
     }
@@ -130,7 +123,7 @@ class LifecycleEngineTest {
         completed.completedAt = Instant.now().minus(30, ChronoUnit.MINUTES);
         workItemStore.put(completed);
 
-        expiryJob.checkExpired();
+        expiryLifecycleService.checkExpired();
 
         WorkItem reloaded = workItemStore.get(completed.id).orElseThrow();
         assertThat(reloaded.status).isEqualTo(WorkItemStatus.COMPLETED);
@@ -147,7 +140,7 @@ class LifecycleEngineTest {
         wi.expiresAt = Instant.now().plus(2, ChronoUnit.HOURS);
         workItemStore.put(wi);
 
-        expiryJob.checkExpired();
+        expiryLifecycleService.checkExpired();
 
         WorkItem reloaded = workItemStore.get(wi.id).orElseThrow();
         assertThat(reloaded.status).isEqualTo(WorkItemStatus.PENDING);
@@ -156,7 +149,7 @@ class LifecycleEngineTest {
     @Test
     void expiry_writesExpiredAuditEntry() {
         WorkItem wi = createExpiredItem(WorkItemStatus.PENDING);
-        expiryJob.checkExpired();
+        expiryLifecycleService.checkExpired();
         List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
         assertThat(trail).anyMatch(e -> "EXPIRED".equals(e.event) && "system".equals(e.actor));
     }
@@ -167,7 +160,7 @@ class LifecycleEngineTest {
         WorkItem wi2 = createExpiredItem(WorkItemStatus.ASSIGNED);
         WorkItem wi3 = createExpiredItem(WorkItemStatus.IN_PROGRESS);
 
-        expiryJob.checkExpired();
+        expiryLifecycleService.checkExpired();
 
         assertThat(workItemStore.get(wi1.id).orElseThrow().status).isEqualTo(WorkItemStatus.EXPIRED);
         assertThat(workItemStore.get(wi2.id).orElseThrow().status).isEqualTo(WorkItemStatus.EXPIRED);
@@ -175,7 +168,7 @@ class LifecycleEngineTest {
     }
 
     // -------------------------------------------------------------------------
-    // ClaimDeadlineJob
+    // Claim deadline
     // -------------------------------------------------------------------------
 
     @Test
@@ -183,7 +176,7 @@ class LifecycleEngineTest {
         WorkItem wi = createPastClaimDeadlineItem();
         // NoOpSlaBreachPolicy returns Fail — item transitions to EXPIRED when claim deadline passes.
         // Applications configure SlaBreachPolicy to keep items active (EscalateTo, Extend).
-        assertThatCode(() -> claimDeadlineJob.checkUnclaimedPastDeadline()).doesNotThrowAnyException();
+        assertThatCode(() -> expiryLifecycleService.checkClaimDeadlines()).doesNotThrowAnyException();
         WorkItem reloaded = workItemStore.get(wi.id).orElseThrow();
         assertThat(reloaded.status).isEqualTo(WorkItemStatus.EXPIRED);
     }
@@ -200,7 +193,7 @@ class LifecycleEngineTest {
         wi.assigneeId = "alice";
         workItemStore.put(wi);
 
-        claimDeadlineJob.checkUnclaimedPastDeadline();
+        expiryLifecycleService.checkClaimDeadlines();
 
         WorkItem reloaded = workItemStore.get(wi.id).orElseThrow();
         assertThat(reloaded.status).isEqualTo(WorkItemStatus.ASSIGNED);
@@ -223,7 +216,7 @@ class LifecycleEngineTest {
         future.expiresAt = Instant.now().plus(2, ChronoUnit.HOURS);
         workItemStore.put(future);
 
-        expiryJob.checkExpired();
+        expiryLifecycleService.checkExpired();
 
         assertThat(workItemStore.get(past.id).orElseThrow().status).isEqualTo(WorkItemStatus.EXPIRED);
         assertThat(workItemStore.get(future.id).orElseThrow().status).isEqualTo(WorkItemStatus.PENDING);

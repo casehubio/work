@@ -17,15 +17,14 @@ import io.casehub.work.runtime.model.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemStore;
-import io.casehub.work.runtime.service.ClaimDeadlineJob;
-import io.casehub.work.runtime.service.ExpiryCleanupJob;
+import io.casehub.work.runtime.service.ExpiryLifecycleService;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
- * @QuarkusTest CDI event emission tests — verifies that WorkItemService and the scheduler
- *              jobs fire {@link WorkItemLifecycleEvent} for every lifecycle transition.
+ * @QuarkusTest CDI event emission tests — verifies that WorkItemService and the expiry
+ *              lifecycle service fire {@link WorkItemLifecycleEvent} for every lifecycle transition.
  *
  *              <p>
  *              These are RED-phase TDD tests; WorkItemLifecycleEvent and its firing
@@ -45,10 +44,7 @@ class WorkItemEventTest {
     WorkItemStore workItemStore;
 
     @Inject
-    ExpiryCleanupJob expiryCleanupJob;
-
-    @Inject
-    ClaimDeadlineJob claimDeadlineJob;
+    ExpiryLifecycleService expiryLifecycleService;
 
     @Inject
     TestEventObserver observer;
@@ -229,11 +225,11 @@ class WorkItemEventTest {
     }
 
     // -------------------------------------------------------------------------
-    // Scheduler job events
+    // Expiry lifecycle events
     // -------------------------------------------------------------------------
 
     @Test
-    void expiryJob_emitsExpiredEvent() {
+    void expiryCheck_emitsExpiredEvent() {
         WorkItem wi = new WorkItem();
         wi.title = "Past expiry";
         wi.status = WorkItemStatus.PENDING;
@@ -244,7 +240,7 @@ class WorkItemEventTest {
         workItemStore.put(wi);
         observer.clear(); // discard any save-triggered events
 
-        expiryCleanupJob.checkExpired();
+        expiryLifecycleService.checkExpired();
 
         List<WorkItemLifecycleEvent> expiredEvents = observer.ofType("expired");
         assertThat(expiredEvents).isNotEmpty();
@@ -252,7 +248,7 @@ class WorkItemEventTest {
     }
 
     @Test
-    void expiryJob_emitsExpiredEvent_withNoOpPolicy() {
+    void expiryCheck_emitsExpiredEvent_withNoOpPolicy() {
         // NoOpSlaBreachPolicy returns Fail — only EXPIRED event fires (no ESCALATED).
         // Applications configure SlaBreachPolicy to control the lifecycle event outcome.
         WorkItem wi = new WorkItem();
@@ -265,14 +261,14 @@ class WorkItemEventTest {
         workItemStore.put(wi);
         observer.clear();
 
-        expiryCleanupJob.checkExpired();
+        expiryLifecycleService.checkExpired();
 
         List<WorkItemLifecycleEvent> expiredEvents = observer.ofType("expired");
         assertThat(expiredEvents).anyMatch(e -> e.workItemId().equals(wi.id));
     }
 
     @Test
-    void claimDeadlineJob_emitsClaimExpiredEvent() {
+    void claimDeadlineCheck_emitsClaimExpiredEvent() {
         WorkItem wi = new WorkItem();
         wi.title = "Past claim deadline";
         wi.status = WorkItemStatus.PENDING;
@@ -283,9 +279,9 @@ class WorkItemEventTest {
         workItemStore.put(wi);
         observer.clear();
 
-        claimDeadlineJob.checkUnclaimedPastDeadline();
+        expiryLifecycleService.checkClaimDeadlines();
 
-        // ClaimDeadlineJob now fires CLAIM_EXPIRED (not generic ESCALATED)
+        // Expiry lifecycle service fires CLAIM_EXPIRED (not generic ESCALATED)
         List<WorkItemLifecycleEvent> claimExpiredEvents = observer.ofType("claim_expired");
         assertThat(claimExpiredEvents).anyMatch(e -> e.workItemId().equals(wi.id));
     }

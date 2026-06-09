@@ -20,7 +20,7 @@ import io.casehub.work.runtime.model.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemPriority;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
-import io.casehub.work.runtime.service.ExpiryCleanupJob;
+import io.casehub.work.runtime.service.ExpiryLifecycleService;
 import io.casehub.work.runtime.service.WorkItemService;
 
 /**
@@ -29,8 +29,8 @@ import io.casehub.work.runtime.service.WorkItemService;
  * <p>
  * A critical production incident WorkItem is created with an {@code expiresAt} value in
  * the past, simulating a deadline that has already passed. The scenario then calls
- * {@link ExpiryCleanupJob#checkExpired()} programmatically to drive the expiry transition
- * without waiting for the scheduler. The resulting {@code EXPIRED} status and audit event
+ * {@link ExpiryLifecycleService#checkExpired()} programmatically to drive the expiry transition
+ * without waiting for the per-item timer. The resulting {@code EXPIRED} status and audit event
  * confirm that the escalation pipeline fired correctly.
  *
  * <p>
@@ -38,8 +38,8 @@ import io.casehub.work.runtime.service.WorkItemService;
  * {@code @Transactional}. Each step commits independently:
  * <ol>
  * <li>{@code workItemService.create()} — commits the new WorkItem in its own transaction
- * <li>{@code expiryJob.checkExpired()} — opens its own transaction, sees the committed
- * item, transitions it to {@code EXPIRED}, and commits the state change
+ * <li>{@code expiryLifecycleService.checkExpired()} — opens its own transaction, sees the
+ * committed item, transitions it to {@code EXPIRED}, and commits the state change
  * <li>Audit and store reads — see the fully committed final state
  * </ol>
  *
@@ -62,7 +62,7 @@ public class EscalationScenario {
     WorkItemService workItemService;
 
     @Inject
-    ExpiryCleanupJob expiryJob;
+    ExpiryLifecycleService expiryLifecycleService;
 
     @Inject
     WorkItemStore workItemStore;
@@ -99,9 +99,9 @@ public class EscalationScenario {
         steps.add(new StepLog(1, description1, wi.id));
 
         // Step 2: trigger the expiry cleanup job (simulates the scheduler firing)
-        final String description2 = "ExpiryCleanupJob.checkExpired() processes the already-expired WorkItem";
+        final String description2 = "ExpiryLifecycleService.checkExpired() processes the already-expired WorkItem";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 2, total, description2);
-        expiryJob.checkExpired();
+        expiryLifecycleService.checkExpired();
         steps.add(new StepLog(2, description2, wi.id));
 
         // Step 3: reload the WorkItem and verify EXPIRED status

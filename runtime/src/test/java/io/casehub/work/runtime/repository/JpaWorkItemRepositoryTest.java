@@ -26,7 +26,7 @@ import io.quarkus.test.junit.QuarkusTest;
  * operations.
  *
  * <p>
- * {@link io.casehub.work.runtime.service.ExpiryCleanupJob} depends on
+ * {@link io.casehub.work.runtime.service.ExpiryLifecycleService} depends on
  * {@link WorkItemStore#scan} with {@link WorkItemQuery#expired} and
  * {@link WorkItemQuery#claimExpired} — correctness here is critical.
  */
