@@ -77,7 +77,7 @@ class TrustScoreJobTest {
                 attestation.attestorType = ActorType.AGENT;
                 attestation.verdict = AttestationVerdict.FLAGGED;
                 attestation.confidence = 0.9;
-                ledgerRepo.saveAttestation(attestation);
+                ledgerRepo.saveAttestation(attestation, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
             }
         }
     }
@@ -95,7 +95,7 @@ class TrustScoreJobTest {
                     attestation.attestorType = ActorType.AGENT;
                     attestation.verdict = AttestationVerdict.SOUND;
                     attestation.confidence = 0.95;
-                    ledgerRepo.saveAttestation(attestation);
+                    ledgerRepo.saveAttestation(attestation, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
                 });
     }
 

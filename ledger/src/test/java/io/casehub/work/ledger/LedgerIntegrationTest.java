@@ -327,9 +327,9 @@ class LedgerIntegrationTest {
         attestation.verdict = AttestationVerdict.SOUND;
         attestation.evidence = "All checks passed";
         attestation.confidence = 0.9;
-        ledgerRepo.saveAttestation(attestation);
+        ledgerRepo.saveAttestation(attestation, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
 
-        final List<LedgerAttestation> results = ledgerRepo.findAttestationsByEntryId(entryId);
+        final List<LedgerAttestation> results = ledgerRepo.findAttestationsByEntryId(entryId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
         assertThat(results).hasSize(1);
 
         final LedgerAttestation saved = results.get(0);
@@ -353,7 +353,7 @@ class LedgerIntegrationTest {
         a1.attestorType = ActorType.HUMAN;
         a1.verdict = AttestationVerdict.SOUND;
         a1.confidence = 0.9;
-        ledgerRepo.saveAttestation(a1);
+        ledgerRepo.saveAttestation(a1, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
 
         final LedgerAttestation a2 = new LedgerAttestation();
         a2.ledgerEntryId = entryId;
@@ -362,9 +362,9 @@ class LedgerIntegrationTest {
         a2.attestorType = ActorType.AGENT;
         a2.verdict = AttestationVerdict.ENDORSED;
         a2.confidence = 0.95;
-        ledgerRepo.saveAttestation(a2);
+        ledgerRepo.saveAttestation(a2, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
 
-        final List<LedgerAttestation> results = ledgerRepo.findAttestationsByEntryId(entryId);
+        final List<LedgerAttestation> results = ledgerRepo.findAttestationsByEntryId(entryId, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
         assertThat(results).hasSize(2);
         assertThat(results.stream().map(a -> a.attestorId).toList())
                 .containsExactlyInAnyOrder("alice", "audit-agent");
