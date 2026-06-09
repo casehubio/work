@@ -32,6 +32,7 @@ import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.runtime.service.TenantContextRunner;
 import io.quarkus.narayana.jta.QuarkusTransaction;
 
 /**
@@ -64,6 +65,9 @@ public class QueueDashboard {
     @Inject
     ReviewStepService stepService;
 
+    @Inject
+    TenantContextRunner tenantContextRunner;
+
     private final AtomicReference<List<WorkItem>> latestItems = new AtomicReference<>(List.of());
     private final AtomicReference<Deque<String>> logLines = new AtomicReference<>(new ArrayDeque<>());
 
@@ -73,9 +77,12 @@ public class QueueDashboard {
      */
     @Transactional
     public void onLifecycleEvent(@ObservesAsync final WorkItemLifecycleEvent event) {
-        final List<WorkItem> items = workItemStore.scan(WorkItemQuery.all());
-        latestItems.set(List.copyOf(items));
-        addLog("Event: " + event.type() + " — " + event.workItemId());
+        final WorkItem workItem = (WorkItem) event.source();
+        tenantContextRunner.runInTenantContext(workItem.tenancyId, () -> {
+            final List<WorkItem> items = workItemStore.scan(WorkItemQuery.all());
+            latestItems.set(List.copyOf(items));
+            addLog("Event: " + event.type() + " — " + event.workItemId());
+        });
     }
 
     private void addLog(final String message) {

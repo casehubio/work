@@ -11,7 +11,9 @@ import java.util.UUID;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
+import jakarta.inject.Inject;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.issuetracker.model.WorkItemIssueLink;
 import io.casehub.work.issuetracker.repository.IssueLinkStore;
 
@@ -34,6 +36,9 @@ public class InMemoryIssueLinkStore implements IssueLinkStore {
 
     private final Map<UUID, WorkItemIssueLink> store = new ConcurrentHashMap<>();
 
+    @Inject
+    CurrentPrincipal currentPrincipal;
+
     /** Removes all stored links. Available for test isolation ({@code @BeforeEach}) and administrative reset. */
     public void clear() {
         store.clear();
@@ -41,18 +46,30 @@ public class InMemoryIssueLinkStore implements IssueLinkStore {
 
     /**
      * {@inheritDoc}
+     *
+     * <p>
+     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public Optional<WorkItemIssueLink> findById(final UUID id) {
-        return Optional.ofNullable(store.get(id));
+        final WorkItemIssueLink link = store.get(id);
+        if (link != null && currentPrincipal.tenancyId().equals(link.tenancyId)) {
+            return Optional.of(link);
+        }
+        return Optional.empty();
     }
 
     /**
      * {@inheritDoc}
+     *
+     * <p>
+     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public List<WorkItemIssueLink> findByWorkItemId(final UUID workItemId) {
+        final String tenancyId = currentPrincipal.tenancyId();
         return store.values().stream()
+                .filter(l -> tenancyId.equals(l.tenancyId))
                 .filter(l -> workItemId.equals(l.workItemId))
                 .sorted(Comparator.comparing(l -> l.linkedAt))
                 .toList();
@@ -60,11 +77,16 @@ public class InMemoryIssueLinkStore implements IssueLinkStore {
 
     /**
      * {@inheritDoc}
+     *
+     * <p>
+     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public Optional<WorkItemIssueLink> findByRef(
             final UUID workItemId, final String trackerType, final String externalRef) {
+        final String tenancyId = currentPrincipal.tenancyId();
         return store.values().stream()
+                .filter(l -> tenancyId.equals(l.tenancyId))
                 .filter(l -> workItemId.equals(l.workItemId)
                         && trackerType.equals(l.trackerType)
                         && externalRef.equals(l.externalRef))
@@ -73,10 +95,15 @@ public class InMemoryIssueLinkStore implements IssueLinkStore {
 
     /**
      * {@inheritDoc}
+     *
+     * <p>
+     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public List<WorkItemIssueLink> findByTrackerRef(final String trackerType, final String externalRef) {
+        final String tenancyId = currentPrincipal.tenancyId();
         return store.values().stream()
+                .filter(l -> tenancyId.equals(l.tenancyId))
                 .filter(l -> trackerType.equals(l.trackerType) && externalRef.equals(l.externalRef))
                 .toList();
     }
@@ -88,6 +115,7 @@ public class InMemoryIssueLinkStore implements IssueLinkStore {
      * If {@code link.id} is {@code null}, a fresh {@link UUID} is assigned
      * (replicating what {@code @PrePersist} does in the JPA implementation).
      * If {@code link.linkedAt} is {@code null}, it is set to {@link Instant#now()}.
+     * If {@code link.tenancyId} is {@code null}, stamps it from {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public WorkItemIssueLink save(final WorkItemIssueLink link) {
@@ -97,15 +125,23 @@ public class InMemoryIssueLinkStore implements IssueLinkStore {
         if (link.linkedAt == null) {
             link.linkedAt = Instant.now();
         }
+        if (link.tenancyId == null) {
+            link.tenancyId = currentPrincipal.tenancyId();
+        }
         store.put(link.id, link);
         return link;
     }
 
     /**
      * {@inheritDoc}
+     *
+     * <p>
+     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public void delete(final WorkItemIssueLink link) {
-        store.remove(link.id);
+        if (link != null && currentPrincipal.tenancyId().equals(link.tenancyId)) {
+            store.remove(link.id);
+        }
     }
 }

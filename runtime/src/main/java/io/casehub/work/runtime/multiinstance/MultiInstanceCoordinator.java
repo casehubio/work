@@ -10,6 +10,7 @@ import io.casehub.work.api.WorkItemGroupLifecycleEvent;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.runtime.service.TenantContextRunner;
 
 /**
  * Observes terminal {@link WorkItemLifecycleEvent} instances asynchronously and
@@ -42,6 +43,9 @@ public class MultiInstanceCoordinator {
     @Inject
     MultiInstanceGroupPolicy policy;
 
+    @Inject
+    TenantContextRunner tenantContextRunner;
+
     /**
      * Receives every terminal WorkItem lifecycle event asynchronously.
      * Skips events for WorkItems that have no parent (not part of a multi-instance group).
@@ -55,21 +59,23 @@ public class MultiInstanceCoordinator {
         if (!child.status.isTerminal())
             return;
 
-        final UUID childId = child.id;
-        final WorkItemStatus childStatus = child.status;
+        tenantContextRunner.runInTenantContext(child.tenancyId, () -> {
+            final UUID childId = child.id;
+            final WorkItemStatus childStatus = child.status;
 
-        WorkItemGroupLifecycleEvent groupEvent = null;
-        for (int attempt = 0; attempt < 2; attempt++) {
-            try {
-                groupEvent = policy.process(childId, childStatus);
-                break;
-            } catch (Exception e) {
-                // Retry once on any transient failure (OCC, RollbackException, etc.).
-                // On the second attempt policyTriggered=true makes process() return null (idempotent).
+            WorkItemGroupLifecycleEvent groupEvent = null;
+            for (int attempt = 0; attempt < 2; attempt++) {
+                try {
+                    groupEvent = policy.process(childId, childStatus);
+                    break;
+                } catch (Exception e) {
+                    // Retry once on any transient failure (OCC, RollbackException, etc.).
+                    // On the second attempt policyTriggered=true makes process() return null (idempotent).
+                }
             }
-        }
-        // Fire the group event only after the transaction commits to prevent spurious
-        // events from transactions that subsequently roll back due to OCC.
-        policy.fireEvent(groupEvent);
+            // Fire the group event only after the transaction commits to prevent spurious
+            // events from transactions that subsequently roll back due to OCC.
+            policy.fireEvent(groupEvent);
+        });
     }
 }

@@ -289,4 +289,27 @@ public class JpaWorkItemStore implements WorkItemStore {
                 "SELECT DISTINCT wi FROM WorkItem wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path = ?2",
                 tenancyId, pattern).list();
     }
+
+    @Override
+    public List<WorkItem> findByParentIdExcludingStatuses(final UUID parentId,
+            final List<io.casehub.work.runtime.model.WorkItemStatus> excludeStatuses) {
+        return WorkItem.<WorkItem> find(
+                "parentId = ?1 AND tenancyId = ?2 AND status NOT IN (?3)",
+                parentId, currentPrincipal.tenancyId(), excludeStatuses).list();
+    }
+
+    @Override
+    public List<WorkItem> findByParentIdWithStatuses(final UUID parentId,
+            final List<io.casehub.work.runtime.model.WorkItemStatus> statuses) {
+        return WorkItem.<WorkItem> find(
+                "parentId = ?1 AND tenancyId = ?2 AND status IN (?3)",
+                parentId, currentPrincipal.tenancyId(), statuses).list();
+    }
+
+    @Override
+    public List<WorkItem> findByParentId(final UUID parentId) {
+        return WorkItem.<WorkItem> find(
+                "parentId = ?1 AND tenancyId = ?2",
+                parentId, currentPrincipal.tenancyId()).list();
+    }
 }

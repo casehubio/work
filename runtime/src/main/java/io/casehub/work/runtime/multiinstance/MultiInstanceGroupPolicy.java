@@ -120,21 +120,15 @@ public class MultiInstanceGroupPolicy {
         final List<WorkItemStatus> terminalStatuses = List.of(
                 WorkItemStatus.COMPLETED, WorkItemStatus.CANCELLED,
                 WorkItemStatus.REJECTED, WorkItemStatus.EXPIRED);
-        WorkItem.<WorkItem> list("parentId = ?1 AND status NOT IN ?2",
-                group.parentId, terminalStatuses)
+        workItemStore.findByParentIdExcludingStatuses(group.parentId, terminalStatuses)
                 .forEach(child -> workItemService.cancel(child.id, "system:multi-instance",
                         "threshold-met — cancelled by group policy"));
     }
 
-    /**
-     * Suspend ASSIGNED or IN_PROGRESS children when the threshold is reached.
-     * PENDING children are left unchanged — suspending unclaimed work is not meaningful.
-     */
     private void suspendRemainingChildren(final WorkItemSpawnGroup group) {
         final List<WorkItemStatus> suspendable = List.of(
                 WorkItemStatus.ASSIGNED, WorkItemStatus.IN_PROGRESS);
-        WorkItem.<WorkItem> list("parentId = ?1 AND status IN ?2",
-                group.parentId, suspendable)
+        workItemStore.findByParentIdWithStatuses(group.parentId, suspendable)
                 .forEach(child -> workItemService.suspend(child.id, "system:multi-instance",
                         "threshold-met — suspended by group policy"));
     }

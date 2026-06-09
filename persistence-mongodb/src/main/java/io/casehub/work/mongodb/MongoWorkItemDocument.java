@@ -35,6 +35,7 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
     @BsonId
     public String id;
 
+    public String tenancyId;
     public String title;
     public String description;
     public String category;
@@ -74,6 +75,7 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
     public static MongoWorkItemDocument from(final WorkItem wi) {
         final MongoWorkItemDocument doc = new MongoWorkItemDocument();
         doc.id = wi.id != null ? wi.id.toString() : UUID.randomUUID().toString();
+        doc.tenancyId = wi.tenancyId;
         doc.title = wi.title;
         doc.description = wi.description;
         doc.category = wi.category;
@@ -116,6 +118,7 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
     public WorkItem toDomain() {
         final WorkItem wi = new WorkItem();
         wi.id = UUID.fromString(id);
+        wi.tenancyId = tenancyId;
         wi.title = title;
         wi.description = description;
         wi.category = category;

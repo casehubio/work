@@ -37,6 +37,14 @@ selects it automatically. Translates WorkItemQuery to MongoDB Document filters.<
       <artifactId>quarkus-arc</artifactId>
     </dependency>
 
+    <!-- Platform API for CurrentPrincipal -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-api</artifactId>
+      <version>0.2-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+
     <!-- Testing -->
     <dependency>
       <groupId>io.quarkus</groupId>

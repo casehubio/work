@@ -6,8 +6,11 @@ import java.util.UUID;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
+import jakarta.inject.Inject;
 
 import org.bson.Document;
+
+import io.casehub.platform.api.identity.CurrentPrincipal;
 
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.repository.AuditEntryStore;
@@ -25,15 +28,23 @@ import io.casehub.work.runtime.repository.AuditQuery;
 @Priority(1)
 public class MongoAuditEntryStore implements AuditEntryStore {
 
+    @Inject
+    CurrentPrincipal currentPrincipal;
+
     @Override
     public void append(final AuditEntry entry) {
+        if (entry.tenancyId == null) {
+            entry.tenancyId = currentPrincipal.tenancyId();
+        }
         MongoAuditEntryDocument.from(entry).persist();
     }
 
     @Override
     public List<AuditEntry> findByWorkItemId(final UUID workItemId) {
+        final Document filter = new Document("workItemId", workItemId.toString())
+                .append("tenancyId", currentPrincipal.tenancyId());
         return MongoAuditEntryDocument
-                .<MongoAuditEntryDocument> find(new Document("workItemId", workItemId.toString()))
+                .<MongoAuditEntryDocument> find(filter)
                 .list()
                 .stream()
                 .map(MongoAuditEntryDocument::toDomain)
@@ -58,6 +69,7 @@ public class MongoAuditEntryStore implements AuditEntryStore {
 
     private Document buildFilter(final AuditQuery query) {
         final Document filter = new Document();
+        filter.append("tenancyId", currentPrincipal.tenancyId());
         if (query.actorId() != null) {
             filter.append("actor", query.actorId());
         }

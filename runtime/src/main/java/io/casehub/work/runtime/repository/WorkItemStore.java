@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRootView;
+import io.casehub.work.runtime.model.WorkItemStatus;
 
 /**
  * KV-native store SPI for {@link WorkItem} persistence.
@@ -130,5 +131,46 @@ public interface WorkItemStore {
      */
     default List<WorkItemRootView> scanRoots(String assignee, String candidateUser, List<String> candidateGroups) {
         return java.util.Collections.emptyList();
+    }
+
+    /**
+     * Find child WorkItems by parent ID, excluding those in the given terminal statuses.
+     * Used by multi-instance group policy for cancelling/suspending remaining children.
+     *
+     * @param parentId the parent WorkItem UUID
+     * @param excludeStatuses statuses to exclude from results
+     * @return list of matching child WorkItems; may be empty
+     */
+    default List<WorkItem> findByParentIdExcludingStatuses(UUID parentId, List<WorkItemStatus> excludeStatuses) {
+        return scanAll().stream()
+                .filter(wi -> parentId.equals(wi.parentId))
+                .filter(wi -> !excludeStatuses.contains(wi.status))
+                .toList();
+    }
+
+    /**
+     * Find child WorkItems by parent ID matching any of the given statuses.
+     *
+     * @param parentId the parent WorkItem UUID
+     * @param statuses statuses to include in results
+     * @return list of matching child WorkItems; may be empty
+     */
+    default List<WorkItem> findByParentIdWithStatuses(UUID parentId, List<WorkItemStatus> statuses) {
+        return scanAll().stream()
+                .filter(wi -> parentId.equals(wi.parentId))
+                .filter(wi -> statuses.contains(wi.status))
+                .toList();
+    }
+
+    /**
+     * Find all child WorkItems by parent ID.
+     *
+     * @param parentId the parent WorkItem UUID
+     * @return list of child WorkItems; may be empty
+     */
+    default List<WorkItem> findByParentId(UUID parentId) {
+        return scanAll().stream()
+                .filter(wi -> parentId.equals(wi.parentId))
+                .toList();
     }
 }

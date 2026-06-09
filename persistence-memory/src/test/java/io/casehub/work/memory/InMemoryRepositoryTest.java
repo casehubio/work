@@ -5,11 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemPriority;
@@ -27,11 +29,34 @@ class InMemoryRepositoryTest {
 
     private InMemoryWorkItemStore workItemStore;
     private InMemoryAuditEntryStore auditStore;
+    private static final CurrentPrincipal TEST_PRINCIPAL = new CurrentPrincipal() {
+        @Override
+        public String actorId() {
+            return "test-user";
+        }
+
+        @Override
+        public String tenancyId() {
+            return "test-tenant";
+        }
+
+        @Override
+        public Set<String> groups() {
+            return Set.of();
+        }
+
+        @Override
+        public boolean isCrossTenantAdmin() {
+            return false;
+        }
+    };
 
     @BeforeEach
     void setUp() {
         workItemStore = new InMemoryWorkItemStore();
+        workItemStore.currentPrincipal = TEST_PRINCIPAL;
         auditStore = new InMemoryAuditEntryStore();
+        auditStore.currentPrincipal = TEST_PRINCIPAL;
     }
 
     // =========================================================================

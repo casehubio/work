@@ -10,7 +10,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
+import jakarta.inject.Inject;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.AuditQuery;
@@ -38,6 +40,9 @@ public class InMemoryAuditEntryStore implements AuditEntryStore {
 
     private final ConcurrentHashMap<UUID, CopyOnWriteArrayList<AuditEntry>> store = new ConcurrentHashMap<>();
 
+    @Inject
+    CurrentPrincipal currentPrincipal;
+
     /** Removes all stored entries. Available for test isolation ({@code @BeforeEach}) and administrative reset. */
     public void clear() {
         store.clear();
@@ -49,6 +54,7 @@ public class InMemoryAuditEntryStore implements AuditEntryStore {
      * <p>
      * If {@code entry.id} is {@code null} a fresh {@link UUID} is assigned. If
      * {@code entry.occurredAt} is {@code null} it is set to {@link Instant#now()}.
+     * If {@code entry.tenancyId} is {@code null}, stamps it from {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public void append(final AuditEntry entry) {
@@ -58,11 +64,17 @@ public class InMemoryAuditEntryStore implements AuditEntryStore {
         if (entry.occurredAt == null) {
             entry.occurredAt = Instant.now();
         }
+        if (entry.tenancyId == null) {
+            entry.tenancyId = currentPrincipal.tenancyId();
+        }
         store.computeIfAbsent(entry.workItemId, k -> new CopyOnWriteArrayList<>()).add(entry);
     }
 
     /**
      * {@inheritDoc}
+     *
+     * <p>
+     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public List<AuditEntry> findByWorkItemId(final UUID workItemId) {
@@ -70,7 +82,9 @@ public class InMemoryAuditEntryStore implements AuditEntryStore {
         if (entries == null) {
             return List.of();
         }
+        final String tenancyId = currentPrincipal.tenancyId();
         return entries.stream()
+                .filter(e -> tenancyId.equals(e.tenancyId))
                 .sorted(Comparator.comparing(e -> e.occurredAt))
                 .toList();
     }
@@ -81,11 +95,16 @@ public class InMemoryAuditEntryStore implements AuditEntryStore {
      * <p>
      * In-memory implementation for tests — applies actorId, event, from, to filters only.
      * Category filter is not supported (no WorkItem access); it is silently ignored.
+     *
+     * <p>
+     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public List<AuditEntry> query(final AuditQuery query) {
+        final String tenancyId = currentPrincipal.tenancyId();
         return store.values().stream()
                 .flatMap(List::stream)
+                .filter(e -> tenancyId.equals(e.tenancyId))
                 .filter(e -> query.actorId() == null || query.actorId().equals(e.actor))
                 .filter(e -> query.event() == null || query.event().equals(e.event))
                 .filter(e -> query.from() == null || !e.occurredAt.isBefore(query.from()))
@@ -98,11 +117,16 @@ public class InMemoryAuditEntryStore implements AuditEntryStore {
 
     /**
      * {@inheritDoc}
+     *
+     * <p>
+     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public long count(final AuditQuery query) {
+        final String tenancyId = currentPrincipal.tenancyId();
         return store.values().stream()
                 .flatMap(List::stream)
+                .filter(e -> tenancyId.equals(e.tenancyId))
                 .filter(e -> query.actorId() == null || query.actorId().equals(e.actor))
                 .filter(e -> query.event() == null || query.event().equals(e.event))
                 .filter(e -> query.from() == null || !e.occurredAt.isBefore(query.from()))

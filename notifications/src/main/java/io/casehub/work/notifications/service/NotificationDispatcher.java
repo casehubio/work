@@ -22,6 +22,7 @@ import io.casehub.work.notifications.model.WorkItemNotificationRule;
 import io.casehub.work.notifications.repository.NotificationRuleStore;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.service.TenantContextRunner;
 
 /**
  * CDI observer that dispatches outbound notifications on WorkItem lifecycle events.
@@ -56,6 +57,9 @@ public class NotificationDispatcher {
     @Inject
     Instance<NotificationChannel> channels;
 
+    @Inject
+    TenantContextRunner tenantContextRunner;
+
     /**
      * Observe WorkItem lifecycle events and dispatch matching notification rules.
      *
@@ -69,6 +73,7 @@ public class NotificationDispatcher {
         final WorkItem wi = (WorkItem) event.source();
         final String eventTypeName = event.eventType().name();
         final String category = wi.category;
+        final String tenancyId = wi.tenancyId;
 
         // Load rules in a new transaction (AFTER_SUCCESS means we're outside the original tx)
         final List<WorkItemNotificationRule> candidates;
@@ -99,12 +104,14 @@ public class NotificationDispatcher {
                     rule.secret, rule.category);
 
             CompletableFuture.runAsync(() -> {
-                try {
-                    channel.send(payload);
-                } catch (final Exception ex) {
-                    LOG.warning("NotificationChannel " + rule.channelType
-                            + " threw on rule " + rule.id + ": " + ex.getMessage());
-                }
+                tenantContextRunner.runInTenantContext(tenancyId, () -> {
+                    try {
+                        channel.send(payload);
+                    } catch (final Exception ex) {
+                        LOG.warning("NotificationChannel " + rule.channelType
+                                + " threw on rule " + rule.id + ": " + ex.getMessage());
+                    }
+                });
             }, EXECUTOR);
         }
     }

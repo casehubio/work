@@ -10,8 +10,11 @@ import java.util.UUID;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
+import jakarta.inject.Inject;
 
 import org.bson.Document;
+
+import io.casehub.platform.api.identity.CurrentPrincipal;
 
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.repository.WorkItemQuery;
@@ -37,10 +40,16 @@ import io.casehub.work.runtime.repository.WorkItemStore;
 @Priority(1)
 public class MongoWorkItemStore implements WorkItemStore {
 
+    @Inject
+    CurrentPrincipal currentPrincipal;
+
     @Override
     public WorkItem put(final WorkItem workItem) {
         if (workItem.id == null) {
             workItem.id = UUID.randomUUID();
+        }
+        if (workItem.tenancyId == null) {
+            workItem.tenancyId = currentPrincipal.tenancyId();
         }
         final Instant now = Instant.now();
         if (workItem.createdAt == null) {
@@ -54,7 +63,9 @@ public class MongoWorkItemStore implements WorkItemStore {
 
     @Override
     public Optional<WorkItem> get(final UUID id) {
-        final MongoWorkItemDocument doc = MongoWorkItemDocument.findById(id.toString());
+        final Document filter = new Document("_id", id.toString())
+                .append("tenancyId", currentPrincipal.tenancyId());
+        final MongoWorkItemDocument doc = MongoWorkItemDocument.find(filter).firstResult();
         return Optional.ofNullable(doc).map(MongoWorkItemDocument::toDomain);
     }
 
@@ -71,6 +82,9 @@ public class MongoWorkItemStore implements WorkItemStore {
 
     private Document buildFilter(final WorkItemQuery q) {
         final List<Document> ands = new ArrayList<>();
+
+        // Tenant filtering
+        ands.add(new Document("tenancyId", currentPrincipal.tenancyId()));
 
         // Assignment — OR logic across three dimensions
         final boolean hasAssigneeId = q.assigneeId() != null;

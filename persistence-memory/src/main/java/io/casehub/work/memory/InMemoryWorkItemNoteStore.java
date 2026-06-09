@@ -12,7 +12,9 @@ import java.util.UUID;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
+import jakarta.inject.Inject;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.WorkItemNote;
 import io.casehub.work.runtime.repository.WorkItemNoteStore;
 
@@ -35,6 +37,9 @@ public class InMemoryWorkItemNoteStore implements WorkItemNoteStore {
 
     private final Map<UUID, WorkItemNote> store = new ConcurrentHashMap<>();
 
+    @Inject
+    CurrentPrincipal currentPrincipal;
+
     /** Removes all stored notes. Available for test isolation ({@code @BeforeEach}) and administrative reset. */
     public void clear() {
         store.clear();
@@ -48,18 +53,27 @@ public class InMemoryWorkItemNoteStore implements WorkItemNoteStore {
         if (note.createdAt == null) {
             note.createdAt = Instant.now();
         }
+        if (note.tenancyId == null) {
+            note.tenancyId = currentPrincipal.tenancyId();
+        }
         store.put(note.id, note);
         return note;
     }
 
     @Override
     public Optional<WorkItemNote> findById(final UUID noteId) {
-        return Optional.ofNullable(store.get(noteId));
+        final WorkItemNote note = store.get(noteId);
+        if (note != null && currentPrincipal.tenancyId().equals(note.tenancyId)) {
+            return Optional.of(note);
+        }
+        return Optional.empty();
     }
 
     @Override
     public List<WorkItemNote> findByWorkItemId(final UUID workItemId) {
+        final String tenancyId = currentPrincipal.tenancyId();
         return store.values().stream()
+                .filter(n -> tenancyId.equals(n.tenancyId))
                 .filter(n -> workItemId.equals(n.workItemId))
                 .sorted(Comparator.comparing(n -> n.createdAt))
                 .toList();
@@ -67,13 +81,22 @@ public class InMemoryWorkItemNoteStore implements WorkItemNoteStore {
 
     @Override
     public WorkItemNote update(final WorkItemNote note) {
+        // Preserve tenancyId on update
+        if (note.tenancyId == null) {
+            note.tenancyId = currentPrincipal.tenancyId();
+        }
         store.put(note.id, note);
         return note;
     }
 
     @Override
     public boolean delete(final UUID noteId) {
-        return store.remove(noteId) != null;
+        final WorkItemNote note = store.get(noteId);
+        if (note != null && currentPrincipal.tenancyId().equals(note.tenancyId)) {
+            store.remove(noteId);
+            return true;
+        }
+        return false;
     }
 
     /** Returns all notes, for test inspection and administrative use. */

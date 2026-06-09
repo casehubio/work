@@ -1,5 +1,6 @@
 package io.casehub.work.memory;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.issuetracker.model.WorkItemIssueLink;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -7,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,10 +16,32 @@ import static org.assertj.core.api.Assertions.assertThat;
 class InMemoryIssueLinkStoreTest {
 
     private InMemoryIssueLinkStore store;
+    private static final CurrentPrincipal TEST_PRINCIPAL = new CurrentPrincipal() {
+        @Override
+        public String actorId() {
+            return "test-user";
+        }
+
+        @Override
+        public String tenancyId() {
+            return "test-tenant";
+        }
+
+        @Override
+        public Set<String> groups() {
+            return Set.of();
+        }
+
+        @Override
+        public boolean isCrossTenantAdmin() {
+            return false;
+        }
+    };
 
     @BeforeEach
     void setUp() {
         store = new InMemoryIssueLinkStore();
+        store.currentPrincipal = TEST_PRINCIPAL;
     }
 
     private WorkItemIssueLink link(final UUID workItemId, final String trackerType, final String externalRef) {

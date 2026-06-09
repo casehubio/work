@@ -27,7 +27,7 @@ public class ReportService {
     @Inject
     CurrentPrincipal currentPrincipal;
 
-    @CacheResult(cacheName = "reports")
+
     public SlaBreachReport slaBreaches(final Instant from, final Instant to,
             final String category, final WorkItemPriority priority) {
         final Instant now = Instant.now();
@@ -104,7 +104,7 @@ public class ReportService {
                 new SlaSummary(breached.size(), Math.round(avg * 10.0) / 10.0, byCategory));
     }
 
-    @CacheResult(cacheName = "reports")
+
     public ActorReport actorPerformance(final String actorId, final Instant from,
             final Instant to, final String category) {
 
@@ -194,7 +194,7 @@ public class ReportService {
                 avgCompletionMinutes, byCategory);
     }
 
-    @CacheResult(cacheName = "reports")
+
     public ThroughputReport throughput(final Instant from, final Instant to, final String groupBy) {
         final List<Object[]> dayCreated = queryDayBuckets("createdAt", from, to, null);
         final List<Object[]> dayCompleted = queryDayBucketsCompleted(from, to);
@@ -202,7 +202,7 @@ public class ReportService {
         return new ThroughputReport(from, to, groupBy, buckets);
     }
 
-    @CacheResult(cacheName = "reports")
+
     public QueueHealthReport queueHealth(final String category, final WorkItemPriority priority) {
         final Instant now = Instant.now();
         final List<WorkItemStatus> activeStatuses = List.of(

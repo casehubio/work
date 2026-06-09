@@ -77,10 +77,7 @@ public class WorkItemInstancesResource {
             return Response.status(404).build();
         }
 
-        // Children query: parentId-scoped, tenant already verified via parent lookup above.
-        // WorkItemQuery doesn't support parentId; using inline Panache query with tenant filter
-        // (same pattern as JpaWorkItemStore.scanRoots — will be consolidated in Task 21).
-        final List<WorkItem> children = WorkItem.list("parentId", parentId);
+        final List<WorkItem> children = workItemStore.findByParentId(parentId);
         final GroupStatus status = group.policyTriggered
                 ? (group.completedCount >= group.requiredCount ? GroupStatus.COMPLETED : GroupStatus.REJECTED)
                 : GroupStatus.IN_PROGRESS;

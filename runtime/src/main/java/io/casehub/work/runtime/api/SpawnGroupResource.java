@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
@@ -11,9 +12,9 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
-import io.casehub.work.runtime.model.WorkItemSpawnGroup;
+import io.casehub.work.runtime.repository.WorkItemRelationStore;
+import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 
 /**
  * REST endpoint for direct spawn group lookup by ID.
@@ -27,6 +28,12 @@ import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 @Produces(MediaType.APPLICATION_JSON)
 public class SpawnGroupResource {
 
+    @Inject
+    WorkItemSpawnGroupStore spawnGroupStore;
+
+    @Inject
+    WorkItemRelationStore relationStore;
+
     /**
      * Fetch a spawn group by ID, including its PART_OF children.
      *
@@ -36,13 +43,13 @@ public class SpawnGroupResource {
     @GET
     @Path("/{groupId}")
     public Response getGroup(@PathParam("groupId") final UUID groupId) {
-        final WorkItemSpawnGroup group = WorkItemSpawnGroup.findById(groupId);
+        final var group = spawnGroupStore.get(groupId).orElse(null);
         if (group == null) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity(Map.of("error", "Spawn group not found")).build();
         }
         final String createdByMarker = "system:spawn:" + groupId;
-        final List<Map<String, Object>> children = WorkItemRelation
+        final List<Map<String, Object>> children = relationStore
                 .findByTargetAndType(group.parentId, WorkItemRelationType.PART_OF)
                 .stream()
                 .filter(r -> createdByMarker.equals(r.createdBy))

@@ -10,7 +10,9 @@ import java.util.UUID;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
+import jakarta.inject.Inject;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
@@ -36,6 +38,9 @@ public class InMemoryWorkItemStore implements WorkItemStore {
 
     private final Map<UUID, WorkItem> store = new ConcurrentHashMap<>();
 
+    @Inject
+    CurrentPrincipal currentPrincipal;
+
     /** Removes all stored WorkItems. Available for test isolation ({@code @BeforeEach}) and administrative reset. */
     public void clear() {
         store.clear();
@@ -46,12 +51,16 @@ public class InMemoryWorkItemStore implements WorkItemStore {
      *
      * <p>
      * If {@code workItem.id} is {@code null} a fresh {@link UUID} is assigned before
-     * the item is stored.
+     * the item is stored. If {@code workItem.tenancyId} is {@code null}, stamps it
+     * from {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public WorkItem put(final WorkItem workItem) {
         if (workItem.id == null) {
             workItem.id = UUID.randomUUID();
+        }
+        if (workItem.tenancyId == null) {
+            workItem.tenancyId = currentPrincipal.tenancyId();
         }
         store.put(workItem.id, workItem);
         return workItem;
@@ -59,10 +68,17 @@ public class InMemoryWorkItemStore implements WorkItemStore {
 
     /**
      * {@inheritDoc}
+     *
+     * <p>
+     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public Optional<WorkItem> get(final UUID id) {
-        return Optional.ofNullable(store.get(id));
+        final WorkItem item = store.get(id);
+        if (item != null && currentPrincipal.tenancyId().equals(item.tenancyId)) {
+            return Optional.of(item);
+        }
+        return Optional.empty();
     }
 
     /**
@@ -73,10 +89,15 @@ public class InMemoryWorkItemStore implements WorkItemStore {
      * dimensions: {@code assigneeId}, {@code candidateGroups}, and
      * {@code candidateUsers}. Each additional filter (status, priority, category,
      * followUpBefore, etc.) is then applied with AND logic.
+     *
+     * <p>
+     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
      */
     @Override
     public List<WorkItem> scan(final WorkItemQuery query) {
+        final String tenancyId = currentPrincipal.tenancyId();
         return store.values().stream()
+                .filter(wi -> tenancyId.equals(wi.tenancyId))
                 .filter(wi -> matchesAssignment(wi, query))
                 .filter(wi -> matchesFilters(wi, query))
                 .toList();
