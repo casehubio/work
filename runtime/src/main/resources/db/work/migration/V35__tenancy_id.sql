@@ -31,5 +31,5 @@ ALTER TABLE work_item_template DROP CONSTRAINT IF EXISTS uq_work_item_template_n
 ALTER TABLE work_item_template ADD CONSTRAINT uq_work_item_template_name_tenant UNIQUE(name, tenancy_id);
 
 -- RoutingCursor: PK (pool_hash) → PK (pool_hash, tenancy_id)
-ALTER TABLE routing_cursor DROP CONSTRAINT IF EXISTS routing_cursor_pkey;
+ALTER TABLE routing_cursor DROP CONSTRAINT IF EXISTS pk_routing_cursor;
 ALTER TABLE routing_cursor ADD PRIMARY KEY (pool_hash, tenancy_id);
