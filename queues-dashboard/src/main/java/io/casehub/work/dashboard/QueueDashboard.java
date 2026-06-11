@@ -128,38 +128,47 @@ public class QueueDashboard {
     }
 
     private void advanceStep() {
-        try {
-            final ReviewStepService.StepResult result = QuarkusTransaction.requiringNew()
-                    .call(stepService::advance);
-            refreshItems();
-            addLog(result.action() + ": " + result.detail());
-            result.hints().forEach(h -> addLog("  \u2192 " + h));
-            addLog(stepService.nextAction());
-        } catch (final Exception e) {
-            addLog("Error: " + e.getMessage());
-        }
+        tenantContextRunner.runInTenantContext(
+                io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, () -> {
+            try {
+                final ReviewStepService.StepResult result = QuarkusTransaction.requiringNew()
+                        .call(stepService::advance);
+                refreshItems();
+                addLog(result.action() + ": " + result.detail());
+                result.hints().forEach(h -> addLog("  \u2192 " + h));
+                addLog(stepService.nextAction());
+            } catch (final Exception e) {
+                addLog("Error: " + e.getMessage());
+            }
+        });
     }
 
     private void resetScenario() {
-        try {
-            final ReviewStepService.StepResult result = QuarkusTransaction.requiringNew()
-                    .call(stepService::reset);
-            refreshItems();
-            addLog(result.action() + ": " + result.detail());
-            addLog(stepService.nextAction());
-        } catch (final Exception e) {
-            addLog("Error resetting: " + e.getMessage());
-        }
+        tenantContextRunner.runInTenantContext(
+                io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, () -> {
+            try {
+                final ReviewStepService.StepResult result = QuarkusTransaction.requiringNew()
+                        .call(stepService::reset);
+                refreshItems();
+                addLog(result.action() + ": " + result.detail());
+                addLog(stepService.nextAction());
+            } catch (final Exception e) {
+                addLog("Error resetting: " + e.getMessage());
+            }
+        });
     }
 
     private void refreshItems() {
-        try {
-            final List<WorkItem> items = QuarkusTransaction.requiringNew()
-                    .call(() -> workItemStore.scan(WorkItemQuery.all()));
-            latestItems.set(List.copyOf(items));
-        } catch (final Exception e) {
-            addLog("Refresh error: " + e.getMessage());
-        }
+        tenantContextRunner.runInTenantContext(
+                io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, () -> {
+            try {
+                final List<WorkItem> items = QuarkusTransaction.requiringNew()
+                        .call(() -> workItemStore.scan(WorkItemQuery.all()));
+                latestItems.set(List.copyOf(items));
+            } catch (final Exception e) {
+                addLog("Refresh error: " + e.getMessage());
+            }
+        });
     }
 
     /** Package-private so Pilot tests can pass this as Renderer to TuiTestRunner. */
