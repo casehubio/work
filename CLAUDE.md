@@ -1,6 +1,6 @@
 # work Workspace
 
-**Name:** CaseHub Work
+**Name:** casehub-work
 **Project repo:** /Users/mdproctor/claude/casehub/work
 **Workspace type:** public
 
