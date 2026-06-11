@@ -62,7 +62,7 @@ class PostgresBroadcasterIT {
     void workItemCreated_eventReachesStream() {
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
 
-        broadcaster.stream(null, null, "test-tenant").subscribe().with(received::add);
+        broadcaster.stream(null, null, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).subscribe().with(received::add);
 
         createWorkItem("SSE fan-out test");
 
@@ -75,7 +75,7 @@ class PostgresBroadcasterIT {
     void workItemCreated_eventContainsCorrectWorkItemId() {
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
 
-        broadcaster.stream(null, null, "test-tenant").subscribe().with(received::add);
+        broadcaster.stream(null, null, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).subscribe().with(received::add);
 
         final WorkItem wi = createWorkItem("ID fidelity test");
 
@@ -88,7 +88,7 @@ class PostgresBroadcasterIT {
     void multipleEvents_allReachStream() {
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
 
-        broadcaster.stream(null, null, "test-tenant").subscribe().with(received::add);
+        broadcaster.stream(null, null, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).subscribe().with(received::add);
 
         createWorkItem("Event 1");
         createWorkItem("Event 2");
@@ -110,7 +110,7 @@ class PostgresBroadcasterIT {
         // Without this, @PostConstruct startListening() may not have completed its
         // async LISTEN command in CI before the test fires events.
         final List<WorkItemLifecycleEvent> warmup = new CopyOnWriteArrayList<>();
-        broadcaster.stream(null, null, "test-tenant").subscribe().with(warmup::add);
+        broadcaster.stream(null, null, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).subscribe().with(warmup::add);
 
         final WorkItem target = createWorkItem("Target item");
         Awaitility.await().atMost(Duration.ofSeconds(10))
@@ -118,7 +118,7 @@ class PostgresBroadcasterIT {
 
         // LISTEN channel confirmed active. Now subscribe to the filtered stream.
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
-        broadcaster.stream(target.id, null, "test-tenant").subscribe().with(received::add);
+        broadcaster.stream(target.id, null, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).subscribe().with(received::add);
 
         createWorkItem("Noise item 1");
         createWorkItem("Noise item 2");
@@ -137,7 +137,7 @@ class PostgresBroadcasterIT {
     void stream_filterByType_onlyMatchingTypeDelivered() {
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
 
-        broadcaster.stream(null, "assigned", "test-tenant").subscribe().with(received::add);
+        broadcaster.stream(null, "assigned", io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).subscribe().with(received::add);
 
         final WorkItem wi = createWorkItem("Type filter test");
         claimWorkItem(wi, "alice");
@@ -155,7 +155,7 @@ class PostgresBroadcasterIT {
     void rolledBackTransaction_eventDoesNotReachStream() throws InterruptedException {
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
 
-        broadcaster.stream(null, "rollback_marker", "test-tenant").subscribe().with(received::add);
+        broadcaster.stream(null, "rollback_marker", io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).subscribe().with(received::add);
 
         // Fire an event with a synthetic type inside a transaction that is then rolled back.
         // AFTER_SUCCESS means the pg_notify only fires after commit — a rollback suppresses it.
@@ -192,7 +192,7 @@ class PostgresBroadcasterIT {
         final WorkItem wi = new WorkItem();
         wi.id = UUID.randomUUID();
         wi.status = WorkItemStatus.PENDING;
-        wi.tenancyId = "test-tenant";
+        wi.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
         // Fire a synthetic event and then force rollback
         lifecycleEvents.fire(WorkItemLifecycleEvent.of("rollback_marker", wi, "test", null));
         throw new RuntimeException("intentional rollback");
