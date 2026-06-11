@@ -11,6 +11,7 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.queues.model.FilterAction;
 import io.casehub.work.queues.model.FilterScope;
 import io.casehub.work.queues.model.WorkItemFilter;
@@ -39,6 +40,9 @@ public class ReviewStepService {
 
     @Inject
     Instance<WorkItemFilterBean> lambdaFilterBeans;
+
+    @Inject
+    CurrentPrincipal currentPrincipal;
 
     private final AtomicInteger step = new AtomicInteger(0);
     private final AtomicReference<UUID> advisoryId = new AtomicReference<>();
@@ -312,6 +316,7 @@ public class ReviewStepService {
         f.conditionExpression = expr;
         f.actions = WorkItemFilter.serializeActions(actions);
         f.active = true;
+        f.tenancyId = currentPrincipal.tenancyId();
         f.persist();
     }
 }
