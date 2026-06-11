@@ -9,6 +9,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -23,11 +24,21 @@ import io.restassured.http.ContentType;
  * (Dev Services is disabled at augmentation if any JDBC URL is configured in application.properties).
  *
  * <p>
- * Requires Docker or a compatible socket (Podman, Colima). Skipped automatically if unavailable.
+ * Requires Docker or a compatible socket (Podman, Colima). Skipped when Docker is unavailable.
  */
 @QuarkusTest
 @QuarkusTestResource(value = PostgresTestResource.class, restrictToAnnotatedClass = true)
+@EnabledIf("isDockerAvailable")
 class PostgresDialectValidationTest {
+
+    static boolean isDockerAvailable() {
+        try {
+            var sock = java.nio.file.Path.of("/var/run/docker.sock");
+            return java.nio.file.Files.exists(sock);
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
     @Test
     void throughput_groupByDay_executesOnPostgres() {

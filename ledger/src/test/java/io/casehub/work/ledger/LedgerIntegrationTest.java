@@ -492,6 +492,7 @@ class LedgerIntegrationTest {
         rel.targetId = parent.id;
         rel.relationType = WorkItemRelationType.PART_OF;
         rel.createdBy = "system:spawn";
+        rel.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
         rel.persist();
 
         // Fire SPAWNED event on parent, as WorkItemSpawnService would
