@@ -33,8 +33,14 @@ class PostgresDialectValidationTest {
 
     static boolean isDockerAvailable() {
         try {
-            var sock = java.nio.file.Path.of("/var/run/docker.sock");
-            return java.nio.file.Files.exists(sock);
+            if (java.nio.file.Files.exists(java.nio.file.Path.of("/var/run/docker.sock"))) return true;
+            var props = java.nio.file.Path.of(System.getProperty("user.home"), ".testcontainers.properties");
+            if (java.nio.file.Files.exists(props)) {
+                String content = java.nio.file.Files.readString(props);
+                if (content.contains("docker.host=")) return true;
+            }
+            return new ProcessBuilder("docker", "info").start().waitFor() == 0
+                    || new ProcessBuilder("podman", "info").start().waitFor() == 0;
         } catch (Exception e) {
             return false;
         }

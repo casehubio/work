@@ -12,6 +12,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.ChildSpec;
 import io.casehub.work.api.SpawnRequest;
 import io.casehub.work.api.SpawnResult;
@@ -104,6 +105,7 @@ public class SpawnScenario {
         t.name = name;
         t.category = category;
         t.createdBy = "spawn-scenario";
+        t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         t.persist();
         return t;
     }

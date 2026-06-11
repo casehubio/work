@@ -16,6 +16,7 @@ import org.jboss.logging.Logger;
 import io.casehub.work.examples.queues.QueueScenarioResponse;
 import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.queues.model.FilterAction;
 import io.casehub.work.queues.model.FilterScope;
 import io.casehub.work.queues.model.QueueView;
@@ -79,6 +80,7 @@ public class FinanceApprovalScenario {
         filterA.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("finance/approval")));
         filterA.active = true;
+        filterA.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterA.persist();
 
         final WorkItemFilter filterB = new WorkItemFilter();
@@ -89,6 +91,7 @@ public class FinanceApprovalScenario {
         filterB.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("finance/exec-review")));
         filterB.active = true;
+        filterB.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterB.persist();
     }
 
@@ -100,12 +103,14 @@ public class FinanceApprovalScenario {
         approval.name = "Finance Approval Queue";
         approval.labelPattern = "finance/approval";
         approval.scope = FilterScope.ORG;
+        approval.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         approval.persist();
 
         final QueueView exec = new QueueView();
         exec.name = "Finance Exec Review Queue";
         exec.labelPattern = "finance/exec-review";
         exec.scope = FilterScope.ORG;
+        exec.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         exec.persist();
     }
 

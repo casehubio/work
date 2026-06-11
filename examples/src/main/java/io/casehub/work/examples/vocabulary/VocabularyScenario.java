@@ -22,6 +22,7 @@ import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemPriority;
 import io.casehub.work.runtime.repository.AuditEntryStore;
+import io.casehub.work.runtime.repository.LabelDefinitionStore;
 import io.casehub.work.runtime.service.LabelVocabularyService;
 import io.casehub.work.runtime.service.WorkItemService;
 
@@ -64,6 +65,9 @@ public class VocabularyScenario {
     LabelVocabularyService vocabularyService;
 
     @Inject
+    LabelDefinitionStore labelDefinitionStore;
+
+    @Inject
     WorkItemService workItemService;
 
     @Inject
@@ -96,7 +100,7 @@ public class VocabularyScenario {
                 "Parental leave — maternity, paternity, or shared", ACTOR_ADMIN);
 
         // Count all definitions in this vocabulary
-        final List<LabelDefinition> registered = LabelDefinition.findByVocabularyId(vocab.id);
+        final List<LabelDefinition> registered = labelDefinitionStore.findByVocabularyId(vocab.id);
         steps.add(new StepLog(1, description1, null));
 
         // Step 2: verify vocabulary via service list — count accessible entries

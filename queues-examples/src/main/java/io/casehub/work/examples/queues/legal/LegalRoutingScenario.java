@@ -16,6 +16,7 @@ import org.jboss.logging.Logger;
 import io.casehub.work.examples.queues.QueueScenarioResponse;
 import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.queues.model.FilterAction;
 import io.casehub.work.queues.model.FilterScope;
 import io.casehub.work.queues.model.QueueView;
@@ -79,6 +80,7 @@ public class LegalRoutingScenario {
         filterA.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("legal/review")));
         filterA.active = true;
+        filterA.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterA.persist();
 
         final WorkItemFilter filterB = new WorkItemFilter();
@@ -89,6 +91,7 @@ public class LegalRoutingScenario {
         filterB.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("legal/urgent")));
         filterB.active = true;
+        filterB.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterB.persist();
     }
 
@@ -100,12 +103,14 @@ public class LegalRoutingScenario {
         review.name = "Legal Review Queue";
         review.labelPattern = "legal/review";
         review.scope = FilterScope.ORG;
+        review.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         review.persist();
 
         final QueueView urgent = new QueueView();
         urgent.name = "Legal Urgent Queue";
         urgent.labelPattern = "legal/urgent";
         urgent.scope = FilterScope.ORG;
+        urgent.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         urgent.persist();
     }
 

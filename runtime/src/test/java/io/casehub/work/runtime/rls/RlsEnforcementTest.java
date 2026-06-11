@@ -46,12 +46,13 @@ class RlsEnforcementTest {
 
     @BeforeAll
     static void setUp() throws Exception {
-        assumeTrue(java.nio.file.Files.exists(java.nio.file.Path.of("/var/run/docker.sock")),
-                "Docker not available — skipping RLS enforcement tests");
-
         postgres = new PostgreSQLContainer<>("postgres:16")
                 .withInitScript("rls-init.sql");
-        postgres.start();
+        try {
+            postgres.start();
+        } catch (Exception e) {
+            assumeTrue(false, "Container runtime not available — skipping RLS enforcement tests");
+        }
 
         adminConn = DriverManager.getConnection(
                 postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());

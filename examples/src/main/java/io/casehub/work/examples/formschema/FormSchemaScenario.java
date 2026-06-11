@@ -19,6 +19,7 @@ import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.service.WorkItemService;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
 
 /**
@@ -95,6 +96,7 @@ public class FormSchemaScenario {
         template.candidateGroups = ACTOR_REVIEWER;
         template.outputDataSchema = OUTPUT_DATA_SCHEMA;
         template.createdBy = ACTOR_ADMIN;
+        template.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         template.persist();
         steps.add(new StepLog(1, description1, null));
 

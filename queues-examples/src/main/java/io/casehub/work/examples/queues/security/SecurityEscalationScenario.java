@@ -16,6 +16,7 @@ import org.jboss.logging.Logger;
 import io.casehub.work.examples.queues.QueueScenarioResponse;
 import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.queues.model.FilterAction;
 import io.casehub.work.queues.model.FilterScope;
 import io.casehub.work.queues.model.QueueView;
@@ -79,6 +80,7 @@ public class SecurityEscalationScenario {
         filterA.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("security/incident")));
         filterA.active = true;
+        filterA.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterA.persist();
 
         final WorkItemFilter filterB = new WorkItemFilter();
@@ -89,6 +91,7 @@ public class SecurityEscalationScenario {
         filterB.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("priority/critical")));
         filterB.active = true;
+        filterB.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterB.persist();
 
         final WorkItemFilter filterC = new WorkItemFilter();
@@ -99,6 +102,7 @@ public class SecurityEscalationScenario {
         filterC.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("security/exec-escalate")));
         filterC.active = true;
+        filterC.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterC.persist();
     }
 
@@ -110,18 +114,21 @@ public class SecurityEscalationScenario {
         incidents.name = "Security Incidents Queue";
         incidents.labelPattern = "security/incident";
         incidents.scope = FilterScope.ORG;
+        incidents.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         incidents.persist();
 
         final QueueView critical = new QueueView();
         critical.name = "Priority Critical Queue";
         critical.labelPattern = "priority/critical";
         critical.scope = FilterScope.ORG;
+        critical.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         critical.persist();
 
         final QueueView exec = new QueueView();
         exec.name = "Security Exec Escalation Queue";
         exec.labelPattern = "security/exec-escalate";
         exec.scope = FilterScope.ORG;
+        exec.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         exec.persist();
     }
 

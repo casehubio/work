@@ -14,6 +14,7 @@ import org.jboss.logging.Logger;
 
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.runtime.api.AuditEntryResponse;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.runtime.filter.FilterRule;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItem;
@@ -87,6 +88,7 @@ public class FilterRulesScenario {
         rule.condition = "workItem.priority.name() == 'HIGH' || workItem.priority.name() == 'URGENT'";
         rule.events = "ADD";
         rule.actionsJson = "[{\"type\":\"APPLY_LABEL\",\"params\":{\"path\":\"urgent\",\"appliedBy\":\"auto-label-urgent\"}}]";
+        rule.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         rule.persist();
         steps.add(new StepLog(1, description1, null));
 

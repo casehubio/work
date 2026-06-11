@@ -74,6 +74,18 @@ public class JpaWorkItemLedgerEntryRepository extends TenantAwareStore implement
         );
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public LedgerAttestation saveAttestation(final LedgerAttestation attestation) {
+        return saveAttestation(attestation, currentPrincipal.tenancyId());
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public List<LedgerAttestation> findAttestationsByEntryId(final UUID entryId) {
+        return findAttestationsByEntryId(entryId, currentPrincipal.tenancyId());
+    }
+
     // ── Inherited LedgerEntryRepository methods ──────────────────────────────
 
     /** {@inheritDoc} */

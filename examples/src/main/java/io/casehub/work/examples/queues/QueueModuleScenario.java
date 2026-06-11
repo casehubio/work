@@ -16,6 +16,7 @@ import jakarta.ws.rs.core.MediaType;
 import org.jboss.logging.Logger;
 
 import io.casehub.work.examples.StepLog;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.queues.model.FilterScope;
 import io.casehub.work.queues.model.QueueView;
 import io.casehub.work.queues.model.WorkItemQueueState;
@@ -162,6 +163,7 @@ public class QueueModuleScenario {
         queueView.ownerId = null;
         queueView.sortField = "createdAt";
         queueView.sortDirection = "ASC";
+        queueView.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         queueView.persist();
         final UUID queueId = queueView.id;
         steps.add(new StepLog(4, description4, null));

@@ -11,6 +11,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.queues.event.QueueEventType;
 import io.casehub.work.queues.model.FilterScope;
 import io.casehub.work.queues.model.QueueView;
@@ -197,6 +198,7 @@ public class QueueLifecycleScenario {
         queue.name = name;
         queue.labelPattern = pattern;
         queue.scope = FilterScope.ORG;
+        queue.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         queue.persist();
         return queue;
     }

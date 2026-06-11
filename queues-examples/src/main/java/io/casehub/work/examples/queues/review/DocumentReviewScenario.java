@@ -18,6 +18,7 @@ import org.jboss.logging.Logger;
 import io.casehub.work.examples.queues.QueueScenarioResponse;
 import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.queues.model.FilterAction;
 import io.casehub.work.queues.model.FilterScope;
 import io.casehub.work.queues.model.QueueView;
@@ -159,18 +160,21 @@ public class DocumentReviewScenario {
         urgent.name = "Urgent Reviews";
         urgent.labelPattern = "review/urgent";
         urgent.scope = FilterScope.ORG;
+        urgent.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         urgent.persist();
 
         final QueueView standard = new QueueView();
         standard.name = "Standard Reviews";
         standard.labelPattern = "review/standard";
         standard.scope = FilterScope.ORG;
+        standard.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         standard.persist();
 
         final QueueView routine = new QueueView();
         routine.name = "Routine Reviews";
         routine.labelPattern = "review/routine";
         routine.scope = FilterScope.ORG;
+        routine.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         routine.persist();
     }
 
@@ -362,6 +366,7 @@ public class DocumentReviewScenario {
         f.conditionExpression = expr;
         f.actions = WorkItemFilter.serializeActions(actions);
         f.active = true;
+        f.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         f.persist();
     }
 }

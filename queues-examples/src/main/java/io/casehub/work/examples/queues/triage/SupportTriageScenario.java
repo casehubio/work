@@ -16,6 +16,7 @@ import org.jboss.logging.Logger;
 import io.casehub.work.examples.queues.QueueScenarioResponse;
 import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
+import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.queues.model.FilterAction;
 import io.casehub.work.queues.model.FilterScope;
 import io.casehub.work.queues.model.QueueView;
@@ -79,6 +80,7 @@ public class SupportTriageScenario {
                 FilterAction.applyLabel("sla/critical"),
                 FilterAction.applyLabel("queue/fast-track")));
         filterA.active = true;
+        filterA.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterA.persist();
 
         final WorkItemFilter filterB = new WorkItemFilter();
@@ -89,6 +91,7 @@ public class SupportTriageScenario {
         filterB.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("intake/triage")));
         filterB.active = true;
+        filterB.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterB.persist();
 
         final WorkItemFilter filterC = new WorkItemFilter();
@@ -99,6 +102,7 @@ public class SupportTriageScenario {
         filterC.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("team/support-lead")));
         filterC.active = true;
+        filterC.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterC.persist();
     }
 
@@ -110,24 +114,28 @@ public class SupportTriageScenario {
         slaCritical.name = "SLA Critical Queue";
         slaCritical.labelPattern = "sla/critical";
         slaCritical.scope = FilterScope.ORG;
+        slaCritical.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         slaCritical.persist();
 
         final QueueView fastTrack = new QueueView();
         fastTrack.name = "Fast Track Queue";
         fastTrack.labelPattern = "queue/fast-track";
         fastTrack.scope = FilterScope.ORG;
+        fastTrack.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         fastTrack.persist();
 
         final QueueView intake = new QueueView();
         intake.name = "Intake Triage Queue";
         intake.labelPattern = "intake/triage";
         intake.scope = FilterScope.ORG;
+        intake.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         intake.persist();
 
         final QueueView supportLead = new QueueView();
         supportLead.name = "Support Lead Queue";
         supportLead.labelPattern = "team/support-lead";
         supportLead.scope = FilterScope.ORG;
+        supportLead.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         supportLead.persist();
     }
 

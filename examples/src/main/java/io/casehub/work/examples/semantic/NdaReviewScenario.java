@@ -151,6 +151,7 @@ public class NdaReviewScenario {
             final var profile = new WorkerSkillProfile();
             profile.workerId = workerId;
             profile.narrative = narrative;
+            profile.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
             profile.persist();
         } else {
             existing.narrative = narrative;

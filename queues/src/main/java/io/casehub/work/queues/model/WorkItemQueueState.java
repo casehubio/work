@@ -7,6 +7,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.quarkus.arc.Arc;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /** Soft-assignment state for a WorkItem within the queue subsystem. */
@@ -40,6 +42,7 @@ public class WorkItemQueueState extends PanacheEntityBase {
                 .orElseGet(() -> {
                     final var s = new WorkItemQueueState();
                     s.workItemId = workItemId;
+                    s.tenancyId = Arc.container().instance(CurrentPrincipal.class).get().tenancyId();
                     s.persist();
                     return s;
                 });

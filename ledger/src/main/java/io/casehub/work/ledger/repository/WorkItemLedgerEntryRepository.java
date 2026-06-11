@@ -51,4 +51,14 @@ public interface WorkItemLedgerEntryRepository extends LedgerEntryRepository {
      * @return the earliest typed entry, or empty if no entries exist
      */
     Optional<WorkItemLedgerEntry> findEarliestByWorkItemId(UUID workItemId);
+
+    /**
+     * Save an attestation, resolving tenancyId from {@link io.casehub.platform.api.identity.CurrentPrincipal}.
+     */
+    LedgerAttestation saveAttestation(LedgerAttestation attestation);
+
+    /**
+     * Find attestations by entry ID, resolving tenancyId from {@link io.casehub.platform.api.identity.CurrentPrincipal}.
+     */
+    List<LedgerAttestation> findAttestationsByEntryId(UUID entryId);
 }
