@@ -135,6 +135,7 @@ class EscalationSummaryServiceTest {
         wi.description = "Legal review of all Q2 contracts";
         wi.category = "legal";
         wi.status = WorkItemStatus.PENDING;
+        wi.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
         wi.createdAt = Instant.now();
         wi.updatedAt = Instant.now();
         return wi;

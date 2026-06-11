@@ -147,6 +147,7 @@ class ResolutionSuggestionServiceTest {
         wi.category = category;
         wi.status = status;
         wi.resolution = resolution;
+        wi.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
         wi.createdAt = Instant.now();
         wi.updatedAt = Instant.now();
         return wi;

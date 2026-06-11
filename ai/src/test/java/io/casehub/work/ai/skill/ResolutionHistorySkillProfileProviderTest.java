@@ -24,6 +24,7 @@ class ResolutionHistorySkillProfileProviderTest {
         wi.completedAt = completedAt;
         wi.title = "T";
         wi.createdBy = "test";
+        wi.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
         return wi;
     }
 
