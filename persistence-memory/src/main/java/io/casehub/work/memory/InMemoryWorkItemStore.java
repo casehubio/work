@@ -41,6 +41,14 @@ public class InMemoryWorkItemStore implements WorkItemStore {
     @Inject
     CurrentPrincipal currentPrincipal;
 
+    /** CDI no-arg constructor. */
+    public InMemoryWorkItemStore() {}
+
+    /** Constructor for unit tests outside CDI. */
+    public InMemoryWorkItemStore(CurrentPrincipal currentPrincipal) {
+        this.currentPrincipal = currentPrincipal;
+    }
+
     /** Removes all stored WorkItems. Available for test isolation ({@code @BeforeEach}) and administrative reset. */
     public void clear() {
         store.clear();

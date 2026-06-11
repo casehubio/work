@@ -17,6 +17,7 @@ import dev.langchain4j.model.chat.ChatModel;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemStatus;
 import io.casehub.work.memory.InMemoryAuditEntryStore;
+import io.casehub.work.ai.TestPrincipal;
 import io.casehub.work.memory.InMemoryWorkItemStore;
 
 class EscalationSummaryServiceTest {
@@ -27,7 +28,7 @@ class EscalationSummaryServiceTest {
 
     @BeforeEach
     void setUp() {
-        workItemStore = new InMemoryWorkItemStore();
+        workItemStore = new InMemoryWorkItemStore(TestPrincipal.DEFAULT);
         auditStore = new InMemoryAuditEntryStore();
         mockModel = mock(ChatModel.class);
     }

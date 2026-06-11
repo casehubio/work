@@ -26,7 +26,7 @@ class ResolutionSuggestionServiceTest {
 
     @BeforeEach
     void setUp() {
-        store = new InMemoryWorkItemStore();
+        store = new InMemoryWorkItemStore(io.casehub.work.ai.TestPrincipal.DEFAULT);
         mockModel = mock(ChatModel.class);
         service = new ResolutionSuggestionService(store, mockModel, 5);
     }

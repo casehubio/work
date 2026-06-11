@@ -30,7 +30,7 @@ class ResolutionHistorySkillProfileProviderTest {
 
     @Test
     void getProfile_aggregatesCategoryFrequency() {
-        final var store = new InMemoryWorkItemStore();
+        final var store = new InMemoryWorkItemStore(io.casehub.work.ai.TestPrincipal.DEFAULT);
         store.put(completedItem("alice", "legal", Instant.now()));
         store.put(completedItem("alice", "legal", Instant.now()));
         store.put(completedItem("alice", "finance", Instant.now()));
@@ -44,7 +44,7 @@ class ResolutionHistorySkillProfileProviderTest {
 
     @Test
     void getProfile_noHistory_returnsEmptyNarrative() {
-        final var store = new InMemoryWorkItemStore();
+        final var store = new InMemoryWorkItemStore(io.casehub.work.ai.TestPrincipal.DEFAULT);
         final var provider = new ResolutionHistorySkillProfileProvider(store, 50);
         final var profile = provider.getProfile("nobody", Set.of());
         assertThat(profile.narrative()).isEmpty();
@@ -52,7 +52,7 @@ class ResolutionHistorySkillProfileProviderTest {
 
     @Test
     void getProfile_respectsHistoryLimit() {
-        final var store = new InMemoryWorkItemStore();
+        final var store = new InMemoryWorkItemStore(io.casehub.work.ai.TestPrincipal.DEFAULT);
         final Instant base = Instant.now();
         for (int i = 0; i < 3; i++) {
             store.put(completedItem("alice", "legal", base.plusSeconds(i + 10)));
@@ -69,7 +69,7 @@ class ResolutionHistorySkillProfileProviderTest {
 
     @Test
     void getProfile_nullCategory_skipped() {
-        final var store = new InMemoryWorkItemStore();
+        final var store = new InMemoryWorkItemStore(io.casehub.work.ai.TestPrincipal.DEFAULT);
         store.put(completedItem("alice", null, Instant.now()));
         final var provider = new ResolutionHistorySkillProfileProvider(store, 50);
         final var profile = provider.getProfile("alice", Set.of());
@@ -78,7 +78,7 @@ class ResolutionHistorySkillProfileProviderTest {
 
     @Test
     void attributes_containsFrequencyMap() {
-        final var store = new InMemoryWorkItemStore();
+        final var store = new InMemoryWorkItemStore(io.casehub.work.ai.TestPrincipal.DEFAULT);
         store.put(completedItem("alice", "legal", Instant.now()));
         store.put(completedItem("alice", "legal", Instant.now()));
         final var provider = new ResolutionHistorySkillProfileProvider(store, 50);
