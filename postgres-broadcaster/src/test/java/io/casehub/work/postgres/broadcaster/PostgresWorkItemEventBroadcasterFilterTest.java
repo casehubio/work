@@ -206,6 +206,7 @@ class PostgresWorkItemEventBroadcasterFilterTest {
         final WorkItem wi = new WorkItem();
         wi.id = workItemId;
         wi.status = WorkItemStatus.PENDING;
+        wi.tenancyId = "test-tenant";
         return WorkItemLifecycleEvent.of(name, wi, "test", null);
     }
 }
