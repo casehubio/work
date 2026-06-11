@@ -70,6 +70,7 @@ class RlsEnforcementTest {
 
             stmt.execute("CREATE ROLE casehub_crosstenancy BYPASSRLS");
             stmt.execute("GRANT casehub_crosstenancy TO current_user");
+            stmt.execute("GRANT casehub_crosstenancy TO app_user");
             stmt.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON work_item TO casehub_crosstenancy");
             stmt.execute("GRANT SELECT, INSERT, UPDATE, DELETE ON work_item TO app_user");
         }
