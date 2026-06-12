@@ -1,5 +1,7 @@
 package io.casehub.work.ledger.model;
 
+import java.nio.charset.StandardCharsets;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
@@ -33,4 +35,11 @@ public class WorkItemLedgerEntry extends LedgerEntry {
     /** The observable fact after execution — e.g. {@code "WorkItemCompleted"}. Nullable. */
     @Column(name = "event_type")
     public String eventType;
+
+    @Override
+    protected byte[] domainContentBytes() {
+        final String content = (commandType != null ? commandType : "")
+                + "|" + (eventType != null ? eventType : "");
+        return content.getBytes(StandardCharsets.UTF_8);
+    }
 }

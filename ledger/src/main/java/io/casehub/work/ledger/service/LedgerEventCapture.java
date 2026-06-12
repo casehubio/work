@@ -137,12 +137,15 @@ public class LedgerEventCapture {
             });
         }
 
-        // Merkle leaf hash (chain integrity maintained by LedgerMerkleFrontier MMR)
+        entry.tenancyId = currentPrincipal.tenancyId();
+
+        // Merkle leaf hash — computed here because JpaWorkItemLedgerEntryRepository.save()
+        // does a raw em.persist() without the ledger runtime save pipeline.
         if (config.hashChain().enabled()) {
             entry.digest = LedgerMerkleTree.leafHash(entry);
         }
 
-        ledgerRepo.save(entry, currentPrincipal.tenancyId());
+        ledgerRepo.save(entry, entry.tenancyId);
 
         // Causal chain: when SPAWNED fires on the parent, point each child's CREATED
         // ledger entry at this parent SPAWNED entry via causedByEntryId.

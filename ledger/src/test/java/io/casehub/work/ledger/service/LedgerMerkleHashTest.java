@@ -81,21 +81,21 @@ class LedgerMerkleHashTest {
     // ── Subclass fields excluded from canonical form (by design) ──────────────
 
     @Test
-    void leafHash_mutatingCommandType_doesNotChangeDigest() {
+    void leafHash_mutatingCommandType_changesDigest() {
         final WorkItemLedgerEntry e = entry(UUID.randomUUID(), 1);
         final String before = LedgerMerkleTree.leafHash(e);
 
         e.commandType = "mutated-command";
-        assertThat(LedgerMerkleTree.leafHash(e)).isEqualTo(before);
+        assertThat(LedgerMerkleTree.leafHash(e)).isNotEqualTo(before);
     }
 
     @Test
-    void leafHash_mutatingEventType_doesNotChangeDigest() {
+    void leafHash_mutatingEventType_changesDigest() {
         final WorkItemLedgerEntry e = entry(UUID.randomUUID(), 1);
         final String before = LedgerMerkleTree.leafHash(e);
 
         e.eventType = "mutated-event";
-        assertThat(LedgerMerkleTree.leafHash(e)).isEqualTo(before);
+        assertThat(LedgerMerkleTree.leafHash(e)).isNotEqualTo(before);
     }
 
     // ── Integrity verification (replaces LedgerHashChain.verify) ─────────────
