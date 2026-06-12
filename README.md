@@ -1,5 +1,7 @@
 # casehub-work
 
+[![Build](https://github.com/casehubio/work/actions/workflows/publish.yml/badge.svg?branch=main)](https://github.com/casehubio/work/actions/workflows/publish.yml) [![Open PRs](https://img.shields.io/github/issues-pr/casehubio/work)](https://github.com/casehubio/work/pulls)
+
 A CaseHub library that gives any Quarkus application a **runtime human task layer** — units of work that wait for a human or AI agent to act on them, with expiry, delegation, escalation, priority, candidate group routing, and a full audit trail. One dependency. Zero coupling to your domain.
 
 ---
