@@ -12,6 +12,7 @@ import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
 
 import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelVocabulary;
 import io.casehub.work.runtime.repository.LabelVocabularyStore;
 
@@ -79,5 +80,35 @@ public class InMemoryLabelVocabularyStore implements LabelVocabularyStore {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public Optional<LabelVocabulary> findByScope(final Path scope) {
+        final String tenancyId = currentPrincipal.tenancyId();
+        return store.values().stream()
+                .filter(v -> tenancyId.equals(v.tenancyId))
+                .filter(v -> scope.equals(v.scope))
+                .findFirst();
+    }
+
+    @Override
+    public LabelVocabulary findOrCreate(final Path scope, final String name) {
+        final String tenancyId = currentPrincipal.tenancyId();
+        synchronized (store) {
+            final Optional<LabelVocabulary> existing = store.values().stream()
+                    .filter(v -> tenancyId.equals(v.tenancyId))
+                    .filter(v -> scope.equals(v.scope))
+                    .findFirst();
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+            final LabelVocabulary vocab = new LabelVocabulary();
+            vocab.id = UUID.randomUUID();
+            vocab.scope = scope;
+            vocab.name = name;
+            vocab.tenancyId = tenancyId;
+            store.put(vocab.id, vocab);
+            return vocab;
+        }
     }
 }

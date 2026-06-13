@@ -600,13 +600,13 @@ curl -X DELETE "http://localhost:8080/workitems/{id}/labels?path=legal/contracts
 
 ## Vocabulary API (quarkus-work core)
 
-Labels must be declared in a vocabulary before they can be applied. Vocabularies are scoped: `GLOBAL` (platform-wide) → `ORG` → `TEAM` → `PERSONAL`. A GLOBAL vocabulary is seeded by Flyway with common labels (`intake`, `intake/triage`, `priority/high`, `priority/critical`, `legal`, `legal/contracts`, `legal/compliance`).
+Labels must be declared in a vocabulary before they can be applied. Vocabularies are scoped using `Path`-based hierarchy — a vocabulary at an ancestor path is visible to all descendant scopes. Root scope (empty/null) is visible to everyone. A root vocabulary is auto-created per tenant on first use, seeded with common labels (`intake`, `intake/triage`, `priority/high`, `priority/critical`, `legal`, `legal/contracts`, `legal/compliance`).
 
 ---
 
 ### GET /vocabulary
 
-Lists all label definitions accessible to the caller (all scopes at or above `PERSONAL`).
+Lists all label definitions visible to the current tenant (all scopes, no filtering).
 
 **Response:** `200 OK` — array of definition objects: `{id, path, vocabularyId, description, createdBy, createdAt}`
 
@@ -616,11 +616,9 @@ curl http://localhost:8080/vocabulary
 
 ---
 
-### POST /vocabulary/{scope}
+### POST /vocabulary
 
-Adds a label definition to the vocabulary at the given scope. Currently only `GLOBAL` scope is supported; `ORG`, `TEAM`, and `PERSONAL` return `501` (deferred pending authentication context).
-
-**Path parameter:** `scope` — `GLOBAL`, `ORG`, `TEAM`, or `PERSONAL`
+Adds a label definition to the vocabulary at the given scope. If no vocabulary exists at the scope, one is auto-created.
 
 **Request body:**
 
@@ -629,15 +627,27 @@ Adds a label definition to the vocabulary at the given scope. Currently only `GL
 | `path` | string | yes | Label path to declare, e.g. `finance/invoices` |
 | `description` | string | no | Human-readable description |
 | `addedBy` | string | no | User ID declaring the label |
+| `scope` | string | no | Scope path for the vocabulary (null/blank = root/global), e.g. `acme-corp/hr-team` |
 
 **Response:** `201 Created` — `{id, path, scope}`
 
-**Errors:** `400` if path is blank or scope is invalid; `501` for non-GLOBAL scopes.
+**Errors:** `400` if path is blank, contains wildcards, or scope is invalid.
 
 ```bash
-curl -X POST http://localhost:8080/vocabulary/GLOBAL \
+# Add to root (global) vocabulary
+curl -X POST http://localhost:8080/vocabulary \
   -H 'Content-Type: application/json' \
   -d '{"path": "finance/invoices", "description": "Invoice approval items", "addedBy": "alice"}'
+
+# Add to org-scoped vocabulary
+curl -X POST http://localhost:8080/vocabulary \
+  -H 'Content-Type: application/json' \
+  -d '{"path": "hr/leave", "description": "Leave requests", "addedBy": "alice", "scope": "acme-corp"}'
+
+# Add to team-scoped vocabulary
+curl -X POST http://localhost:8080/vocabulary \
+  -H 'Content-Type: application/json' \
+  -d '{"path": "sprint/review", "description": "Sprint reviews", "addedBy": "bob", "scope": "acme-corp/hr-team"}'
 ```
 
 ---

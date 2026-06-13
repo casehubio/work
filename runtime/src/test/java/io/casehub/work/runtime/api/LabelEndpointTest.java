@@ -105,7 +105,7 @@ class LabelEndpointTest {
                 .body("""
                         {"path": "test/unique-vocab-54", "description": "test label", "addedBy": "alice"}
                         """)
-                .post("/vocabulary/GLOBAL")
+                .post("/vocabulary")
                 .then()
                 .statusCode(201)
                 .body("path", equalTo("test/unique-vocab-54"));
@@ -121,65 +121,51 @@ class LabelEndpointTest {
     void vocabulary_addDefinition_invalidScope_returns400() {
         given()
                 .contentType(ContentType.JSON)
-                .body("{\"path\": \"x/y\", \"addedBy\": \"alice\"}")
-                .post("/vocabulary/INVALID")
+                .body("""
+                        {"path": "test/label", "addedBy": "alice", "scope": "acme//team"}
+                        """)
+                .post("/vocabulary")
                 .then()
-                .statusCode(400);
+                .statusCode(400)
+                .body("error", org.hamcrest.Matchers.containsString("invalid scope"));
     }
 
     @Test
-    void vocabulary_addDefinition_personal_defaultsOwnerToAddedBy() {
+    void vocabulary_addDefinition_orgScope_succeeds() {
         given()
                 .contentType(ContentType.JSON)
-                .body("{\"path\": \"my/personal/label\", \"addedBy\": \"alice\"}")
-                .post("/vocabulary/PERSONAL")
-                .then()
-                .statusCode(201)
-                .body("path", equalTo("my/personal/label"))
-                .body("scope", equalTo("PERSONAL"));
-    }
-
-    @Test
-    void vocabulary_addDefinition_org_withOwnerId_succeeds() {
-        given()
-                .contentType(ContentType.JSON)
-                .body("{\"path\": \"org/finance/approvals\", \"addedBy\": \"alice\", \"ownerId\": \"acme-corp\"}")
-                .post("/vocabulary/ORG")
+                .body("""
+                        {"path": "org/finance/approvals", "addedBy": "alice", "scope": "acme-corp"}
+                        """)
+                .post("/vocabulary")
                 .then()
                 .statusCode(201)
                 .body("path", equalTo("org/finance/approvals"))
-                .body("scope", equalTo("ORG"));
+                .body("scope", equalTo("acme-corp"));
     }
 
     @Test
-    void vocabulary_addDefinition_team_withOwnerId_succeeds() {
+    void vocabulary_addDefinition_teamScope_succeeds() {
         given()
                 .contentType(ContentType.JSON)
-                .body("{\"path\": \"team/sprint/review\", \"addedBy\": \"bob\", \"ownerId\": \"team-alpha\"}")
-                .post("/vocabulary/TEAM")
+                .body("""
+                        {"path": "team/sprint/review", "addedBy": "bob", "scope": "acme-corp/team-alpha"}
+                        """)
+                .post("/vocabulary")
                 .then()
                 .statusCode(201)
                 .body("path", equalTo("team/sprint/review"))
-                .body("scope", equalTo("TEAM"));
-    }
-
-    @Test
-    void vocabulary_addDefinition_org_missingOwnerId_returns400() {
-        given()
-                .contentType(ContentType.JSON)
-                .body("{\"path\": \"org/some/label\", \"addedBy\": \"alice\"}")
-                .post("/vocabulary/ORG")
-                .then()
-                .statusCode(400)
-                .body("error", org.hamcrest.Matchers.containsString("ownerId"));
+                .body("scope", equalTo("acme-corp/team-alpha"));
     }
 
     @Test
     void vocabulary_addDefinition_scopedTerm_appearsInListAll() {
         given()
                 .contentType(ContentType.JSON)
-                .body("{\"path\": \"my/team/label\", \"addedBy\": \"charlie\", \"ownerId\": \"team-bravo\"}")
-                .post("/vocabulary/TEAM")
+                .body("""
+                        {"path": "my/team/label", "addedBy": "charlie", "scope": "acme-corp/team-bravo"}
+                        """)
+                .post("/vocabulary")
                 .then()
                 .statusCode(201);
 
@@ -191,18 +177,22 @@ class LabelEndpointTest {
     }
 
     @Test
-    void vocabulary_addDefinition_sameOwner_reuseVocabulary() {
+    void vocabulary_addDefinition_sameScope_reuseVocabulary() {
         given()
                 .contentType(ContentType.JSON)
-                .body("{\"path\": \"personal/label/one\", \"addedBy\": \"dave\"}")
-                .post("/vocabulary/PERSONAL")
+                .body("""
+                        {"path": "personal/label/one", "addedBy": "dave", "scope": "casehubio/dave"}
+                        """)
+                .post("/vocabulary")
                 .then()
                 .statusCode(201);
 
         given()
                 .contentType(ContentType.JSON)
-                .body("{\"path\": \"personal/label/two\", \"addedBy\": \"dave\"}")
-                .post("/vocabulary/PERSONAL")
+                .body("""
+                        {"path": "personal/label/two", "addedBy": "dave", "scope": "casehubio/dave"}
+                        """)
+                .post("/vocabulary")
                 .then()
                 .statusCode(201);
 
@@ -218,16 +208,20 @@ class LabelEndpointTest {
     void vocabulary_addDefinition_wildcardPath_returns400() {
         given()
                 .contentType(ContentType.JSON)
-                .body("{\"path\": \"legal/*\", \"addedBy\": \"alice\"}")
-                .post("/vocabulary/GLOBAL")
+                .body("""
+                        {"path": "legal/*", "addedBy": "alice"}
+                        """)
+                .post("/vocabulary")
                 .then()
                 .statusCode(400)
                 .body("error", org.hamcrest.Matchers.containsString("wildcard"));
 
         given()
                 .contentType(ContentType.JSON)
-                .body("{\"path\": \"legal/?\", \"addedBy\": \"alice\"}")
-                .post("/vocabulary/GLOBAL")
+                .body("""
+                        {"path": "legal/?", "addedBy": "alice"}
+                        """)
+                .post("/vocabulary")
                 .then()
                 .statusCode(400)
                 .body("error", org.hamcrest.Matchers.containsString("wildcard"));
@@ -240,7 +234,7 @@ class LabelEndpointTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"path\": \"" + uniquePath + "\", \"description\": \"converter test\", \"addedBy\": \"alice\"}")
-                .post("/vocabulary/GLOBAL")
+                .post("/vocabulary")
                 .then()
                 .statusCode(201)
                 .body("path", equalTo(uniquePath));
@@ -257,7 +251,7 @@ class LabelEndpointTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"path\": \"\", \"addedBy\": \"alice\"}")
-                .post("/vocabulary/GLOBAL")
+                .post("/vocabulary")
                 .then()
                 .statusCode(400);
     }

@@ -4,35 +4,50 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.VocabularyScope;
+import io.casehub.platform.api.path.Path;
 
 class LabelVocabularyServiceTest {
 
     @Test
-    void vocabularyScope_hasCorrectHierarchy() {
-        assertThat(VocabularyScope.GLOBAL.ordinal()).isLessThan(VocabularyScope.ORG.ordinal());
-        assertThat(VocabularyScope.ORG.ordinal()).isLessThan(VocabularyScope.TEAM.ordinal());
-        assertThat(VocabularyScope.TEAM.ordinal()).isLessThan(VocabularyScope.PERSONAL.ordinal());
+    void isAccessibleFrom_rootVisibleToAll() {
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.root(), Path.of("acme-corp"))).isTrue();
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.root(), Path.of("acme-corp", "hr-team"))).isTrue();
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.root(), Path.of("acme-corp", "hr-team", "jane"))).isTrue();
     }
 
     @Test
-    void vocabularyScope_fourValues() {
-        assertThat(VocabularyScope.values()).hasSize(4);
+    void isAccessibleFrom_rootVisibleToRoot() {
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.root(), Path.root())).isTrue();
     }
 
     @Test
-    void isScopeAccessible_globalVisibleToAll() {
-        assertThat(LabelVocabularyService.isScopeAccessible(VocabularyScope.GLOBAL, VocabularyScope.PERSONAL)).isTrue();
-        assertThat(LabelVocabularyService.isScopeAccessible(VocabularyScope.GLOBAL, VocabularyScope.TEAM)).isTrue();
-        assertThat(LabelVocabularyService.isScopeAccessible(VocabularyScope.GLOBAL, VocabularyScope.ORG)).isTrue();
-        assertThat(LabelVocabularyService.isScopeAccessible(VocabularyScope.GLOBAL, VocabularyScope.GLOBAL)).isTrue();
+    void isAccessibleFrom_ancestorVisible() {
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.of("acme-corp"), Path.of("acme-corp", "hr-team"))).isTrue();
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.of("acme-corp"), Path.of("acme-corp", "hr-team", "jane"))).isTrue();
     }
 
     @Test
-    void isScopeAccessible_personalNotVisibleToTeam() {
-        assertThat(LabelVocabularyService.isScopeAccessible(VocabularyScope.PERSONAL, VocabularyScope.TEAM)).isFalse();
-        assertThat(LabelVocabularyService.isScopeAccessible(VocabularyScope.PERSONAL, VocabularyScope.ORG)).isFalse();
-        assertThat(LabelVocabularyService.isScopeAccessible(VocabularyScope.PERSONAL, VocabularyScope.GLOBAL)).isFalse();
+    void isAccessibleFrom_equalVisible() {
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.of("acme-corp"), Path.of("acme-corp"))).isTrue();
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.of("acme-corp", "hr-team"), Path.of("acme-corp", "hr-team"))).isTrue();
+    }
+
+    @Test
+    void isAccessibleFrom_deeperNotVisibleToShallower() {
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.of("acme-corp", "hr-team"), Path.of("acme-corp"))).isFalse();
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.of("acme-corp", "hr-team", "jane"), Path.of("acme-corp"))).isFalse();
+    }
+
+    @Test
+    void isAccessibleFrom_siblingNotVisible() {
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.of("acme-corp"), Path.of("globex"))).isFalse();
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.of("acme-corp", "hr-team"), Path.of("acme-corp", "sales"))).isFalse();
+    }
+
+    @Test
+    void isAccessibleFrom_rootCallerSeesOnlyRoot() {
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.of("acme-corp"), Path.root())).isFalse();
+        assertThat(LabelVocabularyService.isAccessibleFrom(Path.of("acme-corp", "hr-team"), Path.root())).isFalse();
     }
 
     @Test

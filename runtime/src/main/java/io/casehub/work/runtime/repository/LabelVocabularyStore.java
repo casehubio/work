@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelVocabulary;
 
 /**
@@ -54,6 +55,35 @@ public interface LabelVocabularyStore {
      * @return list of vocabularies; may be empty, never null
      */
     List<LabelVocabulary> scanAll();
+
+    /**
+     * Find the vocabulary at the given scope for the current tenant.
+     *
+     * @param scope the scope path to search for
+     * @return an {@link Optional} containing the vocabulary, or empty if not found
+     */
+    Optional<LabelVocabulary> findByScope(Path scope);
+
+    /**
+     * Find the vocabulary at the given scope for the current tenant, or create one
+     * if none exists. Thread-safe: implementations must handle concurrent creation
+     * (via database constraints, synchronization, or native upsert).
+     *
+     * @param scope the scope path
+     * @param name  human-readable name for a newly created vocabulary
+     * @return the existing or newly created vocabulary; never null
+     * @implNote Default is NOT race-safe (check-then-act). Production backends
+     *           must override with atomic semantics (JPA: REQUIRES_NEW + constraint retry;
+     *           InMemory: synchronized).
+     */
+    default LabelVocabulary findOrCreate(Path scope, String name) {
+        return findByScope(scope).orElseGet(() -> {
+            LabelVocabulary vocab = new LabelVocabulary();
+            vocab.scope = scope;
+            vocab.name = name;
+            return put(vocab);
+        });
+    }
 
     /**
      * Delete a LabelVocabulary by ID, scoped to the current tenant.

@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelDefinition;
 import io.casehub.work.runtime.model.LabelVocabulary;
-import io.casehub.work.runtime.model.VocabularyScope;
 import io.casehub.work.runtime.repository.LabelDefinitionStore;
 import io.casehub.work.runtime.repository.LabelVocabularyStore;
 import io.casehub.work.runtime.test.MutableCurrentPrincipal;
@@ -51,7 +50,7 @@ class JpaLabelDefinitionStoreTenancyTest {
     /** Create a minimal vocabulary in the current tenant. */
     private LabelVocabulary createVocabulary(String name) {
         LabelVocabulary vocab = new LabelVocabulary();
-        vocab.scope = VocabularyScope.GLOBAL;
+        vocab.scope = Path.root();
         vocab.name = name;
         return vocabularyStore.put(vocab);
     }

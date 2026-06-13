@@ -16,6 +16,8 @@ public class PathAttributeConverter implements AttributeConverter<Path, String> 
 
     @Override
     public Path convertToEntityAttribute(final String value) {
-        return value == null ? null : Path.parse(value);
+        if (value == null) return null;
+        if (value.isEmpty()) return Path.root();
+        return Path.parse(value);
     }
 }

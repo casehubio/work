@@ -10,8 +10,8 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelVocabulary;
-import io.casehub.work.runtime.model.VocabularyScope;
 import io.casehub.work.runtime.repository.LabelVocabularyStore;
 import io.casehub.work.runtime.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
@@ -43,7 +43,7 @@ class JpaLabelVocabularyStoreTenancyTest {
 
     private LabelVocabulary newVocabulary(String name) {
         LabelVocabulary vocab = new LabelVocabulary();
-        vocab.scope = VocabularyScope.GLOBAL;
+        vocab.scope = Path.root();
         vocab.name = name;
         return vocab;
     }

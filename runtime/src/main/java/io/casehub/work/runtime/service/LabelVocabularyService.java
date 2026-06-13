@@ -10,7 +10,6 @@ import jakarta.transaction.Transactional;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelDefinition;
 import io.casehub.work.runtime.model.LabelVocabulary;
-import io.casehub.work.runtime.model.VocabularyScope;
 import io.casehub.work.runtime.repository.LabelDefinitionStore;
 import io.casehub.work.runtime.repository.LabelVocabularyStore;
 
@@ -24,16 +23,15 @@ public class LabelVocabularyService {
     LabelVocabularyStore labelVocabularyStore;
 
     /**
-     * Returns true if a label declared in {@code definitionScope} is accessible
+     * Returns true if a vocabulary at {@code vocabScope} is accessible
      * to a caller operating at {@code callerScope}.
      *
      * <p>
-     * Accessibility: the definition scope must be at the same level or broader
-     * (lower ordinal = broader scope).
+     * A vocabulary is accessible when its scope is an ancestor of (or equal to)
+     * the caller's scope. Root scope is accessible to everyone.
      */
-    public static boolean isScopeAccessible(final VocabularyScope definitionScope,
-            final VocabularyScope callerScope) {
-        return definitionScope.ordinal() <= callerScope.ordinal();
+    public static boolean isAccessibleFrom(final Path vocabScope, final Path callerScope) {
+        return vocabScope.equals(callerScope) || vocabScope.isAncestorOf(callerScope);
     }
 
     /**
@@ -88,42 +86,33 @@ public class LabelVocabularyService {
      * List all label definitions accessible at the given scope (at or above).
      */
     @Transactional
-    public List<LabelDefinition> listAccessible(final VocabularyScope callerScope) {
+    public List<LabelDefinition> listAccessible(final Path callerScope) {
         return labelVocabularyStore.scanAll().stream()
-                .filter(v -> isScopeAccessible(v.scope, callerScope))
+                .filter(v -> isAccessibleFrom(v.scope, callerScope))
                 .flatMap(v -> labelDefinitionStore.findByVocabularyId(v.id).stream())
                 .toList();
     }
 
+    public record ScopedDefinition(LabelDefinition definition, Path scope) {}
+
     /**
-     * Find the GLOBAL vocabulary (always present — seeded by Flyway V3).
+     * List all label definitions across all vocabularies visible to the current tenant.
+     * No scope filtering — returns everything. Each definition carries its vocabulary's scope.
      */
     @Transactional
-    public LabelVocabulary findGlobalVocabulary() {
+    public List<ScopedDefinition> listAllDefinitions() {
         return labelVocabularyStore.scanAll().stream()
-                .filter(v -> v.scope == VocabularyScope.GLOBAL)
-                .findFirst()
-                .orElse(null);
+                .flatMap(v -> labelDefinitionStore.findByVocabularyId(v.id).stream()
+                        .map(d -> new ScopedDefinition(d, v.scope)))
+                .toList();
     }
 
     /**
-     * Find an existing vocabulary at the given scope and ownerId, or create one.
-     * GLOBAL scope: use {@link #findGlobalVocabulary()} instead.
+     * Find an existing vocabulary at the given scope, or create one.
+     * Delegates to the store's race-safe {@code findOrCreate}.
      */
     @Transactional
-    public LabelVocabulary findOrCreateVocabulary(final VocabularyScope scope, final String ownerId,
-            final String name) {
-        LabelVocabulary existing = labelVocabularyStore.scanAll().stream()
-                .filter(v -> v.scope == scope && ownerId.equals(v.ownerId))
-                .findFirst()
-                .orElse(null);
-        if (existing != null) {
-            return existing;
-        }
-        final LabelVocabulary vocab = new LabelVocabulary();
-        vocab.scope = scope;
-        vocab.ownerId = ownerId;
-        vocab.name = name;
-        return labelVocabularyStore.put(vocab);
+    public LabelVocabulary findOrCreateVocabulary(final Path scope, final String name) {
+        return labelVocabularyStore.findOrCreate(scope, name);
     }
 }

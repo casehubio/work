@@ -1446,10 +1446,9 @@ Not closed here: distribution of queue events across nodes (L6).
 
 | File | What it does |
 |---|---|
-| `runtime/src/main/java/io/casehub/work/runtime/model/LabelVocabulary.java` | Scoped container for LabelDefinition entries; scope enum GLOBAL/ORG/TEAM/PERSONAL |
+| `runtime/src/main/java/io/casehub/work/runtime/model/LabelVocabulary.java` | Scoped container for LabelDefinition entries; `scope` uses `Path` from `casehub-platform-api` with `PathAttributeConverter` |
 | `runtime/src/main/java/io/casehub/work/runtime/model/LabelDefinition.java` | Declared label path within a vocabulary; `path` field uses `PathAttributeConverter` |
 | `runtime/src/main/java/io/casehub/work/runtime/model/PathAttributeConverter.java` | JPA converter: `Path.value()` on write, `Path.parse()` on read; `autoApply = false` |
-| `runtime/src/main/java/io/casehub/work/runtime/model/VocabularyScope.java` | Enum: GLOBAL → ORG → TEAM → PERSONAL visibility hierarchy |
 | `runtime/src/main/java/io/casehub/work/runtime/model/WorkItemLabel.java` | `@Embeddable`; carries `path` (String), `persistence` (MANUAL/INFERRED), `appliedBy` |
 | `runtime/src/main/java/io/casehub/work/runtime/api/VocabularyResource.java` | REST resource for vocabulary CRUD; uses FQN `io.casehub.platform.api.path.Path` to avoid collision with `jakarta.ws.rs.Path` |
 | `queues/src/main/java/io/casehub/work/queues/model/WorkItemFilter.java` | Filter entity; stores `conditionLanguage`, `conditionExpression`, `FilterAction` list (serialised JSON), `FilterScope` |
@@ -1464,7 +1463,7 @@ Not closed here: distribution of queue events across nodes (L6).
 
 #### Key Wiring
 
-**`LabelDefinition.path` uses `PathAttributeConverter`.** The `path` field is `io.casehub.platform.api.path.Path` in Java but stored as `VARCHAR(500)` in the database. The converter calls `Path.value()` on write and `Path.parse()` on read. `autoApply = false` — the converter is opt-in per field, not global. `VocabularyResource` must use the fully qualified name `io.casehub.platform.api.path.Path` in method bodies — it cannot use a simple import because `jakarta.ws.rs.Path` is already in scope from the class-level `@Path` annotation.
+**`LabelDefinition.path` uses `PathAttributeConverter`.** The `path` field is `io.casehub.platform.api.path.Path` in Java but stored as `VARCHAR(500)` in the database. The converter calls `Path.value()` on write and `Path.parse()` on read. `autoApply = false` — the converter is opt-in per field, not global. `VocabularyResource` must use the fully qualified name `io.casehub.platform.api.path.Path` in method bodies — it cannot use a simple import because `jakarta.ws.rs.Path` is already in scope from the class-level `@Path` annotation. `LabelVocabulary.scope` also uses `PathAttributeConverter` — root scope stores as empty string, non-root as the path value string.
 
 **JQ filter evaluation delegates to `casehub-platform-expression`.** `JqConditionEvaluator` injects `JQEvaluator` from `io.casehub.platform.expression`. If that module is absent from the classpath, CDI fails to satisfy the injection point when a JQ filter is evaluated. JEXL and Lambda filters have no external dependency and work without it.
 

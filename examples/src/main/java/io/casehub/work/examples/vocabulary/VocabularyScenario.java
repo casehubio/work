@@ -17,7 +17,6 @@ import io.casehub.work.runtime.api.AuditEntryResponse;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.LabelDefinition;
 import io.casehub.work.runtime.model.LabelVocabulary;
-import io.casehub.work.runtime.model.VocabularyScope;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemPriority;
@@ -90,7 +89,7 @@ public class VocabularyScenario {
         LOG.infof("[SCENARIO] Step %d/%d: %s", 1, total, description1);
 
         final LabelVocabulary vocab = vocabularyService.findOrCreateVocabulary(
-                VocabularyScope.TEAM, TEAM_ID, "HR Team Leave Vocabulary");
+                io.casehub.platform.api.path.Path.of("casehubio", TEAM_ID), "HR Team Leave Vocabulary");
 
         vocabularyService.addDefinition(vocab.id, io.casehub.platform.api.path.Path.parse("leave/annual"),
                 "Standard annual leave entitlement", ACTOR_ADMIN);
@@ -106,7 +105,8 @@ public class VocabularyScenario {
         // Step 2: verify vocabulary via service list — count accessible entries
         final String description2 = "retrieve vocabulary and count accessible entries at TEAM scope";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 2, total, description2);
-        final List<LabelDefinition> accessible = vocabularyService.listAccessible(VocabularyScope.TEAM);
+        final List<LabelDefinition> accessible = vocabularyService.listAccessible(
+                io.casehub.platform.api.path.Path.of("casehubio", TEAM_ID));
         LOG.infof("[SCENARIO] %d vocabulary entries accessible at TEAM scope", accessible.size());
         steps.add(new StepLog(2, description2, null));
 
