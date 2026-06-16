@@ -681,8 +681,7 @@ Creates a saved filter. On every `WorkItemLifecycleEvent`, active filters evalua
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | yes | Human-readable filter name |
-| `scope` | FilterScope | no | `PERSONAL`, `TEAM`, or `ORG` (default: `ORG`) |
-| `ownerId` | string | no | Owner user ID (PERSONAL) or group ID (TEAM) |
+| `scope` | string | no | Path string (e.g. `"legal/team"`); null/blank = root scope (visible to all) |
 | `conditionLanguage` | string | yes | `jexl` or `jq` (lambda filters are CDI beans, not stored via REST) |
 | `conditionExpression` | string | yes | The condition expression |
 | `actions` | FilterAction[] | yes | Actions to apply when condition matches |
@@ -714,7 +713,6 @@ curl -X POST http://localhost:8080/filters \
   -H 'Content-Type: application/json' \
   -d '{
     "name": "High priority triage",
-    "scope": "ORG",
     "conditionLanguage": "jexl",
     "conditionExpression": "priority == '"'"'HIGH'"'"' && assigneeId == null",
     "actions": [{"type": "APPLY_LABEL", "labelPath": "intake/triage"}]
@@ -801,8 +799,7 @@ Creates a named queue view over a label pattern.
 |---|---|---|---|
 | `name` | string | yes | Human-readable queue name |
 | `labelPattern` | string | yes | Label pattern: exact, `legal/*`, or `legal/**` |
-| `scope` | FilterScope | no | `PERSONAL`, `TEAM`, or `ORG` (default: `ORG`) |
-| `ownerId` | string | no | Owner user ID or group ID |
+| `scope` | string | no | Path string (e.g. `"legal/team"`); null/blank = root scope (visible to all) |
 | `additionalConditions` | string | no | JEXL expression applied per WorkItem after label matching (e.g. `status == 'PENDING'`) |
 | `sortField` | string | no | `createdAt` (default), `title`, or `priority` |
 | `sortDirection` | string | no | `ASC` (default) or `DESC` |
@@ -817,7 +814,7 @@ curl -X POST http://localhost:8080/queues \
   -d '{
     "name": "Legal triage",
     "labelPattern": "intake/**",
-    "scope": "TEAM",
+    "scope": "legal",
     "sortField": "createdAt",
     "sortDirection": "ASC"
   }'

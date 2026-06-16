@@ -610,7 +610,7 @@ Before this chapter, lifecycle events had no tamper-evident record and actor tru
 **Delivered:** 2026-04-14 | **Issues:** #92
 
 **What this delivers**
-Before this chapter, WorkItems had no label-based routing and inbox queries returned unfiltered results. After: the optional `casehub-work-queues` module delivers `LabelVocabulary` (GLOBAL→PERSONAL scope hierarchy), `WorkItemFilter` (JEXL/JQ/Lambda evaluators), `FilterChain`, `QueueView` named queries, and `WorkItemQueueEvent` CDI events; consuming apps define label vocabularies and query the inbox as named queue views.
+Before this chapter, WorkItems had no label-based routing and inbox queries returned unfiltered results. After: the optional `casehub-work-queues` module delivers `LabelVocabulary` (Path-based scope hierarchy), `WorkItemFilter` (JEXL/JQ/Lambda evaluators), `FilterChain`, `QueueView` named queries, and `WorkItemQueueEvent` CDI events; consuming apps define label vocabularies and query the inbox as named queue views.
 
 **Accountability gaps closed**
 - No label-based routing audit → `WorkItemQueueEvent` fires on every queue membership change
@@ -1422,10 +1422,10 @@ Item-level exception isolation — exceptions from policy execution are caught p
 #### What it adds
 
 **Before:** WorkItems had no labelling, no vocabulary enforcement, and no named queue views.
-**After:** `casehub-work-runtime` carries `LabelVocabulary` + `LabelDefinition` (path-typed, GLOBAL→ORG→TEAM→PERSONAL hierarchy) and `WorkItemLabel` (MANUAL/INFERRED persistence on WorkItem). `casehub-work-queues` adds `WorkItemFilter` + `FilterChain` (inverse index for cascade), `QueueView` named label-pattern queries, `WorkItemQueueMembership` (persistent before-state for membership diffing), and `WorkItemQueueEvent` CDI events.
+**After:** `casehub-work-runtime` carries `LabelVocabulary` + `LabelDefinition` (path-typed scope hierarchy via `io.casehub.platform.api.path.Path`) and `WorkItemLabel` (MANUAL/INFERRED persistence on WorkItem). `casehub-work-queues` adds `WorkItemFilter` + `FilterChain` (inverse index for cascade), `QueueView` named label-pattern queries, `WorkItemQueueMembership` (persistent before-state for membership diffing), and `WorkItemQueueEvent` CDI events.
 
 What this layer adds:
-- **Vocabulary** — `LabelVocabulary` (runtime) + `LabelDefinition` (runtime, path typed as `io.casehub.platform.api.path.Path`, stored as VARCHAR via `PathAttributeConverter`) define valid label paths at four scope levels (GLOBAL/ORG/TEAM/PERSONAL)
+- **Vocabulary** — `LabelVocabulary` (runtime) + `LabelDefinition` (runtime, path typed as `io.casehub.platform.api.path.Path`, stored as VARCHAR via `PathAttributeConverter`) define valid label paths scoped by `Path` hierarchy (root = widest)
 - **Label persistence** — `WorkItemLabel` (runtime, `@Embeddable`) carries a `path` String, a `LabelPersistence` enum (MANUAL/INFERRED), and `appliedBy` (userId or filterId)
 - **Filter engine** — `WorkItemFilter` (queues) stores conditions (JEXL/JQ/Lambda) and `FilterAction` lists; `FilterEngine` re-evaluates INFERRED labels on every WorkItem mutation via `FilterEvaluatorRegistry` dispatching to `JexlConditionEvaluator`, `JqConditionEvaluator`, or `LambdaFilterRegistry`
 - **Cascade tracking** — `FilterChain` (queues) is the inverse index: tracks which WorkItems a given filter has applied INFERRED labels to, enabling O(affected) cleanup on filter deletion without a full table scan
@@ -1451,9 +1451,9 @@ Not closed here: distribution of queue events across nodes (L6).
 | `runtime/src/main/java/io/casehub/work/runtime/model/PathAttributeConverter.java` | JPA converter: `Path.value()` on write, `Path.parse()` on read; `autoApply = false` |
 | `runtime/src/main/java/io/casehub/work/runtime/model/WorkItemLabel.java` | `@Embeddable`; carries `path` (String), `persistence` (MANUAL/INFERRED), `appliedBy` |
 | `runtime/src/main/java/io/casehub/work/runtime/api/VocabularyResource.java` | REST resource for vocabulary CRUD; uses FQN `io.casehub.platform.api.path.Path` to avoid collision with `jakarta.ws.rs.Path` |
-| `queues/src/main/java/io/casehub/work/queues/model/WorkItemFilter.java` | Filter entity; stores `conditionLanguage`, `conditionExpression`, `FilterAction` list (serialised JSON), `FilterScope` |
+| `queues/src/main/java/io/casehub/work/queues/model/WorkItemFilter.java` | Filter entity; stores `conditionLanguage`, `conditionExpression`, `FilterAction` list (serialised JSON), `Path` scope (management metadata — not an execution predicate) |
 | `queues/src/main/java/io/casehub/work/queues/model/FilterChain.java` | Inverse index: maps filterId → Set<workItemId> for O(affected) cascade on filter delete |
-| `queues/src/main/java/io/casehub/work/queues/model/QueueView.java` | Named queue; `labelPattern` String with wildcard support; `FilterScope` for visibility |
+| `queues/src/main/java/io/casehub/work/queues/model/QueueView.java` | Named queue; `labelPattern` String with wildcard support; `Path` scope for management visibility |
 | `queues/src/main/java/io/casehub/work/queues/model/WorkItemQueueMembership.java` | Persistent before-state; prevents re-firing ADDED events on JVM restart |
 | `queues/src/main/java/io/casehub/work/queues/event/WorkItemQueueEvent.java` | CDI record event: `workItemId`, `queueViewId`, `queueName`, `QueueEventType` |
 | `queues/src/main/java/io/casehub/work/queues/service/FilterEngine.java` | SPI: `evaluate(WorkItem)` and `cascadeDelete(UUID filterId)` |
