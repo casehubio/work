@@ -111,7 +111,7 @@ internal architectural concerns added incrementally across 35 build Chapters:
 |---|---|
 | L1 Domain Baseline | WorkItem + AuditEntry entities, Storage SPI, JPA defaults, WorkItemService — the inbox foundation |
 | L2 REST API | WorkItemResource (7 sub-resources), DTOs, exception mappers, OpenAPI |
-| L3 Lifecycle Engine | ExpiryCleanupJob, ClaimDeadlineJob, ClaimSlaPolicy SPI, SlaBreachPolicy SPI, CDI lifecycle events |
+| L3 Lifecycle Engine | ExpiryTimerJob, ClaimDeadlineTimerJob, ClaimSlaPolicy SPI, SlaBreachPolicy SPI, CDI lifecycle events |
 | L4 Label System | LabelVocabulary, MANUAL/INFERRED label persistence, FilterEngine (JEXL/JQ/Lambda), QueueView |
 | L5 Ledger Integration | WorkItemLedgerEntry (JOINED from LedgerEntry), hash chain, peer attestation, EigenTrust |
 | L6 Distribution | WorkItemEventBroadcaster SPI, LocalWorkItemEventBroadcaster @DefaultBean, PostgreSQL LISTEN/NOTIFY broadcaster |
@@ -141,7 +141,7 @@ C4Container
   Container_Boundary(b1, "Layer: L1 Domain Baseline") {
     Container(api, "casehub-work-api", "Pure Java", "SPI contracts: WorkerSelectionStrategy, SlaBreachPolicy, ClaimSlaPolicy, ExclusionPolicy, SpawnPort, NotificationChannel, Capability")
     Container(core, "casehub-work-core", "Jandex library", "WorkBroker, LeastLoadedStrategy, ClaimFirstStrategy, RoundRobinStrategy, CapabilityValidator")
-    Container(runtime, "casehub-work", "Quarkus extension", "WorkItem entity, WorkItemService, JpaWorkItemStore, AuditEntryStore, Flyway V1–V34")
+    Container(runtime, "casehub-work", "Quarkus extension", "WorkItem entity, WorkItemService, JpaWorkItemStore, AuditEntryStore, Flyway V1–V36")
     Container(deploy, "casehub-work-deployment", "Quarkus deployment", "Build-time processors, feature registration, native config")
     Container(pmem, "casehub-work-persistence-memory", "In-memory persistence", "InMemoryWorkItemStore, InMemoryAuditEntryStore, InMemoryWorkItemNoteStore, InMemoryIssueLinkStore @Alternative @Priority(100)")
   }
@@ -166,7 +166,7 @@ C4Container
     Container(notif, "casehub-work-notifications", "Optional Quarkus extension", "HTTP webhook, Slack, Teams outbound notifications")
     Container(it, "casehub-work-issue-tracker", "Optional Quarkus extension", "IssueTrackerProvider SPI, GitHub/Jira webhook handlers, IssueLinkStore, NormativeResolution")
     Container(mongo, "casehub-work-persistence-mongodb", "Optional Quarkus extension", "MongoDB WorkItemStore @Alternative @Priority(1)")
-    Container(flow, "work-flow", "Optional Quarkus extension", "HumanTaskFlowBridge, WorkItemFlowEventListener — Quarkus-Flow CDI bridge")
+    Container(flow, "casehub-work-flow", "Optional Quarkus extension", "HumanTaskFlowBridge, WorkItemFlowEventListener — Quarkus-Flow CDI bridge")
   }
 ```
 
@@ -176,7 +176,7 @@ C4Container
 |---|---|---|---|
 | `api/` | `casehub-work-api` | Pure Java SPI | WorkerSelectionStrategy, SlaBreachPolicy, BreachDecision (sealed), ClaimSlaPolicy, ExclusionPolicy, SpawnPort, NotificationChannel, Capability, WorkItemCallerRef; depends on `casehub-platform-api` |
 | `core/` | `casehub-work-core` | Jandex library | WorkBroker, LeastLoadedStrategy, ClaimFirstStrategy, RoundRobinStrategy, CapabilityValidator; used by casehub-engine without pulling in JPA or REST |
-| `runtime/` | `casehub-work` | Quarkus extension | WorkItem + AuditEntry entities, WorkItemService, WorkItemAssignmentService, ExpiryLifecycleService, REST resources (7), Flyway V1–V34 at `db/work/migration/` |
+| `runtime/` | `casehub-work` | Quarkus extension | WorkItem + AuditEntry entities, WorkItemService, WorkItemAssignmentService, ExpiryLifecycleService, REST resources (7), Flyway V1–V36 at `db/work/migration/` |
 | `deployment/` | `casehub-work-deployment` | Quarkus deployment | Build-time processor, feature registration, `casehub.work.*` native config |
 | `persistence-memory/` | `casehub-work-persistence-memory` | In-memory persistence | InMemoryWorkItemStore, InMemoryAuditEntryStore, InMemoryWorkItemNoteStore, InMemoryIssueLinkStore, InMemoryRoutingCursorStore — `@Alternative @Priority(100)` (Tier 3) |
 | `queues/` | `casehub-work-queues` | Optional extension | LabelVocabulary, MANUAL/INFERRED label persistence, FilterEngine (JEXL/JQ/Lambda), FilterChain, QueueView, WorkItemQueueEventBroadcaster SPI |
@@ -184,12 +184,12 @@ C4Container
 | `ledger/` | `casehub-work-ledger` | Optional extension | WorkItemLedgerEntry (JOINED from LedgerEntry), LedgerEventCapture @Observes, EigenTrust; depends on `casehub-ledger` |
 | `postgres-broadcaster/` | `casehub-work-postgres-broadcaster` | Optional extension | PostgresWorkItemEventBroadcaster @Alternative @Priority(1); no Flyway |
 | `queues-postgres-broadcaster/` | `casehub-work-queues-postgres-broadcaster` | Optional extension | PostgresWorkItemQueueEventBroadcaster @Alternative @Priority(1); no Flyway |
-| `ai/` | `casehub-work-ai` | Optional extension | SemanticWorkerSelectionStrategy @Alternative @Priority(1), EmbeddingSkillMatcher, ResolutionSuggestionService, EscalationSummaryObserver, Flyway V14 + V4001 |
+| `ai/` | `casehub-work-ai` | Optional extension | SemanticWorkerSelectionStrategy @Alternative @Priority(1), EmbeddingSkillMatcher, ResolutionSuggestionService, EscalationSummaryObserver, Flyway V14 + V4001–V4002 |
 | `reports/` | `casehub-work-reports` | Optional extension | SLA compliance REST reports, Caffeine 5-min TTL cache |
-| `notifications/` | `casehub-work-notifications` | Optional extension | HTTP webhook, Slack, Teams; NotificationChannel SPI; Flyway V3000 |
+| `notifications/` | `casehub-work-notifications` | Optional extension | HTTP webhook, Slack, Teams; NotificationChannel SPI; Flyway V3000–V3001 |
 | `issue-tracker/` | `casehub-work-issue-tracker` | Optional extension | IssueTrackerProvider SPI, IssueLinkStore SPI, GitHub/Jira webhook handlers, NormativeResolution; Flyway V5000–V5001 |
 | `persistence-mongodb/` | `casehub-work-persistence-mongodb` | Optional extension | MongoDB WorkItemStore @Alternative @Priority(1) |
-| `flow/` | `work-flow` | Optional extension | HumanTaskFlowBridge, WorkItemFlowEventListener |
+| `flow/` | `casehub-work-flow` | Optional extension | HumanTaskFlowBridge, WorkItemFlowEventListener |
 | `integration-tests/` | — | Black-box test suite | @QuarkusIntegrationTest + native image validation (25 tests) |
 | `examples/` | — | Runnable demos | POST /examples/{name}/run scenario runner |
 | `flow-examples/` | — | Flow demos | Quarkus-Flow integration examples |
@@ -232,7 +232,7 @@ Actor or system POSTs to `POST /workitems`. `WorkItemService` validates the requ
 
 ### Scenario 2 — SLA breach → Fail
 
-`ExpiryCleanupJob` fires on schedule via `@Scheduled`. It calls `ExpiryLifecycleService.checkExpired()`, which scans all expired WorkItems and calls `SlaBreachPolicy.onBreach(SlaBreachContext)` per item:
+`ExpiryTimerJob` fires on schedule via `@Scheduled`. It calls `ExpiryLifecycleService.checkExpired()`, which scans all expired WorkItems and calls `SlaBreachPolicy.onBreach(SlaBreachContext)` per item:
 
 - `BreachDecision.Fail` → WorkItem transitions to EXPIRED (terminal); `EXPIRED` audit entry written
 - `BreachDecision.EscalateTo(groups, deadline)` → item returns to PENDING with new candidate groups and deadline; `SLA_REASSIGNED` audit entry written; `WorkItemAssignmentService` pre-assigns via `SLA_ESCALATED` trigger
@@ -260,7 +260,7 @@ C4Deployment
     Container(app2, "Application + casehub-work", "JVM or Native", "Serves REST API; fires lifecycle events")
   }
   Deployment_Node(pg, "PostgreSQL") {
-    ContainerDb(db, "Database", "PostgreSQL", "work_item, audit_entry + all module tables; Flyway V1–V34")
+    ContainerDb(db, "Database", "PostgreSQL", "work_item, audit_entry + all module tables; Flyway V1–V36")
     ContainerDb(notify, "LISTEN/NOTIFY", "PostgreSQL", "casehub_work_events + casehub_work_queue_events channels")
   }
   Rel(app1, db, "Flyway + JPA")
@@ -288,13 +288,13 @@ C4Deployment
 
 | Concern | Protocol |
 |---|---|
-| Module tier structure | `docs/protocols/universal/module-tier-structure.md` — pure-Java SPI / Jandex library / Quarkus extension three-tier rule |
-| Flyway migrations | `docs/protocols/casehub/flyway-version-range-allocation.md` — V1–V999 runtime; V2000+ ledger subclass; optional modules own dedicated ranges (ai: V14+V4001, notifications: V3000, issue-tracker: V5000) |
+| Module tier structure | module-tier-structure *(not yet written)* — pure-Java SPI / Jandex library / Quarkus extension three-tier rule |
+| Flyway migrations | flyway-version-range-allocation *(not yet written)* — V1–V999 runtime; V2000+ ledger subclass; optional modules own dedicated ranges (ai: V14+V4001–V4002, notifications: V3000–V3001, issue-tracker: V5000) |
 | Flyway path scoping | PP-20260525-607b33 — all migrations at `db/work/migration/`; consumers set `quarkus.flyway.locations=classpath:db/work/migration` explicitly; Flyway auto-registration does not exist |
-| CDI displacement | `docs/protocols/casehub/alternative-extension-patterns.md` — `@DefaultBean` displaced by `@Alternative @Priority(1)` via classpath presence; no consumer config change |
+| CDI displacement | alternative-extension-patterns *(not yet written)* — `@DefaultBean` displaced by `@Alternative @Priority(1)` via classpath presence; no consumer config change |
 | SPI placement | `docs/PLATFORM.md` §Step 4 — consumer-facing SPIs in `api/`; `@DefaultBean` impls in `api/` when pure Java, in `runtime/` when JPA or config deps apply |
-| Persistence backend priority | `docs/protocols/universal/persistence-backend-cdi-priority.md` — `@DefaultBean` → `@ApplicationScoped` → `@Alternative @Priority(1)` ladder |
-| Auth readiness | `docs/protocols/casehub/auth-retrofit-readiness.md` — no `@RolesAllowed` in the extension; REST resources stay thin enough for retrofit |
+| Persistence backend priority | persistence-backend-cdi-priority *(not yet written)* — `@DefaultBean` → `@ApplicationScoped` → `@Alternative @Priority(1)` ladder |
+| Auth readiness | auth-retrofit-readiness *(not yet written)* — no `@RolesAllowed` in the extension; REST resources stay thin enough for retrofit |
 | Capability vocabulary | `docs/adr/0003-capability-vocabulary-as-validated-value-type.md`, `docs/adr/0004-capability-validation-mode-as-deployment-config.md` |
 
 ### Anti-Patterns
@@ -304,7 +304,7 @@ C4Deployment
 **Fix:** Change `casehub-platform` to `<scope>runtime</scope>` in modules that run `quarkus:build`. Keep `<scope>test</scope>` in library and extension modules that do not run `quarkus:build`.
 
 **Symptom:** After adding a new non-terminal `WorkItemStatus` value, the expiry scheduler silently skips items in that status.
-**Cause:** `WorkItemQuery.expired()` and `WorkItemQuery.claimExpired()` filter on explicit status sets. A new active status absent from those sets is invisible to `ExpiryCleanupJob`.
+**Cause:** `WorkItemQuery.expired()` and `WorkItemQuery.claimExpired()` filter on explicit status sets. A new active status absent from those sets is invisible to `ExpiryTimerJob`.
 **Fix:** Whenever adding a new non-terminal `WorkItemStatus` value, update three places atomically: `WorkItemStatus.isActive()`, `WorkItemStatus.isTerminal()`, and the status predicates inside `WorkItemQuery.expired()` / `WorkItemQuery.claimExpired()`.
 
 **Symptom:** SSE clients receive lifecycle events for WorkItems whose creating transaction rolled back.
@@ -536,7 +536,7 @@ Before this chapter, the WorkItem lifecycle was accessible only via CDI injectio
 **Delivered:** 2026-04-14 | **Issues:** #92
 
 **What this delivers**
-Before this chapter, WorkItems that breached their deadline sat active indefinitely with no automated consequence. After: `ExpiryCleanupJob` (@Scheduled) drives `ExpiryLifecycleService`; every item that passes its deadline either transitions to EXPIRED, returns to the candidate pool with a new deadline, or reaches ESCALATED terminal state within one scheduler cycle.
+Before this chapter, WorkItems that breached their deadline sat active indefinitely with no automated consequence. After: `ExpiryTimerJob` (@Scheduled) drives `ExpiryLifecycleService`; every item that passes its deadline either transitions to EXPIRED, returns to the candidate pool with a new deadline, or reaches ESCALATED terminal state within one scheduler cycle.
 
 **Accountability gaps closed**
 - Missed deadlines with no consequence → SLA breach fires an `AuditEntry` unconditionally on every expiry transition
@@ -1143,7 +1143,7 @@ Four targeted fixes delivered together. #243: `EXPIRED` added to `WorkItemStatus
 
 **Participates in chapters:** C1, C2, C4, C9, C10, C11, C12, C13, C14, C15, C17, C18, C23, C24, C28, C29, C30, C31, C34, C35
 **Architectural patterns:** Hexagonal (Ports and Adapters), Strategy, Registry
-**Key protocols:** `docs/protocols/casehub/flyway-version-range-allocation.md`, `docs/protocols/universal/module-tier-structure.md`, PP-20260525-607b33
+**Key protocols:** flyway-version-range-allocation *(not yet written)*, module-tier-structure *(not yet written)*, PP-20260525-607b33
 **Issues:** Phase 1, #182, #220, ADR-0003, ADR-0004, ADR-0005
 **Navigation:** `git log --grep="Phase 1\|#182\|#220" --oneline`
 **Completed:** 2026-04-14 (baseline); enriched through 2026-06-03
@@ -1198,7 +1198,7 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 
 **`@Version long version` on `WorkItem`.** Provides optimistic concurrency control — concurrent claim from two nodes produces `OptimisticLockException`, mapped to HTTP 409 Conflict by `WorkItemResource`. The second claimer must retry; no explicit locking is used.
 
-**Flyway at `classpath:db/work/migration/`.** All runtime module migrations (V1–V34) live at this path per PP-20260525-607b33. Consumers must set `quarkus.flyway.locations=classpath:db/work/migration` explicitly — Quarkus has no auto-registration mechanism for extension migrations.
+**Flyway at `classpath:db/work/migration/`.** All runtime module migrations (V1–V36) live at this path per PP-20260525-607b33. Consumers must set `quarkus.flyway.locations=classpath:db/work/migration` explicitly — Quarkus has no auto-registration mechanism for extension migrations.
 
 **`InMemoryWorkItemStore` for unit tests.** The testing module provides `InMemoryWorkItemStore` annotated `@Alternative @Priority(1)` — unit tests use this without Quarkus or a datasource; `@QuarkusTest` integration tests use `JpaWorkItemStore` with H2.
 
@@ -1225,7 +1225,7 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 
 #### Gotchas
 
-**Symptom:** `WorkItemQuery.expired()` does not include items in a newly added non-terminal status; `ExpiryCleanupJob` skips them silently.
+**Symptom:** `WorkItemQuery.expired()` does not include items in a newly added non-terminal status; `ExpiryTimerJob` skips them silently.
 **Cause:** `WorkItemQuery.expired()` and `WorkItemQuery.claimExpired()` use explicit status sets. A new active status absent from those sets is invisible to the scheduler.
 **Fix:** When adding a new non-terminal `WorkItemStatus` value, update three places atomically: `WorkItemStatus.isActive()`, `WorkItemStatus.isTerminal()`, and the status predicates inside `WorkItemQuery.expired()` and `WorkItemQuery.claimExpired()`.
 
@@ -1247,7 +1247,7 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 
 **Participates in chapters:** C2, C11, C12, C28, C29, C31
 **Architectural patterns:** Thin REST layer — no business logic in resources
-**Key protocols:** `docs/protocols/casehub/auth-retrofit-readiness.md`
+**Key protocols:** auth-retrofit-readiness *(not yet written)*
 **Issues:** Phase 2, #83–#88, #182
 **Navigation:** `git log --grep="Phase 2\|#83\|#182" --oneline`
 **Completed:** 2026-04-14 (baseline); extended through 2026-05-20
@@ -1334,7 +1334,7 @@ Thin REST delegation — resource method validates input, calls service, maps re
 
 **Participates in chapters:** C3, C4, C15, C23, C24, C32, C33, C35
 **Architectural patterns:** Event-Driven, Strategy, Observer
-**Key protocols:** `docs/protocols/casehub/flyway-version-range-allocation.md`
+**Key protocols:** flyway-version-range-allocation *(not yet written)*
 **Issues:** Phase 3, Phase 4, #125, #212, #213, #243, #244
 **Navigation:** `git log --grep="Phase 3\|Phase 4\|#212\|#213" --oneline`
 **Completed:** 2026-04-14 (baseline); enriched through 2026-06-03
@@ -1342,10 +1342,10 @@ Thin REST delegation — resource method validates input, calls service, maps re
 #### What it adds
 
 **Before:** WorkItem status transitions had no automatic time-based consequence; expired items remained active indefinitely.
-**After:** `ExpiryCleanupJob @Scheduled` drives `ExpiryLifecycleService`, which executes `SlaBreachPolicy.onBreach()` per expired item, transitioning items to EXPIRED, PENDING (EscalateTo), or ESCALATED (Exhausted); `WorkItemLifecycleEvent` fires on every transition.
+**After:** `ExpiryTimerJob @Scheduled` drives `ExpiryLifecycleService`, which executes `SlaBreachPolicy.onBreach()` per expired item, transitioning items to EXPIRED, PENDING (EscalateTo), or ESCALATED (Exhausted); `WorkItemLifecycleEvent` fires on every transition.
 
 What this layer adds:
-- **Scheduler** — `ExpiryCleanupJob` fires on interval; detects expired WorkItems via `WorkItemQuery`; `ClaimDeadlineJob` fires on the same interval to detect claim-expired WorkItems
+- **Scheduler** — `ExpiryTimerJob` fires on interval; detects expired WorkItems via `WorkItemQuery`; `ClaimDeadlineTimerJob` fires on the same interval to detect claim-expired WorkItems
 - **Breach policy execution** — `ExpiryLifecycleService` calls `SlaBreachPolicy.onBreach(SlaBreachContext)` per item; executes the sealed `BreachDecision`; catches `BreachExecutionFailed` at item level to avoid aborting the batch
 - **Claim deadline policy** — `ClaimSlaPolicy` SPI governs what happens when a WorkItem's claim deadline passes (C15)
 - **CDI event bus** — `WorkItemLifecycleEvent` fires synchronously inside every `WorkItemService` state transition; carries event type, WorkItem ID, actor, callerRef, and optional named outcome
@@ -1361,8 +1361,8 @@ Not closed here: tamper-evident recording (L5), distributed broadcast (L6).
 
 #### Key Files
 
-- `runtime/src/main/java/io/casehub/work/runtime/service/ExpiryCleanupJob.java` — `@Scheduled` job that fires on configurable interval (`casehub.work.cleanup.expiry-check-seconds`) and delegates to `ExpiryLifecycleService.checkExpired()`
-- `runtime/src/main/java/io/casehub/work/runtime/service/ClaimDeadlineJob.java` — `@Scheduled` job on the same interval that delegates to `ExpiryLifecycleService.checkClaimDeadlines()` for items whose claim deadline has passed
+- `runtime/src/main/java/io/casehub/work/runtime/service/ExpiryTimerJob.java` — `@Scheduled` job that fires on configurable interval (`casehub.work.cleanup.expiry-check-seconds`) and delegates to `ExpiryLifecycleService.checkExpired()`
+- `runtime/src/main/java/io/casehub/work/runtime/service/ClaimDeadlineTimerJob.java` — `@Scheduled` job on the same interval that delegates to `ExpiryLifecycleService.checkClaimDeadlines()` for items whose claim deadline has passed
 - `runtime/src/main/java/io/casehub/work/runtime/service/ExpiryLifecycleService.java` — dispatches `SlaBreachPolicy.onBreach()` per expired item, executes the sealed `BreachDecision`, fires `SlaBreachEvent`, and catches `BreachExecutionFailed` at item level to write a diagnostic audit entry without aborting the batch
 - `runtime/src/main/java/io/casehub/work/runtime/event/WorkItemLifecycleEvent.java` — CDI event fired synchronously after every WorkItem state transition; carries post-mutation status, actor, rationale, planRef, and outcome; embeds the WorkItem entity so observers avoid a second store lookup
 - `api/src/main/java/io/casehub/work/api/SlaBreachPolicy.java` — SPI that receives a `SlaBreachContext` and returns a sealed `BreachDecision`; stateless; called by `ExpiryLifecycleService` for both completion-expiry and claim-expiry breaches
@@ -1370,7 +1370,7 @@ Not closed here: tamper-evident recording (L5), distributed broadcast (L6).
 
 #### Key Wiring
 
-**`@Scheduled(every = ...)` on `ExpiryCleanupJob` and `ClaimDeadlineJob`.** Both jobs use `quarkus-scheduler` with a configurable interval (`casehub.work.cleanup.expiry-check-seconds`). In a clustered deployment without a cluster lock identity, multiple nodes may fire concurrently — safe because `ExpiryLifecycleService` processes each item within a `@Transactional` boundary with OCC on `WorkItem.version`.
+**`@Scheduled(every = ...)` on `ExpiryTimerJob` and `ClaimDeadlineTimerJob`.** Both jobs use `quarkus-scheduler` with a configurable interval (`casehub.work.cleanup.expiry-check-seconds`). In a clustered deployment without a cluster lock identity, multiple nodes may fire concurrently — safe because `ExpiryLifecycleService` processes each item within a `@Transactional` boundary with OCC on `WorkItem.version`.
 
 **`WorkItemLifecycleEvent` fires synchronously via `Event.fire()`, not `fireAsync()`.** Observers that use `@ObservesAsync` will miss these events. `SlaBreachEvent` also fires synchronously. This is intentional — synchronous delivery keeps breach audit entries in the same transaction scope as the status transition.
 
@@ -1515,7 +1515,7 @@ MANUAL/INFERRED label persistence — human-applied labels survive re-evaluation
 
 **Participates in chapters:** C6
 **Architectural patterns:** Observer, Chain of Responsibility (hash chain), JOINED inheritance
-**Key protocols:** ADR-0001, `docs/protocols/casehub/ledger-subclass-extension.md`
+**Key protocols:** ADR-0001, ledger-subclass-extension *(not yet written)*
 **Issues:** Phase 6, #45, ADR-0001
 **Navigation:** `git log --grep="Phase 6\|#45" --oneline`
 **Completed:** 2026-04-14–15
@@ -1597,7 +1597,7 @@ Optional CDI observer module — a module that attaches to a domain event bus to
 
 **Participates in chapters:** C26, C27
 **Architectural patterns:** @DefaultBean CDI displacement, Observer, Pub-Sub
-**Key protocols:** `docs/protocols/casehub/alternative-extension-patterns.md`
+**Key protocols:** alternative-extension-patterns *(not yet written)*
 **Issues:** Phase 18, Phase 19+20, #93, #147, #150, #155
 **Navigation:** `git log --grep="#93\|#147\|#155" --oneline`
 **Completed:** 2026-04-30 (SPI); 2026-05-01 (PostgreSQL backends)
@@ -1669,7 +1669,7 @@ Not closed here: audit trail for distributed events — ledger writes happen in 
 
 **Participates in chapters:** C5, C18, C19, C20, C21, C22, C23, C25, C26, C27
 **Architectural patterns:** @DefaultBean CDI displacement, Strategy, SPI
-**Key protocols:** `docs/protocols/casehub/alternative-extension-patterns.md`, `docs/protocols/optional-module-pattern.md`
+**Key protocols:** alternative-extension-patterns *(not yet written)*, optional-module-pattern *(not yet written)*
 **Issues:** Phase 5, #73, #106, #121, #124, #126, #140–#141, #142–#145, #156–#161
 **Navigation:** `git log --grep="#121\|#156\|#142" --oneline`
 **Completed:** 2026-04-14 through 2026-05-05
@@ -1685,7 +1685,7 @@ What this layer adds:
 - **Notifications** (`casehub-work-notifications`) — HTTP webhook, Slack, Teams outbound via `NotificationChannel` SPI
 - **Issue tracker** (`casehub-work-issue-tracker`) — bidirectional GitHub/Jira link; NormativeResolution drives WorkItem transitions from inbound webhooks
 - **MongoDB** (`casehub-work-persistence-mongodb`) — drop-in `WorkItemStore` alternative for MongoDB deployments
-- **Flow bridge** (`work-flow`) — `HumanTaskFlowBridge` wraps WorkItem creation as a Quarkus-Flow `function` task
+- **Flow bridge** (`casehub-work-flow`) — `HumanTaskFlowBridge` wraps WorkItem creation as a Quarkus-Flow `function` task
 
 Not closed here: distribution of events (L6), tamper-evident audit (L5).
 
@@ -1766,14 +1766,14 @@ Optional classpath-presence activation — an optional module adds `@Alternative
 1. Define an optional module as a Quarkus extension (with deployment module) that depends only on the core's `api/` artifact.
 2. Implement `@Alternative @Priority(1)` overrides for SPIs defined in `api/` — the override activates when the module is on the classpath.
 3. For new capabilities with no SPI to override (e.g. reports, LLM assist), use `@ApplicationScoped` CDI beans and REST resources that activate by presence.
-4. Ensure the optional module carries its own Flyway migrations at `db/work/migration/` in a reserved V-number range (see `docs/protocols/casehub/flyway-version-range-allocation.md`).
+4. Ensure the optional module carries its own Flyway migrations at `db/work/migration/` in a reserved V-number range (see flyway-version-range-allocation *(not yet written)*).
 5. Write Jandex index for the module (via jandex-maven-plugin) so CDI can discover its beans in Quarkus without a full classpath scan.
 
 ---
 
 ## §10 Architectural Decisions
 
-All 5 ADRs are chapter-specific and elaborated in §9.4 layer entries. This section provides cross-references only.
+All 10 ADRs are chapter-specific and elaborated in §9.4 layer entries. This section provides cross-references only.
 
 | ADR | Decision | Where elaborated |
 |---|---|---|
@@ -1782,6 +1782,11 @@ All 5 ADRs are chapter-specific and elaborated in §9.4 layer entries. This sect
 | ADR-0003 | Capability as a validated value type with kebab-case enforcement — prevents silent empty candidate pools from misspelled tags | §9.4 L1 — Architectural decisions |
 | ADR-0004 | Capability validation mode as deployment config (STRICT/WARN/PERMISSIVE) — not hardcoded — consuming apps choose validation strictness | §9.4 L1 — Architectural decisions |
 | ADR-0005 | Group membership snapshot at WorkItem creation — `excludedGroups` expanded to actor IDs at instantiation so exclusion is deterministic at execution time | §9.4 L1 — Architectural decisions |
+| ADR-0006 | Evaluate outcome conditions at completion time, not at instantiation — condition expressions reference completion-time context (`resolution`, `actorId`, `reason`) unavailable at instantiation | §9.4 L1 — Architectural decisions |
+| ADR-0007 | Use JEXL as the condition expression language for outcomes — reuses existing `JexlConditionEvaluator` with zero new dependencies; one syntax for filter rules and outcome conditions | §9.4 L1 — Architectural decisions |
+| ADR-0008 | Application-level tenant filtering — WHERE clauses via `CurrentPrincipal.tenancyId()` work identically across JPA, MongoDB, and InMemory backends; RLS layered as defence-in-depth | §9.4 L1 — Architectural decisions |
+| ADR-0009 | TenantContextRunner for async and background work — single programmatic CDI context activation pattern for Quartz jobs, `@ObservesAsync`, and startup recovery; nestable and virtual-thread safe | §9.4 L1 — Architectural decisions |
+| ADR-0010 | Cross-tenant access via type-safe `@CrossTenant` CDI qualifier — separate store interfaces with producer validation enforce least-privilege; accidental injection in request-scoped code fails at startup | §9.4 L1 — Architectural decisions |
 
 Full decision records: `docs/adr/`
 
@@ -1791,7 +1796,7 @@ Full decision records: `docs/adr/`
 
 | Quality goal | Scenario | Verification |
 |---|---|---|
-| SLA correctness | WorkItem with `expiresAt` in the past transitions to EXPIRED within one `ExpiryCleanupJob` cycle | `ExpiryLifecycleServiceTest` verifies EXPIRED transition; scheduler interval configurable via `casehub.work.cleanup.expiry-check-seconds` |
+| SLA correctness | WorkItem with `expiresAt` in the past transitions to EXPIRED within one `ExpiryTimerJob` cycle | `ExpiryLifecycleServiceTest` verifies EXPIRED transition; scheduler interval configurable via `casehub.work.cleanup.expiry-check-seconds` |
 | SLA breach exhaustion | Chained policy with two failing branches sets WorkItem to ESCALATED (terminal) | `ExpiryLifecycleServiceTest.checkExpired_chainedExhaustion` |
 | Isolation | Core extension compiles and passes unit tests without `casehub-ledger`, `casehub-qhorus`, or `casehub-engine` on the classpath | `mvn verify -pl runtime` with no optional modules present |
 | Zero-datasource unit tests | `WorkItemServiceTest` runs without Quarkus boot in under 1 s | `InMemoryWorkItemStore @Alternative @Priority(100)` in `casehub-work-persistence-memory`; no `@QuarkusTest` annotation required |
@@ -1805,7 +1810,7 @@ Full decision records: `docs/adr/`
 | casehub-work-api | 82 |
 | casehub-work-core | 38 |
 | runtime | 840 |
-| work-flow | 32 |
+| casehub-work-flow | 32 |
 | casehub-work-ledger | 76 |
 | casehub-work-queues | 84 |
 | casehub-work-ai | 77 |

@@ -1,6 +1,6 @@
 # CaseHub Work — Integration Guide
 
-This guide covers nine integration patterns: standalone REST, Quarkus-Flow workflow suspension, CDI lifecycle event observation, custom escalation policies, unit testing without a datasource, the optional ledger module, the `WorkItemsFlow` DSL, the `quarkus-work` substrate SPI layer, and semantic skill matching via `quarkus-work-ai`.
+This guide covers nine integration patterns: standalone REST, Quarkus-Flow workflow suspension, CDI lifecycle event observation, custom escalation policies, unit testing without a datasource, the optional ledger module, the `WorkItemsFlow` DSL, the `casehub-work` substrate SPI layer, and semantic skill matching via `casehub-work-ai`.
 
 ---
 
@@ -73,19 +73,19 @@ The response is a `WorkItemResponse[]` ordered by creation time. Frontends use `
 
 ## Section 2: Quarkus-Flow Integration
 
-The `quarkus-work-flow` module suspends a Quarkus-Flow workflow until a human resolves a WorkItem, then resumes the workflow with the resolution JSON. See [Section 7](#section-7-quarkus-flow-dsl-workitemsflow) for the higher-level `WorkItemsFlow` DSL, which is the preferred approach for new workflows.
+The `casehub-work-flow` module suspends a Quarkus-Flow workflow until a human resolves a WorkItem, then resumes the workflow with the resolution JSON. See [Section 7](#section-7-quarkus-flow-dsl-workitemsflow) for the higher-level `WorkItemsFlow` DSL, which is the preferred approach for new workflows.
 
 ### Dependency
 
 ```xml
 <dependency>
   <groupId>io.casehub</groupId>
-  <artifactId>quarkus-work-flow</artifactId>
+  <artifactId>casehub-work-flow</artifactId>
   <version>1.0.0-SNAPSHOT</version>
 </dependency>
 ```
 
-This pulls in `quarkus-work` transitively.
+This pulls in `casehub-work` transitively.
 
 ### How it works
 
@@ -277,20 +277,20 @@ public class SlackSlaBreachPolicy implements SlaBreachPolicy {
 
 No qualifier or `@Alternative` annotation is needed — the `SlaBreachPolicy` injection point is unambiguous. The default implementation (`NoOpSlaBreachPolicy`) returns `Fail("no-sla-breach-policy-configured")`, so override it by providing your own `@ApplicationScoped` bean.
 
-The expiry cleanup job (`ExpiryCleanupJob`) runs on the schedule configured by `casehub.work.cleanup.expiry-check-seconds` (default 60s). It calls your `SlaBreachPolicy` bean once per breached WorkItem per scan and executes the returned `BreachDecision` before marking the item as expired.
+The expiry cleanup job (`ExpiryTimerJob`) runs on the schedule configured by `casehub.work.cleanup.expiry-check-seconds` (default 60s). It calls your `SlaBreachPolicy` bean once per breached WorkItem per scan and executes the returned `BreachDecision` before marking the item as expired.
 
 ---
 
-## Section 5: Unit Testing with quarkus-work-testing
+## Section 5: Unit Testing with casehub-work-persistence-memory
 
-The `quarkus-work-testing` module provides in-memory implementations of `WorkItemStore` and `AuditEntryStore`. These override the default JPA implementations via `@Alternative @Priority(1)`, so no datasource or Flyway configuration is needed in tests.
+The `casehub-work-persistence-memory` module provides in-memory implementations of `WorkItemStore` and `AuditEntryStore`. These override the default JPA implementations via `@Alternative @Priority(100)`, so no datasource or Flyway configuration is needed in tests.
 
 ### Dependency
 
 ```xml
 <dependency>
   <groupId>io.casehub</groupId>
-  <artifactId>quarkus-work-testing</artifactId>
+  <artifactId>casehub-work-persistence-memory</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <scope>test</scope>
 </dependency>
@@ -319,12 +319,12 @@ class ExpenseApprovalFlowTest {
 
     @Test
     void createWorkItem_setsDefaultPriority() {
-        WorkItemCreateRequest request = new WorkItemCreateRequest(
-            "Approve expense", null, "finance", null,
-            null,           // priority — should default to MEDIUM
-            "alice", null, null, null,
-            "test", null, null, null, null
-        );
+        WorkItemCreateRequest request = WorkItemCreateRequest.builder()
+            .title("Approve expense")
+            .category("finance")
+            .assigneeId("alice")
+            .createdBy("test")
+            .build();
 
         WorkItem created = service.create(request);
 
@@ -334,10 +334,11 @@ class ExpenseApprovalFlowTest {
 
     @Test
     void claim_transitionsToAssigned() {
-        WorkItem item = service.create(new WorkItemCreateRequest(
-            "Review contract", null, null, null, WorkItemPriority.HIGH,
-            null, null, null, null, "test", null, null, null, null
-        ));
+        WorkItem item = service.create(WorkItemCreateRequest.builder()
+            .title("Review contract")
+            .priority(WorkItemPriority.HIGH)
+            .createdBy("test")
+            .build());
 
         WorkItem claimed = service.claim(item.id, "bob");
 
@@ -348,10 +349,10 @@ class ExpenseApprovalFlowTest {
 
     @Test
     void claim_rejectsNonPendingItem() {
-        WorkItem item = service.create(new WorkItemCreateRequest(
-            "Review contract", null, null, null, null,
-            null, null, null, null, "test", null, null, null, null
-        ));
+        WorkItem item = service.create(WorkItemCreateRequest.builder()
+            .title("Review contract")
+            .createdBy("test")
+            .build());
         service.claim(item.id, "bob");
 
         assertThatThrownBy(() -> service.claim(item.id, "carol"))
@@ -363,16 +364,20 @@ class ExpenseApprovalFlowTest {
 
 ### Plain unit test (no @QuarkusTest)
 
-The in-memory repositories can also be used outside of Quarkus CDI for pure unit tests:
+`WorkItemService` is CDI-managed with many injected dependencies — it cannot be directly instantiated. For fast unit tests, use `@QuarkusComponentTest` which boots only the CDI container without Quarkus startup:
 
 ```java
+@QuarkusComponentTest
 class WorkItemServiceUnitTest {
 
-    InMemoryWorkItemStore workItemStore = new InMemoryWorkItemStore();
-    InMemoryAuditEntryStore auditStore = new InMemoryAuditEntryStore();
-    WorkItemsConfig config = /* mock or test double */;
+    @Inject
+    InMemoryWorkItemStore workItemStore;
 
-    WorkItemService service = new WorkItemService(workItemStore, auditStore, config);
+    @Inject
+    InMemoryAuditEntryStore auditStore;
+
+    @Inject
+    WorkItemService service;
 
     @BeforeEach
     void setUp() {
@@ -380,11 +385,11 @@ class WorkItemServiceUnitTest {
         auditStore.clear();
     }
 
-    // tests as above, no Quarkus boot time
+    // tests as above, minimal boot time
 }
 ```
 
-This approach gives instant test execution — no Quarkus boot, no H2, no Flyway. Use `@QuarkusTest` only when you need CDI wiring or the REST layer.
+This approach gives fast test execution — CDI wiring without full Quarkus boot, no H2, no Flyway. Use `@QuarkusTest` when you need the REST layer or database integration.
 
 ### InMemoryWorkItemStore behaviour notes
 
@@ -499,7 +504,7 @@ This sets `sourceEntityId`, `sourceEntityType`, and `sourceEntitySystem` on the 
 
 ## Section 7: Quarkus-Flow DSL (WorkItemsFlow)
 
-The `quarkus-work-flow` module provides `WorkItemsFlow` — a base class that extends `Flow` with a `workItem()` DSL method. This is the preferred way to embed WorkItem suspension steps in a workflow definition, giving a uniform style alongside `function()`, `agent()`, and other quarkus-flow task types.
+The `casehub-work-flow` module provides `WorkItemsFlow` — a base class that extends `Flow` with a `workItem()` DSL method. This is the preferred way to embed WorkItem suspension steps in a workflow definition, giving a uniform style alongside `function()`, `agent()`, and other quarkus-flow task types.
 
 ### Extending WorkItemsFlow
 
@@ -576,30 +581,30 @@ Both `requestApproval()` (direct assignee) and `requestGroupApproval()` (candida
 
 ---
 
-## Section 8: The quarkus-work Substrate (SPI Layer)
+## Section 8: The casehub-work Substrate (SPI Layer)
 
-`quarkus-work-api` and `quarkus-work-core` are two lightweight modules that sit below the WorkItems extension. They define the generic routing SPIs used by WorkItems, CaseHub, and any other work-management domain.
+`casehub-work-api` and `casehub-work-core` are two lightweight modules that sit below the WorkItems extension. They define the generic routing SPIs used by WorkItems, CaseHub, and any other work-management domain.
 
 ### Why they exist
 
-WorkItems previously defined its own strategy and event interfaces inside the runtime module. Extracting them into `quarkus-work-api` lets CaseHub adopt the same `WorkerSelectionStrategy`, `WorkerRegistry`, `WorkloadProvider`, and `SlaBreachPolicy` SPIs without depending on WorkItems. Cross-domain tools like `quarkus-work-ai` implement the SPIs once and serve both domains.
+WorkItems previously defined its own strategy and event interfaces inside the runtime module. Extracting them into `casehub-work-api` lets CaseHub adopt the same `WorkerSelectionStrategy`, `WorkerRegistry`, `WorkloadProvider`, and `SlaBreachPolicy` SPIs without depending on WorkItems. Cross-domain tools like `casehub-work-ai` implement the SPIs once and serve both domains.
 
 ### Module layout
 
 | Module | GroupId | Purpose |
 |---|---|---|
-| `quarkus-work-api` | `io.casehub` | Pure-Java SPI interfaces and value objects — no CDI, no Quarkus, no persistence |
-| `quarkus-work-core` | `io.casehub` | Jandex library — `WorkBroker`, built-in strategies, filter engine |
-| `quarkus-work` | `io.casehub` | Quarkus extension — assembles everything, provides JPA entities and REST API |
+| `casehub-work-api` | `io.casehub` | Pure-Java SPI interfaces and value objects — no CDI, no Quarkus, no persistence |
+| `casehub-work-core` | `io.casehub` | Jandex library — `WorkBroker`, built-in strategies, filter engine |
+| `casehub-work` | `io.casehub` | Quarkus extension — assembles everything, provides JPA entities and REST API |
 
-### Depending on quarkus-work-api directly
+### Depending on casehub-work-api directly
 
-If you only need the SPIs (to implement a custom strategy or registry) depend on `quarkus-work-api` rather than the full `quarkus-work` runtime:
+If you only need the SPIs (to implement a custom strategy or registry) depend on `casehub-work-api` rather than the full `casehub-work` runtime:
 
 ```xml
 <dependency>
   <groupId>io.casehub</groupId>
-  <artifactId>quarkus-work-api</artifactId>
+  <artifactId>casehub-work-api</artifactId>
   <version>${casehub.work.version}</version>
 </dependency>
 ```
@@ -608,7 +613,7 @@ This avoids a transitive dependency on Quarkus Hibernate ORM, Flyway, and all Wo
 
 ### How WorkBroker dispatches assignment
 
-`WorkBroker` (in `quarkus-work-core`) is the generic assignment engine. `WorkItemAssignmentService` calls it on every WorkItem creation, release, and delegation:
+`WorkBroker` (in `casehub-work-core`) is the generic assignment engine. `WorkItemAssignmentService` calls it on every WorkItem creation, release, and delegation:
 
 1. Build `SelectionContext` from the WorkItem fields (`category`, `priority`, `title`, `description`, `candidateUsers`, `candidateGroups`, `requiredCapabilities`).
 2. Resolve `WorkerCandidate` list from `candidateUsers` + `WorkerRegistry.resolveGroup()`.
@@ -626,8 +631,10 @@ void onAny(@Observes WorkLifecycleEvent event) {
     log.infof("Event %s on %s", event.eventType(), event.sourceUri());
 }
 
-void onCreated(@Observes @WorkEventType(WorkEventType.CREATED) WorkLifecycleEvent event) {
-    // targeted observer — only fires on creation
+void onCreated(@Observes WorkItemLifecycleEvent event) {
+    if ("io.casehub.work.workitem.created".equals(event.type())) {
+        // filter by CloudEvents type suffix for targeted observation
+    }
 }
 ```
 
@@ -635,7 +642,7 @@ Call `event.source()` to get the `WorkItem` entity. Call `event.sourceUri()` to 
 
 ### SlaBreachPolicy — decision-returning interface
 
-`SlaBreachPolicy` has one method: `onBreach(SlaBreachContext context)`. Check `context.breachType()` to distinguish completion expiry (`BreachType.COMPLETION_EXPIRED`, fired by `ExpiryCleanupJob`) from claim deadline (`BreachType.CLAIM_EXPIRED`, fired by `ClaimDeadlineJob`):
+`SlaBreachPolicy` has one method: `onBreach(SlaBreachContext context)`. Check `context.breachType()` to distinguish completion expiry (`BreachType.COMPLETION_EXPIRED`, fired by `ExpiryTimerJob`) from claim deadline (`BreachType.CLAIM_EXPIRED`, fired by `ClaimDeadlineTimerJob`):
 
 ```java
 @ApplicationScoped
@@ -673,16 +680,16 @@ public class RedisWorkloadProvider implements WorkloadProvider {
 
 ---
 
-## Section 9: Semantic Skill Matching (quarkus-work-ai)
+## Section 9: Semantic Skill Matching (casehub-work-ai)
 
-`quarkus-work-ai` adds AI-native routing to WorkItems. When it is on the classpath, `SemanticWorkerSelectionStrategy` activates automatically and routes each WorkItem to the candidate whose skill profile best matches the work item's semantic content.
+`casehub-work-ai` adds AI-native routing to WorkItems. When it is on the classpath, `SemanticWorkerSelectionStrategy` activates automatically and routes each WorkItem to the candidate whose skill profile best matches the work item's semantic content.
 
 ### Dependency
 
 ```xml
 <dependency>
   <groupId>io.casehub</groupId>
-  <artifactId>quarkus-work-ai</artifactId>
+  <artifactId>casehub-work-ai</artifactId>
   <version>${casehub.work.version}</version>
 </dependency>
 ```
@@ -795,4 +802,4 @@ Do **not** use `io.quarkiverse.langchain4j:quarkus-langchain4j-core` — the Qua
 
 ### See also
 
-The `quarkus-work-examples` module has a runnable scenario (`POST /examples/semantic/run`) demonstrating NDA review routed to a legal specialist over a finance analyst using a deterministic keyword-based matcher. It runs headlessly without any external AI provider.
+The `casehub-work-examples` module has a runnable scenario (`POST /examples/semantic/run`) demonstrating NDA review routed to a legal specialist over a finance analyst using a deterministic keyword-based matcher. It runs headlessly without any external AI provider.

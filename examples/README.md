@@ -1,30 +1,8 @@
-# quarkus-work-examples
+# casehub-work-examples
 
-Runnable scenario demonstrations for every ledger, audit, and lifecycle capability
-of `quarkus-work`. Each scenario runs in one HTTP call, logs a narrative to
-stdout, and returns the full ledger trail as JSON.
-
-## Capability Coverage
-
-| Capability | S1 Expense | S2 Credit | S3 Moderation | S4 Queue |
-|---|---|---|---|---|
-| create / claim / start / complete | ✅ | ✅ | ✅ | ✅ |
-| reject | | | ✅ | |
-| delegate + causedByEntryId | | ✅ | | |
-| release | | | | ✅ |
-| suspend + resume | | ✅ | | |
-| candidateGroups / work queues | | | | ✅ |
-| inbox filtering | | | | ✅ |
-| Hash chain (SHA-256) | ✅ | ✅ | ✅ | ✅ |
-| decisionContext (GDPR Art. 22) | ✅ | ✅ | ✅ | ✅ |
-| rationale + planRef | | ✅ | ✅ | |
-| evidence capture | | | ✅ | |
-| provenance (sourceEntity*) | | ✅ | ✅ | |
-| peer attestations | | ✅ | ✅ | |
-| actorType AGENT | | | ✅ | |
-| actorType HUMAN | ✅ | ✅ | ✅ | ✅ |
-| EigenTrust trust scores | | | | ✅ |
-| trust score endpoint | | | | ✅ |
+Runnable scenario demonstrations for every ledger, audit, lifecycle, queue, AI,
+and template capability of `casehub-work`. Each scenario runs in one HTTP call,
+logs a narrative to stdout, and returns the result as JSON.
 
 ## Prerequisites
 
@@ -36,109 +14,59 @@ stdout, and returns the full ledger trail as JSON.
 
 ```bash
 # Start in dev mode (H2 in-memory, auto-restart)
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -pl quarkus-work-examples
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -pl examples
 ```
 
-Quarkus starts on `http://localhost:8080`. All four scenarios are ready immediately.
+Quarkus starts on `http://localhost:8080`. All 17 scenarios are ready immediately.
 
-## Scenario 1: Expense Approval
+## Scenarios
 
-**What it demonstrates:** Baseline lifecycle (create → claim → start → complete),
-automatic ledger recording, SHA-256 hash chain, decisionContext snapshots.
+| # | Scenario | Endpoint | Description |
+|---|---|---|---|
+| 1 | Expense Approval | `POST /examples/expense/run` | Baseline lifecycle (create, claim, start, complete), automatic ledger recording, SHA-256 hash chain, decisionContext snapshots |
+| 2 | Regulated Credit Decision | `POST /examples/credit/run` | Provenance linking, suspend/resume, delegation with `causedByEntryId`, rationale + planRef (GDPR Art. 22), peer attestation (dual-control) |
+| 3 | AI Content Moderation | `POST /examples/moderation/run` | Evidence capture, `actorType=AGENT` for AI creator, `actorType=HUMAN` for moderator, provenance from an AI system, agent attestation on a human decision |
+| 4 | Document Review Queue | `POST /examples/queue/run` | `candidateGroups` work queue routing, inbox filtering, release (un-claim), multiple actors building ledger history, EigenTrust reputation scoring |
+| 5 | Semantic Skill Routing | `POST /examples/semantic/run` | `SemanticWorkerSelectionStrategy` routes a WorkItem to the most qualified candidate based on skill profile matching against the work item description |
+| 6 | Audit Search | `POST /examples/auditsearch/run` | Cross-WorkItem audit trail queries — query the audit store by actor, event type, and category to reconstruct an auditor's full action history |
+| 7 | Software Licence Cancellation | `POST /examples/cancel/run` | Cancellation path — a WorkItem is created but cancelled before claim because the purchase is no longer needed; full audit trail of the cancel transition |
+| 8 | Dynamic Filter Rules | `POST /examples/filterrules/run` | JEXL-based dynamic filter rules: auto-label HIGH/URGENT priority WorkItems; rules are persisted, survive restarts, and can be disabled without redeployment |
+| 9 | Output Schema Validation | `POST /examples/formschema/run` | Register a template with `outputDataSchema` (JSON Schema), instantiate WorkItems, verify valid resolutions succeed and invalid ones are rejected |
+| 10 | Label Management | `POST /examples/labelling/run` | Manual label lifecycle: add, query by pattern (`customer/*`), and remove labels on WorkItems |
+| 11 | Low Confidence AI Filter | `POST /examples/lowconfidence/run` | `ai/low-confidence` permanent filter — AI-created WorkItems with confidence < 0.7 are auto-labelled for extra scrutiny; high-confidence and manual items pass unaffected |
+| 12 | Exclusion Policy Demo | `POST /examples/exclusion-policy/run` | All parse branches of `ExpiringExclusionPolicy.check` — policy contract demo exercised directly, not via service-tier integration |
+| 13 | Escalation | `POST /examples/escalation/run` | Expiry-triggered status transition — a WorkItem with a past `expiresAt` is processed by `ExpiryLifecycleService.checkExpired()`, confirming EXPIRED status and audit event |
+| 14 | Business Hours SLA | `POST /examples/business-hours/run` | WorkItem deadlines set in business hours (not wall-clock hours); also has a `POST /examples/business-hours/preview` endpoint for SLA preview |
+| 15 | Queue Module | `POST /examples/queues/run` | Label-pattern specialist queues with soft-claim handoff — pickup, relinquish, and senior takeover without force-reassignment |
+| 16 | Subprocess Spawning | `POST /examples/spawn/run` | Parent WorkItem spawns parallel child WorkItems (credit-check, fraud-check, compliance-check), each with a distinct `callerRef` for orchestrator routing |
+| 17 | Vocabulary Registration | `POST /examples/vocabulary/run` | Register a standard label vocabulary before creating WorkItems, ensuring consistent category naming across all work requests |
+
+## Running All Scenarios in Sequence
 
 ```bash
-curl -s -X POST http://localhost:8080/examples/expense/run | jq .
-```
-
-**Key fields in the response:**
-
-- `ledgerEntries[0].digest` — SHA-256 of entry 1; used as `previousHash` of entry 2
-- `ledgerEntries[*].previousHash` — each entry chains to the prior digest
-- `ledgerEntries[*].decisionContext` — JSON snapshot of WorkItem state at each transition
-
-**Stdout while running:**
-```
-[SCENARIO] Step 1/4: finance-system Creates expense WorkItem for alice (priority=HIGH)
-[SCENARIO] Step 2/4: alice claims WorkItem
-[SCENARIO] Step 3/4: alice starts work
-[SCENARIO] Step 4/4: alice completes — approved
-```
-
-## Scenario 2: Regulated Credit Decision
-
-**What it demonstrates:** Provenance linking, suspend/resume, delegation with
-`causedByEntryId`, rationale + planRef (GDPR Article 22 / EU AI Act Article 12
-compliance), peer attestation (dual-control pattern), full 9-entry hash chain.
-
-```bash
-curl -s -X POST http://localhost:8080/examples/credit/run | jq .
-```
-
-**Key fields in the response:**
-
-- `ledgerEntries[0].sourceEntityId/Type/System` — provenance from credit-engine
-- Suspension entry: `eventType=WorkItemSuspended` with detail "Awaiting payslip documents"
-- Delegation entry: `causedByEntryId` links to the resume entry that preceded it
-- Completion entry: `rationale` and `planRef` (credit-policy-v2.1) for GDPR compliance
-- Completion entry: `attestations[0].verdict=SOUND` from compliance-carol (dual-control)
-
-## Scenario 3: AI Content Moderation
-
-**What it demonstrates:** Evidence capture, `actorType=AGENT` for the AI creator,
-`actorType=HUMAN` for the moderator, provenance from an AI system, agent attestation
-on a human decision.
-
-```bash
-curl -s -X POST http://localhost:8080/examples/moderation/run | jq .
-```
-
-**Key fields in the response:**
-
-- `ledgerEntries[0].actorType=AGENT` — created by `agent:content-ai`
-- `ledgerEntries[0].evidence` — `{"flagReason":"hate-speech","confidence":0.73,"modelVersion":"mod-v3"}`
-- `ledgerEntries[0].sourceEntitySystem=content-ai` — provenance
-- Rejection entry: `rationale` = "Context review: satire, not hate speech"
-- Rejection entry: `attestations[0].attestorType=AGENT` — compliance bot ENDORSED the override
-
-**Actor type derivation:** Any `actorId` starting with `"agent:"` maps to `actorType=AGENT`.
-Starting with `"system:"` maps to `SYSTEM`. All others are `HUMAN`.
-
-## Scenario 4: Document Review Queue
-
-**What it demonstrates:** `candidateGroups` work queue routing, inbox filtering,
-release (un-claim without delegating), multiple actors building ledger history,
-EigenTrust reputation scoring.
-
-```bash
-curl -s -X POST http://localhost:8080/examples/queue/run | jq .
-```
-
-**Key fields in the response:**
-
-- `workItemIds` — three WorkItems created in `candidateGroups=["doc-reviewers"]`
-- `allLedgerEntries` — all transitions across all three items (14 total)
-- Release entry: `eventType=WorkItemReleased`, `actorId=reviewer-alice`
-- `reviewerBobTrust.trustScore` — computed EigenTrust score for bob
-- `reviewerAliceTrust.trustScore` — bob ≥ alice (more completions, no releases)
-
-**Query a trust score directly:**
-```bash
-curl -s http://localhost:8080/workitems/actors/reviewer-bob/trust | jq .
-```
-
-## Running All Four in Sequence
-
-```bash
-curl -s -X POST http://localhost:8080/examples/expense/run | jq '.scenario, (.ledgerEntries | length)'
-curl -s -X POST http://localhost:8080/examples/credit/run | jq '.scenario, (.ledgerEntries | length)'
-curl -s -X POST http://localhost:8080/examples/moderation/run | jq '.scenario, (.ledgerEntries | length)'
-curl -s -X POST http://localhost:8080/examples/queue/run | jq '.scenario, (.allLedgerEntries | length)'
+curl -s -X POST http://localhost:8080/examples/expense/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/credit/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/moderation/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/queue/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/semantic/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/auditsearch/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/cancel/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/filterrules/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/formschema/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/labelling/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/lowconfidence/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/exclusion-policy/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/escalation/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/business-hours/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/queues/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/spawn/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/vocabulary/run | jq '.scenario'
 ```
 
 ## Other Lifecycle Transitions
 
-`cancel` and expiry/escalation are not covered by named scenarios but work via
-the standard WorkItem REST API:
+`cancel` and expiry/escalation are also covered by named scenarios above (Cancel, Escalation),
+but work via the standard WorkItem REST API as well:
 
 ```bash
 # Create and immediately cancel a WorkItem
@@ -158,7 +86,7 @@ Expiry + escalation: set `quarkus.work.default-expiry-hours=0` in
 ## Running the Tests
 
 ```bash
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl quarkus-work-examples
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl examples
 ```
 
-Expected: 4 tests, 0 failures.
+Expected: 30 tests, 0 failures.

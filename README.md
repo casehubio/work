@@ -51,14 +51,12 @@ curl -X POST http://localhost:8080/workitems \
   -d '{"title":"Approve loan application #4821","priority":"HIGH","createdBy":"underwriting-agent","candidateGroups":"loan-officers"}'
 
 # Claim it (PENDING → ASSIGNED)
-curl -X PUT "http://localhost:8080/workitems/{id}/claim" \
-  -H 'Content-Type: application/json' \
-  -d '{"assigneeId":"alice"}'
+curl -X PUT "http://localhost:8080/workitems/{id}/claim?claimant=alice"
 
 # Complete it (IN_PROGRESS → COMPLETED)
-curl -X PUT "http://localhost:8080/workitems/{id}/complete" \
+curl -X PUT "http://localhost:8080/workitems/{id}/complete?actor=alice" \
   -H 'Content-Type: application/json' \
-  -d '{"actorId":"alice","resolution":"{\"approved\":true}","rationale":"Income verified, DTI within limits"}'
+  -d '{"resolution":"{\"approved\":true}","outcome":"Income verified, DTI within limits"}'
 ```
 
 ### 4. Observe lifecycle events
@@ -90,19 +88,23 @@ The meaningful distinction is not human vs agent — it is **synchronous vs asyn
 
 ```
                 PENDING ──── claim ────► ASSIGNED ──── start ────► IN_PROGRESS
-                  ▲              │                          │
-                  │           release                  complete │ reject
-                  │              │                       │         │
-                  └──── delegate ┘                    COMPLETED  REJECTED
-                                                       (terminal)
+                  ▲                                                    │
+                  │                                            complete │ reject
+                  │                                               │         │
+                  │                                            COMPLETED  REJECTED
+                  │                                              (terminal)
+                  │
+ASSIGNED | IN_PROGRESS ──── delegate ──► DELEGATED ──── accept ──► ASSIGNED (new assignee)
+                                              │
+                                           decline ──► PENDING (returned to delegator)
 
 ASSIGNED | IN_PROGRESS ──── suspend ───► SUSPENDED ──── resume ───► (prior state)
-ASSIGNED | IN_PROGRESS ──── delegate ──► PENDING (new assignee)
+ASSIGNED ──── release ───► PENDING
 Any non-terminal ──────── cancel ──────► CANCELLED (terminal)
 PENDING | ASSIGNED | IN_PROGRESS | SUSPENDED ── (deadline breach) ──► EXPIRED ──► ESCALATED
 ```
 
-**Delegation detail:** on first delegation the actor becomes `owner`. Subsequent delegates extend `delegationChain`. The WorkItem returns to PENDING for the next assignee.
+**Delegation detail:** delegation transitions the WorkItem to DELEGATED. The delegate can accept (→ ASSIGNED) or decline (→ PENDING, returned to delegator). On first delegation the actor becomes `owner`. Subsequent delegates extend `delegationChain`.
 
 ---
 
@@ -133,6 +135,9 @@ Three systems in the Quarkus ecosystem define "task":
 | `casehub-work-postgres-broadcaster` | Optional | Distributed SSE — PostgreSQL LISTEN/NOTIFY backend for `WorkItemEventBroadcaster`. Delivers lifecycle events to SSE clients on all cluster nodes. Drop-in replacement: add the dependency, the broadcaster auto-activates via `@Alternative @Priority(1)`. |
 | `casehub-work-queues-postgres-broadcaster` | Optional | Distributed SSE for queue events — PostgreSQL LISTEN/NOTIFY backend for `WorkItemQueueEventBroadcaster`. Delivers queue events (`ADDED`/`REMOVED`/`CHANGED`) to SSE clients on all cluster nodes. Requires `casehub-work-queues`. Drop-in: auto-activates via `@Alternative @Priority(1)`. |
 | `casehub-work-flow` | Integration | Quarkus-Flow `WorkItemsFlow` base class — `workItem()` DSL alongside `function()`, `agent()` |
+| `casehub-work-flow-examples` | Examples | Quarkus-Flow integration demonstrations — contract review workflow mixing `function()` and `workItem()` steps |
+| `casehub-work-queues-dashboard` | Examples | Queue management TUI dashboard — Tamboui terminal UI for live queue board display |
+| `casehub-work-queues-examples` | Examples | Queue scenario demonstrations — triage cascades, legal routing, finance approval chains |
 
 ---
 
@@ -151,9 +156,8 @@ SLA breach behaviour (what happens when `expiresAt` or `claimDeadline` is exceed
 ## Documentation
 
 - [**Why WorkItems vs Issue Trackers**](docs/workitems-vs-issue-trackers.md) — the case for a runtime human task layer
-- [**Architecture**](docs/ARCHITECTURE.md) — module graph, domain model, SPI contracts, ecosystem positioning
+- [**Architecture**](ARC42STORIES.MD) — module graph, domain model, SPI contracts, ecosystem positioning
 - [**API Reference**](docs/api-reference.md) — all REST endpoints, request/response schemas, CDI event types
-- [**Implementation Tracker**](docs/DESIGN.md) — build roadmap and test totals
 
 ---
 

@@ -1,46 +1,127 @@
 # CaseHub Work — REST API Reference
 
-Base path: `/workitems`
+All responses are `application/json`. All request bodies require `Content-Type: application/json` unless otherwise noted.
 
-All responses are `application/json`. All request bodies with a JSON body require `Content-Type: application/json`.
+**Modules:** Endpoints are spread across optional modules. An endpoint is available only if its module is on the classpath.
+
+| Module | Base paths | Description |
+|---|---|---|
+| `casehub-work` (runtime) | `/workitems`, `/workitem-templates`, `/workitem-schedules`, `/spawn-groups`, `/audit`, `/vocabulary`, `/filter-rules`, `/q/asyncapi` | Core WorkItem lifecycle, templates, schedules, spawning, audit, vocabulary, filter rules |
+| `casehub-work-queues` | `/queues`, `/filters`, `/workitems/{id}/pickup`, `/workitems/{id}/relinquishable` | Queue views, filters, soft pickup |
+| `casehub-work-ledger` | `/workitems/{id}/ledger`, `/workitems/actors/{actorId}/trust` | Immutable audit ledger, trust scores |
+| `casehub-work-ai` | `/workitems/{id}/resolution-suggestion`, `/worker-skill-profiles`, `/workitems/{id}/escalation-summaries` | AI suggestions, skill profiles, escalation summaries |
+| `casehub-work-notifications` | `/workitem-notification-rules` | Webhook and Slack notification rules |
+| `casehub-work-reports` | `/workitems/reports/*` | SLA, actor, throughput, and queue health reports |
+| `casehub-work-issue-tracker` | `/workitems/{id}/issues`, `/workitems/github-webhook`, `/workitems/jira-webhook` | External issue tracker integration |
 
 ---
 
-## Endpoints
+## Shared Types
+
+### WorkItemResponse
+
+Returned by most lifecycle endpoints.
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | |
+| `title` | string | |
+| `description` | string | |
+| `category` | string | |
+| `formKey` | string | UI form reference |
+| `status` | WorkItemStatus | See [WorkItemStatus](#workitemstatus) |
+| `priority` | WorkItemPriority | `LOW`, `MEDIUM`, `HIGH`, `URGENT` |
+| `assigneeId` | string | |
+| `owner` | string | |
+| `candidateGroups` | string | Comma-separated |
+| `candidateUsers` | string | Comma-separated |
+| `requiredCapabilities` | string | Comma-separated |
+| `createdBy` | string | |
+| `delegationDeclineTarget` | DeclineTarget | `POOL` or `DELEGATOR` (null when not delegated) |
+| `delegationChain` | string | |
+| `priorStatus` | WorkItemStatus | Status before current transition |
+| `payload` | string | JSON context |
+| `resolution` | string | |
+| `claimDeadline` | instant | |
+| `expiresAt` | instant | |
+| `followUpDate` | instant | |
+| `createdAt` | instant | |
+| `updatedAt` | instant | |
+| `assignedAt` | instant | |
+| `startedAt` | instant | |
+| `completedAt` | instant | |
+| `suspendedAt` | instant | |
+| `labels` | WorkItemLabelResponse[] | Each: `path` (string), `persistence` (`MANUAL`/`INFERRED`), `appliedBy` (string) |
+| `confidenceScore` | double (nullable) | AI confidence score (0.0–1.0) |
+| `callerRef` | string (nullable) | Opaque caller-supplied routing key |
+| `version` | long | JPA optimistic lock version |
+| `templateId` | UUID (nullable) | Template this item was instantiated from |
+| `outcome` | string (nullable) | Named outcome at completion |
+| `permittedOutcomes` | Outcome[] (nullable) | Each: `name`, `displayName`, `condition` |
+| `inputDataSchema` | string (nullable) | JSON Schema for payload validation |
+| `outputDataSchema` | string (nullable) | JSON Schema for resolution validation |
+| `excludedUsers` | string (nullable) | Comma-separated excluded user IDs |
+| `scope` | string (nullable) | Hierarchical scope path |
+
+### WorkItemStatus
+
+| Status | Terminal | Description |
+|---|---|---|
+| `PENDING` | no | Awaiting claim |
+| `ASSIGNED` | no | Claimed, not yet started |
+| `IN_PROGRESS` | no | Work underway |
+| `DELEGATED` | no | Delegated, awaiting accept/decline |
+| `SUSPENDED` | no | Paused |
+| `COMPLETED` | yes | Finished successfully |
+| `REJECTED` | yes | Finished with rejection |
+| `CANCELLED` | yes | Cancelled |
+| `ESCALATED` | yes | Escalated by SLA breach policy |
+| `EXPIRED` | yes | Exceeded expiry deadline |
+
+---
+
+## WorkItem Lifecycle
 
 ### POST /workitems
 
-Creates a new WorkItem in `PENDING` status. If no `expiresAt` is supplied, the expiry is set to `now + casehub.work.default-expiry-hours`. If no `claimDeadline` is supplied and `casehub.work.default-claim-hours > 0`, the claim deadline is set to `now + casehub.work.default-claim-hours`.
+Creates a new WorkItem in `PENDING` status. If no `expiresAt` is supplied, expiry is set to `now + casehub.work.default-expiry-hours`. If no `claimDeadline` is supplied and `casehub.work.default-claim-hours > 0`, the claim deadline is set accordingly. Business-hours variants (`claimDeadlineBusinessHours`, `expiresAtBusinessHours`) use the BusinessHoursCalculator SPI.
 
-**Request body:**
+**Request body:** `CreateWorkItemRequest`
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `title` | string | yes | Human-readable task name |
-| `description` | string | no | What the human needs to do |
-| `category` | string | no | Classification label (e.g. `finance`, `legal`, `security-review`) |
-| `formKey` | string | no | UI form reference — how frontends render this item |
-| `priority` | WorkItemPriority | no | Defaults to `MEDIUM` if omitted |
-| `assigneeId` | string | no | Direct assignee; leave null to use candidate groups |
-| `candidateGroups` | string | no | Comma-separated group names eligible to claim (e.g. `finance-team,managers`) |
-| `candidateUsers` | string | no | Comma-separated user IDs individually invited to claim |
+| `title` | string | yes | |
+| `description` | string | no | |
+| `category` | string | no | Classification label (e.g. `finance`, `legal`) |
+| `formKey` | string | no | UI form reference |
+| `priority` | WorkItemPriority | no | `LOW` / `MEDIUM` / `HIGH` / `URGENT`, defaults to `MEDIUM` |
+| `assigneeId` | string | no | Direct assignee; null for candidate-based routing |
+| `candidateGroups` | string | no | Comma-separated group names eligible to claim |
+| `candidateUsers` | string | no | Comma-separated user IDs invited to claim |
 | `requiredCapabilities` | string | no | Comma-separated capability tags for routing |
 | `createdBy` | string | no | System or agent that created the WorkItem |
-| `payload` | string | no | JSON context for the human (stored as TEXT, not parsed) |
+| `payload` | string | no | JSON context (stored as TEXT, not parsed) |
 | `claimDeadline` | ISO-8601 instant | no | Must be claimed by; overrides config default |
 | `expiresAt` | ISO-8601 instant | no | Must be completed by; overrides config default |
 | `followUpDate` | ISO-8601 instant | no | Reminder date; surfaces in inbox when `followUp=true` |
+| `labels` | WorkItemLabelRequest[] | no | Labels to apply at creation (each: `path`, `persistence`, `appliedBy`) |
+| `confidenceScore` | double | no | AI confidence score (0.0–1.0) |
+| `callerRef` | string | no | Opaque caller-supplied routing key |
+| `claimDeadlineBusinessHours` | integer | no | Claim deadline in business hours (uses BusinessHoursCalculator SPI) |
+| `expiresAtBusinessHours` | integer | no | Expiry in business hours |
+| `excludedUsers` | string | no | Comma-separated user IDs excluded from claiming |
+| `scope` | string | no | Hierarchical scope path (e.g. `casehubio/devtown/pr-review`) |
 
-**Response:** `201 Created`
-**Headers:** `Location: /workitems/{id}`
+**Response:** `201 Created` (with `Location` header)
 **Body:** `WorkItemResponse`
+
+**Error:** `400` — validation failure
 
 ```bash
 curl -X POST http://localhost:8080/workitems \
   -H 'Content-Type: application/json' \
   -d '{
     "title": "Review contract for Acme Corp",
-    "description": "Check section 4.2 for liability clause",
     "category": "legal",
     "priority": "HIGH",
     "candidateGroups": "legal-team",
@@ -53,37 +134,78 @@ curl -X POST http://localhost:8080/workitems \
 
 ### GET /workitems
 
-Lists all WorkItems. Intended for admin use. Returns all records regardless of status or assignment.
+Lists all WorkItems. Intended for admin use.
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `label` | string | no | Filter by label pattern |
+| `outcome` | string | no | Filter by outcome |
 
 **Response:** `200 OK`
 **Body:** `WorkItemResponse[]`
 
-```bash
-curl http://localhost:8080/workitems
-```
+---
+
+### GET /workitems/inbox/summary
+
+Aggregate inbox counts for dashboard widgets.
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `assignee` | string | no | |
+| `candidateGroup` | string[] | no | Multi-value |
+| `candidateUser` | string | no | |
+| `status` | WorkItemStatus | no | |
+| `priority` | WorkItemPriority | no | |
+| `category` | string | no | |
+
+**Response:** `200 OK`
+**Body:** `InboxSummary`
+
+| Field | Type | Description |
+|---|---|---|
+| `total` | long | |
+| `byStatus` | map\<string, long\> | |
+| `byPriority` | map\<string, long\> | |
+| `overdue` | long | |
+| `claimDeadlineBreached` | long | |
 
 ---
 
 ### GET /workitems/inbox
 
-Returns WorkItems visible to the requesting user or group. Uses OR logic across `assigneeId`, `candidateGroups`, and `candidateUsers`; all additional filters (status, priority, category, followUp) are applied with AND logic.
+Returns WorkItems visible to the requesting user or group with multi-instance stats. Uses OR logic across `assignee`/`candidateGroups`/`candidateUsers`; all other filters applied with AND.
 
-If neither `assignee` nor `candidateGroup` is provided, returns all WorkItems filtered only by the secondary criteria.
+**Query parameters:**
 
-**Query parameters:** see [Inbox query parameters](#inbox-query-parameters).
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `assignee` | string | no | |
+| `candidateGroup` | string[] | no | Multi-value |
+| `candidateUser` | string | no | |
+| `status` | WorkItemStatus | no | |
+| `priority` | WorkItemPriority | no | |
+| `category` | string | no | |
+| `followUp` | boolean | no | Filter to items with `followUpDate` in the past |
+| `outcome` | string | no | |
 
 **Response:** `200 OK`
-**Body:** `WorkItemResponse[]`
+**Body:** `WorkItemRootResponse[]`
+
+| Field | Type | Description |
+|---|---|---|
+| `item` | WorkItemResponse | |
+| `childCount` | int | |
+| `completedCount` | integer (nullable) | |
+| `requiredCount` | integer (nullable) | |
+| `groupStatus` | string (nullable) | |
 
 ```bash
-# Inbox for alice, showing only high-priority items
 curl "http://localhost:8080/workitems/inbox?assignee=alice&priority=HIGH"
-
-# Group inbox for finance-team
-curl "http://localhost:8080/workitems/inbox?candidateGroup=finance-team&candidateGroup=managers"
-
-# Items with a follow-up date due now or in the past
-curl "http://localhost:8080/workitems/inbox?assignee=alice&followUp=true"
 ```
 
 ---
@@ -95,27 +217,23 @@ Returns a single WorkItem with its complete audit trail.
 **Path parameter:** `id` — UUID
 
 **Response:** `200 OK`
-**Body:** `WorkItemWithAuditResponse`
+**Body:** `WorkItemWithAuditResponse` — all `WorkItemResponse` fields plus `auditTrail` (`AuditEntryResponse[]` — each: `id` UUID, `event` string, `actor` string, `detail` string, `occurredAt` instant)
 
-**Error:** `404 Not Found` if the WorkItem does not exist.
-
-```bash
-curl http://localhost:8080/workitems/a1b2c3d4-e5f6-7890-abcd-ef1234567890
-```
+**Error:** `404`
 
 ---
 
 ### PUT /workitems/{id}/claim
 
-Claims the WorkItem. Transitions `PENDING → ASSIGNED`. Sets `assigneeId` to the claimant and records `assignedAt`.
+Claims the WorkItem. Transitions `PENDING → ASSIGNED`.
 
 **Path parameter:** `id` — UUID
-**Query parameter:** `claimant` — the user ID taking ownership
+**Query parameter:** `claimant` — string
 
 **Response:** `200 OK`
 **Body:** `WorkItemResponse`
 
-**Error:** `409 Conflict` if the WorkItem is not in `PENDING` status.
+**Error:** `409` — not PENDING
 
 ```bash
 curl -X PUT "http://localhost:8080/workitems/{id}/claim?claimant=alice"
@@ -125,1244 +243,1403 @@ curl -X PUT "http://localhost:8080/workitems/{id}/claim?claimant=alice"
 
 ### PUT /workitems/{id}/start
 
-Begins work on the WorkItem. Transitions `ASSIGNED → IN_PROGRESS`. Records `startedAt`.
+Begins work. Transitions `ASSIGNED → IN_PROGRESS`. Records `startedAt`.
 
 **Path parameter:** `id` — UUID
-**Query parameter:** `actor` — the user ID starting work
+**Query parameter:** `actor` — string
 
 **Response:** `200 OK`
 **Body:** `WorkItemResponse`
-
-**Error:** `409 Conflict` if the WorkItem is not in `ASSIGNED` status.
-
-```bash
-curl -X PUT "http://localhost:8080/workitems/{id}/start?actor=alice"
-```
 
 ---
 
 ### PUT /workitems/{id}/complete
 
-Completes the WorkItem. Transitions `IN_PROGRESS → COMPLETED`. Stores the resolution JSON and records `completedAt`. Fires `io.casehub.work.workitem.completed` CDI event.
+Completes the WorkItem. Transitions `IN_PROGRESS → COMPLETED`. Records `completedAt`.
 
 **Path parameter:** `id` — UUID
-**Query parameter:** `actor` — the user ID completing the work
-**Request body:**
+**Query parameter:** `actor` — string
+
+**Request body:** `CompleteRequest`
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `resolution` | string | no | JSON decision from the human (stored as TEXT) |
+| `resolution` | string | no | |
+| `outcome` | string | no | Named outcome; validated against `permittedOutcomes` if template-defined |
 
 **Response:** `200 OK`
 **Body:** `WorkItemResponse`
 
-**Error:** `409 Conflict` if the WorkItem is not in `IN_PROGRESS` status.
+**Error:** `400` — outcome validation fails
 
 ```bash
 curl -X PUT "http://localhost:8080/workitems/{id}/complete?actor=alice" \
   -H 'Content-Type: application/json' \
-  -d '{"resolution": "{\"approved\": true, \"notes\": \"All checks passed\"}"}'
+  -d '{"resolution": "Approved with conditions", "outcome": "APPROVED"}'
 ```
 
 ---
 
 ### PUT /workitems/{id}/reject
 
-Rejects the WorkItem. Transitions `ASSIGNED|IN_PROGRESS → REJECTED`. Records `completedAt`. Fires `io.casehub.work.workitem.rejected` CDI event.
+Rejects the WorkItem. Transitions `ASSIGNED`/`IN_PROGRESS → REJECTED`.
 
 **Path parameter:** `id` — UUID
-**Query parameter:** `actor` — the user ID rejecting the work
-**Request body:**
+**Query parameter:** `actor` — string
+
+**Request body:** `RejectRequest`
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `reason` | string | no | Human-readable rejection reason (stored in audit detail) |
+| `reason` | string | no | |
+| `outcome` | string | no | |
 
 **Response:** `200 OK`
 **Body:** `WorkItemResponse`
-
-**Error:** `409 Conflict` if the WorkItem is not in `ASSIGNED` or `IN_PROGRESS` status.
-
-```bash
-curl -X PUT "http://localhost:8080/workitems/{id}/reject?actor=alice" \
-  -H 'Content-Type: application/json' \
-  -d '{"reason": "Insufficient documentation provided"}'
-```
 
 ---
 
 ### PUT /workitems/{id}/delegate
 
-Delegates the WorkItem to another user. Transitions `ASSIGNED|IN_PROGRESS → PENDING` with the new assignee set and `delegationState=PENDING`. On first delegation, the actor becomes the `owner`. The actor's ID is appended to `delegationChain`.
+Delegates to another actor. Transitions `ASSIGNED`/`IN_PROGRESS → DELEGATED`.
 
 **Path parameter:** `id` — UUID
-**Query parameter:** `actor` — the user ID delegating
-**Request body:**
+**Query parameter:** `actor` — string
+
+**Request body:** `DelegateRequest`
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `to` | string | yes | The user ID to delegate to |
+| `to` | string | yes | Target actor |
+| `declineTarget` | DeclineTarget | no | `POOL` or `DELEGATOR`; controls where WorkItem goes if declined |
 
 **Response:** `200 OK`
 **Body:** `WorkItemResponse`
 
-**Error:** `409 Conflict` if the WorkItem is not in `ASSIGNED` or `IN_PROGRESS` status.
+---
 
-```bash
-curl -X PUT "http://localhost:8080/workitems/{id}/delegate?actor=alice" \
-  -H 'Content-Type: application/json' \
-  -d '{"to": "bob"}'
-```
+### PUT /workitems/{id}/accept-delegation
+
+Accepts a pending delegation. Transitions `DELEGATED → ASSIGNED`.
+
+**Path parameter:** `id` — UUID
+**Query parameter:** `claimant` — string
+
+**Response:** `200 OK`
+**Body:** `WorkItemResponse`
+
+**Error:** `409` — not DELEGATED
+
+---
+
+### PUT /workitems/{id}/decline-delegation
+
+Declines a delegation. Routes based on `declineTarget`: `POOL → PENDING`, `DELEGATOR → ASSIGNED` (back to original).
+
+**Path parameter:** `id` — UUID
+**Query parameter:** `actor` — string
+
+**Response:** `200 OK`
+**Body:** `WorkItemResponse`
+
+**Error:** `409` — not DELEGATED
 
 ---
 
 ### PUT /workitems/{id}/release
 
-Releases the WorkItem back to the candidate pool. Transitions `ASSIGNED → PENDING`. Clears `assigneeId`.
+Releases a claimed WorkItem back to the pool. Transitions `ASSIGNED → PENDING`.
 
 **Path parameter:** `id` — UUID
-**Query parameter:** `actor` — the user ID releasing
+**Query parameter:** `actor` — string
 
 **Response:** `200 OK`
 **Body:** `WorkItemResponse`
-
-**Error:** `409 Conflict` if the WorkItem is not in `ASSIGNED` status.
-
-```bash
-curl -X PUT "http://localhost:8080/workitems/{id}/release?actor=alice"
-```
 
 ---
 
 ### PUT /workitems/{id}/suspend
 
-Suspends the WorkItem. Transitions `ASSIGNED|IN_PROGRESS → SUSPENDED`. Records `suspendedAt` and saves the prior status in `priorStatus` for use by resume.
+Suspends a WorkItem. Transitions `ASSIGNED`/`IN_PROGRESS → SUSPENDED`. Records `priorStatus` for restore on resume.
 
 **Path parameter:** `id` — UUID
-**Query parameter:** `actor` — the user ID suspending
-**Request body:**
+**Query parameter:** `actor` — string
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `reason` | string | no | Why the item was suspended (stored in audit detail) |
+**Request body:** `SuspendRequest` — `reason` (string, optional)
 
 **Response:** `200 OK`
 **Body:** `WorkItemResponse`
-
-**Error:** `409 Conflict` if the WorkItem is not in `ASSIGNED` or `IN_PROGRESS` status.
-
-```bash
-curl -X PUT "http://localhost:8080/workitems/{id}/suspend?actor=alice" \
-  -H 'Content-Type: application/json' \
-  -d '{"reason": "Waiting for additional input from requester"}'
-```
 
 ---
 
 ### PUT /workitems/{id}/resume
 
-Resumes a suspended WorkItem. Transitions `SUSPENDED → prior status` (either `ASSIGNED` or `IN_PROGRESS`). Clears `suspendedAt` and `priorStatus`.
+Resumes a suspended WorkItem. Transitions `SUSPENDED →` `priorStatus` (restores the status before suspension — either `ASSIGNED` or `IN_PROGRESS`).
 
 **Path parameter:** `id` — UUID
-**Query parameter:** `actor` — the user ID resuming
+**Query parameter:** `actor` — string
 
 **Response:** `200 OK`
 **Body:** `WorkItemResponse`
-
-**Error:** `409 Conflict` if the WorkItem is not in `SUSPENDED` status.
-
-```bash
-curl -X PUT "http://localhost:8080/workitems/{id}/resume?actor=alice"
-```
 
 ---
 
 ### PUT /workitems/{id}/cancel
 
-Cancels the WorkItem. Transitions any non-terminal status → `CANCELLED`. Records `completedAt`. Fires `io.casehub.work.workitem.cancelled` CDI event. Admin operation.
+Cancels a WorkItem. Transitions any non-terminal status → `CANCELLED`.
 
 **Path parameter:** `id` — UUID
-**Query parameter:** `actor` — the user ID or system cancelling
-**Request body:**
+**Query parameter:** `actor` — string
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `reason` | string | no | Cancellation reason (stored in audit detail) |
+**Request body:** `CancelRequest` — `reason` (string, optional)
 
 **Response:** `200 OK`
 **Body:** `WorkItemResponse`
 
-**Error:** `409 Conflict` if the WorkItem is already in a terminal status.
-
-```bash
-curl -X PUT "http://localhost:8080/workitems/{id}/cancel?actor=admin" \
-  -H 'Content-Type: application/json' \
-  -d '{"reason": "Project cancelled by stakeholder"}'
-```
-
 ---
 
-## SSE Event Streams
+### PUT /workitems/{id}/extend
 
-WorkItems exposes two Server-Sent Events endpoints for real-time lifecycle notifications. Both are **hot streams**: only events that occur after the client connects are delivered. Past events are not replayed — use `GET /workitems/{id}` to fetch current state.
-
-Each SSE message carries a JSON-serialised `WorkItemLifecycleEvent` as its data payload.
-
----
-
-### GET /workitems/events
-
-Subscribe to all WorkItem lifecycle events, with optional filtering.
-
-**Query parameters:**
-
-| Parameter | Type | Description |
-|---|---|---|
-| `workItemId` | UUID | If provided, only events for this specific WorkItem are emitted |
-| `type` | string | If provided, only events whose type suffix matches are emitted (e.g. `"completed"`, `"assigned"`; case-insensitive) |
-
-**Produces:** `text/event-stream`
-**Data format:** one JSON object per event (see [WorkItemLifecycleEvent fields](#workitemlifecycleevent-fields) below)
-
-```bash
-# All events on the bus
-curl -N -H "Accept: text/event-stream" http://localhost:8080/workitems/events
-
-# Only completion events
-curl -N -H "Accept: text/event-stream" "http://localhost:8080/workitems/events?type=completed"
-
-# All events for one WorkItem
-curl -N -H "Accept: text/event-stream" \
-  "http://localhost:8080/workitems/events?workItemId=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-```
-
----
-
-### GET /workitems/{id}/events
-
-Subscribe to lifecycle events scoped to a specific WorkItem. Convenience alias for `GET /workitems/events?workItemId={id}`.
+Extends a WorkItem's expiry deadline.
 
 **Path parameter:** `id` — UUID
+**Query parameter:** `actor` — string
 
-**Produces:** `text/event-stream`
-**Data format:** one JSON object per event (same as above)
-
-```bash
-curl -N -H "Accept: text/event-stream" \
-  http://localhost:8080/workitems/a1b2c3d4-e5f6-7890-abcd-ef1234567890/events
-```
-
----
-
-### WorkItemLifecycleEvent fields
-
-Each SSE data payload is a JSON object with the following fields:
-
-| Field | Type | Description |
-|---|---|---|
-| `type` | string | Event type, e.g. `io.casehub.work.workitem.completed` |
-| `sourceUri` | string | CloudEvents source URI — `/workitems/{id}` |
-| `workItemId` | UUID | The WorkItem this event concerns |
-| `status` | WorkItemStatus | Status of the WorkItem after the transition |
-| `actor` | string | Who triggered the transition |
-| `detail` | string | Optional JSON or free-text detail (reason, resolution, delegation target) |
-| `occurredAt` | ISO-8601 instant | When the event was recorded |
-
----
-
-### Distributed deployment
-
-By default, SSE events are in-process only — clients connected to node A do not receive events generated on node B.
-
-Add `casehub-work-postgres-broadcaster` to your application to enable cross-cluster delivery. The module auto-activates via `@Alternative @Priority(1)` and requires no additional configuration beyond the existing PostgreSQL datasource. All nodes publish lifecycle events to the `casehub_work_events` PostgreSQL channel and receive events from all other nodes, so every SSE subscriber receives every event regardless of which node produced it.
-
-Only events from successfully committed transactions are published — rolled-back events are not forwarded to the channel.
-
----
-
-## Schemas
-
-### WorkItemResponse
-
-Returned by all lifecycle endpoints and list endpoints.
-
-| Field | Type | Description |
-|---|---|---|
-| `id` | UUID | Unique identifier |
-| `title` | string | Human-readable task name |
-| `description` | string | What the human needs to do |
-| `category` | string | Classification label |
-| `formKey` | string | UI form reference |
-| `status` | WorkItemStatus | Current lifecycle status |
-| `priority` | WorkItemPriority | `LOW`, `MEDIUM`, `HIGH`, or `URGENT` |
-| `assigneeId` | string | Current owner (actual worker) |
-| `owner` | string | Ultimate responsible party; set on first delegation |
-| `candidateGroups` | string | Comma-separated groups eligible to claim |
-| `candidateUsers` | string | Comma-separated users individually invited to claim |
-| `requiredCapabilities` | string | Comma-separated capability tags |
-| `createdBy` | string | System or agent that created the WorkItem |
-| `delegationState` | DelegationState | `null`, `PENDING`, or `RESOLVED` |
-| `delegationChain` | string | Comma-separated prior assignees |
-| `priorStatus` | WorkItemStatus | Status before suspension; `null` when not suspended |
-| `payload` | string | JSON context for the human |
-| `resolution` | string | JSON decision from the human; set on complete |
-| `claimDeadline` | ISO-8601 instant | Must be claimed by this time |
-| `expiresAt` | ISO-8601 instant | Must be completed by this time |
-| `followUpDate` | ISO-8601 instant | Reminder date |
-| `createdAt` | ISO-8601 instant | When the WorkItem was created |
-| `updatedAt` | ISO-8601 instant | When the WorkItem was last modified |
-| `assignedAt` | ISO-8601 instant | When it was claimed or assigned |
-| `startedAt` | ISO-8601 instant | When `IN_PROGRESS` began |
-| `completedAt` | ISO-8601 instant | When a terminal state was reached |
-| `suspendedAt` | ISO-8601 instant | When `SUSPENDED` |
-| `labels` | WorkItemLabelResponse[] | Labels attached to this WorkItem (empty array if none) |
-
----
-
-### WorkItemLabelResponse
-
-Embedded in `WorkItemResponse.labels`.
-
-| Field | Type | Description |
-|---|---|---|
-| `path` | string | Label path, e.g. `legal/contracts/nda` |
-| `persistence` | LabelPersistence | `MANUAL` (human-applied) or `INFERRED` (filter-applied, recomputed on mutation) |
-| `appliedBy` | string | userId (MANUAL) or filterId (INFERRED) |
-
----
-
-### WorkItemWithAuditResponse
-
-Returned only by `GET /workitems/{id}`. All fields of `WorkItemResponse`, plus:
-
-| Field | Type | Description |
-|---|---|---|
-| `auditTrail` | AuditEntryResponse[] | Chronological list of lifecycle events for this WorkItem |
-
----
-
-### AuditEntryResponse
-
-| Field | Type | Description |
-|---|---|---|
-| `id` | UUID | Unique identifier of the audit entry |
-| `event` | string | Audit event type (see [Lifecycle event types](#lifecycle-event-types)) |
-| `actor` | string | Who triggered the event |
-| `detail` | string | Optional JSON or text detail (reason, delegation target, resolution, etc.) |
-| `occurredAt` | ISO-8601 instant | When the event was recorded |
-
----
-
-## Inbox Query Parameters
-
-Used with `GET /workitems/inbox`.
-
-| Parameter | Type | Description |
-|---|---|---|
-| `assignee` | string | Show WorkItems assigned to this user ID, or where this user is in `candidateUsers` |
-| `candidateGroup` | string (repeatable) | Show WorkItems where any of these groups appears in `candidateGroups`. May be specified multiple times. |
-| `candidateUser` | string | Alias for `assignee` — merged into the same OR filter |
-| `status` | WorkItemStatus | Filter by exact status |
-| `priority` | WorkItemPriority | Filter by exact priority |
-| `category` | string | Filter by exact category string |
-| `followUp` | boolean | If `true`, only return items where `followUpDate` is in the past (due for follow-up) |
-
-Assignment filters (`assignee`, `candidateGroup`, `candidateUser`) are combined with OR. All other filters are applied with AND on top.
-
----
-
-## WorkItemStatus Values
-
-| Status | Terminal | Description |
-|---|---|---|
-| `PENDING` | no | Available for claiming; no active assignee |
-| `ASSIGNED` | no | Claimed by an assignee; not yet started |
-| `IN_PROGRESS` | no | Being actively worked |
-| `COMPLETED` | yes | Successfully resolved by the human |
-| `REJECTED` | no | Human declined or declared it uncompletable |
-| `DELEGATED` | no | Transitional; ownership transferred, pending new assignment |
-| `SUSPENDED` | no | On hold; will resume |
-| `CANCELLED` | yes | Externally cancelled by system or admin |
-| `EXPIRED` | no | Passed completion deadline; escalation policy fires |
-| `ESCALATED` | yes | Escalation policy has fired; awaiting admin action or auto-resolved |
-
-Note: `REJECTED` and `EXPIRED` are not terminal by the `isTerminal()` definition — `CANCELLED` on an expired or rejected item is still possible. `COMPLETED`, `REJECTED`, `CANCELLED`, and `ESCALATED` are the four terminal statuses per `WorkItemStatus.isTerminal()`.
-
----
-
-## WorkItemPriority Values
-
-| Value | Description |
-|---|---|
-| `LOW` | Below-normal urgency |
-| `MEDIUM` | Default priority |
-| `HIGH` | Elevated urgency |
-| `URGENT` | Requires immediate attention |
-
----
-
-## Lifecycle Event Types
-
-A `WorkItemLifecycleEvent` CDI event is fired on every transition. The `type` field follows the pattern `io.casehub.work.workitem.{action}`.
-
-| Event type | Audit event | Triggered by |
-|---|---|---|
-| `io.casehub.work.workitem.created` | `CREATED` | `POST /` |
-| `io.casehub.work.workitem.assigned` | `ASSIGNED` | `PUT /{id}/claim` |
-| `io.casehub.work.workitem.started` | `STARTED` | `PUT /{id}/start` |
-| `io.casehub.work.workitem.completed` | `COMPLETED` | `PUT /{id}/complete` |
-| `io.casehub.work.workitem.rejected` | `REJECTED` | `PUT /{id}/reject` |
-| `io.casehub.work.workitem.delegated` | `DELEGATED` | `PUT /{id}/delegate` |
-| `io.casehub.work.workitem.released` | `RELEASED` | `PUT /{id}/release` |
-| `io.casehub.work.workitem.suspended` | `SUSPENDED` | `PUT /{id}/suspend` |
-| `io.casehub.work.workitem.resumed` | `RESUMED` | `PUT /{id}/resume` |
-| `io.casehub.work.workitem.cancelled` | `CANCELLED` | `PUT /{id}/cancel` |
-| `io.casehub.work.workitem.expired` | `EXPIRED` | Expiry cleanup job |
-| `io.casehub.work.workitem.escalated` | `ESCALATED` | Escalation policy |
-
-The `WorkItemLifecycleEvent` record fields: `type`, `source` (`/workitems/{id}`), `subject` (UUID string), `workItemId` (UUID), `status` (post-transition), `occurredAt`, `actor`, `detail` (nullable JSON or reason string).
-
----
-
-## Error Responses
-
-| Status | Condition | Body |
-|---|---|---|
-| `404 Not Found` | WorkItem with the given `id` does not exist | `{"error": "WorkItem not found: {id}"}` |
-| `409 Conflict` | Transition is not valid for the current status | `{"error": "Cannot {action} WorkItem in status: {STATUS}"}` |
-
----
-
-## Label API (quarkus-work core)
-
-Labels are path-structured tags on WorkItems (e.g. `legal/contracts/nda`). `MANUAL` labels are human-applied; `INFERRED` labels are maintained by the filter engine in `quarkus-work-queues`.
-
----
-
-### GET /workitems?label={pattern}
-
-Returns WorkItems with at least one label matching the pattern.
-
-**Query parameter:** `label` — label path or wildcard pattern:
-- `legal/contracts` — exact match
-- `legal/*` — one segment below (matches `legal/contracts`, not `legal/contracts/nda`)
-- `legal/**` — full subtree (matches any path starting with `legal/`)
-
-**Response:** `200 OK` — `WorkItemResponse[]`
-
-```bash
-curl "http://localhost:8080/workitems?label=legal/**"
-```
-
----
-
-### POST /workitems/{id}/labels
-
-Adds a `MANUAL` label to an existing WorkItem. The label path must be declared in an accessible vocabulary.
-
-**Path parameter:** `id` — UUID
-
-**Request body:**
+**Request body:** `ExtendRequest`
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `path` | string | yes | Label path (must exist in vocabulary) |
-| `appliedBy` | string | no | User ID applying the label |
+| `newExpiresAt` | ISO-8601 instant | yes | |
 
-**Response:** `200 OK` — `WorkItemResponse` (with updated labels list)
+**Response:** `200 OK`
+**Body:** `WorkItemResponse`
 
-**Errors:** `400` if path is blank; `404` if WorkItem not found.
-
-```bash
-curl -X POST "http://localhost:8080/workitems/{id}/labels" \
-  -H 'Content-Type: application/json' \
-  -d '{"path": "legal/contracts", "appliedBy": "alice"}'
-```
+**Error:** `400` — `newExpiresAt` is in the past
 
 ---
 
-### DELETE /workitems/{id}/labels?path={labelPath}
+### POST /workitems/{id}/clone
 
-Removes a `MANUAL` label from a WorkItem. `INFERRED` labels cannot be removed via this endpoint — they are managed by the filter engine.
+Creates a new `PENDING` WorkItem copying operational fields. Title defaults to `"{original title} (copy)"`. `MANUAL` labels are copied; `INFERRED` labels are not.
 
 **Path parameter:** `id` — UUID
-**Query parameter:** `path` — exact label path to remove
 
-**Response:** `200 OK` — `WorkItemResponse` (with label removed)
+**Request body:** `CloneRequest`
 
-**Errors:** `404` if WorkItem not found or label not present.
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `title` | string | no | Override title |
+| `createdBy` | string | yes | |
 
-```bash
-curl -X DELETE "http://localhost:8080/workitems/{id}/labels?path=legal/contracts"
-```
+**Response:** `201 Created`
+**Body:** `WorkItemResponse`
+
+**Error:** `404`
 
 ---
 
-## Vocabulary API (quarkus-work core)
+## Notes
 
-Labels must be declared in a vocabulary before they can be applied. Vocabularies are scoped using `Path`-based hierarchy — a vocabulary at an ancestor path is visible to all descendant scopes. Root scope (empty/null) is visible to everyone. A root vocabulary is auto-created per tenant on first use, seeded with common labels (`intake`, `intake/triage`, `priority/high`, `priority/critical`, `legal`, `legal/contracts`, `legal/compliance`).
+### POST /workitems/{id}/notes
+
+Add an internal operational note to a WorkItem.
+
+**Path parameter:** `id` — UUID
+
+**Request body:** `NoteRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `content` | string | yes | |
+| `author` | string | yes | |
+
+**Response:** `201 Created`
+**Body:** `NoteResponse` — `id` (UUID), `workItemId` (UUID), `content` (string), `author` (string), `createdAt` (instant), `editedAt` (instant, null initially)
+
+---
+
+### GET /workitems/{id}/notes
+
+List all notes for a WorkItem, oldest first.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** `NoteResponse[]`
+
+---
+
+### PUT /workitems/{id}/notes/{noteId}
+
+Edit an existing note. Sets `editedAt` to now.
+
+**Path parameters:** `id` — UUID, `noteId` — UUID
+
+**Request body:** `NoteEditRequest` — `content` (string, required)
+
+**Response:** `200 OK`
+**Body:** `NoteResponse`
+
+**Error:** `404`
+
+---
+
+### DELETE /workitems/{id}/notes/{noteId}
+
+Delete a note.
+
+**Path parameters:** `id` — UUID, `noteId` — UUID
+
+**Response:** `204 No Content`
+
+**Error:** `404`
+
+---
+
+## Links
+
+### POST /workitems/{id}/links
+
+Add a structured reference to an external resource (runbook, ticket, wiki page).
+
+**Path parameter:** `id` — UUID
+
+**Request body:** `AddLinkRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `url` | string | yes | URL of the external resource |
+| `title` | string | no | |
+| `relationType` | string | yes | e.g. `runbook`, `customer-ticket`, `wiki` |
+| `linkedBy` | string | no | |
+
+**Response:** `201 Created`
+**Body:** `LinkResponse` — `id` (UUID), `workItemId` (UUID), `url`, `title`, `relationType`, `linkedBy`, `createdAt` (instant)
+
+---
+
+### GET /workitems/{id}/links
+
+List all links, optionally filtered by relation type.
+
+**Path parameter:** `id` — UUID
+**Query parameter:** `type` — string (optional, filter by `relationType`)
+
+**Response:** `200 OK`
+**Body:** `LinkResponse[]`
+
+---
+
+### DELETE /workitems/{id}/links/{linkId}
+
+**Path parameters:** `id` — UUID, `linkId` — UUID
+
+**Response:** `204 No Content`
+
+**Error:** `404`
+
+---
+
+## Relations
+
+### POST /workitems/{id}/relations
+
+Add a directed relation between two WorkItems. For `PART_OF`: cycles are rejected.
+
+**Path parameter:** `id` — UUID (source)
+
+**Request body:** `AddRelationRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `targetId` | string (UUID) | yes | |
+| `relationType` | string | yes | `PART_OF`, `BLOCKS`, `DEPENDS_ON`, or custom |
+| `createdBy` | string | no | |
+
+**Response:** `201 Created`
+**Body:** `RelationResponse` — `id`, `sourceId`, `targetId`, `relationType`, `createdBy`, `createdAt`
+
+**Error:** `400` — cycle detected, `409` — duplicate
+
+---
+
+### GET /workitems/{id}/relations
+
+List outgoing relations.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** `RelationResponse[]`
+
+---
+
+### GET /workitems/{id}/relations/incoming
+
+List incoming relations.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** `RelationResponse[]`
+
+---
+
+### DELETE /workitems/{id}/relations/{relationId}
+
+**Path parameters:** `id` — UUID, `relationId` — UUID
+
+**Response:** `204 No Content`
+
+**Error:** `404`
+
+---
+
+### GET /workitems/{id}/children
+
+List direct children (WorkItems with `PART_OF` relation pointing here). Does not recurse.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** `WorkItemResponse[]`
+
+---
+
+### GET /workitems/{id}/parent
+
+Get the parent WorkItem.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** `WorkItemResponse`
+
+**Error:** `404` — no parent
+
+---
+
+## Labels and Vocabulary
+
+### POST /workitems/{id}/labels
+
+Add a label.
+
+**Path parameter:** `id` — UUID
+
+**Request body:** `AddLabelRequest` — `path` (string, required), `appliedBy` (string, optional)
+
+**Response:** `200 OK`
+**Body:** `WorkItemResponse`
+
+---
+
+### DELETE /workitems/{id}/labels
+
+Remove a label.
+
+**Path parameter:** `id` — UUID
+**Query parameter:** `path` — string (required)
+
+**Response:** `200 OK`
+**Body:** `WorkItemResponse`
 
 ---
 
 ### GET /vocabulary
 
-Lists all label definitions visible to the current tenant (all scopes, no filtering).
+List all label definitions.
 
-**Response:** `200 OK` — array of definition objects: `{id, path, vocabularyId, description, createdBy, createdAt}`
-
-```bash
-curl http://localhost:8080/vocabulary
-```
+**Response:** `200 OK`
+**Body:** array — each: `id` (UUID), `path` (string), `vocabularyId` (UUID), `scope` (string), `description` (string), `createdBy` (string), `createdAt` (instant)
 
 ---
 
 ### POST /vocabulary
 
-Adds a label definition to the vocabulary at the given scope. If no vocabulary exists at the scope, one is auto-created.
+Register a label definition.
 
-**Request body:**
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `path` | string | yes | Label path to declare, e.g. `finance/invoices` |
-| `description` | string | no | Human-readable description |
-| `addedBy` | string | no | User ID declaring the label |
-| `scope` | string | no | Scope path for the vocabulary (null/blank = root/global), e.g. `acme-corp/hr-team` |
-
-**Response:** `201 Created` — `{id, path, scope}`
-
-**Errors:** `400` if path is blank, contains wildcards, or scope is invalid.
-
-```bash
-# Add to root (global) vocabulary
-curl -X POST http://localhost:8080/vocabulary \
-  -H 'Content-Type: application/json' \
-  -d '{"path": "finance/invoices", "description": "Invoice approval items", "addedBy": "alice"}'
-
-# Add to org-scoped vocabulary
-curl -X POST http://localhost:8080/vocabulary \
-  -H 'Content-Type: application/json' \
-  -d '{"path": "hr/leave", "description": "Leave requests", "addedBy": "alice", "scope": "acme-corp"}'
-
-# Add to team-scoped vocabulary
-curl -X POST http://localhost:8080/vocabulary \
-  -H 'Content-Type: application/json' \
-  -d '{"path": "sprint/review", "description": "Sprint reviews", "addedBy": "bob", "scope": "acme-corp/hr-team"}'
-```
-
----
-
-## Queue API (quarkus-work-queues)
-
-These endpoints are only present when `quarkus-work-queues` is on the classpath. They activate automatically via CDI.
-
-A **queue** is a `QueueView` — a named label-pattern query. WorkItems appear in the queue when they carry a matching label. `INFERRED` labels are applied by the filter engine; `MANUAL` labels are applied by users. Adding `quarkus-work-queues` as a dependency wires up the filter evaluation engine automatically.
-
----
-
-### GET /filters
-
-Lists all saved filters visible to the caller.
-
-**Response:** `200 OK` — array of `{id, name, scope, conditionLanguage, active}`
-
-```bash
-curl http://localhost:8080/filters
-```
-
----
-
-### POST /filters
-
-Creates a saved filter. On every `WorkItemLifecycleEvent`, active filters evaluate their condition and apply `INFERRED` labels to matching WorkItems.
-
-**Request body:**
+**Request body:** `AddDefinitionRequest`
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `name` | string | yes | Human-readable filter name |
-| `scope` | string | no | Path string (e.g. `"legal/team"`); null/blank = root scope (visible to all) |
-| `conditionLanguage` | string | yes | `jexl` or `jq` (lambda filters are CDI beans, not stored via REST) |
-| `conditionExpression` | string | yes | The condition expression |
-| `actions` | FilterAction[] | yes | Actions to apply when condition matches |
+| `path` | string | yes | No wildcards |
+| `description` | string | no | |
+| `addedBy` | string | no | |
+| `scope` | string | no | Hierarchical path; null/blank = root/global |
 
-**FilterAction:**
-
-| Field | Type | Description |
-|---|---|---|
-| `type` | string | Always `"APPLY_LABEL"` |
-| `labelPath` | string | Label path to apply as `INFERRED` |
-
-**Condition expression fields available (JEXL and JQ):**
-
-| Field | JEXL | JQ |
-|---|---|---|
-| Status | `status == 'HIGH'` | `.status == "HIGH"` |
-| Priority | `priority == 'HIGH'` | `.priority == "HIGH"` |
-| Assignee | `assigneeId == null` | `.assigneeId == null` |
-| Category | `category == 'legal'` | `.category == "legal"` |
-| Labels | `labels.contains('legal/contracts')` | `.labels \| contains(["legal/contracts"])` |
-
-**Response:** `201 Created` — `{id, name, active}`
-
-**Errors:** `400` if `conditionLanguage` is `"lambda"` (CDI beans only).
-
-```bash
-# JEXL filter: route high-priority unassigned items to intake queue
-curl -X POST http://localhost:8080/filters \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "name": "High priority triage",
-    "conditionLanguage": "jexl",
-    "conditionExpression": "priority == '"'"'HIGH'"'"' && assigneeId == null",
-    "actions": [{"type": "APPLY_LABEL", "labelPath": "intake/triage"}]
-  }'
-```
+**Response:** `201 Created`
+**Body:** `id` (UUID), `path` (string), `scope` (string)
 
 ---
 
-### PUT /filters/{id}
+## Templates
 
-Updates a saved filter's name, condition expression, or actions.
+### POST /workitem-templates
+
+Create a WorkItem template.
+
+**Request body:** `CreateTemplateRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | Unique template name |
+| `description` | string | no | |
+| `category` | string | no | |
+| `priority` | string | no | `LOW`/`MEDIUM`/`HIGH`/`URGENT` |
+| `candidateGroups` | string | no | Comma-separated |
+| `candidateUsers` | string | no | Comma-separated |
+| `requiredCapabilities` | string | no | Comma-separated |
+| `defaultExpiryHours` | integer | no | Calendar-hour expiry |
+| `defaultClaimHours` | integer | no | Calendar-hour claim deadline |
+| `defaultExpiryBusinessHours` | integer | no | Business-hour expiry |
+| `defaultClaimBusinessHours` | integer | no | Business-hour claim deadline |
+| `defaultPayload` | string | no | JSON |
+| `labelPaths` | string | no | JSON array of label paths |
+| `instanceCount` | integer | no | Multi-instance count |
+| `requiredCount` | integer | no | M-of-N completion threshold |
+| `parentRole` | string | no | `COORDINATOR` or `PARTICIPANT` |
+| `assignmentStrategy` | string | no | CDI bean name |
+| `onThresholdReached` | string | no | `KEEP`, `SUSPEND`, or `CANCEL` |
+| `allowSameAssignee` | boolean | no | |
+| `outcomes` | Outcome[] | no | Each: `name`, `displayName`, `condition` |
+| `inputDataSchema` | JSON | no | JSON Schema (draft-07) for payload |
+| `outputDataSchema` | JSON | no | JSON Schema (draft-07) for resolution |
+| `excludedUsers` | string | no | Comma-separated |
+| `excludedGroups` | string | no | Comma-separated |
+| `scope` | string | no | |
+| `createdBy` | string | yes | |
+
+**Response:** `201 Created`
+
+**Error:** `400`, `409` (name conflict)
+
+---
+
+### GET /workitem-templates
+
+List all templates.
+
+**Response:** `200 OK`
+
+---
+
+### GET /workitem-templates/{id}
 
 **Path parameter:** `id` — UUID
 
-**Request body:** Same as POST (partial — only provided fields are updated).
+**Response:** `200 OK`
 
-**Response:** `200 OK` — `{id, name}`
-
-**Error:** `404` if filter not found.
+**Error:** `404`
 
 ---
 
-### DELETE /filters/{id}
+### DELETE /workitem-templates/{id}
 
-Deletes a saved filter and cascades: all `INFERRED` labels applied by this filter are removed from affected WorkItems. WorkItems are then re-evaluated by remaining active filters to restore any labels still justified.
+Does NOT delete WorkItems previously instantiated from it.
 
 **Path parameter:** `id` — UUID
 
 **Response:** `204 No Content`
 
-**Error:** `404` if filter not found.
-
-```bash
-curl -X DELETE http://localhost:8080/filters/{id}
-```
+**Error:** `404`
 
 ---
 
-### POST /filters/evaluate
+### PUT /workitem-templates/{id}
 
-Ad-hoc filter evaluation. Evaluates a condition expression against a provided WorkItem snapshot without saving the filter.
+Full replacement update. All mutable fields overwritten; null clears. `createdBy` is immutable.
 
-**Request body:**
+**Path parameter:** `id` — UUID
+
+**Request body:** `UpdateTemplateRequest` (same fields as create, minus `createdBy`)
+
+**Response:** `200 OK`
+
+**Error:** `400`, `404`, `409`
+
+---
+
+### PATCH /workitem-templates/{id}
+
+Partial update via JSON Merge Patch (RFC 7396). Fields present in patch are applied (null clears); absent fields unchanged. `createdBy` not patchable.
+
+**Content-Type:** `application/merge-patch+json`
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+
+**Error:** `400`, `404`, `409`
+
+---
+
+### POST /workitem-templates/{id}/instantiate
+
+Create a WorkItem from a template. WorkItem inherits all template defaults.
+
+**Path parameter:** `id` — UUID
+
+**Request body:** `InstantiateRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `title` | string | no | Override |
+| `assigneeId` | string | no | |
+| `createdBy` | string | yes | |
+
+**Response:** `201 Created`
+**Body:** `WorkItemResponse`
+
+**Error:** `400`, `404`
+
+---
+
+## Schedules
+
+### POST /workitem-schedules
+
+Create a recurring schedule that instantiates a template on a cron expression.
+
+**Request body:** `CreateScheduleRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | |
+| `templateId` | string (UUID) | yes | |
+| `cronExpression` | string | yes | Quartz 6-field cron |
+| `createdBy` | string | no | |
+
+**Response:** `201 Created`
+**Body:** `ScheduleResponse` — `id`, `name`, `templateId`, `cronExpression`, `active`, `createdBy`, `createdAt`, `lastFiredAt`, `nextFireAt`
+
+---
+
+### GET /workitem-schedules
+
+List all schedules.
+
+**Response:** `200 OK`
+**Body:** `ScheduleResponse[]`
+
+---
+
+### GET /workitem-schedules/{id}
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+
+**Error:** `404`
+
+---
+
+### DELETE /workitem-schedules/{id}
+
+**Path parameter:** `id` — UUID
+
+**Response:** `204 No Content`
+
+**Error:** `404`
+
+---
+
+### PUT /workitem-schedules/{id}/active
+
+Enable or disable a schedule. Re-enabling recomputes `nextFireAt` so missed periods are not all fired at once.
+
+**Path parameter:** `id` — UUID
+
+**Request body:** `SetActiveRequest` — `active` (boolean, required)
+
+**Response:** `200 OK`
+**Body:** `ScheduleResponse`
+
+**Error:** `400`, `404`
+
+---
+
+## Spawning and Multi-Instance
+
+### POST /workitems/{id}/spawn
+
+Spawn a group of child WorkItems from templates. Idempotent — second call with same `idempotencyKey` returns existing group (200).
+
+**Path parameter:** `id` — UUID (parent)
+
+**Request body:** `SpawnBodyRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `idempotencyKey` | string | yes | |
+| `children` | SpawnChildRequest[] | yes | Each: `templateId` (UUID, required), `callerRef` (string, optional), `overrides` (map, optional) |
+
+**Response:** `201 Created` (new) or `200 OK` (idempotent replay)
+**Body:** `groupId` (string), `children` (array of `workItemId`, `callerRef`)
+
+**Error:** `400`, `404`, `409`, `422`
+
+---
+
+### GET /workitems/{id}/spawn-groups
+
+List spawn groups for a parent.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** array — each: `id`, `parentId`, `idempotencyKey`, `createdAt`
+
+---
+
+### DELETE /workitems/{id}/spawn-groups/{groupId}
+
+Cancel a spawn group.
+
+**Path parameters:** `id` — UUID, `groupId` — UUID
+**Query parameter:** `cancelChildren` — boolean (if true, cancels PENDING children)
+
+**Response:** `204 No Content`
+
+**Error:** `404`
+
+---
+
+### GET /spawn-groups/{groupId}
+
+Fetch a spawn group by ID. Includes `PART_OF` children.
+
+**Path parameter:** `groupId` — UUID
+
+**Response:** `200 OK`
+**Body:** `id`, `parentId`, `idempotencyKey`, `createdAt`, `children` (array of `workItemId`, `createdAt`)
+
+**Error:** `404`
+
+---
+
+### GET /workitems/{id}/instances
+
+Get multi-instance children with M-of-N group summary. 404 for non-multi-instance parents.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** `InstancesResponse`
 
 | Field | Type | Description |
 |---|---|---|
-| `conditionLanguage` | string | `jexl` or `jq` |
-| `conditionExpression` | string | The condition to evaluate |
-| `workItem` | object | WorkItem fields to evaluate against (`title`, `status`, `priority`, `assigneeId`, `category`) |
+| `parentId` | UUID | |
+| `groupId` | UUID | |
+| `instanceCount` | int | |
+| `requiredCount` | int | M-of-N threshold |
+| `completedCount` | int | |
+| `rejectedCount` | int | |
+| `groupStatus` | string | `IN_PROGRESS`, `COMPLETED`, or `REJECTED` |
+| `instances` | WorkItemResponse[] | |
 
-**Response:** `200 OK` — `{matches: boolean}`
-
-```bash
-curl -X POST http://localhost:8080/filters/evaluate \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "conditionLanguage": "jexl",
-    "conditionExpression": "priority == '"'"'HIGH'"'"'",
-    "workItem": {"priority": "HIGH", "status": "PENDING"}
-  }'
-```
+**Error:** `404`
 
 ---
 
+## Bulk Operations
+
+### POST /workitems/bulk
+
+Execute a bulk operation across multiple WorkItems. Partial success allowed. Max batch size: 100.
+
+**Request body:** `BulkRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `operation` | string | yes | `claim` or `cancel` |
+| `workItemIds` | string[] | yes | Max 100 |
+| `actorId` | string | no | |
+| `reason` | string | no | Used for `cancel` |
+
+**Response:** `200 OK` (even with partial failures)
+**Body:** `BulkItemResult[]` — each: `id` (string), `status` (`ok`/`error`), `error` (string, nullable)
+
+**Error:** `400` — batch > 100
+
+---
+
+## Filter Rules
+
+### POST /filter-rules
+
+Create a dynamic filter rule. Filter rules run when WorkItems are created or updated, evaluating a condition expression and applying actions.
+
+**Request body:** `CreateFilterRuleRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | yes | |
+| `description` | string | no | |
+| `enabled` | boolean | no | Default `true` |
+| `condition` | string | yes | JEXL or JQ expression |
+| `events` | string[] | no | Default `["ADD","UPDATE","REMOVE"]` |
+| `actionsJson` | string | no | JSON-encoded actions array (default `"[]"`) |
+
+**Response:** `201 Created`
+**Body:** `id`, `name`, `description`, `enabled`, `condition`, `events`, `actionsJson`, `createdAt`
+
+---
+
+### GET /filter-rules
+
+List all dynamic filter rules.
+
+**Response:** `200 OK`
+
+---
+
+### GET /filter-rules/{id}
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+
+**Error:** `404`
+
+---
+
+### DELETE /filter-rules/{id}
+
+**Path parameter:** `id` — UUID
+
+**Response:** `204 No Content`
+
+**Error:** `404`
+
+---
+
+### GET /filter-rules/permanent
+
+List all permanent (CDI-produced) filter rules defined in code.
+
+**Response:** `200 OK`
+**Body:** array — each: `name`, `description`, `enabled`, `events`, `condition`
+
+---
+
+### PUT /filter-rules/permanent/enabled
+
+Toggle a permanent rule's enabled state at runtime. Override is in-memory — resets on restart.
+
+**Query parameter:** `name` — string (required)
+
+**Request body:** `{"enabled": true|false}`
+
+**Response:** `200 OK`
+
+**Error:** `400`, `404`
+
+---
+
+## Queues
+
+*Module: `casehub-work-queues`*
+
 ### GET /queues
 
-Lists all `QueueView` objects visible to the caller.
+List all queue views.
 
-**Response:** `200 OK` — array of `{id, name, labelPattern, scope}`
-
-```bash
-curl http://localhost:8080/queues
-```
+**Response:** `200 OK`
+**Body:** array — each: `id` (UUID), `name` (string), `labelPattern` (string), `scope` (string)
 
 ---
 
 ### POST /queues
 
-Creates a named queue view over a label pattern.
+Create a new queue view.
 
-**Request body:**
+**Request body:** `CreateQueueRequest`
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `name` | string | yes | Human-readable queue name |
-| `labelPattern` | string | yes | Label pattern: exact, `legal/*`, or `legal/**` |
-| `scope` | string | no | Path string (e.g. `"legal/team"`); null/blank = root scope (visible to all) |
-| `additionalConditions` | string | no | JEXL expression applied per WorkItem after label matching (e.g. `status == 'PENDING'`) |
-| `sortField` | string | no | `createdAt` (default), `title`, or `priority` |
-| `sortDirection` | string | no | `ASC` (default) or `DESC` |
+| `name` | string | no | |
+| `labelPattern` | string | yes | Glob/regex matched against WorkItem labels |
+| `scope` | string | no | Path-based scope |
+| `additionalConditions` | string | no | JEXL expression |
+| `sortField` | string | no | Default `createdAt` |
+| `sortDirection` | string | no | `ASC` or `DESC`, default `ASC` |
 
-**Response:** `201 Created` — `{id, name, labelPattern}`
-
-**Error:** `400` if `labelPattern` is blank.
-
-```bash
-curl -X POST http://localhost:8080/queues \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "name": "Legal triage",
-    "labelPattern": "intake/**",
-    "scope": "legal",
-    "sortField": "createdAt",
-    "sortDirection": "ASC"
-  }'
-```
+**Response:** `201 Created`
 
 ---
 
 ### GET /queues/{id}
 
-Executes the queue view: returns WorkItems whose labels match `labelPattern`, further filtered by `additionalConditions` (if set), ordered by `sortField`/`sortDirection`.
+Query the live content of a queue view.
 
-**Path parameter:** `id` — UUID of the QueueView
+**Path parameter:** `id` — UUID
 
-**Response:** `200 OK` — `WorkItemResponse[]`
+**Response:** `200 OK`
+**Body:** `WorkItemResponse[]`
 
-**Error:** `404` if QueueView not found.
-
-```bash
-curl http://localhost:8080/queues/{id}
-```
+**Error:** `404`
 
 ---
 
 ### DELETE /queues/{id}
 
-Deletes a QueueView. Does not affect WorkItem labels.
+**Path parameter:** `id` — UUID
 
 **Response:** `204 No Content`
+
+**Error:** `404`
 
 ---
 
 ### GET /queues/{id}/events
 
-Subscribe to queue membership events for a specific queue. The stream emits a `WorkItemQueueEvent` JSON object each time a WorkItem is added to, removed from, or changes position within the queue.
+SSE stream of queue membership events. Hot stream — only events after connect are delivered.
 
-This is a **hot stream**: only events that occur after the client connects are delivered. Past events are not replayed.
-
-**Path parameter:** `id` — UUID of the QueueView
-
+**Path parameter:** `id` — UUID
 **Produces:** `text/event-stream`
 
-**Data format:** one JSON object per event:
-
-| Field | Type | Description |
-|---|---|---|
-| `type` | string | `ADDED`, `REMOVED`, or `CHANGED` |
-| `queueId` | UUID | The QueueView this event concerns |
-| `workItemId` | UUID | The WorkItem that entered, left, or changed in the queue |
-| `occurredAt` | ISO-8601 instant | When the queue membership changed |
-
-```bash
-curl -N -H "Accept: text/event-stream" \
-  http://localhost:8080/queues/a1b2c3d4-e5f6-7890-abcd-ef1234567890/events
-```
-
-**Distributed deployment:** By default, queue SSE events are in-process only — clients connected to node A do not receive events generated on node B. Add `casehub-work-queues-postgres-broadcaster` alongside `casehub-work-queues` to enable cross-cluster delivery. The module auto-activates via `@Alternative @Priority(1)` and requires no additional configuration. All nodes publish queue events to the `casehub_work_queue_events` PostgreSQL channel and receive events from all other nodes.
+**Response:** `200 OK` (streaming)
+**Body:** `WorkItemQueueEvent` per event — `workItemId` (UUID), `queueViewId` (UUID), `queueName` (string), `eventType` (`ADDED`/`REMOVED`/`CHANGED`), `tenancyId` (string)
 
 ---
 
 ### PUT /workitems/{id}/pickup
 
-Queue pickup — claims a WorkItem from a queue. Handles two cases in one call:
-
-- **PENDING**: standard claim; delegates to the core claim logic.
-- **ASSIGNED + relinquishable**: soft pickup. The current assignee has flagged the item as available. Ownership transfers to `claimant` and the relinquishable flag is cleared automatically.
-
-Returns `409` if the WorkItem is `ASSIGNED` but *not* marked as relinquishable.
+Queue pickup — claim or soft-takeover. `PENDING` = standard claim. `ASSIGNED` with relinquishable flag = soft pickup with ownership transfer.
 
 **Path parameter:** `id` — UUID
-**Query parameter:** `claimant` — user ID taking ownership
+**Query parameter:** `claimant` — string
 
-**Response:** `200 OK` — `WorkItemResponse` (updated)
+**Response:** `200 OK`
+**Body:** `WorkItemResponse`
 
-**Errors:**
-- `404` — WorkItem not found.
-- `409` — WorkItem is `ASSIGNED` and not relinquishable, or in a terminal/unsupported status.
-
-```bash
-# Pick up from a queue (works for both PENDING and relinquishable ASSIGNED)
-curl -X PUT "http://localhost:8080/workitems/{id}/pickup?claimant=bob"
-```
+**Error:** `404`, `409` (ASSIGNED and not relinquishable)
 
 ---
 
 ### PUT /workitems/{id}/relinquishable
 
-Sets or clears the soft-assignment flag. When `relinquishable: true`, the assignee signals that another eligible candidate may claim the WorkItem even though it is `ASSIGNED`.
+Set or clear the relinquishable flag.
 
 **Path parameter:** `id` — UUID
 
-**Request body:**
+**Request body:** `RelinquishableRequest` — `relinquishable` (boolean)
 
-| Field | Type | Description |
-|---|---|---|
-| `relinquishable` | boolean | `true` to mark as available for pickup; `false` to clear |
+**Response:** `200 OK`
+**Body:** `workItemId` (UUID), `relinquishable` (boolean)
 
-**Response:** `200 OK` — `{workItemId, relinquishable}`
+**Error:** `404`
 
-**Error:** `404` if WorkItem not found.
+---
+
+### GET /filters
+
+List all queue filters.
+
+**Response:** `200 OK`
+**Body:** array — each: `id` (UUID), `name`, `scope`, `conditionLanguage`, `active` (boolean)
+
+---
+
+### POST /filters
+
+Create a queue filter.
+
+**Request body:** `CreateFilterRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | no | |
+| `scope` | string | no | Path-based scope |
+| `conditionLanguage` | string | no | `jexl` or `jq` |
+| `conditionExpression` | string | no | |
+| `actions` | FilterAction[] | no | |
+
+**Response:** `201 Created`
+
+---
+
+### PUT /filters/{id}
+
+Update a queue filter. Null fields left unchanged.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+
+**Error:** `404`
+
+---
+
+### DELETE /filters/{id}
+
+**Path parameter:** `id` — UUID
+
+**Response:** `204 No Content`
+
+**Error:** `404`
+
+---
+
+### POST /filters/evaluate
+
+Ad-hoc filter evaluation against a synthetic WorkItem without persisting.
+
+**Request body:** `AdHocEvalRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `conditionLanguage` | string | yes | `jexl` or `jq` |
+| `conditionExpression` | string | yes | |
+| `workItem` | object | yes | `title`, `status`, `priority`, `assigneeId`, `category` |
+
+**Response:** `200 OK`
+**Body:** `matches` (boolean)
+
+---
+
+## Audit
+
+### GET /audit
+
+Cross-WorkItem audit history query. All filters optional and combinable. Paginated.
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `actorId` | string | no | Exact match on actor |
+| `from` | ISO-8601 | no | Inclusive lower bound on `occurredAt` |
+| `to` | ISO-8601 | no | Inclusive upper bound |
+| `event` | string | no | Exact match on event type (e.g. `COMPLETED`) |
+| `category` | string | no | Filter to WorkItems in that category |
+| `page` | int | no | Zero-based (default `0`) |
+| `size` | int | no | Page size (default `20`, max `100`) |
+
+**Response:** `200 OK`
+**Body:** `entries` (array of `id`, `workItemId`, `event`, `actor`, `detail`, `occurredAt`), `page`, `size`, `total`
 
 ```bash
-curl -X PUT "http://localhost:8080/workitems/{id}/relinquishable" \
-  -H 'Content-Type: application/json' \
-  -d '{"relinquishable": true}'
+curl "http://localhost:8080/audit?actorId=alice&event=COMPLETED&from=2025-01-01T00:00:00Z&size=50"
 ```
 
 ---
 
-## Ledger API (casehub-work-ledger)
+## Ledger
 
-These endpoints are only present when `casehub-work-ledger` is on the classpath. They activate automatically via CDI — no configuration required beyond adding the dependency.
-
----
+*Module: `casehub-work-ledger`*
 
 ### GET /workitems/{id}/ledger
 
-Returns all ledger entries for a WorkItem in sequence order, each with its peer attestations embedded.
+Retrieve all ledger entries for a WorkItem with attestations, ordered by sequence.
 
 **Path parameter:** `id` — UUID
 
 **Response:** `200 OK`
 **Body:** `LedgerEntryResponse[]`
 
-**Error:** `404 Not Found` if the WorkItem does not exist.
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | |
+| `subjectId` | UUID | WorkItem ID |
+| `sequenceNumber` | int | |
+| `entryType` | LedgerEntryType | |
+| `commandType` | string (nullable) | e.g. `CompleteWorkItem` |
+| `eventType` | string (nullable) | e.g. `WorkItemCompleted` |
+| `actorId` | string | |
+| `actorType` | ActorType | `HUMAN`, `AGENT`, `SYSTEM` |
+| `actorRole` | string (nullable) | |
+| `causedByEntryId` | UUID (nullable) | Causal link |
+| `digest` | string (nullable) | SHA-256 leaf hash |
+| `occurredAt` | instant | |
+| `attestations` | LedgerAttestationResponse[] | |
 
-```bash
-curl http://localhost:8080/workitems/a1b2c3d4-e5f6-7890-abcd-ef1234567890/ledger
-```
+Attestation fields: `id`, `ledgerEntryId`, `subjectId`, `attestorId`, `attestorType`, `verdict` (`SOUND`/`ENDORSED`/`FLAGGED`/`CHALLENGED`), `evidence`, `confidence` (0.0–1.0), `occurredAt`
+
+**Error:** `404`
 
 ---
 
 ### PUT /workitems/{id}/ledger/provenance
 
-Sets the source entity provenance on the creation ledger entry (sequence number 1). Call this immediately after creating a WorkItem from an external system (Quarkus-Flow, CaseHub, Qhorus) to record which entity originated the WorkItem.
+Set source entity provenance on the creation entry (seq 1). Called by integrating systems after WorkItem creation.
 
 **Path parameter:** `id` — UUID
 
-**Request body:**
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `sourceEntityId` | string | yes | Identifier of the external entity, e.g. `"workflow-instance-abc123"` |
-| `sourceEntityType` | string | yes | Type of the external entity, e.g. `"Flow:WorkflowInstance"` |
-| `sourceEntitySystem` | string | yes | System owning the entity, e.g. `"quarkus-flow"` |
+**Request body:** `ProvenanceRequest` — `sourceEntityId`, `sourceEntityType`, `sourceEntitySystem` (all string)
 
 **Response:** `200 OK`
 
-**Errors:**
-- `404 Not Found` — WorkItem does not exist, or no creation ledger entry found.
-- `409 Conflict` — Provenance is already set on the creation entry.
-
-```bash
-curl -X PUT "http://localhost:8080/workitems/{id}/ledger/provenance" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "sourceEntityId": "workflow-instance-abc123",
-    "sourceEntityType": "Flow:WorkflowInstance",
-    "sourceEntitySystem": "quarkus-flow"
-  }'
-```
+**Error:** `404`, `409` (already set)
 
 ---
 
 ### POST /workitems/{id}/ledger/{entryId}/attestations
 
-Posts a peer attestation on a specific ledger entry. Requires `casehub.work.ledger.attestations.enabled=true` (the default when the module is present).
+Post a peer attestation on a specific ledger entry.
 
-**Path parameters:**
-- `id` — WorkItem UUID
-- `entryId` — ledger entry UUID to attest
+**Path parameters:** `id` — UUID, `entryId` — UUID
 
-**Request body:**
+**Request body:** `LedgerAttestationRequest`
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `attestorId` | string | yes | Identity of the actor providing the attestation |
-| `attestorType` | ActorType | yes | `HUMAN`, `AGENT`, or `SYSTEM` |
-| `verdict` | AttestationVerdict | yes | Formal judgment on the ledger entry |
-| `evidence` | string | no | Optional supporting evidence (JSON or free text) |
-| `confidence` | double | yes | Confidence level in the range 0.0–1.0 |
-
-**AttestationVerdict values:**
-
-| Value | Meaning |
-|---|---|
-| `SOUND` | The decision was correct and well-reasoned |
-| `FLAGGED` | The decision warrants further review |
-| `ENDORSED` | The attestor positively endorses the decision |
-| `CHALLENGED` | The attestor disputes the decision |
+| `attestorId` | string | yes | |
+| `attestorType` | ActorType | yes | `HUMAN`, `AGENT`, `SYSTEM` |
+| `verdict` | AttestationVerdict | yes | `SOUND`, `ENDORSED`, `FLAGGED`, `CHALLENGED` |
+| `evidence` | string | no | |
+| `confidence` | double | yes | 0.0–1.0 |
 
 **Response:** `201 Created`
 
-**Errors:**
-- `404 Not Found` — ledger entry does not exist or does not belong to the given WorkItem.
-- `409 Conflict` — attestations are disabled (`casehub.work.ledger.attestations.enabled=false`).
-
-```bash
-curl -X POST "http://localhost:8080/workitems/{id}/ledger/{entryId}/attestations" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "attestorId": "alice",
-    "attestorType": "HUMAN",
-    "verdict": "SOUND",
-    "evidence": "{\"notes\": \"Decision was well-documented\"}",
-    "confidence": 0.95
-  }'
-```
+**Error:** `404`, `409` (attestations disabled)
 
 ---
 
 ### GET /workitems/actors/{actorId}/trust
 
-Returns the computed EigenTrust-inspired trust score for an actor. Requires `casehub.work.ledger.trust-score.enabled=true`. Scores are computed by a nightly scheduled job; the endpoint returns `404` until the first computation run completes.
+Get computed Bayesian Beta trust score for an actor.
 
-**Path parameter:** `actorId` — the actor's identity string (e.g. `"alice"`, `"agent-007"`)
+**Path parameter:** `actorId` — string
 
 **Response:** `200 OK`
-**Body:** `ActorTrustScoreResponse`
+**Body:** `ActorTrustScoreResponse` — `actorId`, `actorType`, `trustScore` (0.0–1.0, neutral prior 0.5), `decisionCount`, `overturnedCount`, `attestationPositive`, `attestationNegative`, `lastComputedAt`
 
-**Errors:**
-- `404 Not Found` — trust scoring is disabled, or no score has been computed yet for this actor.
-
-```bash
-curl http://localhost:8080/workitems/actors/alice/trust
-```
+**Error:** `404` (scoring disabled or no score computed)
 
 ---
 
-## Ledger Schemas
+## AI
 
-### LedgerEntryResponse
+*Module: `casehub-work-ai`*
 
-Returned by `GET /workitems/{id}/ledger` as an array.
+### GET /workitems/{id}/resolution-suggestion
 
-| Field | Type | Description |
-|---|---|---|
-| `id` | UUID | Ledger entry UUID |
-| `workItemId` | UUID | WorkItem this entry belongs to |
-| `sequenceNumber` | int | Position in the per-WorkItem ledger (1-based) |
-| `entryType` | LedgerEntryType | Whether this is a `COMMAND`, `EVENT`, or other record type |
-| `commandType` | string | The actor's expressed intent; `null` for pure events |
-| `eventType` | string | The observable fact after execution; `null` for pure commands |
-| `actorId` | string | Identity of the actor |
-| `actorType` | ActorType | `HUMAN`, `AGENT`, or `SYSTEM` |
-| `actorRole` | string | Functional role of the actor; `null` if not set |
-| `planRef` | string | Policy or procedure reference governing this action; `null` if not set |
-| `rationale` | string | The actor's stated basis for the decision; `null` if not set |
-| `decisionContext` | string | JSON snapshot of the WorkItem state at this transition; `null` if `decision-context.enabled=false` |
-| `evidence` | string | Structured evidence; `null` if `evidence.enabled=false` |
-| `detail` | string | Free-text or JSON transition detail (reason, resolution, delegation target); `null` if not applicable |
-| `causedByEntryId` | UUID | FK to the entry that caused this one; `null` if not applicable |
-| `correlationId` | string | OpenTelemetry trace ID; `null` if not set |
-| `sourceEntityId` | string | External entity identifier; `null` until provenance is set |
-| `sourceEntityType` | string | Type of the external entity; `null` until provenance is set |
-| `sourceEntitySystem` | string | System owning the external entity; `null` until provenance is set |
-| `previousHash` | string | SHA-256 digest of the preceding entry; `null` for entry 1, or if hash chain disabled |
-| `digest` | string | SHA-256 digest of this entry's canonical content; `null` if hash chain disabled |
-| `occurredAt` | ISO-8601 instant | When this entry was recorded |
-| `attestations` | LedgerAttestationResponse[] | Peer attestations on this entry (empty array if none) |
+AI resolution suggestion based on similar past WorkItems. Always returns 200. `suggestion` is null when no suggestion produced; check `modelAvailable` to distinguish "no model" from "model returned nothing".
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** `ResolutionSuggestionResponse` — `workItemId` (UUID), `suggestion` (string, nullable), `basedOn` (int), `modelAvailable` (boolean)
+
+**Error:** `404`
 
 ---
-
-### LedgerAttestationResponse
-
-Embedded in `LedgerEntryResponse.attestations`.
-
-| Field | Type | Description |
-|---|---|---|
-| `id` | UUID | Attestation UUID |
-| `ledgerEntryId` | UUID | Ledger entry this attestation targets |
-| `workItemId` | UUID | WorkItem this attestation belongs to (denormalized) |
-| `attestorId` | string | Identity of the attestor |
-| `attestorType` | ActorType | `HUMAN`, `AGENT`, or `SYSTEM` |
-| `attestorRole` | string | Functional role of the attestor; `null` if not set |
-| `verdict` | AttestationVerdict | `SOUND`, `FLAGGED`, `ENDORSED`, or `CHALLENGED` |
-| `evidence` | string | Supporting evidence; `null` if not provided |
-| `confidence` | double | Confidence level in the range 0.0–1.0 |
-| `occurredAt` | ISO-8601 instant | When the attestation was recorded |
-
----
-
-### ActorTrustScoreResponse
-
-Returned by `GET /workitems/actors/{actorId}/trust`.
-
-| Field | Type | Description |
-|---|---|---|
-| `actorId` | string | The actor's identity string |
-| `actorType` | ActorType | `HUMAN`, `AGENT`, or `SYSTEM` |
-| `trustScore` | double | Computed trust score in [0.0, 1.0]; neutral prior is 0.5 |
-| `decisionCount` | int | Total number of `EVENT` ledger entries attributed to this actor |
-| `overturnedCount` | int | Number of decisions that received at least one negative attestation |
-| `attestationPositive` | int | Total count of positive attestations (`SOUND` or `ENDORSED`) received |
-| `attestationNegative` | int | Total count of negative attestations (`FLAGGED` or `CHALLENGED`) received |
-| `lastComputedAt` | ISO-8601 instant | When this score was last computed |
-
----
-
-## Worker Skill Profile API (quarkus-work-ai)
-
-Requires `quarkus-work-ai` on the classpath. Profiles feed `WorkerProfileSkillProfileProvider` so `SemanticWorkerSelectionStrategy` can match workers to work items by narrative similarity.
 
 ### POST /worker-skill-profiles
 
-Upsert a worker skill profile. If a profile already exists for the given `workerId`, its narrative is updated.
+Upsert a worker skill profile for semantic skill matching.
 
-**Request body:**
+**Request body:** `ProfileRequest` — `workerId` (string, required), `narrative` (string, optional)
 
-```json
-{
-  "workerId": "alice",
-  "narrative": "Expert in NDA review, contract negotiation, intellectual property law, and legal compliance"
-}
-```
-
-| Field | Required | Description |
-|---|---|---|
-| `workerId` | Yes | Worker identifier (any string); used as the primary key |
-| `narrative` | No | Free-text description of the worker's skills and expertise |
-
-**Responses:**
-
-| Status | Description |
-|---|---|
-| `201 Created` | Profile created or updated |
-| `400 Bad Request` | `workerId` is missing or blank |
-
-**Example:**
-
-```bash
-curl -X POST /worker-skill-profiles \
-  -H "Content-Type: application/json" \
-  -d '{"workerId": "alice", "narrative": "Expert in NDA review and contract law"}'
-```
+**Response:** `201 Created`
 
 ---
 
 ### GET /worker-skill-profiles
 
-Return all worker skill profiles.
+List all worker skill profiles.
 
-**Response:** array of skill profile objects.
-
-**Example response:**
-
-```json
-[
-  {
-    "workerId": "alice",
-    "narrative": "Expert in NDA review and contract law",
-    "createdAt": "2026-04-23T09:00:00Z",
-    "updatedAt": "2026-04-23T09:00:00Z"
-  },
-  {
-    "workerId": "bob",
-    "narrative": "Specialist in financial analysis and budgeting",
-    "createdAt": "2026-04-23T09:01:00Z",
-    "updatedAt": "2026-04-23T09:01:00Z"
-  }
-]
-```
+**Response:** `200 OK`
 
 ---
 
 ### GET /worker-skill-profiles/{workerId}
 
-Return the skill profile for a specific worker.
+**Path parameter:** `workerId` — string
 
-**Path parameters:**
+**Response:** `200 OK`
 
-| Parameter | Description |
-|---|---|
-| `workerId` | The worker identifier |
-
-**Responses:**
-
-| Status | Description |
-|---|---|
-| `200 OK` | Profile returned |
-| `404 Not Found` | No profile exists for this workerId |
-
-**Example:**
-
-```bash
-curl /worker-skill-profiles/alice
-```
-
-**Example response:**
-
-```json
-{
-  "workerId": "alice",
-  "narrative": "Expert in NDA review and contract law",
-  "createdAt": "2026-04-23T09:00:00Z",
-  "updatedAt": "2026-04-23T09:00:00Z"
-}
-```
+**Error:** `404`
 
 ---
 
 ### DELETE /worker-skill-profiles/{workerId}
 
-Delete the skill profile for a specific worker.
+**Path parameter:** `workerId` — string
 
-**Path parameters:**
+**Response:** `204 No Content`
 
-| Parameter | Description |
-|---|---|
-| `workerId` | The worker identifier |
-
-**Responses:**
-
-| Status | Description |
-|---|---|
-| `204 No Content` | Profile deleted |
-| `404 Not Found` | No profile exists for this workerId |
-
-**Example:**
-
-```bash
-curl -X DELETE /worker-skill-profiles/alice
-```
+**Error:** `404`
 
 ---
 
-### WorkerSkillProfile schema
+### GET /workitems/{id}/escalation-summaries
 
-| Field | Type | Description |
-|---|---|---|
-| `workerId` | string | Primary key — the worker's identity string |
-| `narrative` | string | Free-text skill description used by the embedding matcher |
-| `createdAt` | ISO-8601 instant | When the profile was first created |
-| `updatedAt` | ISO-8601 instant | When the profile was last updated |
+LLM-generated escalation summaries for a WorkItem, most recent first.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** `EscalationSummary[]` — each: `id` (UUID), `tenancyId`, `workItemId` (UUID), `eventType` (`EXPIRED`/`CLAIM_EXPIRED`), `summary` (string, nullable), `generatedAt` (instant)
 
 ---
 
-## Reports API (`quarkus-work-reports` module)
+## Notifications
 
-Optional module — add `quarkus-work-reports` to your application to activate these endpoints. Zero cost when absent.
+*Module: `casehub-work-notifications`*
 
-All endpoints return `application/json`. All timestamps are ISO-8601.
+### POST /workitem-notification-rules
+
+Create a notification rule.
+
+**Request body:** `CreateRuleRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `channelType` | string | yes | `webhook` or `slack` |
+| `targetUrl` | string | yes | |
+| `eventTypes` | string | yes | Comma-separated event types |
+| `category` | string | no | Optional filter |
+| `secret` | string | no | Webhook HMAC secret |
+| `enabled` | boolean | no | Default `true` |
+
+**Response:** `201 Created`
+**Body:** `id`, `channelType`, `targetUrl`, `eventTypes`, `category`, `enabled`, `createdAt` (secret intentionally omitted)
+
+---
+
+### GET /workitem-notification-rules
+
+List rules, optionally filtered by channel type.
+
+**Query parameter:** `channelType` — string (optional)
+
+**Response:** `200 OK` (secret omitted)
+
+---
+
+### GET /workitem-notification-rules/{id}
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK` (secret omitted)
+
+**Error:** `404`
+
+---
+
+### PUT /workitem-notification-rules/{id}
+
+**Path parameter:** `id` — UUID
+
+**Request body:** `CreateRuleRequest` (all fields optional for update)
+
+**Response:** `200 OK`
+
+**Error:** `404`
+
+---
+
+### DELETE /workitem-notification-rules/{id}
+
+**Path parameter:** `id` — UUID
+
+**Response:** `204 No Content`
+
+**Error:** `404`
+
+---
+
+## Reports
+
+*Module: `casehub-work-reports`*
 
 ### GET /workitems/reports/sla-breaches
 
-Returns WorkItems that breached their `expiresAt` deadline.
+SLA breach report — WorkItems that exceeded their expiry deadline.
 
-**Query parameters:**
+**Query parameters:** `from` (ISO-8601), `to` (ISO-8601), `category` (string), `priority` (string) — all optional
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `from` | ISO-8601 instant | No | Include only items whose `expiresAt` ≥ from |
-| `to` | ISO-8601 instant | No | Include only items whose `expiresAt` ≤ to |
-| `category` | string | No | Filter to this category |
-| `priority` | enum | No | Filter to this priority (LOW\|MEDIUM\|HIGH\|URGENT) |
-
-**Breach definition:** active item past `expiresAt`, OR terminal item where `completedAt > expiresAt`. Items with no `expiresAt` are excluded.
-
-**Example response:**
-```json
-{
-  "items": [
-    {
-      "workItemId": "uuid",
-      "category": "onboarding",
-      "priority": "HIGH",
-      "expiresAt": "2026-04-25T09:00:00Z",
-      "completedAt": "2026-04-25T11:32:00Z",
-      "status": "COMPLETED",
-      "breachDurationMinutes": 152
-    }
-  ],
-  "summary": {
-    "totalBreached": 3,
-    "avgBreachDurationMinutes": 94.5,
-    "byCategory": { "onboarding": 2, "review": 1 }
-  }
-}
-```
+**Response:** `200 OK`
+**Body:** `SlaBreachReport` — `items` (array of `workItemId`, `category`, `priority`, `expiresAt`, `completedAt`, `status`, `breachDurationMinutes`), `summary` (`totalBreached`, `avgBreachDurationMinutes`, `byCategory` map)
 
 ---
 
 ### GET /workitems/reports/actors/{actorId}
 
-Returns a performance summary for a single actor derived from audit history.
+Actor performance report.
 
-**Query parameters:** `from`, `to` (ISO-8601), `category`
+**Path parameter:** `actorId` — string
+**Query parameters:** `from` (ISO-8601), `to` (ISO-8601), `category` (string) — all optional
 
-**Example response:**
-```json
-{
-  "actorId": "alice",
-  "totalAssigned": 12,
-  "totalCompleted": 9,
-  "totalRejected": 1,
-  "avgCompletionMinutes": 47.3,
-  "byCategory": { "onboarding": 5, "review": 4 }
-}
-```
-
-`avgCompletionMinutes` is `assignedAt → completedAt`, null when no completions in range.
+**Response:** `200 OK`
+**Body:** `ActorReport` — `actorId`, `totalAssigned`, `totalCompleted`, `totalRejected`, `avgCompletionMinutes` (nullable), `byCategory` map
 
 ---
 
 ### GET /workitems/reports/throughput
 
-Created/completed counts over time, grouped by day, week, or month.
+Throughput report — created vs completed counts over time buckets.
 
-**Query parameters:**
+**Query parameters:** `from` (ISO-8601, required), `to` (ISO-8601, required), `groupBy` (string — `day`/`week`/`month`, default `day`)
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `from` | ISO-8601 instant | **Yes** | Start of range (unbounded scan not permitted) |
-| `to` | ISO-8601 instant | **Yes** | End of range |
-| `groupBy` | string | No | `day` (default), `week`, or `month` |
-
-**Example response:**
-```json
-{
-  "from": "2026-04-01T00:00:00Z",
-  "to": "2026-04-27T23:59:59Z",
-  "groupBy": "week",
-  "buckets": [
-    { "period": "2026-W14", "created": 12, "completed": 8 },
-    { "period": "2026-W15", "created": 18, "completed": 15 }
-  ]
-}
-```
-
-Period format: `yyyy-MM-dd` (day), `yyyy-Www` (ISO week), `yyyy-MM` (month). Created and completed counts are independent — an in-flight WorkItem contributes to `created` but not `completed`.
+**Response:** `200 OK`
+**Body:** `ThroughputReport` — `from`, `to`, `groupBy`, `buckets` (array of `period`, `created`, `completed`)
 
 ---
 
 ### GET /workitems/reports/queue-health
 
-Point-in-time snapshot of the current queue state.
+Queue health snapshot.
 
-**Query parameters:** `category`, `priority` (optional filters)
+**Query parameters:** `category` (string), `priority` (string) — all optional
 
-**Example response:**
-```json
-{
-  "timestamp": "2026-04-27T17:00:00Z",
-  "overdueCount": 5,
-  "pendingCount": 23,
-  "avgPendingAgeSeconds": 7200,
-  "oldestUnclaimedCreatedAt": "2026-04-25T10:00:00Z",
-  "criticalOverdueCount": 2
-}
+**Response:** `200 OK`
+**Body:** `QueueHealthReport` — `timestamp`, `overdueCount`, `pendingCount`, `avgPendingAgeSeconds`, `oldestUnclaimedCreatedAt`, `criticalOverdueCount`
+
+---
+
+## Issue Tracker Integration
+
+*Module: `casehub-work-issue-tracker`*
+
+### POST /workitems/{id}/issues
+
+Link an existing issue. Fetches current title/URL/status from remote tracker. Idempotent.
+
+**Path parameter:** `id` — UUID
+
+**Request body:** `LinkIssueRequest` — `trackerType` (string, required — `github`/`jira`), `externalRef` (string, required — e.g. `owner/repo#42`), `linkedBy` (string)
+
+**Response:** `201 Created`
+**Body:** `id`, `workItemId`, `trackerType`, `externalRef`, `title`, `url`, `status`, `linkedAt`, `linkedBy`
+
+**Error:** `400`, `404`, `500`
+
+---
+
+### POST /workitems/{id}/issues/create
+
+Create a new issue in remote tracker and link it. WorkItem UUID appended to issue body.
+
+**Path parameter:** `id` — UUID
+
+**Request body:** `CreateIssueRequest` — `trackerType` (string, required), `title` (string, required), `body` (string — markdown), `linkedBy` (string)
+
+**Response:** `201 Created`
+
+**Error:** `400`, `500`
+
+---
+
+### GET /workitems/{id}/issues
+
+List linked issues.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+
+---
+
+### DELETE /workitems/{id}/issues/{linkId}
+
+Remove a link. Does NOT close the issue in the remote tracker.
+
+**Path parameters:** `id` — UUID, `linkId` — UUID
+
+**Response:** `204 No Content`
+
+**Error:** `404`
+
+---
+
+### PUT /workitems/{id}/issues/sync
+
+Refresh linked issues from remote trackers. Failed fetches skipped.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** `synced` (int), `workItemId` (UUID)
+
+---
+
+### POST /workitems/github-webhook/{tenancyId}
+
+Receive GitHub webhook events. Verifies `X-Hub-Signature-256` HMAC. Returns 200 for all valid requests.
+
+**Path parameter:** `tenancyId` — string
+**Headers:** `X-Hub-Signature-256`
+
+**Response:** `200 OK`
+
+**Error:** `400`, `401`
+
+---
+
+### POST /workitems/jira-webhook/{tenancyId}
+
+Receive Jira webhook events. Verification via shared secret query parameter.
+
+**Path parameter:** `tenancyId` — string
+**Query parameter:** `secret` — string
+
+**Response:** `200 OK`
+
+**Error:** `400`, `401`
+
+---
+
+## SSE Events
+
+### GET /workitems/events
+
+Server-Sent Events stream of all WorkItem lifecycle events. Hot stream — only events after connect.
+
+**Produces:** `text/event-stream`
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `workItemId` | UUID | no | Filter to single WorkItem |
+| `type` | string | no | Event type suffix (e.g. `created`, `completed`) |
+
+**Body:** `WorkItemLifecycleEvent` per event
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | string | CloudEvents type (e.g. `io.casehub.work.workitem.created`) |
+| `source` | string | URI (e.g. `/workitems/{id}`) |
+| `subject` | string | WorkItem UUID |
+| `workItemId` | UUID | |
+| `status` | WorkItemStatus | |
+| `occurredAt` | instant | |
+| `actor` | string | |
+| `detail` | string (nullable) | |
+| `rationale` | string (nullable) | |
+| `planRef` | string (nullable) | |
+| `outcome` | string (nullable) | |
+
+```bash
+curl -N "http://localhost:8080/workitems/events?type=completed"
 ```
 
-`oldestUnclaimedCreatedAt` is `null` when no PENDING items match the filter. `criticalOverdueCount` is always ≤ `overdueCount`.
+---
+
+### GET /workitems/{id}/events
+
+SSE stream for a specific WorkItem.
+
+**Path parameter:** `id` — UUID
+**Produces:** `text/event-stream`
+
+Same event schema as above.
+
+---
+
+## AsyncAPI
+
+### GET /q/asyncapi
+
+Serve the AsyncAPI 3.0 specification YAML.
+
+**Produces:** `application/yaml`
+
+**Response:** `200 OK`
+**Body:** YAML
+
+**Error:** `503` — resource not found on classpath

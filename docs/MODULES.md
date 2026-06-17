@@ -6,8 +6,8 @@ Use `ide_find_class` / `ide_find_symbol` to locate specific classes. This file d
 
 | Module | Purpose | Key constraints |
 |---|---|---|
-| `casehub-work-api/` | Pure-Java SPI — no JPA, no REST | All SPIs, events, value objects. casehub-engine depends on this directly. |
-| `casehub-work-core/` | Jandex library — no JPA, no REST | WorkBroker, built-in strategies, claim SLA policies; pure CDI. No filter classes — filter engine moved to `runtime/filter/` in #133. |
+| `api/` | Pure-Java SPI — no JPA, no REST | All SPIs, events, value objects. casehub-engine depends on this directly. |
+| `core/` | Jandex library — no JPA, no REST | WorkBroker, built-in strategies, claim SLA policies; pure CDI. No filter classes — filter engine moved to `runtime/filter/` in #133. |
 | `runtime/` | Extension runtime | WorkItem entity, JPA stores, filter engine, multi-instance coordinator, REST endpoints at `/workitems` |
 | `deployment/` | Extension build-time | `WorkItemsProcessor` @BuildStep only |
 | `persistence-memory/` | In-memory persistence (`casehub-work-persistence-memory`) | Thread-safe ConcurrentHashMap stores; Tier 3 `@Alternative @Priority(100)` — beats JPA and MongoDB. For tests, demos, and ephemeral deployment. |
@@ -18,15 +18,18 @@ Use `ide_find_class` / `ide_find_symbol` to locate specific classes. This file d
 
 | Module | Purpose |
 |---|---|
-| `work-flow/` | Quarkus-Flow CDI bridge (`HumanTaskFlowBridge`, `PendingWorkItemRegistry`, `WorkItemFlowEventListener`) |
-| `casehub-work-ledger/` | Optional accountability module (command/event ledger, hash chain, attestation, EigenTrust) |
-| `casehub-work-queues/` | Optional label-based queue module; label filter chains, queue views, JEXL/JQ expression evaluation |
-| `casehub-work-ai/` | AI-native features; confidence gating via `LowConfidenceFilterProducer`; `SemanticWorkerSelectionStrategy` (@Alternative @Priority(1)) for embedding-based worker scoring |
-| `casehub-work-notifications/` | Optional outbound notification module; CDI observer dispatches to HTTP webhook, Slack, and Teams channels. Flyway V3000. |
-| `casehub-work-reports/` | Optional SLA compliance reporting; `/reports/sla-breaches`, `/actors/{id}`, `/throughput`, `/queue-health` |
-| `casehub-work-postgres-broadcaster/` | Optional distributed SSE; PostgreSQL LISTEN/NOTIFY for WorkItem events (`casehub_work_events`) |
-| `casehub-work-queues-postgres-broadcaster/` | Optional distributed SSE for queue events (`casehub_work_queue_events`); depends on `casehub-work-queues` + `quarkus-reactive-pg-client` |
-| `casehub-work-issue-tracker/` | Optional issue-tracker link module; `IssueTrackerProvider` SPI; GitHub and Jira webhook handlers. Flyway V5000. |
-| `casehub-work-examples/` | Runnable scenario demos; each runs via `POST /examples/{name}/run` |
-| `casehub-work-persistence-mongodb/` | Optional MongoDB-backed WorkItemStore and AuditEntryStore; Tier 2 `@Alternative @Priority(1)` |
+| `flow/` | Quarkus-Flow CDI bridge (`HumanTaskFlowBridge`, `PendingWorkItemRegistry`, `WorkItemFlowEventListener`) |
+| `flow-examples/` | Example scenarios for the Quarkus-Flow integration |
+| `ledger/` | Optional accountability module (command/event ledger, hash chain, attestation, EigenTrust) |
+| `queues/` | Optional label-based queue module; label filter chains, queue views, JEXL/JQ expression evaluation |
+| `queues-dashboard/` | Optional queue dashboard UI |
+| `queues-examples/` | Example scenarios for the queue module |
+| `ai/` | AI-native features; confidence gating via `LowConfidenceFilterProducer`; `SemanticWorkerSelectionStrategy` (@Alternative @Priority(1)) for embedding-based worker scoring |
+| `notifications/` | Optional outbound notification module; CDI observer dispatches to HTTP webhook, Slack, and Teams channels. Flyway V3000. |
+| `reports/` | Optional SLA compliance reporting; `/reports/sla-breaches`, `/actors/{id}`, `/throughput`, `/queue-health` |
+| `postgres-broadcaster/` | Optional distributed SSE; PostgreSQL LISTEN/NOTIFY for WorkItem events (`casehub_work_events`) |
+| `queues-postgres-broadcaster/` | Optional distributed SSE for queue events (`casehub_work_queue_events`); depends on `casehub-work-queues` + `quarkus-reactive-pg-client` |
+| `issue-tracker/` | Optional issue-tracker link module; `IssueTrackerProvider` SPI; GitHub and Jira webhook handlers. Flyway V5000. |
+| `examples/` | Runnable scenario demos; each runs via `POST /examples/{name}/run` |
+| `persistence-mongodb/` | Optional MongoDB-backed WorkItemStore and AuditEntryStore; Tier 2 `@Alternative @Priority(1)` |
 | `integration-tests/` | `@QuarkusIntegrationTest` suite and native image validation |

@@ -1,6 +1,6 @@
 # CaseHub Work — Examples Guide
 
-The `quarkus-work-examples` module is a runnable Quarkus application that demonstrates every significant WorkItems feature through concrete business scenarios. Each scenario is a single HTTP call that plays out a full story, logs a step-by-step narrative to stdout, and returns the resulting audit trail as JSON.
+The `casehub-work-examples` module is a runnable Quarkus application that demonstrates every significant WorkItems feature through concrete business scenarios. Each scenario is a single HTTP call that plays out a full story, logs a step-by-step narrative to stdout, and returns the resulting audit trail as JSON.
 
 The goal is not to show the API surface in abstract — it is to show how WorkItems solves specific problems that every real system eventually runs into: compliance evidence, AI/human handoffs, routing without redeployment, structured expiry, and so on.
 
@@ -15,7 +15,7 @@ The goal is not to show the API surface in abstract — it is to show how WorkIt
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests
 
 # Start in dev mode — H2 in-memory database, no external dependencies
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -pl quarkus-work-examples
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -pl examples
 ```
 
 Quarkus starts on `http://localhost:8080`. All scenarios are ready immediately — no seed data required, no configuration beyond defaults.
@@ -42,20 +42,23 @@ curl -s -X POST http://localhost:8080/examples/moderation/run  | jq '.scenario, 
 curl -s -X POST http://localhost:8080/examples/queue/run       | jq '.scenario, (.allLedgerEntries | length)'
 curl -s -X POST http://localhost:8080/examples/semantic/run    | jq '.scenario, .assignedTo'
 curl -s -X POST http://localhost:8080/examples/cancel/run      | jq '.scenario, .finalStatus'
-curl -s -X POST http://localhost:8080/examples/labels/run      | jq '.scenario, .labels'
-curl -s -X POST http://localhost:8080/examples/vocabulary/run  | jq '.scenario, .vocabulary'
-curl -s -X POST http://localhost:8080/examples/audit-search/run | jq '.scenario, (.auditEntries | length)'
-curl -s -X POST http://localhost:8080/examples/form-schema/run | jq '.scenario, .formKey'
-curl -s -X POST http://localhost:8080/examples/escalation/run  | jq '.scenario, .escalationFired'
-curl -s -X POST http://localhost:8080/examples/filter-rules/run | jq '.scenario, .appliedLabels'
-curl -s -X POST http://localhost:8080/examples/low-confidence/run | jq '.scenario, .flaggedCount'
-curl -s -X POST http://localhost:8080/examples/queues/run      | jq '.scenario, .pickedUp'
+curl -s -X POST http://localhost:8080/examples/labelling/run    | jq '.scenario, .labelsAtCompletion'
+curl -s -X POST http://localhost:8080/examples/vocabulary/run  | jq '.scenario, .registeredEntryCount'
+curl -s -X POST http://localhost:8080/examples/auditsearch/run | jq '.scenario, .sarahActionCount'
+curl -s -X POST http://localhost:8080/examples/formschema/run  | jq '.scenario, .templateName'
+curl -s -X POST http://localhost:8080/examples/escalation/run  | jq '.scenario, .escalationEventPresent'
+curl -s -X POST http://localhost:8080/examples/filterrules/run | jq '.scenario, .urgentOnHigh'
+curl -s -X POST http://localhost:8080/examples/lowconfidence/run | jq '.scenario, .lowConfidenceFlagged'
+curl -s -X POST http://localhost:8080/examples/queues/run      | jq '.scenario, .pickedUpWorkItemId'
+curl -s -X POST http://localhost:8080/examples/business-hours/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/exclusion-policy/run | jq '.scenario'
+curl -s -X POST http://localhost:8080/examples/spawn/run       | jq '.scenario'
 ```
 
 ### Run the test suite
 
 ```bash
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl quarkus-work-examples
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl examples
 ```
 
 Each scenario has a corresponding `@QuarkusTest` that asserts the key invariants without a running server.
@@ -240,7 +243,7 @@ Any process where an upstream business event makes an in-flight task moot: dupli
 
 ### 7. Labels — cross-cutting tags for VIP routing and filtering
 
-**Endpoint:** `POST /examples/labels/run`
+**Endpoint:** `POST /examples/labelling/run`
 
 **Why this matters:**
 Priority and category capture coarse-grained classification, but real workflows need cross-cutting tags: "this is urgent regardless of category", "this customer is VIP", "this is blocked on an external party". Hard-coding these into new status values or priority levels requires schema changes and deployments. Labels add that dimension at runtime — no migration, no code change, no enum extension.
@@ -255,9 +258,9 @@ Priority and category capture coarse-grained classification, but real workflows 
 A VIP customer submits a support ticket. The ticket is created as a WorkItem with normal priority (the support system doesn't know which customers are VIP at creation time — that's resolved asynchronously from the CRM). The CRM integration applies two labels: `priority/high` and `customer/vip`. The scenario then queries the inbox filtered by `customer/vip*` and confirms the WorkItem appears. A support supervisor can now maintain a VIP-only view without any schema changes to the WorkItem model.
 
 **Key WorkItems features:**
-- `PUT /workitems/{id}/labels` → apply one or more labels
-- Labels stored as a comma-separated field on the WorkItem
-- `GET /workitems/inbox?labelPattern=customer/vip*` → pattern-matched label filtering
+- `POST /workitems/{id}/labels` → apply a label
+- Labels stored as structured entries on the WorkItem
+- `GET /workitems/inbox?label=customer/vip*` → pattern-matched label filtering
 - Labels returned in the WorkItem JSON response as an array
 - Applied after creation — the originating system does not need to know the labels at create time
 
@@ -283,8 +286,8 @@ When ten teams create WorkItems with `category = "Annual Leave"`, `"annual_leave
 The HR team registers standard leave categories before the leave management system goes live: `annual`, `sick`, `parental`, `compassionate`, `unpaid`. WorkItems created by the leave management system use these controlled terms in `category`. The scenario demonstrates registration, listing, and then creating two WorkItems — one with a valid term (`annual`) and one with a free-text value (`AL`) to show the validation response. Downstream, filter rules and audit queries work reliably because the category field is consistent.
 
 **Key WorkItems features:**
-- `POST /workitems/vocabulary` → register a term in a namespace
-- `GET /workitems/vocabulary/{namespace}` → list all terms in a namespace
+- `POST /vocabulary` → register a label definition
+- `GET /vocabulary` → list all label definitions
 - Category value validated against vocabulary on WorkItem creation (if vocabulary configured)
 - Validation error response with the registered valid terms listed
 
@@ -303,7 +306,7 @@ A single WorkItem's audit trail shows what happened to that item. But regulators
 **What it demonstrates:**
 - Multiple WorkItems created across a time window
 - Actions by a specific actor (`compliance-auditor`) across several items
-- `GET /workitems/audit?actor=X&from=T1&to=T2` to retrieve cross-item audit entries
+- `GET /audit?actorId=X&from=T1&to=T2` to retrieve cross-item audit entries
 - Response showing all audit entries matching the filter, ordered by time
 - Using audit search to reconstruct a compliance officer's review history
 
@@ -311,7 +314,7 @@ A single WorkItem's audit trail shows what happened to that item. But regulators
 A compliance officer, `auditor-carol`, reviews several WorkItems over the course of a morning. The scenario creates five WorkItems in different categories, has Carol perform claim, start, and complete actions on three of them, and records notes on two. A compliance director then queries all of Carol's actions in a two-hour window via the audit search API. The response returns a chronological list of every action Carol took across all WorkItems — workItemId, event type, detail, and timestamp — sufficient to answer an audit question without accessing individual WorkItem records.
 
 **Key WorkItems features:**
-- `GET /workitems/audit?actor=auditor-carol&from=...&to=...` → time-bounded actor query
+- `GET /audit?actorId=auditor-carol&from=...&to=...` → time-bounded actor query
 - Audit entries span multiple WorkItems in a single response
 - Each entry includes `workItemId`, `event`, `actor`, `detail`, `occurredAt`
 - No JPA joins or custom queries needed — the API handles the aggregation
@@ -339,10 +342,10 @@ If any JSON payload is valid, the resolution from a human could say `"done"`, `{
 The legal team registers a JSON Schema for contract review WorkItems under the key `contract-review-v1`. The schema requires `outcome` (enum: `APPROVED`, `REJECTED`, `NEEDS_AMENDMENT`), `reviewedBy` (string), and `comments` (string, optional). WorkItems created with `formKey = "contract-review-v1"` advertise this schema. The scenario creates a contract review WorkItem, retrieves the form schema via the forms endpoint (which a UI would use to render the form), then demonstrates a valid completion and an invalid completion (missing required `outcome` field) to show the validation response.
 
 **Key WorkItems features:**
-- `POST /workitems/forms` → register a form key with its JSON Schema
-- `GET /workitems/forms/{formKey}` → retrieve schema (used by dynamic form renderers)
+- `POST /workitem-templates` → create a template with `inputDataSchema` and `outputDataSchema` (JSON Schema draft-07)
+- `GET /workitem-templates/{id}` → retrieve template including schemas (used by dynamic form renderers)
 - `formKey` field on WorkItem signals which form applies
-- Resolution validated against schema at `complete` time; `400` with field errors on mismatch
+- Resolution validated against `outputDataSchema` at `complete` time; `400` with field errors on mismatch
 - Enables frontend-agnostic form rendering from a single schema definition
 
 **When to use this pattern:**
@@ -369,7 +372,7 @@ A production incident WorkItem is created with `expiresAt` set to one minute ago
 
 **Key WorkItems features:**
 - `expiresAt` on WorkItem creation → defines when the expiry job notices the breach
-- `ExpiryCleanupJob.runCleanup()` → programmatic trigger (scheduler runs it automatically in production)
+- `ExpiryTimerJob.runCleanup()` → programmatic trigger (scheduler runs it automatically in production)
 - Audit entry: `event = "WorkItemExpired"`, `actor = "system:expiry-cleanup"`
 - `SlaBreachPolicy` SPI receives `SlaBreachContext` → return `EscalateTo`, `Extend`, or `Fail` decision → plug in Slack, PagerDuty, email
 - `casehub.work.cleanup.expiry-check-seconds` → controls scheduler interval
@@ -459,38 +462,93 @@ A `legal-documents` queue is defined with condition `category == 'legal'`. Five 
 - `POST /filters` → define a filter with JEXL condition and name
 - `POST /queues` → create a named queue backed by a filter
 - `GET /queues/{name}` → live filtered WorkItem list
-- `PUT /workitems/{id}/pickup?actor=X&queue=legal-documents` → claim via queue
-- `PUT /workitems/{id}/relinquish?actor=X` → return to queue without reject
-- `GET /workitems/{id}/relinquishable` → check whether a WorkItem can be returned
+- `PUT /workitems/{id}/pickup?claimant=X` → claim or soft-takeover via queue
+- `PUT /workitems/{id}/relinquishable` → set the relinquishable flag for soft-pickup
+- `PUT /workitems/{id}/release?actor=X` → release back to queue
 
 **When to use this pattern:**
 Legal review by document type, technical support routing by product area, clinical task routing by specialty, any domain with specialist workers who need a curated view of relevant-only work.
 
 ---
 
+### 15. Business Hours — SLA deadlines in working hours
+
+**Endpoint:** `POST /examples/business-hours/run`
+
+**Why this matters:**
+Calendar-hour deadlines punish workers for weekends and holidays. An SLA set to 8 hours at 4pm Friday expires at midnight Saturday — when nobody is working. Business-hours deadlines count only working hours, so an 8-hour SLA at 4pm Friday expires at 12pm Monday.
+
+**What it demonstrates:**
+- `claimDeadlineBusinessHours` and `expiresAtBusinessHours` on WorkItem creation
+- BusinessHoursCalculator SPI converting business hours to calendar deadlines
+- Deadline computation skipping non-working hours
+
+**When to use this pattern:**
+Any SLA that should count working hours only: customer support response times, approval deadlines, compliance review windows.
+
+---
+
+### 16. Exclusion Policy — time-scoped user exclusions
+
+**Endpoint:** `POST /examples/exclusion-policy/run`
+
+**Why this matters:**
+Excluding a user permanently from claiming certain WorkItems is crude. Temporary exclusions — "this user is on leave until Friday" or "this reviewer handled this case previously and must be excluded for conflict of interest" — need expiry. The exclusion policy pattern provides time-scoped exclusions with automatic cleanup.
+
+**What it demonstrates:**
+- Custom `ExclusionPolicy` SPI implementation with time-based expiry
+- `excludedUsers` field populated at creation and evaluated at claim time
+- Exclusion that expires after a configured duration
+
+**When to use this pattern:**
+Conflict-of-interest rules, temporary leave management, rotation policies where the same reviewer should not handle consecutive cases.
+
+---
+
+### 17. Spawn — subprocess spawning from templates
+
+**Endpoint:** `POST /examples/spawn/run`
+
+**Why this matters:**
+A parent task that needs three independent sub-reviews (legal, finance, compliance) should not create them manually. Spawning creates child WorkItems from templates in one idempotent call, links them via PART_OF relations, and tracks M-of-N completion. The parent can monitor progress without polling each child individually.
+
+**What it demonstrates:**
+- `workItemSpawnService.spawn(SpawnRequest)` creating multiple children from templates
+- `PART_OF` relations linking children to parent
+- Idempotent spawning (same `idempotencyKey` returns existing group)
+- Multi-instance group tracking
+
+**When to use this pattern:**
+Multi-reviewer approval processes, parallel sub-task decomposition, M-of-N voting patterns, any parent-child WorkItem hierarchy.
+
+---
+
 ## Capability Coverage
 
-| Capability | 1 Expense | 2 Credit | 3 Mod | 4 Queue | 5 Semantic | 6 Cancel | 7 Labels | 8 Vocab | 9 Audit | 10 Form | 11 Escalate | 12 Rules | 13 LowConf | 14 Queues |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| create / claim / start / complete | ✅ | ✅ | ✅ | ✅ | ✅ | | | | | | | | | ✅ |
-| reject | | | ✅ | | | | | | | | | | | |
-| cancel | | | | | | ✅ | | | | | | | | |
-| delegate | | ✅ | | | | | | | | | | | | |
-| suspend + resume | | ✅ | | | | | | | | | | | | |
-| release | | | | ✅ | | | | | | | | | | |
-| pickup + relinquish | | | | | | | | | | | | | | ✅ |
-| candidateGroups | | | ✅ | ✅ | | | | | | | | | | ✅ |
-| candidateUsers + semantic routing | | | | | ✅ | | | | | | | | | |
-| labels | | | | | | | ✅ | | | | | ✅ | ✅ | |
-| vocabulary | | | | | | | | ✅ | | | | | | |
-| form schema | | | | | | | | | | ✅ | | | | |
-| confidenceScore | | | | | ✅ | | | | | | | | ✅ | |
-| expiry + escalation | | | | | | | | | | | ✅ | | | |
-| JEXL filter rules | | | | | | | | | | | | ✅ | | ✅ |
-| audit trail | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | | | ✅ | | ✅ | | | |
-| cross-WorkItem audit search | | | | | | | | | ✅ | | | | | |
-| hash chain (SHA-256) | ✅ | ✅ | ✅ | ✅ | | | | | | | | | | |
-| provenance | | ✅ | ✅ | | | | | | | | | | | |
-| peer attestation | | ✅ | ✅ | | | | | | | | | | | |
-| actorType AGENT | | | ✅ | | | | | | | | | | | |
-| EigenTrust trust scores | | | | ✅ | | | | | | | | | | |
+| Capability | 1 Expense | 2 Credit | 3 Mod | 4 Queue | 5 Semantic | 6 Cancel | 7 Labels | 8 Vocab | 9 Audit | 10 Form | 11 Escalate | 12 Rules | 13 LowConf | 14 Queues | 15 BizHrs | 16 Excl | 17 Spawn |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| create / claim / start / complete | ✅ | ✅ | ✅ | ✅ | ✅ | | | | | | | | | ✅ | ✅ | | ✅ |
+| reject | | | ✅ | | | | | | | | | | | | | | |
+| cancel | | | | | | ✅ | | | | | | | | | | | |
+| delegate | | ✅ | | | | | | | | | | | | | | | |
+| suspend + resume | | ✅ | | | | | | | | | | | | | | | |
+| release | | | | ✅ | | | | | | | | | | | | | |
+| pickup + relinquish | | | | | | | | | | | | | | ✅ | | | |
+| candidateGroups | | | ✅ | ✅ | | | | | | | | | | ✅ | | | |
+| candidateUsers + semantic routing | | | | | ✅ | | | | | | | | | | | | |
+| labels | | | | | | | ✅ | | | | | ✅ | ✅ | | | | |
+| vocabulary | | | | | | | | ✅ | | | | | | | | | |
+| form schema | | | | | | | | | | ✅ | | | | | | | |
+| confidenceScore | | | | | ✅ | | | | | | | | ✅ | | | | |
+| expiry + escalation | | | | | | | | | | | ✅ | | | | | | |
+| business hours | | | | | | | | | | | | | | | ✅ | | |
+| JEXL filter rules | | | | | | | | | | | | ✅ | | ✅ | | | |
+| audit trail | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | | | ✅ | | ✅ | | | | | | |
+| cross-WorkItem audit search | | | | | | | | | ✅ | | | | | | | | |
+| hash chain (SHA-256) | ✅ | ✅ | ✅ | ✅ | | | | | | | | | | | | | |
+| provenance | | ✅ | ✅ | | | | | | | | | | | | | | |
+| peer attestation | | ✅ | ✅ | | | | | | | | | | | | | | |
+| actorType AGENT | | | ✅ | | | | | | | | | | | | | | |
+| EigenTrust trust scores | | | | ✅ | | | | | | | | | | | | | |
+| exclusion policy | | | | | | | | | | | | | | | | ✅ | |
+| spawn + multi-instance | | | | | | | | | | | | | | | | | ✅ |
