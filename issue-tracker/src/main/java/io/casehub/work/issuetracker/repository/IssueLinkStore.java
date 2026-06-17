@@ -17,7 +17,7 @@ import io.casehub.work.issuetracker.model.WorkItemIssueLink;
  * <strong>CDI backend activation:</strong><br>
  * Tier 1: {@code @ApplicationScoped} (JPA/SQL, default) — {@code casehub-work-issue-tracker}.<br>
  * Tier 3: {@code @Alternative @Priority(100)} (in-memory, ephemeral) — {@code casehub-work-persistence-memory}.<br>
- * No Tier 2 (MongoDB) exists yet (tracked as casehubio/work#253).
+ * Tier 2: {@code @Alternative @Priority(1)} (MongoDB) — {@code casehub-work-persistence-mongodb}.
  */
 public interface IssueLinkStore {
 

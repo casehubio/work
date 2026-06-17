@@ -25,6 +25,12 @@ selects it automatically. Translates WorkItemQuery to MongoDB Document filters.<
       <version>${project.version}</version>
     </dependency>
 
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-work-issue-tracker</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
     <!-- MongoDB with Panache -->
     <dependency>
       <groupId>io.quarkus</groupId>

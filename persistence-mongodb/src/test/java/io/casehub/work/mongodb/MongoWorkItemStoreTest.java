@@ -18,13 +18,14 @@ import io.casehub.work.runtime.model.WorkItemLabel;
 import io.casehub.work.runtime.model.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.runtime.repository.WorkItemStore;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class MongoWorkItemStoreTest {
 
     @Inject
-    MongoWorkItemStore store;
+    WorkItemStore store;
 
     @BeforeEach
     void clearAll() {

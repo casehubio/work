@@ -31,5 +31,5 @@ Use `ide_find_class` / `ide_find_symbol` to locate specific classes. This file d
 | `queues-postgres-broadcaster/` | Optional distributed SSE for queue events (`casehub_work_queue_events`); depends on `casehub-work-queues` + `quarkus-reactive-pg-client` |
 | `issue-tracker/` | Optional issue-tracker link module; `IssueTrackerProvider` SPI; GitHub and Jira webhook handlers. Flyway V5000. |
 | `examples/` | Runnable scenario demos; each runs via `POST /examples/{name}/run` |
-| `persistence-mongodb/` | Optional MongoDB-backed WorkItemStore and AuditEntryStore; Tier 2 `@Alternative @Priority(1)` |
+| `persistence-mongodb/` | Optional MongoDB-backed stores for all runtime/core/issue-tracker SPIs; Tier 2 `@Alternative @Priority(1)`. Drop-in replacement for JPA — add to classpath, no consumer changes needed. |
 | `integration-tests/` | `@QuarkusIntegrationTest` suite and native image validation |

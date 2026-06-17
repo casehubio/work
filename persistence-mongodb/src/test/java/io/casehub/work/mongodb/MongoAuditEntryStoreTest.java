@@ -12,13 +12,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.model.AuditEntry;
+import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class MongoAuditEntryStoreTest {
 
     @Inject
-    MongoAuditEntryStore store;
+    AuditEntryStore store;
 
     @BeforeEach
     void clearAll() {
