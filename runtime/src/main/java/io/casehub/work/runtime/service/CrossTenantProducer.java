@@ -9,9 +9,6 @@ import io.casehub.work.runtime.repository.CrossTenant;
 import io.casehub.work.runtime.repository.CrossTenantRoutingCursorStore;
 import io.casehub.work.runtime.repository.CrossTenantWorkItemScheduleStore;
 import io.casehub.work.runtime.repository.CrossTenantWorkItemStore;
-import io.casehub.work.runtime.repository.jpa.JpaCrossTenantRoutingCursorStore;
-import io.casehub.work.runtime.repository.jpa.JpaCrossTenantWorkItemScheduleStore;
-import io.casehub.work.runtime.repository.jpa.JpaCrossTenantWorkItemStore;
 
 /**
  * CDI producer for {@code @CrossTenant} store variants.
@@ -40,13 +37,13 @@ public class CrossTenantProducer {
     CurrentPrincipal systemPrincipal;
 
     @Inject
-    JpaCrossTenantWorkItemStore crossTenantWorkItemStore;
+    CrossTenantWorkItemStore crossTenantWorkItemStore;
 
     @Inject
-    JpaCrossTenantWorkItemScheduleStore crossTenantScheduleStore;
+    CrossTenantWorkItemScheduleStore crossTenantScheduleStore;
 
     @Inject
-    JpaCrossTenantRoutingCursorStore crossTenantCursorStore;
+    CrossTenantRoutingCursorStore crossTenantCursorStore;
 
     /**
      * Produces a {@code @CrossTenant} {@link CrossTenantWorkItemStore}.
