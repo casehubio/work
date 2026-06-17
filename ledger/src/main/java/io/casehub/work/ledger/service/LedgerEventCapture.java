@@ -167,13 +167,18 @@ public class LedgerEventCapture {
             final java.util.List<LedgerMerkleFrontier> current = em
                     .createNamedQuery("LedgerMerkleFrontier.findBySubjectId", LedgerMerkleFrontier.class)
                     .setParameter("subjectId", entry.subjectId)
+                    .setParameter("tenancyId", entry.tenancyId)
                     .getResultList();
             final java.util.List<LedgerMerkleFrontier> newFrontier = LedgerMerkleTree.append(entry.digest, current,
                     entry.subjectId);
-            em.createQuery("DELETE FROM LedgerMerkleFrontier f WHERE f.subjectId = :subjectId")
+            em.createQuery("DELETE FROM LedgerMerkleFrontier f WHERE f.subjectId = :subjectId AND f.tenancyId = :tenancyId")
                     .setParameter("subjectId", entry.subjectId)
+                    .setParameter("tenancyId", entry.tenancyId)
                     .executeUpdate();
-            newFrontier.forEach(em::persist);
+            newFrontier.forEach(f -> {
+                f.tenancyId = entry.tenancyId;
+                em.persist(f);
+            });
         }
     }
 
