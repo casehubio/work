@@ -15,7 +15,6 @@ import jakarta.persistence.OptimisticLockException;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
-import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.ReturnDocument;
@@ -45,9 +44,6 @@ public class MongoWorkItemSpawnGroupStore implements WorkItemSpawnGroupStore {
 
     @Inject
     CurrentPrincipal currentPrincipal;
-
-    @Inject
-    MongoClient mongoClient;
 
     @Override
     public WorkItemSpawnGroup put(final WorkItemSpawnGroup group) {
@@ -93,17 +89,17 @@ public class MongoWorkItemSpawnGroupStore implements WorkItemSpawnGroupStore {
                     Updates.set("policyTriggered", group.policyTriggered),
                     Updates.inc("version", 1L));
 
-            final Document result = mongoClient.getDatabase("workitems")
-                    .getCollection("work_item_spawn_groups")
-                    .findOneAndUpdate(filter, update,
-                            new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER));
+            final MongoWorkItemSpawnGroupDocument result = (MongoWorkItemSpawnGroupDocument)
+                    MongoWorkItemSpawnGroupDocument.mongoCollection()
+                            .findOneAndUpdate(filter, update,
+                                    new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER));
 
             if (result == null) {
                 throw new OptimisticLockException(
                         "Version conflict on WorkItemSpawnGroup " + idStr);
             }
 
-            group.version = result.getLong("version");
+            group.version = result.version;
         }
         return group;
     }

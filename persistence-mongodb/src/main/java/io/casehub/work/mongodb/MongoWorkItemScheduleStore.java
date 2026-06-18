@@ -15,7 +15,6 @@ import jakarta.persistence.OptimisticLockException;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
-import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.ReturnDocument;
@@ -45,9 +44,6 @@ public class MongoWorkItemScheduleStore implements WorkItemScheduleStore {
 
     @Inject
     CurrentPrincipal currentPrincipal;
-
-    @Inject
-    MongoClient mongoClient;
 
     @Override
     public WorkItemSchedule put(final WorkItemSchedule schedule) {
@@ -90,17 +86,17 @@ public class MongoWorkItemScheduleStore implements WorkItemScheduleStore {
                     Updates.set("nextFireAt", schedule.nextFireAt),
                     Updates.inc("version", 1L));
 
-            final Document result = mongoClient.getDatabase("workitems")
-                    .getCollection("work_item_schedules")
-                    .findOneAndUpdate(filter, update,
-                            new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER));
+            final MongoWorkItemScheduleDocument result = (MongoWorkItemScheduleDocument)
+                    MongoWorkItemScheduleDocument.mongoCollection()
+                            .findOneAndUpdate(filter, update,
+                                    new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER));
 
             if (result == null) {
                 throw new OptimisticLockException(
                         "Version conflict on WorkItemSchedule " + idStr);
             }
 
-            schedule.version = result.getLong("version");
+            schedule.version = result.version;
         }
         return schedule;
     }

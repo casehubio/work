@@ -9,7 +9,6 @@ import jakarta.inject.Inject;
 
 import org.bson.Document;
 
-import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.ReturnDocument;
 
@@ -46,9 +45,6 @@ public class MongoRoutingCursorStore implements RoutingCursorStore {
     @Inject
     CurrentPrincipal currentPrincipal;
 
-    @Inject
-    MongoClient mongoClient;
-
     @Override
     public int acquireNext(final String poolHash, final int poolSize) {
         final String id = poolHash + ":" + currentPrincipal.tenancyId();
@@ -66,13 +62,11 @@ public class MongoRoutingCursorStore implements RoutingCursorStore {
                 .upsert(true)
                 .returnDocument(ReturnDocument.AFTER);
 
-        final Document result = mongoClient.getDatabase("workitems")
-                .getCollection("routing_cursors")
-                .findOneAndUpdate(filter, update, options);
+        final MongoRoutingCursorDocument result = (MongoRoutingCursorDocument)
+                MongoRoutingCursorDocument.mongoCollection()
+                        .findOneAndUpdate(filter, update, options);
 
-        // Returned value is 1-based (first call returns 1, second returns 2, etc.)
-        // Convert to 0-based index
-        final long rawIndex = result.getLong("lastIndex") - 1;
+        final long rawIndex = result.lastIndex - 1;
         return Math.floorMod(rawIndex, poolSize);
     }
 }

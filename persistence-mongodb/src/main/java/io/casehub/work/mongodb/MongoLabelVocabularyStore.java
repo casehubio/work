@@ -12,7 +12,6 @@ import jakarta.inject.Inject;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
-import com.mongodb.client.MongoClient;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.ReturnDocument;
@@ -43,9 +42,6 @@ public class MongoLabelVocabularyStore implements LabelVocabularyStore {
 
     @Inject
     CurrentPrincipal currentPrincipal;
-
-    @Inject
-    MongoClient mongoClient;
 
     @Override
     public LabelVocabulary put(final LabelVocabulary vocabulary) {
@@ -109,24 +105,15 @@ public class MongoLabelVocabularyStore implements LabelVocabularyStore {
                 .upsert(true)
                 .returnDocument(ReturnDocument.AFTER);
 
-        // Execute atomic findOneAndUpdate
-        final Document result = mongoClient.getDatabase("workitems")
-                .getCollection("label_vocabularies")
-                .findOneAndUpdate(filter, update, options);
+        final MongoLabelVocabularyDocument result = (MongoLabelVocabularyDocument)
+                MongoLabelVocabularyDocument.mongoCollection()
+                        .findOneAndUpdate(filter, update, options);
 
         if (result == null) {
             throw new IllegalStateException("Unexpected null result from findOneAndUpdate with upsert");
         }
 
-        // Convert result document back to domain
-        final LabelVocabulary vocabulary = new LabelVocabulary();
-        vocabulary.id = UUID.fromString(result.getString("_id"));
-        vocabulary.tenancyId = result.getString("tenancyId");
-        final String scopeValue = result.getString("scope");
-        vocabulary.scope = (scopeValue == null || scopeValue.isEmpty()) ? Path.root() : Path.parse(scopeValue);
-        vocabulary.name = result.getString("name");
-
-        return vocabulary;
+        return result.toDomain();
     }
 
     @Override
