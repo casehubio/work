@@ -107,7 +107,7 @@ public class FilterRegistryEngine {
     private FilterEvent toFilterEvent(final WorkEventType eventType) {
         return switch (eventType) {
             case CREATED -> FilterEvent.ADD;
-            case COMPLETED, REJECTED, CANCELLED, EXPIRED, ESCALATED -> FilterEvent.REMOVE;
+            case COMPLETED, REJECTED, FAULTED, CANCELLED, OBSOLETE, EXPIRED, ESCALATED -> FilterEvent.REMOVE;
             default -> FilterEvent.UPDATE;
         };
     }

@@ -20,7 +20,17 @@ public enum WorkItemStatus {
     /** WorkItem was rejected by the assignee or a reviewer. */
     REJECTED,
 
-    /** WorkItem has been delegated to another actor. */
+    /** System or infrastructure failure — distinct from {@link #REJECTED} (actor's deliberate decision).
+     *  FAULTED means the system hosting or processing this WorkItem failed.
+     *  PENDING→FAULTED means infrastructure failed before anyone could act. */
+    FAULTED,
+
+    /** WorkItem has been forwarded to a named actor for acceptance — pre-acceptance hold.
+     *  Non-terminal: the named actor must call {@code acceptDelegation()} or {@code declineDelegation()}.
+     *  <p><strong>Cross-system semantics differ:</strong>
+     *  {@code CommitmentState.DELEGATED} (casehub-qhorus) is <em>terminal</em> — obligation transferred
+     *  and discharged. {@code PlanItemStatus.DELEGATED} (casehub-engine) means control passed to an
+     *  external actor (broader). See {@code docs/LIFECYCLE.md} for cross-system DELEGATED semantics. */
     DELEGATED,
 
     /** WorkItem has been temporarily suspended and is awaiting resumption. */
@@ -33,19 +43,24 @@ public enum WorkItemStatus {
     EXPIRED,
 
     /** WorkItem was escalated due to expiry or policy breach. */
-    ESCALATED;
+    ESCALATED,
+
+    /** WorkItem superseded by context change — the case context changed, making this work irrelevant.
+     *  Distinct from {@link #CANCELLED} (deliberate stop by a human or system).
+     *  Typically triggered by the engine or an orchestrator, not by the actor. */
+    OBSOLETE;
 
     /**
      * Returns {@code true} if this status represents a terminal (end) state from
      * which the WorkItem cannot transition further under normal lifecycle rules.
-     * Terminal statuses are: {@link #COMPLETED}, {@link #REJECTED},
-     * {@link #CANCELLED}, and {@link #ESCALATED}.
+     * Terminal statuses are: {@link #COMPLETED}, {@link #REJECTED}, {@link #FAULTED},
+     * {@link #CANCELLED}, {@link #OBSOLETE}, {@link #EXPIRED}, and {@link #ESCALATED}.
      *
      * @return {@code true} when the WorkItem has reached a terminal state
      */
     public boolean isTerminal() {
         return switch (this) {
-            case COMPLETED, REJECTED, CANCELLED, ESCALATED, EXPIRED -> true;
+            case COMPLETED, REJECTED, FAULTED, CANCELLED, OBSOLETE, EXPIRED, ESCALATED -> true;
             default -> false;
         };
     }

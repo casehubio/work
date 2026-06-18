@@ -79,6 +79,8 @@ public final class WorkItemContextBuilder {
         map.put("excludedUsers", workItem.excludedUsers);
         map.put("scope", workItem.scope);
         map.put("tenancyId", workItem.tenancyId);
+        map.put("percentComplete", workItem.percentComplete);
+        map.put("statusNote", workItem.statusNote);
         return map;
     }
 }

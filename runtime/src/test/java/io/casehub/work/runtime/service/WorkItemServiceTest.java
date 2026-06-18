@@ -1317,4 +1317,244 @@ class WorkItemServiceTest {
     void findById_unknownId_returnsEmpty() {
         assertThat(service.findById(UUID.randomUUID())).isEmpty();
     }
+
+    // -------------------------------------------------------------------------
+    // Happy paths — fault
+    // -------------------------------------------------------------------------
+
+    @Test
+    void fault_fromPending_transitionsToFaulted() {
+        WorkItem wi = service.create(basicRequest());
+        wi = service.fault(wi.id, "system", "infrastructure failure");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+    }
+
+    @Test
+    void fault_fromAssigned_transitionsToFaulted() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        wi = service.fault(wi.id, "system", "agent timeout");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+    }
+
+    @Test
+    void fault_fromInProgress_transitionsToFaulted() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        wi = service.fault(wi.id, "system", "context overflow");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+    }
+
+    @Test
+    void fault_fromSuspended_transitionsToFaulted() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.suspend(wi.id, "alice", "paused");
+        wi = service.fault(wi.id, "system", "host crashed");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+    }
+
+    @Test
+    void fault_fromDelegated_transitionsToFaulted() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.delegate(wi.id, "alice", "bob", null);
+        wi = service.fault(wi.id, "system", "delegation target unreachable");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+    }
+
+    @Test
+    void fault_setsCompletedAt() {
+        WorkItem wi = service.create(basicRequest());
+        wi = service.fault(wi.id, "system", "failure");
+        assertThat(wi.completedAt).isNotNull();
+    }
+
+    @Test
+    void fault_setsResolution() {
+        WorkItem wi = service.create(basicRequest());
+        wi = service.fault(wi.id, "system", "API timeout");
+        assertThat(wi.resolution).isEqualTo("API timeout");
+    }
+
+    @Test
+    void fault_fromTerminal_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        service.complete(wi.id, "alice", "done", null);
+        final UUID id = wi.id;
+        assertThatThrownBy(() -> service.fault(id, "system", "too late"))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void faultFromSystem_fromPending_transitionsToFaulted() {
+        WorkItem wi = service.create(basicRequest());
+        wi = service.faultFromSystem(wi.id, "system", "infrastructure failure");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+    }
+
+    @Test
+    void faultFromSystem_fromTerminal_returnsSilently() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        service.complete(wi.id, "alice", "done", null);
+        wi = service.faultFromSystem(wi.id, "system", "too late");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.COMPLETED);
+    }
+
+    // -------------------------------------------------------------------------
+    // Happy paths — obsolete
+    // -------------------------------------------------------------------------
+
+    @Test
+    void obsolete_fromPending_transitionsToObsolete() {
+        WorkItem wi = service.create(basicRequest());
+        wi = service.obsolete(wi.id, "system", "case withdrawn");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.OBSOLETE);
+    }
+
+    @Test
+    void obsolete_fromInProgress_transitionsToObsolete() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        wi = service.obsolete(wi.id, "system", "context changed");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.OBSOLETE);
+    }
+
+    @Test
+    void obsolete_setsCompletedAt() {
+        WorkItem wi = service.create(basicRequest());
+        wi = service.obsolete(wi.id, "system", "superseded");
+        assertThat(wi.completedAt).isNotNull();
+    }
+
+    @Test
+    void obsolete_setsResolution() {
+        WorkItem wi = service.create(basicRequest());
+        wi = service.obsolete(wi.id, "system", "trial withdrawn");
+        assertThat(wi.resolution).isEqualTo("trial withdrawn");
+    }
+
+    @Test
+    void obsolete_fromTerminal_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        service.complete(wi.id, "alice", "done", null);
+        final UUID id = wi.id;
+        assertThatThrownBy(() -> service.obsolete(id, "system", "too late"))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void obsoleteFromSystem_fromPending_transitionsToObsolete() {
+        WorkItem wi = service.create(basicRequest());
+        wi = service.obsoleteFromSystem(wi.id, "system", "context changed");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.OBSOLETE);
+    }
+
+    @Test
+    void obsoleteFromSystem_fromTerminal_returnsSilently() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        service.complete(wi.id, "alice", "done", null);
+        wi = service.obsoleteFromSystem(wi.id, "system", "too late");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.COMPLETED);
+    }
+
+    // -------------------------------------------------------------------------
+    // Happy paths — cancelFromSystem
+    // -------------------------------------------------------------------------
+
+    @Test
+    void cancelFromSystem_fromPending_transitionsToCancelled() {
+        WorkItem wi = service.create(basicRequest());
+        wi = service.cancelFromSystem(wi.id, "system", "group policy");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.CANCELLED);
+    }
+
+    @Test
+    void cancelFromSystem_fromTerminal_returnsSilently() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        service.complete(wi.id, "alice", "done", null);
+        wi = service.cancelFromSystem(wi.id, "system", "too late");
+        assertThat(wi.status).isEqualTo(WorkItemStatus.COMPLETED);
+    }
+
+    // -------------------------------------------------------------------------
+    // Happy paths — progress
+    // -------------------------------------------------------------------------
+
+    @Test
+    void progress_updatesPercentComplete() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        wi = service.progress(wi.id, "alice", 42, "reviewing clause 14");
+        assertThat(wi.percentComplete).isEqualTo(42);
+    }
+
+    @Test
+    void progress_updatesStatusNote() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        wi = service.progress(wi.id, "alice", 80, "almost done");
+        assertThat(wi.statusNote).isEqualTo("almost done");
+    }
+
+    @Test
+    void progress_doesNotChangeStatus() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        wi = service.progress(wi.id, "alice", 50, null);
+        assertThat(wi.status).isEqualTo(WorkItemStatus.IN_PROGRESS);
+    }
+
+    @Test
+    void progress_allowsNullPercentComplete() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        wi = service.progress(wi.id, "alice", null, "status update only");
+        assertThat(wi.percentComplete).isNull();
+        assertThat(wi.statusNote).isEqualTo("status update only");
+    }
+
+    @Test
+    void progress_fromPending_throws() {
+        WorkItem wi = service.create(basicRequest());
+        final UUID id = wi.id;
+        assertThatThrownBy(() -> service.progress(id, "alice", 50, "nope"))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void progress_fromAssigned_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        final UUID id = wi.id;
+        assertThatThrownBy(() -> service.progress(id, "alice", 50, "nope"))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void progress_fromTerminal_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "alice");
+        service.start(wi.id, "alice");
+        service.complete(wi.id, "alice", "done", null);
+        final UUID id = wi.id;
+        assertThatThrownBy(() -> service.progress(id, "alice", 50, "too late"))
+                .isInstanceOf(IllegalStateException.class);
+    }
 }

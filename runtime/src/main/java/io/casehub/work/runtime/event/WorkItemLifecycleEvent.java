@@ -230,11 +230,7 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
     @Override
     public WorkEventType eventType() {
         final String name = type.substring(type.lastIndexOf('.') + 1).toUpperCase();
-        try {
-            return WorkEventType.valueOf(name);
-        } catch (final IllegalArgumentException e) {
-            return WorkEventType.CREATED;
-        }
+        return WorkEventType.valueOf(name);
     }
 
     @JsonIgnore

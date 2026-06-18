@@ -62,6 +62,8 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
     public Instant startedAt;
     public Instant completedAt;
     public Instant suspendedAt;
+    public Integer percentComplete;
+    public String statusNote;
     public List<MongoLabel> labels = new ArrayList<>();
 
     /** Embedded label document. */
@@ -102,6 +104,8 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
         doc.startedAt = wi.startedAt;
         doc.completedAt = wi.completedAt;
         doc.suspendedAt = wi.suspendedAt;
+        doc.percentComplete = wi.percentComplete;
+        doc.statusNote = wi.statusNote;
         if (wi.labels != null) {
             doc.labels = wi.labels.stream().map(l -> {
                 final MongoLabel ml = new MongoLabel();
@@ -145,6 +149,8 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
         wi.startedAt = startedAt;
         wi.completedAt = completedAt;
         wi.suspendedAt = suspendedAt;
+        wi.percentComplete = percentComplete;
+        wi.statusNote = statusNote;
         wi.labels = labels != null ? labels.stream().map(ml -> {
             final WorkItemLabel label = new WorkItemLabel();
             label.path = ml.path;

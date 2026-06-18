@@ -30,7 +30,9 @@ public final class WorkItemMapper {
                 wi.inputDataSchema,
                 wi.outputDataSchema,
                 wi.excludedUsers,
-                wi.scope);
+                wi.scope,
+                wi.percentComplete,
+                wi.statusNote);
     }
 
     public static AuditEntryResponse toAuditResponse(final AuditEntry e) {
@@ -58,7 +60,9 @@ public final class WorkItemMapper {
                 wi.inputDataSchema,
                 wi.outputDataSchema,
                 wi.excludedUsers,
-                wi.scope);
+                wi.scope,
+                wi.percentComplete,
+                wi.statusNote);
     }
 
     public static WorkItemCreateRequest toServiceRequest(final CreateWorkItemRequest req) {

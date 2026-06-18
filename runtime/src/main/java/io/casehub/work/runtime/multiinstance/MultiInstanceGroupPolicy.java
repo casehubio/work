@@ -117,11 +117,11 @@ public class MultiInstanceGroupPolicy {
     }
 
     private void cancelRemainingChildren(final WorkItemSpawnGroup group) {
-        final List<WorkItemStatus> terminalStatuses = List.of(
-                WorkItemStatus.COMPLETED, WorkItemStatus.CANCELLED,
-                WorkItemStatus.REJECTED, WorkItemStatus.EXPIRED);
-        workItemStore.findByParentIdExcludingStatuses(group.parentId, terminalStatuses)
-                .forEach(child -> workItemService.cancel(child.id, "system:multi-instance",
+        workItemStore.findByParentIdExcludingStatuses(group.parentId,
+                java.util.Arrays.stream(WorkItemStatus.values())
+                        .filter(WorkItemStatus::isTerminal)
+                        .toList())
+                .forEach(child -> workItemService.cancelFromSystem(child.id, "system:multi-instance",
                         "threshold-met — cancelled by group policy"));
     }
 

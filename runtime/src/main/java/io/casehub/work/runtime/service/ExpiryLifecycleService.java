@@ -310,7 +310,7 @@ public class ExpiryLifecycleService {
             timerService.rescheduleClaimDeadline(item.id, item.claimDeadline);
         }
         writeAudit(item, "SLA_EXTENDED", null, now);
-        // No lifecycle event — deadline extension is not a status transition
+        fireLifecycleEvent("SLA_EXTENDED", item);
         return extend;
     }
 

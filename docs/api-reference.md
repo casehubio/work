@@ -62,6 +62,8 @@ Returned by most lifecycle endpoints.
 | `outputDataSchema` | string (nullable) | JSON Schema for resolution validation |
 | `excludedUsers` | string (nullable) | Comma-separated excluded user IDs |
 | `scope` | string (nullable) | Hierarchical scope path |
+| `percentComplete` | integer (nullable) | Progress percentage (0–100), updated via `PUT /workitems/{id}/progress` |
+| `statusNote` | string (nullable) | Free-text status note from actor |
 
 ### WorkItemStatus
 
@@ -74,8 +76,10 @@ Returned by most lifecycle endpoints.
 | `SUSPENDED` | no | Paused |
 | `COMPLETED` | yes | Finished successfully |
 | `REJECTED` | yes | Finished with rejection |
+| `FAULTED` | yes | System or infrastructure failure (distinct from REJECTED — not a deliberate decision) |
 | `CANCELLED` | yes | Cancelled |
-| `ESCALATED` | yes | Escalated by SLA breach policy |
+| `OBSOLETE` | yes | Superseded by context change (distinct from CANCELLED — not a deliberate stop) |
+| `ESCALATED` | yes | All SLA breach policy branches exhausted |
 | `EXPIRED` | yes | Exceeded expiry deadline |
 
 ---
@@ -415,6 +419,67 @@ Extends a WorkItem's expiry deadline.
 **Body:** `WorkItemResponse`
 
 **Error:** `400` — `newExpiresAt` is in the past
+
+---
+
+### PUT /workitems/{id}/fault
+
+Marks a WorkItem as FAULTED — system or infrastructure failure. Callable from any non-terminal state.
+
+**Path parameter:** `id` — UUID
+
+**Request body:** `FaultRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `actor` | string | yes | System actor or agent ID |
+| `errorDetail` | string | no | Error description (stored as resolution) |
+
+**Response:** `200 OK`
+**Body:** `WorkItemResponse`
+
+**Error:** `400` — WorkItem is already terminal
+
+---
+
+### PUT /workitems/{id}/obsolete
+
+Marks a WorkItem as OBSOLETE — superseded by context change. Callable from any non-terminal state. Intended for engine/orchestrator use; actors should call cancel instead.
+
+**Path parameter:** `id` — UUID
+
+**Request body:** `ObsoleteRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `actor` | string | yes | Triggering system or identity |
+| `reason` | string | no | Reason for obsolescence (stored as resolution) |
+
+**Response:** `200 OK`
+**Body:** `WorkItemResponse`
+
+**Error:** `400` — WorkItem is already terminal
+
+---
+
+### PUT /workitems/{id}/progress
+
+Reports progress on an IN_PROGRESS WorkItem. Updates percentComplete and statusNote without changing status.
+
+**Path parameter:** `id` — UUID
+**Header:** `X-Actor-Id` — string (actor reporting progress)
+
+**Request body:** `ProgressRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `percentComplete` | integer (0–100) | no | Progress percentage |
+| `statusNote` | string | no | Free-text status note |
+
+**Response:** `200 OK`
+**Body:** `WorkItemResponse`
+
+**Error:** `400` — WorkItem is not IN_PROGRESS
 
 ---
 

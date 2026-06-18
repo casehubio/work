@@ -638,6 +638,125 @@ public class WorkItemService {
     }
 
     @Transactional
+    public WorkItem fault(final UUID id, final String systemActorId, final String errorDetail) {
+        final WorkItem item = requireWorkItem(id);
+        if (item.status.isTerminal()) {
+            throw new IllegalStateException("Cannot fault WorkItem in status: " + item.status);
+        }
+        item.status = WorkItemStatus.FAULTED;
+        item.completedAt = Instant.now();
+        item.resolution = errorDetail;
+        final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
+        audit(saved.id, "FAULTED", systemActorId, errorDetail);
+        if (lifecycleEvent != null) {
+            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("FAULTED", saved, systemActorId, errorDetail);
+            lifecycleEvent.fire(evt);
+            lifecycleEvent.fireAsync(evt);
+        }
+        return saved;
+    }
+
+    @Transactional
+    public WorkItem faultFromSystem(final UUID id, final String actorId, final String errorDetail) {
+        final WorkItem item = requireWorkItem(id);
+        if (item.status.isTerminal())
+            return item;
+        item.status = WorkItemStatus.FAULTED;
+        item.completedAt = Instant.now();
+        item.resolution = errorDetail;
+        final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
+        audit(saved.id, "FAULTED", actorId, errorDetail);
+        if (lifecycleEvent != null) {
+            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("FAULTED", saved, actorId, errorDetail);
+            lifecycleEvent.fire(evt);
+            lifecycleEvent.fireAsync(evt);
+        }
+        return saved;
+    }
+
+    @Transactional
+    public WorkItem obsolete(final UUID id, final String triggeredBy, final String reason) {
+        final WorkItem item = requireWorkItem(id);
+        if (item.status.isTerminal()) {
+            throw new IllegalStateException("Cannot obsolete WorkItem in status: " + item.status);
+        }
+        item.status = WorkItemStatus.OBSOLETE;
+        item.completedAt = Instant.now();
+        item.resolution = reason;
+        final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
+        audit(saved.id, "OBSOLETE", triggeredBy, reason);
+        if (lifecycleEvent != null) {
+            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("OBSOLETE", saved, triggeredBy, reason);
+            lifecycleEvent.fire(evt);
+            lifecycleEvent.fireAsync(evt);
+        }
+        return saved;
+    }
+
+    @Transactional
+    public WorkItem obsoleteFromSystem(final UUID id, final String triggeredBy, final String reason) {
+        final WorkItem item = requireWorkItem(id);
+        if (item.status.isTerminal())
+            return item;
+        item.status = WorkItemStatus.OBSOLETE;
+        item.completedAt = Instant.now();
+        item.resolution = reason;
+        final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
+        audit(saved.id, "OBSOLETE", triggeredBy, reason);
+        if (lifecycleEvent != null) {
+            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("OBSOLETE", saved, triggeredBy, reason);
+            lifecycleEvent.fire(evt);
+            lifecycleEvent.fireAsync(evt);
+        }
+        return saved;
+    }
+
+    @Transactional
+    public WorkItem cancelFromSystem(final UUID id, final String actorId, final String reason) {
+        final WorkItem item = requireWorkItem(id);
+        if (item.status.isTerminal())
+            return item;
+        item.status = WorkItemStatus.CANCELLED;
+        item.completedAt = Instant.now();
+        final WorkItem saved = workItemStore.put(item);
+        timerService.cancelExpiry(saved.id);
+        timerService.cancelClaimDeadline(saved.id);
+        audit(saved.id, "CANCELLED", actorId, reason);
+        if (lifecycleEvent != null) {
+            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("CANCELLED", saved, actorId, reason);
+            lifecycleEvent.fire(evt);
+            lifecycleEvent.fireAsync(evt);
+        }
+        return saved;
+    }
+
+    @Transactional
+    public WorkItem progress(final UUID id, final String actorId, final Integer percentComplete,
+            final String statusNote) {
+        final WorkItem item = requireWorkItem(id);
+        if (item.status != WorkItemStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Cannot report progress for WorkItem in status: " + item.status);
+        }
+        item.percentComplete = percentComplete;
+        item.statusNote = statusNote;
+        item.updatedAt = Instant.now();
+        final WorkItem saved = workItemStore.put(item);
+        audit(saved.id, "PROGRESS_UPDATE", actorId, statusNote);
+        if (lifecycleEvent != null) {
+            lifecycleEvent.fire(WorkItemLifecycleEvent.of("PROGRESS_UPDATE", saved, actorId, statusNote));
+        }
+        return saved;
+    }
+
+    @Transactional
     public WorkItem extend(final UUID id, final Instant newExpiresAt, final String actorId) {
         if (newExpiresAt == null) {
             throw new IllegalArgumentException("newExpiresAt is required");

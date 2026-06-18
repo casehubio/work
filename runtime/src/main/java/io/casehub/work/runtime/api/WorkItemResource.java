@@ -341,6 +341,32 @@ public class WorkItemResource {
     }
 
     @PUT
+    @Path("/{id}/fault")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response fault(@PathParam("id") final UUID id, final FaultRequest body) {
+        final WorkItem saved = workItemService.fault(id, body.actor(), body.errorDetail());
+        return Response.ok(WorkItemMapper.toResponse(saved)).build();
+    }
+
+    @PUT
+    @Path("/{id}/obsolete")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response obsolete(@PathParam("id") final UUID id, final ObsoleteRequest body) {
+        final WorkItem saved = workItemService.obsolete(id, body.actor(), body.reason());
+        return Response.ok(WorkItemMapper.toResponse(saved)).build();
+    }
+
+    @PUT
+    @Path("/{id}/progress")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response progress(@PathParam("id") final UUID id,
+            @QueryParam("actor") final String actor,
+            final ProgressRequest body) {
+        final WorkItem saved = workItemService.progress(id, actor, body.percentComplete(), body.statusNote());
+        return Response.ok(WorkItemMapper.toResponse(saved)).build();
+    }
+
+    @PUT
     @Path("/{id}/extend")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response extend(@PathParam("id") final UUID id,

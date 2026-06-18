@@ -331,6 +331,14 @@ public class WorkItem extends PanacheEntityBase {
     @Column(name = "output_data_schema", columnDefinition = "TEXT")
     public String outputDataSchema;
 
+    /** Progress percentage reported by the actor (0–100). Nullable — null means no progress reported. */
+    @Column(name = "percent_complete")
+    public Integer percentComplete;
+
+    /** Free-text status note from the actor (e.g. "reviewing clause 14/22"). Nullable. */
+    @Column(name = "status_note", columnDefinition = "TEXT")
+    public String statusNote;
+
     // -------------------------------------------------------------------------
     // JPA lifecycle callbacks
     // -------------------------------------------------------------------------

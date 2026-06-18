@@ -72,6 +72,26 @@ class WorkItemStatusTest {
     }
 
     @Test
+    void faulted_isTerminal() {
+        assertThat(WorkItemStatus.FAULTED.isTerminal()).isTrue();
+    }
+
+    @Test
+    void faulted_isNotActive() {
+        assertThat(WorkItemStatus.FAULTED.isActive()).isFalse();
+    }
+
+    @Test
+    void obsolete_isTerminal() {
+        assertThat(WorkItemStatus.OBSOLETE.isTerminal()).isTrue();
+    }
+
+    @Test
+    void obsolete_isNotActive() {
+        assertThat(WorkItemStatus.OBSOLETE.isActive()).isFalse();
+    }
+
+    @Test
     void terminalStatusesAreNeverActive() {
         for (final WorkItemStatus s : WorkItemStatus.values()) {
             if (s.isTerminal()) {

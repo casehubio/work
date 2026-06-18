@@ -61,5 +61,9 @@ public record WorkItemWithAuditResponse(
         /** JSON Schema for resolution; snapshotted from template at instantiation. Null if unconstrained. */
         String outputDataSchema,
         String excludedUsers,
-        String scope) {
+        String scope,
+        /** Progress percentage (0–100); null when not set. */
+        Integer percentComplete,
+        /** Free-text progress note; null when not set. */
+        String statusNote) {
 }

@@ -58,11 +58,10 @@ public class ReportService extends TenantAwareStore {
         q.setHint("jakarta.persistence.query.timeout", 30_000);
         q.setParameter("tenancyId", currentPrincipal.tenancyId());
         q.setParameter("now", now);
-        q.setParameter("activeStatuses", List.of(
-                WorkItemStatus.PENDING, WorkItemStatus.ASSIGNED, WorkItemStatus.IN_PROGRESS,
-                WorkItemStatus.SUSPENDED, WorkItemStatus.ESCALATED, WorkItemStatus.EXPIRED));
-        q.setParameter("terminalStatuses", List.of(
-                WorkItemStatus.COMPLETED, WorkItemStatus.REJECTED, WorkItemStatus.CANCELLED));
+        q.setParameter("activeStatuses", java.util.Arrays.stream(WorkItemStatus.values())
+                .filter(WorkItemStatus::isActive).toList());
+        q.setParameter("terminalStatuses", java.util.Arrays.stream(WorkItemStatus.values())
+                .filter(WorkItemStatus::isTerminal).toList());
         if (from != null) {
             q.setParameter("from", from);
         }
@@ -217,9 +216,8 @@ public class ReportService extends TenantAwareStore {
 
     private QueueHealthReport queueHealthInternal(final String category, final WorkItemPriority priority) {
         final Instant now = Instant.now();
-        final List<WorkItemStatus> activeStatuses = List.of(
-                WorkItemStatus.PENDING, WorkItemStatus.ASSIGNED, WorkItemStatus.IN_PROGRESS,
-                WorkItemStatus.SUSPENDED, WorkItemStatus.ESCALATED, WorkItemStatus.EXPIRED);
+        final List<WorkItemStatus> activeStatuses = java.util.Arrays.stream(WorkItemStatus.values())
+                .filter(WorkItemStatus::isActive).toList();
 
         // overdueCount
         final StringBuilder overdueJpql = new StringBuilder(
@@ -366,9 +364,8 @@ public class ReportService extends TenantAwareStore {
         q.setParameter("tenancyId", currentPrincipal.tenancyId());
         q.setParameter("from", from);
         q.setParameter("to", to);
-        q.setParameter("terminalStatuses", List.of(
-                WorkItemStatus.COMPLETED, WorkItemStatus.REJECTED,
-                WorkItemStatus.CANCELLED, WorkItemStatus.ESCALATED));
+        q.setParameter("terminalStatuses", java.util.Arrays.stream(WorkItemStatus.values())
+                .filter(WorkItemStatus::isTerminal).toList());
         return q.getResultList();
     }
 }

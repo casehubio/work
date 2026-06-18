@@ -83,5 +83,9 @@ public record WorkItemResponse(
         /** Comma-separated user IDs excluded from this WorkItem; null = unconstrained. */
         String excludedUsers,
         /** Hierarchical scope path e.g. {@code "casehubio/devtown/pr-review"}; null = root scope. */
-        String scope) {
+        String scope,
+        /** Progress percentage (0–100); null when not set. */
+        Integer percentComplete,
+        /** Free-text progress note; null when not set. */
+        String statusNote) {
 }

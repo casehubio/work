@@ -10,11 +10,19 @@ public enum WorkEventType {
     STARTED,
     COMPLETED,
     REJECTED,
+    /** System or infrastructure failure. */
+    FAULTED,
     DELEGATED,
+    /** Delegatee accepted a targeted delegation. */
+    DELEGATION_ACCEPTED,
+    /** Delegatee declined a targeted delegation. */
+    DELEGATION_DECLINED,
     RELEASED,
     SUSPENDED,
     RESUMED,
     CANCELLED,
+    /** WorkItem superseded by context change. */
+    OBSOLETE,
     EXPIRED,
     /** Claim deadline passed without the work being claimed. */
     CLAIM_EXPIRED,
@@ -23,6 +31,16 @@ public enum WorkEventType {
     ESCALATED,
     /** expiresAt deadline was extended forward by an actor or breach policy. */
     DEADLINE_EXTENDED,
+    /** WorkItem re-routed to new candidate groups by SLA breach policy. */
+    SLA_REASSIGNED,
+    /** SLA breach policy extended the deadline. */
+    SLA_EXTENDED,
     /** An external signal was received and routed to this work unit. */
-    SIGNAL_RECEIVED
+    SIGNAL_RECEIVED,
+    /** Actor reported progress (percentComplete, statusNote). */
+    PROGRESS_UPDATE,
+    /** A label was added to the WorkItem. */
+    LABEL_ADDED,
+    /** A label was removed from the WorkItem. */
+    LABEL_REMOVED
 }
