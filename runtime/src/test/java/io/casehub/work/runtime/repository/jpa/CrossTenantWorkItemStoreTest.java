@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -67,25 +69,32 @@ class CrossTenantWorkItemStoreTest {
     }
 
     @Test
-    void findActiveWithDeadlines_excludes_terminal_statuses() {
+    void findActiveWithDeadlines_excludesAllTerminalStatuses() {
         principal.setTenancyId("tenant-a");
 
         WorkItem active = createItemWithExpiresAt("tenant-a");
         active.status = WorkItemStatus.IN_PROGRESS;
         inTx(() -> tenantStore.put(active));
 
-        WorkItem completed = createItemWithExpiresAt("tenant-a");
-        completed.status = WorkItemStatus.COMPLETED;
-        inTx(() -> tenantStore.put(completed));
-
-        WorkItem expired = createItemWithExpiresAt("tenant-a");
-        expired.status = WorkItemStatus.EXPIRED;
-        inTx(() -> tenantStore.put(expired));
+        List<UUID> terminalIds = new ArrayList<>();
+        for (WorkItemStatus status : WorkItemStatus.values()) {
+            if (status.isTerminal()) {
+                WorkItem terminal = createItemWithExpiresAt("tenant-a");
+                terminal.status = status;
+                inTx(() -> tenantStore.put(terminal));
+                terminalIds.add(terminal.id);
+            }
+        }
 
         var results = crossTenantStore.findActiveWithDeadlines();
-        assertThat(results.stream().anyMatch(wi -> wi.id.equals(active.id))).isTrue();
-        assertThat(results.stream().noneMatch(wi -> wi.id.equals(completed.id))).isTrue();
-        assertThat(results.stream().noneMatch(wi -> wi.id.equals(expired.id))).isTrue();
+        assertThat(results.stream().anyMatch(wi -> wi.id.equals(active.id)))
+                .as("Active item with deadline should be returned")
+                .isTrue();
+        for (UUID terminalId : terminalIds) {
+            assertThat(results.stream().noneMatch(wi -> wi.id.equals(terminalId)))
+                    .as("Terminal item %s should be excluded", terminalId)
+                    .isTrue();
+        }
     }
 
     @Test

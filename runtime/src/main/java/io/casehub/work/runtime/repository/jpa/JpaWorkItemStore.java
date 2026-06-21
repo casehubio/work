@@ -16,6 +16,7 @@ import io.casehub.work.api.GroupStatus;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRootView;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
+import io.casehub.work.runtime.model.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
@@ -183,10 +184,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
             return WorkItem.count(
                     "parentId = ?1 AND assigneeId = ?2 AND id != ?3 AND status NOT IN (?4) AND tenancyId = ?5",
                     parentId, assigneeId, excludeId,
-                    List.of(io.casehub.work.runtime.model.WorkItemStatus.COMPLETED,
-                            io.casehub.work.runtime.model.WorkItemStatus.REJECTED,
-                            io.casehub.work.runtime.model.WorkItemStatus.CANCELLED,
-                            io.casehub.work.runtime.model.WorkItemStatus.ESCALATED),
+                    WorkItemStatus.TERMINAL_STATUSES,
                     currentPrincipal.tenancyId());
         });
     }

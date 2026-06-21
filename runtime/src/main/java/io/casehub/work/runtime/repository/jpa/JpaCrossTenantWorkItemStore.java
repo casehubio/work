@@ -25,9 +25,7 @@ public class JpaCrossTenantWorkItemStore extends TenantAwareStore implements Cro
         return withCrossTenantQuery(() ->
             WorkItem.find(
                 "status NOT IN (?1) AND (expiresAt IS NOT NULL OR claimDeadline IS NOT NULL)",
-                List.of(WorkItemStatus.COMPLETED, WorkItemStatus.REJECTED,
-                        WorkItemStatus.CANCELLED, WorkItemStatus.EXPIRED,
-                        WorkItemStatus.ESCALATED))
+                WorkItemStatus.TERMINAL_STATUSES)
                 .list());
     }
 }

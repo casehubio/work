@@ -1,6 +1,5 @@
 package io.casehub.work.mongodb;
 
-import java.util.Arrays;
 import java.util.List;
 
 import jakarta.annotation.Priority;
@@ -26,16 +25,13 @@ import io.casehub.work.runtime.repository.CrossTenantWorkItemStore;
 @Priority(1)
 public class MongoCrossTenantWorkItemStore implements CrossTenantWorkItemStore {
 
-    private static final List<String> TERMINAL_STATUSES =
-            Arrays.stream(WorkItemStatus.values())
-                    .filter(WorkItemStatus::isTerminal)
-                    .map(Enum::name)
-                    .toList();
+    private static final List<String> TERMINAL_STATUS_NAMES =
+            WorkItemStatus.TERMINAL_STATUSES.stream().map(Enum::name).toList();
 
     @Override
     public List<WorkItem> findActiveWithDeadlines() {
         Document filter = new Document("$and", List.of(
-                new Document("status", new Document("$nin", TERMINAL_STATUSES)),
+                new Document("status", new Document("$nin", TERMINAL_STATUS_NAMES)),
                 new Document("$or", List.of(
                         new Document("expiresAt", new Document("$ne", null)),
                         new Document("claimDeadline", new Document("$ne", null))))));

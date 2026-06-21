@@ -3,6 +3,7 @@ package io.casehub.work.runtime.repository.jpa;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -189,5 +190,43 @@ class JpaWorkItemStoreTenancyTest {
         List<WorkItem> resultB = store.scanAll();
         assertThat(resultB).extracting(w -> w.id).contains(wiB.id);
         assertThat(resultB).extracting(w -> w.id).doesNotContain(wiA.id);
+    }
+
+    // -------------------------------------------------------------------------
+    // countByParentAndAssignee — terminal status exclusion
+    // -------------------------------------------------------------------------
+
+    @Test
+    void countByParentAndAssignee_excludesAllTerminalStatuses() {
+        principal.setTenancyId(TENANT_A);
+
+        WorkItem parent = newWorkItem("Parent");
+        store.put(parent);
+        final UUID parentId = parent.id;
+
+        // One active child as the baseline count
+        WorkItem activeChild = newWorkItem("Active child");
+        activeChild.parentId = parentId;
+        activeChild.assigneeId = "bob";
+        activeChild.status = WorkItemStatus.IN_PROGRESS;
+        store.put(activeChild);
+
+        // One child in each terminal status — none should be counted
+        List<WorkItemStatus> terminalStatuses = Arrays.stream(WorkItemStatus.values())
+                .filter(WorkItemStatus::isTerminal)
+                .toList();
+        for (WorkItemStatus status : terminalStatuses) {
+            WorkItem terminalChild = newWorkItem("Terminal-" + status);
+            terminalChild.parentId = parentId;
+            terminalChild.assigneeId = "bob";
+            terminalChild.status = status;
+            store.put(terminalChild);
+        }
+
+        long count = store.countByParentAndAssignee(parentId, "bob", UUID.randomUUID());
+        assertThat(count)
+                .as("Only non-terminal WorkItems should be counted — all %d terminal statuses must be excluded: %s",
+                        terminalStatuses.size(), terminalStatuses)
+                .isEqualTo(1L);
     }
 }

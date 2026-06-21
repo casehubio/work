@@ -1,5 +1,8 @@
 package io.casehub.work.runtime.model;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Lifecycle status of a {@link WorkItem}.
  */
@@ -49,6 +52,10 @@ public enum WorkItemStatus {
      *  Distinct from {@link #CANCELLED} (deliberate stop by a human or system).
      *  Typically triggered by the engine or an orchestrator, not by the actor. */
     OBSOLETE;
+
+    /** All terminal statuses, derived from {@link #isTerminal()}. Single source of truth for queries. */
+    public static final List<WorkItemStatus> TERMINAL_STATUSES =
+            Arrays.stream(values()).filter(WorkItemStatus::isTerminal).toList();
 
     /**
      * Returns {@code true} if this status represents a terminal (end) state from

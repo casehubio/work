@@ -2,6 +2,8 @@ package io.casehub.work.runtime.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
+
 import org.junit.jupiter.api.Test;
 
 class WorkItemStatusTest {
@@ -89,6 +91,16 @@ class WorkItemStatusTest {
     @Test
     void obsolete_isNotActive() {
         assertThat(WorkItemStatus.OBSOLETE.isActive()).isFalse();
+    }
+
+    @Test
+    void terminalStatusesConstant_matchesIsTerminal() {
+        var expected = Arrays.stream(WorkItemStatus.values())
+                .filter(WorkItemStatus::isTerminal)
+                .toList();
+        assertThat(WorkItemStatus.TERMINAL_STATUSES)
+                .as("TERMINAL_STATUSES constant must match isTerminal() for all enum values")
+                .containsExactlyInAnyOrderElementsOf(expected);
     }
 
     @Test

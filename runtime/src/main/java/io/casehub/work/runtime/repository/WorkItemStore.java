@@ -34,10 +34,24 @@ public interface WorkItemStore {
 
     /**
      * Persist or update a WorkItem and return the saved instance.
-     * Replaces the former {@code save()} method — aligned with KV store terminology.
+     *
+     * <p><strong>Optimistic concurrency control (OCC) contract:</strong>
+     * Production implementations <em>must</em> provide OCC on update. Two concurrent
+     * {@code put()} calls on the same WorkItem must produce exactly one success and
+     * one {@link jakarta.persistence.OptimisticLockException} (or equivalent). The
+     * service layer relies on this for claim atomicity — without OCC, two nodes
+     * racing to claim the same WorkItem would both succeed, producing a double-claim.
+     *
+     * <ul>
+     *   <li>JPA: {@code @Version} on {@code WorkItem.version} — Hibernate enforces OCC.
+     *   <li>MongoDB: version-checked {@code replaceOne} — application-level OCC.
+     *   <li>InMemory: no OCC (shared references, {@code ConcurrentHashMap}). Acceptable
+     *       because this backend is test-only ({@code @Alternative @Priority(100)}).
+     * </ul>
      *
      * @param workItem the work item to persist; must not be {@code null}
      * @return the persisted work item
+     * @throws jakarta.persistence.OptimisticLockException if the item was concurrently modified
      */
     WorkItem put(WorkItem workItem);
 

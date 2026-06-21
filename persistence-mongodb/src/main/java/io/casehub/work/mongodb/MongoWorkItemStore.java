@@ -2,7 +2,6 @@ package io.casehub.work.mongodb;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -152,15 +151,13 @@ public class MongoWorkItemStore implements WorkItemStore {
     @Override
     public long countByParentAndAssignee(final UUID parentId, final String assigneeId,
             final UUID excludeId) {
-        final List<String> terminalStatuses = Arrays.stream(WorkItemStatus.values())
-                .filter(WorkItemStatus::isTerminal)
-                .map(Enum::name)
-                .toList();
+        final List<String> terminalNames = WorkItemStatus.TERMINAL_STATUSES.stream()
+                .map(Enum::name).toList();
         final Document filter = new Document("parentId", parentId.toString())
                 .append("assigneeId", assigneeId)
                 .append("tenancyId", currentPrincipal.tenancyId())
                 .append("_id", new Document("$ne", excludeId.toString()))
-                .append("status", new Document("$nin", terminalStatuses));
+                .append("status", new Document("$nin", terminalNames));
         return MongoWorkItemDocument.count(filter);
     }
 
