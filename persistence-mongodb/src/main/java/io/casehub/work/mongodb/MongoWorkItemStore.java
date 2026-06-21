@@ -2,21 +2,26 @@ package io.casehub.work.mongodb;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.mongodb.client.result.UpdateResult;
+
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
+import jakarta.persistence.OptimisticLockException;
 
 import org.bson.Document;
 
 import io.casehub.platform.api.identity.CurrentPrincipal;
 
 import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
 
@@ -57,7 +62,35 @@ public class MongoWorkItemStore implements WorkItemStore {
         }
         workItem.updatedAt = now;
 
-        MongoWorkItemDocument.from(workItem).persistOrUpdate();
+        final String idStr = workItem.id.toString();
+
+        final boolean exists = MongoWorkItemDocument.find(
+                new Document("_id", idStr)).firstResult() != null;
+
+        if (!exists) {
+            // New document — plain persist with version 0
+            workItem.version = 0L;
+            MongoWorkItemDocument.from(workItem).persist();
+        } else {
+            // Existing document — replaceOne with version check (OCC)
+            final MongoWorkItemDocument doc = MongoWorkItemDocument.from(workItem);
+            final long currentVersion = workItem.version != null ? workItem.version : 0L;
+            doc.version = currentVersion + 1;
+
+            final Document filter = new Document("_id", idStr)
+                    .append("version", workItem.version);
+
+            final UpdateResult result =
+                    MongoWorkItemDocument.mongoCollection().replaceOne(filter, doc);
+
+            if (result.getModifiedCount() == 0) {
+                throw new OptimisticLockException(
+                        "Version conflict on WorkItem " + idStr
+                                + " (expected version " + workItem.version + ")");
+            }
+
+            workItem.version = doc.version;
+        }
         return workItem;
     }
 
@@ -76,6 +109,59 @@ public class MongoWorkItemStore implements WorkItemStore {
                 ? MongoWorkItemDocument.listAll()
                 : MongoWorkItemDocument.<MongoWorkItemDocument> find(filter).list();
         return docs.stream().map(MongoWorkItemDocument::toDomain).toList();
+    }
+
+    @Override
+    public Optional<WorkItem> findByCallerRef(final String callerRef) {
+        final Document filter = new Document("callerRef", callerRef)
+                .append("tenancyId", currentPrincipal.tenancyId());
+        final MongoWorkItemDocument doc = MongoWorkItemDocument.find(filter).firstResult();
+        return Optional.ofNullable(doc).map(MongoWorkItemDocument::toDomain);
+    }
+
+    @Override
+    public List<WorkItem> findByParentId(final UUID parentId) {
+        final Document filter = new Document("parentId", parentId.toString())
+                .append("tenancyId", currentPrincipal.tenancyId());
+        return MongoWorkItemDocument.<MongoWorkItemDocument> find(filter).list()
+                .stream().map(MongoWorkItemDocument::toDomain).toList();
+    }
+
+    @Override
+    public List<WorkItem> findByParentIdExcludingStatuses(final UUID parentId,
+            final List<WorkItemStatus> excludeStatuses) {
+        final Document filter = new Document("parentId", parentId.toString())
+                .append("tenancyId", currentPrincipal.tenancyId())
+                .append("status", new Document("$nin",
+                        excludeStatuses.stream().map(Enum::name).toList()));
+        return MongoWorkItemDocument.<MongoWorkItemDocument> find(filter).list()
+                .stream().map(MongoWorkItemDocument::toDomain).toList();
+    }
+
+    @Override
+    public List<WorkItem> findByParentIdWithStatuses(final UUID parentId,
+            final List<WorkItemStatus> statuses) {
+        final Document filter = new Document("parentId", parentId.toString())
+                .append("tenancyId", currentPrincipal.tenancyId())
+                .append("status", new Document("$in",
+                        statuses.stream().map(Enum::name).toList()));
+        return MongoWorkItemDocument.<MongoWorkItemDocument> find(filter).list()
+                .stream().map(MongoWorkItemDocument::toDomain).toList();
+    }
+
+    @Override
+    public long countByParentAndAssignee(final UUID parentId, final String assigneeId,
+            final UUID excludeId) {
+        final List<String> terminalStatuses = Arrays.stream(WorkItemStatus.values())
+                .filter(WorkItemStatus::isTerminal)
+                .map(Enum::name)
+                .toList();
+        final Document filter = new Document("parentId", parentId.toString())
+                .append("assigneeId", assigneeId)
+                .append("tenancyId", currentPrincipal.tenancyId())
+                .append("_id", new Document("$ne", excludeId.toString()))
+                .append("status", new Document("$nin", terminalStatuses));
+        return MongoWorkItemDocument.count(filter);
     }
 
     // ── Filter builder ────────────────────────────────────────────────────────
@@ -150,6 +236,11 @@ public class MongoWorkItemStore implements WorkItemStore {
         // Label pattern — regex on embedded array field
         if (q.labelPattern() != null) {
             ands.add(buildLabelFilter(q.labelPattern()));
+        }
+
+        // Outcome
+        if (q.outcome() != null) {
+            ands.add(new Document("outcome", q.outcome()));
         }
 
         if (ands.isEmpty()) {
