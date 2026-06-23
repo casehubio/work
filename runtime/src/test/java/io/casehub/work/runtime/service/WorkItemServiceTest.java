@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.preferences.MapPreferences;
 import io.casehub.work.api.AssignmentDecision;
+import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.filter.JexlConditionEvaluator;
 import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.PolicyDecision;
@@ -259,6 +260,8 @@ class WorkItemServiceTest {
         final OutcomeValidator outcomeValidator = new OutcomeValidator();
         outcomeValidator.conditionEvaluator = new JexlConditionEvaluator();
         service.outcomeValidator = outcomeValidator;
+        // Wire WorkItemLifecycleEmitter — @Inject field, not in constructor
+        service.lifecycleEmitter = mock(WorkItemLifecycleEmitter.class);
     }
 
     private WorkItemCreateRequest basicRequest() {
@@ -1295,6 +1298,7 @@ class WorkItemServiceTest {
                 new BlockedAttemptAuditService(auditStore),
                 new CapabilityValidator(ValidationMode.PERMISSIVE, () -> java.util.Set.of()),
                 mock(WorkItemTimerService.class));
+        svc.lifecycleEmitter = mock(WorkItemLifecycleEmitter.class);
         WorkItem wi = svc.create(basicRequest());
         assertThat(wi.claimDeadline).isNull();
     }

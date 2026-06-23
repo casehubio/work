@@ -37,6 +37,7 @@ import io.casehub.work.api.SelectionContext;
 import io.casehub.work.api.WorkerCandidate;
 import io.casehub.work.core.strategy.WorkBroker;
 import io.casehub.work.runtime.event.SlaBreachEvent;
+import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemStatus;
@@ -171,7 +172,7 @@ class ExpiryLifecycleServiceTest {
         service.slaBreachPolicy = policy;
         service.preferenceProvider = EMPTY_PREFS;
         service.slaBreachEventBus = new CapturingBreachEventBus(breachEvents);
-        service.lifecycleEvent = null; // CDI event bus — not under test
+        service.lifecycleEmitter = mock(WorkItemLifecycleEmitter.class);
         service.claimSlaPolicy = new FixedClaimSlaPolicy();
         service.config = WorkItemServiceTest.testConfig();
         service.assignmentService = new WorkItemAssignmentService(

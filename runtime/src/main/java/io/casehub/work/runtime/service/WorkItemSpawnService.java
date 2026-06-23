@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -15,6 +14,7 @@ import io.casehub.work.api.SpawnPort;
 import io.casehub.work.api.SpawnRequest;
 import io.casehub.work.api.SpawnResult;
 import io.casehub.work.api.SpawnedChild;
+import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.OutcomeCodecs;
@@ -56,7 +56,7 @@ public class WorkItemSpawnService implements SpawnPort {
     private final WorkItemTemplateStore templateStore;
 
     @Inject
-    Event<WorkItemLifecycleEvent> lifecycleEvent;
+    WorkItemLifecycleEmitter lifecycleEmitter;
 
     @Inject
     public WorkItemSpawnService(final WorkItemStore workItemStore, final WorkItemService workItemService,
@@ -172,9 +172,7 @@ public class WorkItemSpawnService implements SpawnPort {
         auditEntry.occurredAt = Instant.now();
         auditStore.append(auditEntry);
 
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("SPAWNED", parent, "system:spawn", spawnDetail));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("SPAWNED", parent, "system:spawn", spawnDetail));
 
         return new SpawnResult(group.id, spawnedChildren, true);
     }

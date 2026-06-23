@@ -28,6 +28,7 @@ import io.casehub.work.api.SlaBreachContext;
 import io.casehub.work.api.SlaBreachPolicy;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.event.SlaBreachEvent;
+import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItem;
@@ -61,7 +62,7 @@ public class ExpiryLifecycleService {
     PreferenceProvider preferenceProvider;
 
     @Inject
-    Event<WorkItemLifecycleEvent> lifecycleEvent;
+    WorkItemLifecycleEmitter lifecycleEmitter;
 
     @Inject
     Event<SlaBreachEvent> slaBreachEventBus;
@@ -354,9 +355,7 @@ public class ExpiryLifecycleService {
     }
 
     private void fireLifecycleEvent(final String event, final WorkItem item) {
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of(event, item, "system", null));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of(event, item, "system", null));
     }
 
     // ── Internal ─────────────────────────────────────────────────────────────

@@ -8,7 +8,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -26,6 +25,7 @@ import io.casehub.work.api.ExclusionPolicy;
 import io.casehub.work.api.PolicyDecision;
 import io.casehub.work.core.strategy.CapabilityValidator;
 import io.casehub.work.runtime.config.WorkItemsConfig;
+import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.api.LabelPersistence;
@@ -65,7 +65,7 @@ public class WorkItemService {
     OutcomeValidator outcomeValidator;
 
     @Inject
-    Event<WorkItemLifecycleEvent> lifecycleEvent;
+    WorkItemLifecycleEmitter lifecycleEmitter;
 
     @Inject
     jakarta.enterprise.inject.Instance<BusinessCalendar> businessCalendar;
@@ -184,9 +184,7 @@ public class WorkItemService {
             timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
         }
         audit(saved.id, "CREATED", request.createdBy, request.auditDetail);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("CREATED", saved, request.createdBy, null));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("CREATED", saved, request.createdBy, null));
         return saved;
     }
 
@@ -232,9 +230,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "ASSIGNED", claimantId, null);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ASSIGNED", saved, claimantId, null));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("ASSIGNED", saved, claimantId, null));
         return saved;
     }
 
@@ -248,9 +244,7 @@ public class WorkItemService {
         item.startedAt = Instant.now();
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "STARTED", actorId, null);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("STARTED", saved, actorId, null));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("STARTED", saved, actorId, null));
         return saved;
     }
 
@@ -271,11 +265,7 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "COMPLETED", actorId, null);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("COMPLETED", saved, actorId, resolution);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("COMPLETED", saved, actorId, resolution));
         return saved;
     }
 
@@ -294,11 +284,7 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "REJECTED", actorId, reason);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("REJECTED", saved, actorId, reason);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("REJECTED", saved, actorId, reason));
         return saved;
     }
 
@@ -324,11 +310,7 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "COMPLETED", actorId, null);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("COMPLETED", saved, actorId, resolution);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("COMPLETED", saved, actorId, resolution));
         return saved;
     }
 
@@ -346,11 +328,7 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "REJECTED", actorId, reason);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("REJECTED", saved, actorId, reason);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("REJECTED", saved, actorId, reason));
         return saved;
     }
 
@@ -386,12 +364,8 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "COMPLETED", actorId, null);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of(
-                    "COMPLETED", saved, actorId, resolution, rationale, planRef);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of(
+                "COMPLETED", saved, actorId, resolution, rationale, planRef));
         return saved;
     }
 
@@ -419,12 +393,8 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "REJECTED", actorId, reason);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of(
-                    "REJECTED", saved, actorId, reason, rationale, null);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of(
+                "REJECTED", saved, actorId, reason, rationale, null));
         return saved;
     }
 
@@ -463,9 +433,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "DELEGATED", actorId, "to:" + saved.assigneeId);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("DELEGATED", saved, actorId, "to:" + toAssigneeId));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("DELEGATED", saved, actorId, "to:" + toAssigneeId));
         return saved;
     }
 
@@ -488,9 +456,7 @@ public class WorkItemService {
         item.delegationDeclineTarget = null;
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "DELEGATION_ACCEPTED", claimantId, null);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("DELEGATION_ACCEPTED", saved, claimantId, null));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("DELEGATION_ACCEPTED", saved, claimantId, null));
         return saved;
     }
 
@@ -533,9 +499,7 @@ public class WorkItemService {
             timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
         }
         audit(saved.id, "DELEGATION_DECLINED", actorId, null);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("DELEGATION_DECLINED", saved, actorId, null));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("DELEGATION_DECLINED", saved, actorId, null));
         return saved;
     }
 
@@ -569,9 +533,7 @@ public class WorkItemService {
             timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
         }
         audit(saved.id, "RELEASED", actorId, null);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("RELEASED", saved, actorId, null));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("RELEASED", saved, actorId, null));
         return saved;
     }
 
@@ -588,9 +550,7 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "SUSPENDED", actorId, reason);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("SUSPENDED", saved, actorId, reason));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("SUSPENDED", saved, actorId, reason));
         return saved;
     }
 
@@ -611,9 +571,7 @@ public class WorkItemService {
             timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
         }
         audit(saved.id, "RESUMED", actorId, null);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("RESUMED", saved, actorId, null));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("RESUMED", saved, actorId, null));
         return saved;
     }
 
@@ -629,11 +587,7 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "CANCELLED", actorId, reason);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("CANCELLED", saved, actorId, reason);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("CANCELLED", saved, actorId, reason));
         return saved;
     }
 
@@ -650,11 +604,7 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "FAULTED", systemActorId, errorDetail);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("FAULTED", saved, systemActorId, errorDetail);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("FAULTED", saved, systemActorId, errorDetail));
         return saved;
     }
 
@@ -670,11 +620,7 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "FAULTED", actorId, errorDetail);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("FAULTED", saved, actorId, errorDetail);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("FAULTED", saved, actorId, errorDetail));
         return saved;
     }
 
@@ -691,11 +637,7 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "OBSOLETE", triggeredBy, reason);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("OBSOLETE", saved, triggeredBy, reason);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("OBSOLETE", saved, triggeredBy, reason));
         return saved;
     }
 
@@ -711,11 +653,7 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "OBSOLETE", triggeredBy, reason);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("OBSOLETE", saved, triggeredBy, reason);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("OBSOLETE", saved, triggeredBy, reason));
         return saved;
     }
 
@@ -730,11 +668,7 @@ public class WorkItemService {
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "CANCELLED", actorId, reason);
-        if (lifecycleEvent != null) {
-            final WorkItemLifecycleEvent evt = WorkItemLifecycleEvent.of("CANCELLED", saved, actorId, reason);
-            lifecycleEvent.fire(evt);
-            lifecycleEvent.fireAsync(evt);
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("CANCELLED", saved, actorId, reason));
         return saved;
     }
 
@@ -750,9 +684,7 @@ public class WorkItemService {
         item.updatedAt = Instant.now();
         final WorkItem saved = workItemStore.put(item);
         audit(saved.id, "PROGRESS_UPDATE", actorId, statusNote);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("PROGRESS_UPDATE", saved, actorId, statusNote));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("PROGRESS_UPDATE", saved, actorId, statusNote));
         return saved;
     }
 
@@ -774,9 +706,7 @@ public class WorkItemService {
         final WorkItem saved = workItemStore.put(item);
         timerService.rescheduleExpiry(saved.id, newExpiresAt);
         audit(saved.id, "DEADLINE_EXTENDED", actorId, null);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("DEADLINE_EXTENDED", saved, actorId, null));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("DEADLINE_EXTENDED", saved, actorId, null));
         return saved;
     }
 
@@ -786,9 +716,7 @@ public class WorkItemService {
                 .orElseThrow(() -> new WorkItemNotFoundException(workItemId));
         item.labels.add(new WorkItemLabel(path, LabelPersistence.MANUAL, appliedBy));
         final WorkItem saved = workItemStore.put(item);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("LABEL_ADDED", saved, appliedBy, null));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("LABEL_ADDED", saved, appliedBy, null));
         return saved;
     }
 
@@ -802,9 +730,7 @@ public class WorkItemService {
             throw new LabelNotFoundException(workItemId, path);
         }
         final WorkItem saved = workItemStore.put(item);
-        if (lifecycleEvent != null) {
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("LABEL_REMOVED", saved, "system", path));
-        }
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("LABEL_REMOVED", saved, "system", path));
         return saved;
     }
 

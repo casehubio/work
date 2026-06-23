@@ -442,6 +442,7 @@ flowchart LR
 | C33 | SlaBreachPolicy SPI + Escalation Removal | Lifecycle Enrichment | Phase 25+26, #212–#216 | ✅ |
 | C34 | Capability Vocabulary | Lifecycle Enrichment | #220, ADR-0003, ADR-0004 | ✅ |
 | C35 | Status Lifecycle Fixes + DELEGATED | Lifecycle Enrichment | Phase 27, #241, #243–#245 | ✅ |
+| C36 | CloudEvent Adapter | Platform Integration | #273 | ✅ |
 
 **Layer × Chapter matrix** (High/Med/Low/—):
 
@@ -1134,6 +1135,28 @@ Four targeted fixes delivered together. #243: `EXPIRED` added to `WorkItemStatus
 |---|---|
 | L1 Domain Model | Med |
 | L3 Routing + Assignment | Med |
+
+---
+
+### Chapter C36 — CloudEvent Adapter
+
+**Journey:** Platform Integration | **Sequence:** 1 of 1 | **Status:** ✅
+**Delivered:** 2026-06-23 | **Issues:** #273
+
+**What this delivers**
+Before this chapter, casehub-work lifecycle events were only observable by CDI beans that directly depend on `casehub-work` types. After: `WorkCloudEventAdapter` bridges `WorkItemLifecycleEvent` (24 CloudEvent types) and `WorkItemGroupLifecycleEvent` (3 CloudEvent types) to the platform `Event<CloudEvent>` bus, enabling casehub-ras and any future observer to react to WorkItem lifecycle transitions without coupling to casehub-work types.
+
+Additionally, `WorkItemLifecycleEmitter` and `WorkItemGroupLifecycleEmitter` structurally enforce dual-channel CDI firing (`fire()` + `fireAsync()`) at all lifecycle event sites, fixing a gap where `QueueDashboard` (`@ObservesAsync`) missed 13 non-terminal event types that were previously fired sync-only.
+
+**Accountability gaps closed**
+- `QueueDashboard` (`@ObservesAsync`) received only terminal events → all 24+ event types now reach async observers
+- No CloudEvent bridge existed → casehub-ras can observe WorkItem lifecycle without casehub-work type dependency
+
+**Layer Impact**
+| Layer | Delta |
+|---|---|
+| L3 Lifecycle Engine | Med |
+| L7 Optional Integrations | Med |
 
 ---
 

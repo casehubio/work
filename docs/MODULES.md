@@ -8,7 +8,7 @@ Use `ide_find_class` / `ide_find_symbol` to locate specific classes. This file d
 |---|---|---|
 | `api/` | Pure-Java SPI — no JPA, no REST | All SPIs, events, value objects. casehub-engine depends on this directly. |
 | `core/` | Jandex library — no JPA, no REST | WorkBroker, built-in strategies, claim SLA policies; pure CDI. No filter classes — filter engine moved to `runtime/filter/` in #133. |
-| `runtime/` | Extension runtime | WorkItem entity, JPA stores, filter engine, multi-instance coordinator, REST endpoints at `/workitems` |
+| `runtime/` | Extension runtime | WorkItem entity, JPA stores, filter engine, multi-instance coordinator, REST endpoints at `/workitems`, CloudEvent adapter (`WorkCloudEventAdapter`), dual-channel emitters (`WorkItemLifecycleEmitter`, `WorkItemGroupLifecycleEmitter`) |
 | `deployment/` | Extension build-time | `WorkItemsProcessor` @BuildStep only |
 | `persistence-memory/` | In-memory persistence (`casehub-work-persistence-memory`) | Thread-safe ConcurrentHashMap stores; Tier 3 `@Alternative @Priority(100)` — beats JPA and MongoDB. For tests, demos, and ephemeral deployment. |
 | `docs/` | Architecture, design, specs | `ARCHITECTURE.md` (SPI contracts), `DESIGN.md` (roadmap + Flyway history), `GOTCHAS.md`, `FLYWAY.md` |

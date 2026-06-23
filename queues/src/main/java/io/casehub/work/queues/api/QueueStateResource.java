@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
-import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
@@ -19,6 +18,7 @@ import jakarta.ws.rs.core.Response;
 import io.casehub.work.queues.model.WorkItemQueueState;
 import io.casehub.work.queues.repository.QueueStateStore;
 import io.casehub.work.runtime.api.WorkItemMapper;
+import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemStore;
@@ -46,7 +46,7 @@ public class QueueStateResource {
     WorkItemService workItemService;
 
     @Inject
-    Event<WorkItemLifecycleEvent> lifecycleEvent;
+    WorkItemLifecycleEmitter lifecycleEmitter;
 
     /**
      * Request body for setting the relinquishable flag.
@@ -123,7 +123,7 @@ public class QueueStateResource {
             // Clear the flag — the signal is consumed on first pickup
             state.relinquishable = false;
             // Fire lifecycle event so ledger, filter engine, and dashboard observers react
-            lifecycleEvent.fire(WorkItemLifecycleEvent.of("ASSIGNED", saved, claimant,
+            lifecycleEmitter.emit(WorkItemLifecycleEvent.of("ASSIGNED", saved, claimant,
                     "Queue pickup (relinquishable takeover)"));
             return Response.ok(WorkItemMapper.toResponse(saved)).build();
         }
