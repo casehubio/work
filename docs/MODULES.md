@@ -33,3 +33,4 @@ Use `ide_find_class` / `ide_find_symbol` to locate specific classes. This file d
 | `examples/` | Runnable scenario demos; each runs via `POST /examples/{name}/run` |
 | `persistence-mongodb/` | Optional MongoDB-backed stores for all runtime/core/issue-tracker SPIs; Tier 2 `@Alternative @Priority(1)`. Drop-in replacement for JPA — add to classpath, no consumer changes needed. |
 | `integration-tests/` | `@QuarkusIntegrationTest` suite and native image validation |
+| `integration-tests-memory/` | Ephemeral deployment ITs — `persistence-memory` stores with dummy H2 datasource (no Flyway, no schema); verifies full CRUD without a real database |

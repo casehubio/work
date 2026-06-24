@@ -36,6 +36,7 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <module>queues-postgres-broadcaster</module>
 
     <module>integration-tests</module>
+    <module>integration-tests-memory</module>
   </modules>
 
   <scm>
