@@ -65,7 +65,7 @@ public sealed interface BreachDecision
 
     /**
      * All configured SLA breach policy branches have been exhausted.
-     * The WorkItem transitions to {@link io.casehub.work.runtime.model.WorkItemStatus#ESCALATED}
+     * The WorkItem transitions to {@link WorkItemStatus#ESCALATED}
      * (terminal) and requires operator intervention to resolve.
      *
      * <p>Returned by the runtime when a {@link Chained} policy's primary and fallback both

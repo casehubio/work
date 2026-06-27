@@ -44,8 +44,8 @@ class FilterEngineTest {
 
     static boolean matches(String key, WorkItem wi) {
         return switch (key) {
-            case "HIGH" -> wi.priority == WorkItemPriority.HIGH;
-            case "PENDING" -> wi.status == WorkItemStatus.PENDING;
+            case "HIGH" -> wi.priority == io.casehub.work.api.WorkItemPriority.HIGH;
+            case "PENDING" -> wi.status == io.casehub.work.api.WorkItemStatus.PENDING;
             case "HAS_INTAKE" -> wi.labels.stream().anyMatch(l -> l.path.equals("intake"));
             case "ALWAYS" -> true;
             default -> false;
@@ -55,8 +55,8 @@ class FilterEngineTest {
     @Test
     void matchingFilter_appliesInferredLabel() {
         var wi = new WorkItem();
-        wi.priority = WorkItemPriority.HIGH;
-        wi.status = WorkItemStatus.PENDING;
+        wi.priority = io.casehub.work.api.WorkItemPriority.HIGH;
+        wi.status = io.casehub.work.api.WorkItemStatus.PENDING;
         evaluate(wi, List.of(new TestFilter("HIGH", List.of(FilterAction.applyLabel("priority/high")))));
         assertThat(wi.labels).extracting(l -> l.path).contains("priority/high");
         assertThat(wi.labels).filteredOn(l -> l.path.equals("priority/high"))
@@ -66,7 +66,7 @@ class FilterEngineTest {
     @Test
     void nonMatchingFilter_doesNotApplyLabel() {
         var wi = new WorkItem();
-        wi.priority = WorkItemPriority.MEDIUM;
+        wi.priority = io.casehub.work.api.WorkItemPriority.MEDIUM;
         evaluate(wi, List.of(new TestFilter("HIGH", List.of(FilterAction.applyLabel("priority/high")))));
         assertThat(wi.labels).extracting(l -> l.path).doesNotContain("priority/high");
     }
@@ -74,7 +74,7 @@ class FilterEngineTest {
     @Test
     void stripsExistingInferredLabels_beforeEval() {
         var wi = new WorkItem();
-        wi.priority = WorkItemPriority.MEDIUM;
+        wi.priority = io.casehub.work.api.WorkItemPriority.MEDIUM;
         wi.labels.add(new WorkItemLabel("old/inferred", io.casehub.work.api.LabelPersistence.INFERRED, "old"));
         wi.labels.add(new WorkItemLabel("manual/keep", io.casehub.work.api.LabelPersistence.MANUAL, "alice"));
         evaluate(wi, List.of());
@@ -85,7 +85,7 @@ class FilterEngineTest {
     @Test
     void propagationChain_filterBSeesLabelFromA() {
         var wi = new WorkItem();
-        wi.priority = WorkItemPriority.HIGH;
+        wi.priority = io.casehub.work.api.WorkItemPriority.HIGH;
         var filterA = new TestFilter("HIGH", List.of(FilterAction.applyLabel("intake")));
         var filterB = new TestFilter("HAS_INTAKE", List.of(FilterAction.applyLabel("intake/triage")));
         evaluate(wi, List.of(filterA, filterB));
@@ -104,8 +104,8 @@ class FilterEngineTest {
     @Test
     void multipleFilters_allApplied() {
         var wi = new WorkItem();
-        wi.priority = WorkItemPriority.HIGH;
-        wi.status = WorkItemStatus.PENDING;
+        wi.priority = io.casehub.work.api.WorkItemPriority.HIGH;
+        wi.status = io.casehub.work.api.WorkItemStatus.PENDING;
         evaluate(wi, List.of(
                 new TestFilter("HIGH", List.of(FilterAction.applyLabel("priority/high"))),
                 new TestFilter("PENDING", List.of(FilterAction.applyLabel("intake")))));

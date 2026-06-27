@@ -1,6 +1,4 @@
-package io.casehub.work.runtime.model;
-
-import io.casehub.work.api.LabelPersistence;
+package io.casehub.work.api;
 
 /**
  * Value object carrying label data for WorkItem creation.

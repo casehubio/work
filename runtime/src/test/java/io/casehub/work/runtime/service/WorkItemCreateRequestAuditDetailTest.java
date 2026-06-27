@@ -2,7 +2,7 @@ package io.casehub.work.runtime.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.casehub.work.runtime.model.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemCreateRequest;
 import org.junit.jupiter.api.Test;
 
 class WorkItemCreateRequestAuditDetailTest {

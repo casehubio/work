@@ -6,7 +6,7 @@ import java.util.Map;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemPriority;
 import io.serverlessworkflow.api.types.Workflow;
 
 /**

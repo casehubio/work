@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 
 /**
  * Pure static aggregation logic for inbox summary counts.

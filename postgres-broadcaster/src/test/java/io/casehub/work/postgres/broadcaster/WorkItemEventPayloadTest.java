@@ -2,15 +2,13 @@ package io.casehub.work.postgres.broadcaster;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 
 /**
  * Correctness tests for {@link WorkItemEventPayload} — round-trip fidelity and field mapping.

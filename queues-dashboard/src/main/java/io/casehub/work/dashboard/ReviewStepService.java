@@ -17,8 +17,8 @@ import io.casehub.work.queues.model.FilterAction;
 import io.casehub.work.queues.model.WorkItemFilter;
 import io.casehub.work.queues.service.WorkItemFilterBean;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemCreateRequest;
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.repository.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 

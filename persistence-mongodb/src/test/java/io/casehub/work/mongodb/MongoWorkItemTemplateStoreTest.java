@@ -11,7 +11,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.WorkItemTemplateStore;
 import io.quarkus.test.junit.QuarkusTest;

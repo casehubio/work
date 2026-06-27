@@ -18,7 +18,7 @@ import io.casehub.work.api.SpawnRequest;
 import io.casehub.work.api.SpawnResult;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.runtime.service.WorkItemSpawnService;

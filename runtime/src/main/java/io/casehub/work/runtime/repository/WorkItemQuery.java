@@ -3,8 +3,8 @@ package io.casehub.work.runtime.repository;
 import java.time.Instant;
 import java.util.List;
 
-import io.casehub.work.runtime.model.WorkItemPriority;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemStatus;
 
 /**
  * KV-native query criteria for {@link WorkItemStore#scan}.

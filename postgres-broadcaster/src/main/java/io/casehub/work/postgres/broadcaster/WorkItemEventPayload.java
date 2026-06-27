@@ -6,7 +6,7 @@ import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 
 /**
  * Wire-format DTO for a {@link WorkItemLifecycleEvent} sent over a PostgreSQL NOTIFY channel.
@@ -34,7 +34,11 @@ public record WorkItemEventPayload(
         @JsonProperty("rationale") String rationale,
         @JsonProperty("planRef") String planRef,
         @JsonProperty("outcome") String outcome,
-        @JsonProperty("tenancyId") String tenancyId) {
+        @JsonProperty("tenancyId") String tenancyId,
+        @JsonProperty("callerRef") String callerRef,
+        @JsonProperty("assigneeId") String assigneeId,
+        @JsonProperty("resolution") String resolution,
+        @JsonProperty("candidateGroups") String candidateGroups) {
 
     /** Convert from a live lifecycle event for publishing to the PostgreSQL channel. */
     static WorkItemEventPayload from(final WorkItemLifecycleEvent event) {
@@ -42,12 +46,14 @@ public record WorkItemEventPayload(
                 event.type(), event.sourceUri(), event.subject(),
                 event.workItemId(), event.status(), event.occurredAt(),
                 event.actor(), event.detail(), event.rationale(), event.planRef(),
-                event.outcome(), event.tenancyId());
+                event.outcome(), event.tenancyId(),
+                event.callerRef(), event.assigneeId(), event.resolution(), event.candidateGroups());
     }
 
     /** Reconstruct a lifecycle event from a received wire payload. */
     WorkItemLifecycleEvent toEvent() {
         return WorkItemLifecycleEvent.fromWire(type, source, subject,
-                workItemId, status, occurredAt, actor, detail, rationale, planRef, outcome, tenancyId);
+                workItemId, status, occurredAt, actor, detail, rationale, planRef, outcome, tenancyId,
+                callerRef, assigneeId, resolution, candidateGroups);
     }
 }

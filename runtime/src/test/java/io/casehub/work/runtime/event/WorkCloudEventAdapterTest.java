@@ -27,7 +27,7 @@ import io.cloudevents.CloudEvent;
 import io.casehub.work.api.GroupStatus;
 import io.casehub.work.api.WorkItemGroupLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 
 @ExtendWith(MockitoExtension.class)
 class WorkCloudEventAdapterTest {

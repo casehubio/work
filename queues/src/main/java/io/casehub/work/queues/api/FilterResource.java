@@ -25,8 +25,8 @@ import io.casehub.work.queues.service.FilterEngine;
 import io.casehub.work.queues.service.FilterEvaluatorRegistry;
 import io.casehub.work.queues.service.WorkItemExpressionEvaluator;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemPriority;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemStatus;
 
 @Path("/filters")
 @Produces(MediaType.APPLICATION_JSON)

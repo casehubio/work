@@ -30,11 +30,11 @@ import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemLabel;
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
@@ -119,6 +119,7 @@ public class WorkItemService {
         item.outputDataSchema = request.outputDataSchema;
         item.excludedUsers = request.excludedUsers;
         item.scope = request.scope;
+        item.tenancyId = request.tenancyId;
 
         final Instant now = Instant.now();
         item.createdAt = now;
@@ -801,6 +802,16 @@ public class WorkItemService {
         return workItemStore.scanAll().stream()
                 .filter(w -> callerRef.equals(w.callerRef))
                 .findFirst();
+    }
+
+    /**
+     * Find an active WorkItem by caller reference, delegating to the store.
+     *
+     * @param callerRef the caller reference to look up; must not be {@code null}
+     * @return an {@link Optional} containing the matching active WorkItem, or empty if not found
+     */
+    public Optional<WorkItem> findActiveByCallerRef(final String callerRef) {
+        return workItemStore.findActiveByCallerRef(callerRef);
     }
 
     private ClaimSlaContext buildClaimSlaContext(final WorkItem item, final Instant now) {

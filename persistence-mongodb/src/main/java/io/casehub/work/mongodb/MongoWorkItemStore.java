@@ -20,7 +20,7 @@ import org.bson.Document;
 import io.casehub.platform.api.identity.CurrentPrincipal;
 
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
 
@@ -113,6 +113,17 @@ public class MongoWorkItemStore implements WorkItemStore {
     @Override
     public Optional<WorkItem> findByCallerRef(final String callerRef) {
         final Document filter = new Document("callerRef", callerRef)
+                .append("tenancyId", currentPrincipal.tenancyId());
+        final MongoWorkItemDocument doc = MongoWorkItemDocument.find(filter).firstResult();
+        return Optional.ofNullable(doc).map(MongoWorkItemDocument::toDomain);
+    }
+
+    @Override
+    public Optional<WorkItem> findActiveByCallerRef(final String callerRef) {
+        final List<String> terminalNames = WorkItemStatus.TERMINAL_STATUSES.stream()
+                .map(Enum::name).toList();
+        final Document filter = new Document("callerRef", callerRef)
+                .append("status", new Document("$nin", terminalNames))
                 .append("tenancyId", currentPrincipal.tenancyId());
         final MongoWorkItemDocument doc = MongoWorkItemDocument.find(filter).firstResult();
         return Optional.ofNullable(doc).map(MongoWorkItemDocument::toDomain);

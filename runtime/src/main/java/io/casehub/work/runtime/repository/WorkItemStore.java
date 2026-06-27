@@ -6,7 +6,7 @@ import java.util.UUID;
 
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRootView;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 
 /**
  * KV-native store SPI for {@link WorkItem} persistence.
@@ -123,6 +123,29 @@ public interface WorkItemStore {
     default Optional<WorkItem> findByCallerRef(String callerRef) {
         return scanAll().stream()
                 .filter(wi -> callerRef.equals(wi.callerRef))
+                .findFirst();
+    }
+
+    /**
+     * Find a non-terminal (active) WorkItem by its caller reference.
+     *
+     * <p>
+     * {@code callerRef} is the opaque string set by the caller when the WorkItem was created
+     * (e.g. {@code "case:{caseId}/pi:{planItemId}"}). Returns only non-terminal WorkItems —
+     * useful for idempotent creation checks where a duplicate WorkItem in a terminal status
+     * should be ignored.
+     *
+     * <p>
+     * The default implementation performs a linear scan via {@link #scanAll()} — override in
+     * JPA/SQL stores for an indexed query on {@code callerRef} with a status filter.
+     *
+     * @param callerRef the caller reference to look up; must not be {@code null}
+     * @return an {@link Optional} containing the matching active WorkItem, or empty if not found or only terminal copies exist
+     */
+    default Optional<WorkItem> findActiveByCallerRef(String callerRef) {
+        return scanAll().stream()
+                .filter(wi -> callerRef.equals(wi.callerRef))
+                .filter(wi -> wi.status != null && wi.status.isActive())
                 .findFirst();
     }
 

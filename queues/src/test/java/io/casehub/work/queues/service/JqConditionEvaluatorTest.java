@@ -17,8 +17,8 @@ import io.casehub.platform.expression.MockSecretManager;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemLabel;
-import io.casehub.work.runtime.model.WorkItemPriority;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemStatus;
 import io.quarkus.arc.DefaultBean;
 import io.quarkus.test.component.QuarkusComponentTest;
 

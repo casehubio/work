@@ -12,7 +12,7 @@ import io.casehub.work.api.WorkItemGroupLifecycleEvent;
 import io.casehub.work.runtime.event.WorkItemGroupLifecycleEmitter;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;

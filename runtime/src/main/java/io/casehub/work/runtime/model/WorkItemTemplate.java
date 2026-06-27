@@ -1,7 +1,6 @@
 package io.casehub.work.runtime.model;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -72,7 +71,7 @@ public class WorkItemTemplate extends PanacheEntityBase {
     /** Default priority; null means the WorkItem will use the system default (MEDIUM). */
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
-    public WorkItemPriority priority;
+    public io.casehub.work.api.WorkItemPriority priority;
 
     /** Default comma-separated candidate groups for queue routing. */
     @Column(name = "candidate_groups", length = 500)

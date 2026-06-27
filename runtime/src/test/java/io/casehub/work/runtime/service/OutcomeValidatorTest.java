@@ -153,7 +153,7 @@ class OutcomeValidatorTest {
 
     @Test
     void validate_conditionReferencesWorkItemStatus_accepted() {
-        item.status = io.casehub.work.runtime.model.WorkItemStatus.IN_PROGRESS;
+        item.status = io.casehub.work.api.WorkItemStatus.IN_PROGRESS;
         setOutcomes(new Outcome("approve", null, "workItem.status.name() == 'IN_PROGRESS'"));
         assertThatCode(() -> validator.validate(item, "approve", null, null, "actor"))
                 .doesNotThrowAnyException();

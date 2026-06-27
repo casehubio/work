@@ -1,7 +1,7 @@
 package io.casehub.work.issuetracker.webhook;
 
 import io.casehub.work.api.NormativeResolution;
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemPriority;
 
 /**
  * Normalised inbound event from an external issue tracker.

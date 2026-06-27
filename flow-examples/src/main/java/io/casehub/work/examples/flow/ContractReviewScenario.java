@@ -21,7 +21,7 @@ import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
 
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;

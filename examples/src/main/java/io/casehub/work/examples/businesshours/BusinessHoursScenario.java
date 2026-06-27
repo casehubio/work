@@ -19,8 +19,8 @@ import jakarta.ws.rs.core.Response;
 import io.casehub.work.api.BusinessCalendar;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemCreateRequest;
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.service.WorkItemService;
 
 /**

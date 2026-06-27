@@ -9,7 +9,7 @@ import jakarta.inject.Inject;
 import io.casehub.work.api.WorkItemGroupLifecycleEvent;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.service.TenantContextRunner;
 
 /**

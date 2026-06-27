@@ -12,7 +12,7 @@ import io.casehub.work.api.NormativeResolution;
 import io.casehub.work.issuetracker.spi.IssueTrackerException;
 import io.casehub.work.issuetracker.webhook.WebhookEvent;
 import io.casehub.work.issuetracker.webhook.WebhookEventKind;
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemPriority;
 
 /**
  * Parses raw GitHub Issues webhook payloads into normalised {@link WebhookEvent} records.

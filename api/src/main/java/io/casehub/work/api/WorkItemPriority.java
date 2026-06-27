@@ -1,7 +1,7 @@
-package io.casehub.work.runtime.model;
+package io.casehub.work.api;
 
 /**
- * Priority level of a {@link WorkItem}, used to drive inbox ordering and
+ * Priority level of a WorkItem, used to drive inbox ordering and
  * escalation policy thresholds. Aligns with Linear's priority vocabulary.
  */
 public enum WorkItemPriority {

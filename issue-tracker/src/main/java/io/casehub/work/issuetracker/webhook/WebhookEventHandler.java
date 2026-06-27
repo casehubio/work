@@ -12,7 +12,7 @@ import org.jboss.logging.Logger;
 import io.casehub.work.issuetracker.repository.IssueLinkStore;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemLabel;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 

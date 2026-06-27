@@ -85,11 +85,11 @@ public class WorkItem extends PanacheEntityBase {
 
     /** Current lifecycle status of this work item. */
     @Enumerated(EnumType.STRING)
-    public WorkItemStatus status;
+    public io.casehub.work.api.WorkItemStatus status;
 
     /** Priority level driving inbox ordering and escalation thresholds. */
     @Enumerated(EnumType.STRING)
-    public WorkItemPriority priority;
+    public io.casehub.work.api.WorkItemPriority priority;
 
     // -------------------------------------------------------------------------
     // Assignment
@@ -148,7 +148,7 @@ public class WorkItem extends PanacheEntityBase {
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "prior_status")
-    public WorkItemStatus priorStatus;
+    public io.casehub.work.api.WorkItemStatus priorStatus;
 
     // -------------------------------------------------------------------------
     // Payload and resolution
@@ -190,11 +190,11 @@ public class WorkItem extends PanacheEntityBase {
     @Column(name = "updated_at")
     public Instant updatedAt;
 
-    /** When the item transitioned into {@link WorkItemStatus#ASSIGNED}. */
+    /** When the item transitioned into {@link io.casehub.work.api.WorkItemStatus#ASSIGNED}. */
     @Column(name = "assigned_at")
     public Instant assignedAt;
 
-    /** When the item transitioned into {@link WorkItemStatus#IN_PROGRESS}. */
+    /** When the item transitioned into {@link io.casehub.work.api.WorkItemStatus#IN_PROGRESS}. */
     @Column(name = "started_at")
     public Instant startedAt;
 
@@ -202,7 +202,7 @@ public class WorkItem extends PanacheEntityBase {
     @Column(name = "completed_at")
     public Instant completedAt;
 
-    /** When the item transitioned into {@link WorkItemStatus#SUSPENDED}. */
+    /** When the item transitioned into {@link io.casehub.work.api.WorkItemStatus#SUSPENDED}. */
     @Column(name = "suspended_at")
     public Instant suspendedAt;
 
@@ -308,7 +308,7 @@ public class WorkItem extends PanacheEntityBase {
     public String excludedUsers;
 
     /**
-     * The outcome name recorded when this item reached {@link WorkItemStatus#COMPLETED}.
+     * The outcome name recorded when this item reached {@link io.casehub.work.api.WorkItemStatus#COMPLETED}.
      * Null until the item is completed. Validated against {@link #permittedOutcomes}
      * when that field is non-null.
      */

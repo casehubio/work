@@ -7,7 +7,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 
 /**
  * Verifies that WorkItemLifecycleEvent carries the outcome field. Refs #169.
@@ -51,7 +51,8 @@ class WorkItemLifecycleEventOutcomeTest {
                 id, WorkItemStatus.COMPLETED,
                 java.time.Instant.now(),
                 "alice", null, null, null,
-                "approved", "test-tenant");
+                "approved", "test-tenant",
+                null, null, null, null);
 
         assertThat(event.outcome()).isEqualTo("approved");
     }

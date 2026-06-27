@@ -115,12 +115,6 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
         <version>1.13.0</version>
       </dependency>
       <dependency>
-        <groupId>org.assertj</groupId>
-        <artifactId>assertj-core</artifactId>
-        <version>3.26.3</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>com.networknt</groupId>
         <artifactId>json-schema-validator</artifactId>
         <version>${networknt-json-schema.version}</version>
@@ -129,22 +123,6 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-jexl3</artifactId>
         <version>3.4.0</version>
-      </dependency>
-      <!-- Not yet in casehub-parent BOM (platform#23 landed after last BOM release) -->
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-api</artifactId>
-        <version>0.2-SNAPSHOT</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform-expression</artifactId>
-        <version>0.2-SNAPSHOT</version>
-      </dependency>
-      <dependency>
-        <groupId>io.casehub</groupId>
-        <artifactId>casehub-platform</artifactId>
-        <version>0.2-SNAPSHOT</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

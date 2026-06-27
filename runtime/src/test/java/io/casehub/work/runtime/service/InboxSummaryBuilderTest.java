@@ -9,8 +9,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemPriority;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemStatus;
 
 /**
  * Pure unit tests for inbox summary aggregation logic — no Quarkus, no DB.

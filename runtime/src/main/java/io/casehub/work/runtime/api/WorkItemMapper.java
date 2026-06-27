@@ -4,7 +4,7 @@ import java.util.List;
 
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.OutcomeCodecs;
 import io.casehub.work.runtime.model.WorkItemLabel;
 
