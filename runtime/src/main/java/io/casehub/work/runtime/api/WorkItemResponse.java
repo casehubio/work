@@ -6,8 +6,8 @@ import java.util.UUID;
 
 import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.Outcome;
-import io.casehub.work.runtime.model.WorkItemPriority;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemStatus;
 
 public record WorkItemResponse(
         UUID id,

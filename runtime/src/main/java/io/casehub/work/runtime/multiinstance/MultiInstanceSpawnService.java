@@ -13,17 +13,15 @@ import jakarta.transaction.Transactional;
 import io.casehub.work.api.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceConfig;
 import io.casehub.work.api.MultiInstanceContext;
-import io.casehub.work.api.OnThresholdReached;
 import io.casehub.work.api.ParentRole;
 import io.casehub.work.runtime.model.OutcomeCodecs;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.WorkItemService;
-import io.casehub.work.runtime.service.WorkItemTemplateService;
 
 /**
  * Creates a multi-instance group: a parent WorkItem + N child instances + a
@@ -53,9 +51,9 @@ public class MultiInstanceSpawnService {
      * Create a multi-instance group: parent WorkItem + N child instances + spawn group.
      * All created in the caller's transaction.
      *
+     * @param mergedRequest the fully-merged create request for the parent (request-wins over template)
      * @param template the template driving the group; must have {@code instanceCount} set
-     * @param titleOverride optional parent title; defaults to {@code template.name}
-     * @param createdBy the actor (user or system) triggering instantiation
+     * @param expandedExcludedUsers excluded users after group expansion; may be null
      * @return the parent WorkItem
      *
      * <p>
@@ -70,16 +68,10 @@ public class MultiInstanceSpawnService {
      * </ul>
      */
     @Transactional
-    public WorkItem createGroup(final WorkItemTemplate template, final String expandedExcludedUsers,
-            final String titleOverride, final String createdBy, final String callerRef) {
-        final boolean isCoordinator = template.parentRole == null
-                || ParentRole.COORDINATOR.name().equals(template.parentRole);
-
-        // 1. Create parent
-        final String expansionNote = buildExpansionNote(template, expandedExcludedUsers);
-        final WorkItemCreateRequest parentReq = buildParentRequest(
-                template, expandedExcludedUsers, expansionNote, titleOverride, createdBy, isCoordinator, callerRef);
-        final WorkItem parent = workItemService.create(parentReq);
+    public WorkItem createGroup(final WorkItemCreateRequest mergedRequest,
+            final WorkItemTemplate template, final String expandedExcludedUsers) {
+        // 1. Create parent from merged request
+        final WorkItem parent = workItemService.create(mergedRequest);
 
         // 2. Create WorkItemSpawnGroup with M-of-N policy
         final WorkItemSpawnGroup group = new WorkItemSpawnGroup();
@@ -98,7 +90,9 @@ public class MultiInstanceSpawnService {
         // 3. Create N child instances and wire PART_OF relations
         final List<WorkItem> children = new ArrayList<>();
         for (int i = 0; i < template.instanceCount; i++) {
-            final WorkItemCreateRequest childReq = buildChildRequest(template, expandedExcludedUsers, createdBy, i, group);
+            final WorkItemCreateRequest childReq = buildChildRequest(template, expandedExcludedUsers,
+                    mergedRequest.createdBy, i, group, mergedRequest.scope, mergedRequest.tenancyId,
+                    mergedRequest.permittedOutcomes);
             final WorkItem child = workItemService.create(childReq);
             child.parentId = parent.id;
 
@@ -128,47 +122,11 @@ public class MultiInstanceSpawnService {
         return parent;
     }
 
-    private static String buildExpansionNote(final WorkItemTemplate template, final String expanded) {
-        if (template.excludedGroups == null || template.excludedGroups.isBlank()) return null;
-        long before = template.excludedUsers == null ? 0L
-                : java.util.Arrays.stream(template.excludedUsers.split(",")).map(String::trim).filter(s -> !s.isEmpty()).count();
-        long after = expanded == null ? 0L
-                : java.util.Arrays.stream(expanded.split(",")).map(String::trim).filter(s -> !s.isEmpty()).count();
-        long added = after - before;
-        if (added <= 0) return null;
-        return "excludedGroups=[\"" + template.excludedGroups.trim() + "\"] resolved to " + added + " actor(s)";
-    }
-
-    private WorkItemCreateRequest buildParentRequest(final WorkItemTemplate template,
-            final String expandedExcludedUsers, final String auditDetail, final String titleOverride,
-            final String createdBy, final boolean isCoordinator, final String callerRef) {
-        final String title = (titleOverride != null && !titleOverride.isBlank())
-                ? titleOverride
-                : template.name;
-        return WorkItemCreateRequest.builder()
-                .title(title)
-                .description(template.description)
-                .category(template.category)
-                .priority(template.priority)
-                .candidateGroups(isCoordinator ? null : template.candidateGroups)
-                .candidateUsers(isCoordinator ? null : template.candidateUsers)
-                .requiredCapabilities(template.requiredCapabilities)
-                .createdBy(createdBy)
-                .payload(template.defaultPayload)
-                .callerRef(callerRef)
-                .expiresAtBusinessHours(isCoordinator ? null : template.defaultExpiryBusinessHours)
-                .templateId(template.id)
-                .permittedOutcomes(OutcomeCodecs.decodeOutcomes(template.outcomes))
-                .inputDataSchema(template.inputDataSchema)
-                .outputDataSchema(template.outputDataSchema)
-                .excludedUsers(expandedExcludedUsers)
-                .auditDetail(auditDetail)
-                .build();
-    }
-
     private WorkItemCreateRequest buildChildRequest(final WorkItemTemplate template,
             final String expandedExcludedUsers, final String createdBy,
-            final int index, final WorkItemSpawnGroup group) {
+            final int index, final WorkItemSpawnGroup group,
+            final String scope, final String tenancyId,
+            final java.util.List<io.casehub.work.api.Outcome> permittedOutcomes) {
         return WorkItemCreateRequest.builder()
                 .title(template.name + " [" + (index + 1) + "/" + template.instanceCount + "]")
                 .description(template.description)
@@ -182,10 +140,14 @@ public class MultiInstanceSpawnService {
                 .claimDeadlineBusinessHours(template.defaultClaimBusinessHours)
                 .expiresAtBusinessHours(template.defaultExpiryBusinessHours)
                 .templateId(template.id)
-                .permittedOutcomes(OutcomeCodecs.decodeOutcomes(template.outcomes))
+                .permittedOutcomes(permittedOutcomes != null
+                        ? permittedOutcomes
+                        : OutcomeCodecs.decodeOutcomes(template.outcomes))
                 .inputDataSchema(template.inputDataSchema)
                 .outputDataSchema(template.outputDataSchema)
                 .excludedUsers(expandedExcludedUsers)
+                .scope(scope != null ? scope : template.scope)
+                .tenancyId(tenancyId)
                 .build();
     }
 

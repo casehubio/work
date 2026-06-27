@@ -229,7 +229,7 @@ public class WorkItemTemplateResource {
         t.description = request.description();
         t.category = request.category();
         t.priority = request.priority() != null
-                ? io.casehub.work.runtime.model.WorkItemPriority.valueOf(request.priority())
+                ? io.casehub.work.api.WorkItemPriority.valueOf(request.priority())
                 : null;
         t.candidateGroups = request.candidateGroups();
         t.candidateUsers = request.candidateUsers();
@@ -357,7 +357,7 @@ public class WorkItemTemplateResource {
         t.description = request.description();
         t.category = request.category();
         t.priority = request.priority() != null
-                ? io.casehub.work.runtime.model.WorkItemPriority.valueOf(request.priority())
+                ? io.casehub.work.api.WorkItemPriority.valueOf(request.priority())
                 : null;
         t.candidateGroups = request.candidateGroups();
         t.candidateUsers = request.candidateUsers();
@@ -473,7 +473,7 @@ public class WorkItemTemplateResource {
                 t.priority = null;
             } else {
                 try {
-                    t.priority = io.casehub.work.runtime.model.WorkItemPriority.valueOf(priorityNode.asText());
+                    t.priority = io.casehub.work.api.WorkItemPriority.valueOf(priorityNode.asText());
                 } catch (final IllegalArgumentException e) {
                     return Response.status(Response.Status.BAD_REQUEST)
                             .entity(Map.of("error", "invalid priority value: " + priorityNode.asText())).build();

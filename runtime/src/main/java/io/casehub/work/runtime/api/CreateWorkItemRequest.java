@@ -3,8 +3,8 @@ package io.casehub.work.runtime.api;
 import java.time.Instant;
 import java.util.List;
 
-import io.casehub.work.runtime.model.WorkItemLabelRequest;
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemLabelRequest;
+import io.casehub.work.api.WorkItemPriority;
 
 public record CreateWorkItemRequest(
         String title,

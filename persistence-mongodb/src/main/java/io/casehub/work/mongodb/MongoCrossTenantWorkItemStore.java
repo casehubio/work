@@ -9,7 +9,7 @@ import jakarta.enterprise.inject.Alternative;
 import org.bson.Document;
 
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.CrossTenantWorkItemStore;
 
 /**

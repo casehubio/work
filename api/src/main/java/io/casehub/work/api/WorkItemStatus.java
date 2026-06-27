@@ -1,10 +1,10 @@
-package io.casehub.work.runtime.model;
+package io.casehub.work.api;
 
 import java.util.Arrays;
 import java.util.List;
 
 /**
- * Lifecycle status of a {@link WorkItem}.
+ * Lifecycle status of a WorkItem.
  */
 public enum WorkItemStatus {
 

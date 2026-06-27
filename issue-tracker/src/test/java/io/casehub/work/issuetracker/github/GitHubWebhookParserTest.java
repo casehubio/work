@@ -3,7 +3,7 @@ package io.casehub.work.issuetracker.github;
 import io.casehub.work.api.NormativeResolution;
 import io.casehub.work.issuetracker.webhook.WebhookEvent;
 import io.casehub.work.issuetracker.webhook.WebhookEventKind;
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemPriority;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;

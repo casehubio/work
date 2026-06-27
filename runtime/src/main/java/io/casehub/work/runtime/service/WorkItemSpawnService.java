@@ -19,7 +19,7 @@ import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.OutcomeCodecs;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
@@ -29,7 +29,6 @@ import io.casehub.work.runtime.repository.WorkItemRelationStore;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
 import io.casehub.work.runtime.repository.WorkItemTemplateStore;
-import io.casehub.work.runtime.service.WorkItemTemplateService;
 
 /**
  * Implements {@link SpawnPort} for the WorkItem domain.
@@ -196,7 +195,7 @@ public class WorkItemSpawnService implements SpawnPort {
                     .stream()
                     .filter(r -> createdByMarker.equals(r.createdBy))
                     .forEach(r -> workItemStore.get(r.sourceId).ifPresent(child -> {
-                        if (child.status == io.casehub.work.runtime.model.WorkItemStatus.PENDING) {
+                        if (child.status == io.casehub.work.api.WorkItemStatus.PENDING) {
                             workItemService.cancel(child.id, "system:spawn",
                                     "Cancelled by spawn group cancellation");
                         }

@@ -2,7 +2,7 @@ package io.casehub.work.flow;
 
 import java.util.function.Function;
 
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemPriority;
 import io.serverlessworkflow.fluent.func.configurers.FuncTaskConfigurer;
 import io.serverlessworkflow.fluent.func.dsl.FuncDSL;
 import io.smallrye.mutiny.Uni;

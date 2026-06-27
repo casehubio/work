@@ -9,7 +9,7 @@ package io.casehub.work.api;
  *   <li>{@link #FAILURE} — work was attempted but could not be completed</li>
  * </ul>
  *
- * <p>Maps to {@link io.casehub.work.runtime.model.WorkItemStatus}:
+ * <p>Maps to {@link WorkItemStatus}:
  * DONE → COMPLETED, DECLINE → CANCELLED, FAILURE → REJECTED.
  *
  * <p>Used by {@link io.casehub.work.issuetracker.webhook.WebhookEvent} to translate

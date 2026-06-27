@@ -14,7 +14,7 @@ import org.jboss.logging.Logger;
 import dev.langchain4j.model.chat.ChatModel;
 import io.casehub.work.ai.config.WorkItemsAiConfig;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
 

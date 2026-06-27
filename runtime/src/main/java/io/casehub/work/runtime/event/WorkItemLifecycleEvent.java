@@ -9,8 +9,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.casehub.work.api.WorkEventType;
 import io.casehub.work.api.WorkLifecycleEvent;
+import io.casehub.work.api.WorkItemEvent;
+import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 
 /**
  * CDI event fired on every WorkItem lifecycle transition.
@@ -39,7 +41,7 @@ import io.casehub.work.runtime.model.WorkItemStatus;
  * The {@code status} field in this event records the status <em>after</em> the transition.
  * No "previous status" field is provided in the event itself.
  */
-public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
+public final class WorkItemLifecycleEvent extends WorkLifecycleEvent implements WorkItemEvent {
 
     private final String type;
     private final String sourceUri;
@@ -53,12 +55,18 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
     private final String planRef;
     private final String outcome;
     private final String tenancyId;
+    private final String callerRef;
+    private final String assigneeId;
+    private final String resolution;
+    private final String candidateGroups;
     private final WorkItem workItem;
 
     private WorkItemLifecycleEvent(final String type, final String sourceUri, final String subject,
             final UUID workItemId, final WorkItemStatus status, final Instant occurredAt,
             final String actor, final String detail, final String rationale, final String planRef,
-            final String outcome, final String tenancyId, final WorkItem workItem) {
+            final String outcome, final String tenancyId,
+            final String callerRef, final String assigneeId, final String resolution, final String candidateGroups,
+            final WorkItem workItem) {
         this.type = type;
         this.sourceUri = sourceUri;
         this.subject = subject;
@@ -71,6 +79,10 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
         this.planRef = planRef;
         this.outcome = outcome;
         this.tenancyId = tenancyId;
+        this.callerRef = callerRef;
+        this.assigneeId = assigneeId;
+        this.resolution = resolution;
+        this.candidateGroups = candidateGroups;
         this.workItem = workItem;
     }
 
@@ -89,7 +101,9 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
                 "/workitems/" + workItem.id,
                 workItem.id.toString(),
                 workItem.id, workItem.status, Instant.now(),
-                actor, detail, null, null, workItem.outcome, workItem.tenancyId, workItem);
+                actor, detail, null, null, workItem.outcome, workItem.tenancyId,
+                workItem.callerRef, workItem.assigneeId, workItem.resolution, workItem.candidateGroups,
+                workItem);
     }
 
     /**
@@ -111,7 +125,9 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
                 "/workitems/" + workItem.id,
                 workItem.id.toString(),
                 workItem.id, workItem.status, Instant.now(),
-                actor, detail, rationale, planRef, workItem.outcome, workItem.tenancyId, workItem);
+                actor, detail, rationale, planRef, workItem.outcome, workItem.tenancyId,
+                workItem.callerRef, workItem.assigneeId, workItem.resolution, workItem.candidateGroups,
+                workItem);
     }
 
     /**
@@ -128,9 +144,11 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
     public static WorkItemLifecycleEvent fromWire(final String type, final String sourceUri,
             final String subject, final UUID workItemId, final WorkItemStatus status,
             final Instant occurredAt, final String actor, final String detail,
-            final String rationale, final String planRef, final String outcome, final String tenancyId) {
+            final String rationale, final String planRef, final String outcome, final String tenancyId,
+            final String callerRef, final String assigneeId, final String resolution, final String candidateGroups) {
         return new WorkItemLifecycleEvent(type, sourceUri, subject, workItemId, status,
-                occurredAt, actor, detail, rationale, planRef, outcome, tenancyId, null);
+                occurredAt, actor, detail, rationale, planRef, outcome, tenancyId,
+                callerRef, assigneeId, resolution, candidateGroups, null);
     }
 
     // ---- Existing accessors preserved (same names as old record components) ----
@@ -222,6 +240,64 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent {
     @JsonIgnore
     public String tenancyId() {
         return tenancyId;
+    }
+
+    /**
+     * The callerRef from the WorkItem (external correlation identifier).
+     * For wire-reconstructed events, this is stored independently; for local events,
+     * it is read from the embedded workItem entity.
+     */
+    @JsonProperty("callerRef")
+    public String callerRef() {
+        return callerRef;
+    }
+
+    /**
+     * The assigneeId from the WorkItem (who is assigned to complete this work).
+     * For wire-reconstructed events, this is stored independently; for local events,
+     * it is read from the embedded workItem entity.
+     */
+    @JsonProperty("assigneeId")
+    public String assigneeId() {
+        return assigneeId;
+    }
+
+    /**
+     * The resolution JSON from the WorkItem.
+     * For wire-reconstructed events, this is stored independently; for local events,
+     * it is read from the embedded workItem entity.
+     */
+    @JsonProperty("resolution")
+    public String resolution() {
+        return resolution;
+    }
+
+    /**
+     * The candidateGroups from the WorkItem (comma-separated list of eligible groups).
+     * For wire-reconstructed events, this is stored independently; for local events,
+     * it is read from the embedded workItem entity.
+     */
+    @JsonProperty("candidateGroups")
+    public String candidateGroups() {
+        return candidateGroups;
+    }
+
+    // ---- WorkItemEvent interface implementation ----
+
+    /**
+     * Returns a {@link WorkItemRef} built from this event's data.
+     * For local events (workItem != null), fields are read from the embedded entity.
+     * For wire events (workItem == null), fields are read from independently stored values.
+     */
+    @JsonIgnore
+    @Override
+    public WorkItemRef ref() {
+        if (workItem != null) {
+            return new WorkItemRef(workItemId, status, workItem.callerRef, workItem.assigneeId,
+                    workItem.resolution, workItem.candidateGroups, outcome, tenancyId);
+        }
+        return new WorkItemRef(workItemId, status, callerRef, assigneeId,
+                resolution, candidateGroups, outcome, tenancyId);
     }
 
     // ---- WorkLifecycleEvent abstract method implementations ----

@@ -7,8 +7,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.runtime.model.WorkItemCreateRequest;
-import io.casehub.work.runtime.model.WorkItemLabelRequest;
+import io.casehub.work.api.WorkItemLabelRequest;
 
 // MANUAL labels only — INFERRED rejection is a service concern tested in WorkItemServiceTest.
 class WorkItemLabelMapperTest {

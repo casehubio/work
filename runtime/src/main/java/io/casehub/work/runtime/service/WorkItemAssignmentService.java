@@ -23,7 +23,7 @@ import io.casehub.work.core.strategy.RoundRobinStrategy;
 import io.casehub.work.core.strategy.WorkBroker;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 
 /**
  * Orchestrates worker selection for WorkItems on creation, release, and delegation.

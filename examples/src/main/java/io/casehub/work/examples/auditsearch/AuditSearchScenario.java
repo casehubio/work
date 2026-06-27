@@ -13,8 +13,8 @@ import jakarta.ws.rs.core.MediaType;
 import org.jboss.logging.Logger;
 
 import io.casehub.work.examples.StepLog;
-import io.casehub.work.runtime.model.WorkItemCreateRequest;
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.AuditQuery;
 import io.casehub.work.runtime.service.WorkItemService;

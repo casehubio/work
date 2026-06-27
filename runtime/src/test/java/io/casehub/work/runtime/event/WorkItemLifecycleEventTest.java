@@ -7,7 +7,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 
 /**
  * Pure JUnit 5 unit tests for {@link WorkItemLifecycleEvent} — no container needed.
@@ -88,5 +88,46 @@ class WorkItemLifecycleEventTest {
         WorkItemLifecycleEvent e = WorkItemLifecycleEvent.of("CREATED",
                 workItem(UUID.randomUUID(), WorkItemStatus.PENDING), "system", null);
         assertThat(e.detail()).isNull();
+    }
+
+    @Test
+    void ref_returnsWorkItemRefFromEntity() {
+        final WorkItem workItem = new WorkItem();
+        workItem.id = UUID.randomUUID();
+        workItem.status = WorkItemStatus.IN_PROGRESS;
+        workItem.callerRef = "case:1/pi:2";
+        workItem.assigneeId = "alice";
+        workItem.resolution = "{}";
+        workItem.candidateGroups = "team-a";
+        workItem.outcome = "approved";
+        workItem.tenancyId = "tenant-1";
+
+        final WorkItemLifecycleEvent event = WorkItemLifecycleEvent.of("COMPLETED", workItem, "alice", null);
+        final io.casehub.work.api.WorkItemRef ref = event.ref();
+
+        assertThat(ref.id()).isEqualTo(workItem.id);
+        assertThat(ref.callerRef()).isEqualTo("case:1/pi:2");
+        assertThat(ref.assigneeId()).isEqualTo("alice");
+        assertThat(ref.resolution()).isEqualTo("{}");
+        assertThat(ref.candidateGroups()).isEqualTo("team-a");
+        assertThat(ref.tenancyId()).isEqualTo("tenant-1");
+    }
+
+    @Test
+    void ref_fromWireEvent_returnsWorkItemRefFromStoredFields() {
+        final UUID id = UUID.randomUUID();
+        final WorkItemLifecycleEvent wireEvent = WorkItemLifecycleEvent.fromWire(
+                "io.casehub.work.workitem.completed", "/workitems/" + id, id.toString(),
+                id, WorkItemStatus.COMPLETED, java.time.Instant.now(), "alice", null, null, null,
+                "approved", "tenant-1",
+                "case:1/pi:2", "alice", "{}", "team-a");
+
+        final io.casehub.work.api.WorkItemRef ref = wireEvent.ref();
+
+        assertThat(ref.id()).isEqualTo(id);
+        assertThat(ref.callerRef()).isEqualTo("case:1/pi:2");
+        assertThat(ref.assigneeId()).isEqualTo("alice");
+        assertThat(ref.resolution()).isEqualTo("{}");
+        assertThat(ref.candidateGroups()).isEqualTo("team-a");
     }
 }

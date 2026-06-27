@@ -18,7 +18,7 @@ import io.casehub.work.reports.service.QueueHealthReport;
 import io.casehub.work.reports.service.ReportService;
 import io.casehub.work.reports.service.SlaBreachReport;
 import io.casehub.work.reports.service.ThroughputReport;
-import io.casehub.work.runtime.model.WorkItemPriority;
+import io.casehub.work.api.WorkItemPriority;
 
 @Path("/workitems/reports")
 @Produces(MediaType.APPLICATION_JSON)

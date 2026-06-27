@@ -19,7 +19,7 @@ import io.casehub.work.api.Outcome;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.runtime.model.OutcomeCodecs;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemLabel;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.multiinstance.MultiInstanceSpawnService;
@@ -145,8 +145,13 @@ public class WorkItemTemplateService {
                 // payloadOverride is not forwarded to multi-instance spawning in this release
                 LOG.warnf("payloadOverride ignored for multi-instance template '%s' (casehubio/work#175)", template.id);
             }
+            final WorkItemCreateRequest groupRequest = toCreateRequest(
+                    template, titleOverride, assigneeIdOverride, createdBy, callerRef, null);
+            final WorkItemCreateRequest mergedGroupRequest = expandedExcludedUsers != null
+                    ? groupRequest.toBuilder().excludedUsers(expandedExcludedUsers).build()
+                    : groupRequest;
             return multiInstanceSpawnService.get()
-                    .createGroup(template, expandedExcludedUsers, titleOverride, createdBy, callerRef);
+                    .createGroup(mergedGroupRequest, template, expandedExcludedUsers);
         }
 
         WorkItemCreateRequest request =
@@ -169,6 +174,101 @@ public class WorkItemTemplateService {
         }
 
         return workItem;
+    }
+
+    /**
+     * Create a WorkItem from a template using request-wins merge semantics.
+     *
+     * <p>
+     * The request's fields take precedence over template defaults for every non-null value.
+     * When a request field is null, the corresponding template default is used. This enables
+     * SPI callers to provide a {@link WorkItemCreateRequest} with only the fields they want
+     * to override, and let the template fill in everything else.
+     *
+     * <p>
+     * For multi-instance templates, delegates to {@link MultiInstanceSpawnService#createGroup}
+     * with the merged request. For simple templates, creates a single WorkItem and applies
+     * template labels.
+     *
+     * @param request the create request; must have {@code templateId} set
+     * @return the newly created WorkItem (or parent WorkItem for multi-instance)
+     * @throws IllegalArgumentException if the template is not found
+     */
+    @Transactional
+    public WorkItem createFromTemplate(final WorkItemCreateRequest request) {
+        final WorkItemTemplate template = templateStore.get(request.templateId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Template not found: " + request.templateId));
+
+        final String expandedExcludedUsers = templateExpander.expandExcludedUsers(template);
+
+        final WorkItemCreateRequest merged = mergeRequestWithTemplate(template, request, expandedExcludedUsers);
+
+        if (template.instanceCount != null) {
+            return multiInstanceSpawnService.get()
+                    .createGroup(merged, template, expandedExcludedUsers);
+        }
+
+        final WorkItem workItem = workItemService.create(merged);
+
+        final List<WorkItemLabel> labels = parseLabels(template);
+        WorkItem result = workItem;
+        for (final WorkItemLabel label : labels) {
+            result = workItemService.addLabel(result.id, label.path, label.appliedBy);
+        }
+        return result;
+    }
+
+    /**
+     * Merge a {@link WorkItemCreateRequest} with template defaults using request-wins semantics.
+     *
+     * <p>
+     * For every field, if the request provides a non-null value it is used; otherwise the
+     * template default is used. Payload merging uses {@link #mergePayload} for deep JSON
+     * object merge when both request and template provide payloads.
+     *
+     * <p>
+     * Static for unit testability — no CDI or JPA dependency.
+     *
+     * @param template the template providing defaults
+     * @param request the request providing overrides
+     * @param expandedExcludedUsers excluded users after group expansion; may be null
+     * @return the merged request ready for {@link WorkItemService#create}
+     */
+    static WorkItemCreateRequest mergeRequestWithTemplate(
+            final WorkItemTemplate template, final WorkItemCreateRequest request,
+            final String expandedExcludedUsers) {
+        return WorkItemCreateRequest.builder()
+                .title(request.title != null ? request.title : template.name)
+                .description(request.description != null ? request.description : template.description)
+                .category(request.category != null ? request.category : template.category)
+                .formKey(request.formKey)
+                .priority(request.priority != null ? request.priority : template.priority)
+                .assigneeId(request.assigneeId)
+                .candidateGroups(request.candidateGroups != null ? request.candidateGroups : template.candidateGroups)
+                .candidateUsers(request.candidateUsers != null ? request.candidateUsers : template.candidateUsers)
+                .requiredCapabilities(request.requiredCapabilities != null ? request.requiredCapabilities : template.requiredCapabilities)
+                .createdBy(request.createdBy)
+                .payload(mergePayload(template.defaultPayload, request.payload))
+                .claimDeadline(request.claimDeadline)
+                .expiresAt(request.expiresAt)
+                .followUpDate(request.followUpDate)
+                .confidenceScore(request.confidenceScore)
+                .callerRef(request.callerRef)
+                .claimDeadlineBusinessHours(request.claimDeadlineBusinessHours != null
+                        ? request.claimDeadlineBusinessHours : template.defaultClaimBusinessHours)
+                .expiresAtBusinessHours(request.expiresAtBusinessHours != null
+                        ? request.expiresAtBusinessHours : template.defaultExpiryBusinessHours)
+                .templateId(request.templateId)
+                .permittedOutcomes(request.permittedOutcomes != null
+                        ? request.permittedOutcomes
+                        : OutcomeCodecs.decodeOutcomes(template.outcomes))
+                .inputDataSchema(request.inputDataSchema != null ? request.inputDataSchema : template.inputDataSchema)
+                .outputDataSchema(request.outputDataSchema != null ? request.outputDataSchema : template.outputDataSchema)
+                .excludedUsers(expandedExcludedUsers != null ? expandedExcludedUsers : request.excludedUsers)
+                .scope(request.scope != null ? request.scope : template.scope)
+                .tenancyId(request.tenancyId)
+                .build();
     }
 
     /**

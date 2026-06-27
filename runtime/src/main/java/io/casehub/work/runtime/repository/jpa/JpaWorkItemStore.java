@@ -16,7 +16,7 @@ import io.casehub.work.api.GroupStatus;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRootView;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
@@ -62,6 +62,14 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
     public Optional<WorkItem> findByCallerRef(final String callerRef) {
         return withTenantQuery(() ->
                 WorkItem.find("callerRef = ?1 AND tenancyId = ?2", callerRef, currentPrincipal.tenancyId())
+                        .firstResultOptional());
+    }
+
+    @Override
+    public Optional<WorkItem> findActiveByCallerRef(final String callerRef) {
+        return withTenantQuery(() ->
+                WorkItem.find("callerRef = ?1 AND status NOT IN (?2) AND tenancyId = ?3",
+                        callerRef, WorkItemStatus.TERMINAL_STATUSES, currentPrincipal.tenancyId())
                         .firstResultOptional());
     }
 
@@ -297,7 +305,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
 
     @Override
     public List<WorkItem> findByParentIdExcludingStatuses(final UUID parentId,
-            final List<io.casehub.work.runtime.model.WorkItemStatus> excludeStatuses) {
+            final List<io.casehub.work.api.WorkItemStatus> excludeStatuses) {
         return withTenantQuery(() ->
                 WorkItem.<WorkItem> find(
                         "parentId = ?1 AND tenancyId = ?2 AND status NOT IN (?3)",
@@ -306,7 +314,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
 
     @Override
     public List<WorkItem> findByParentIdWithStatuses(final UUID parentId,
-            final List<io.casehub.work.runtime.model.WorkItemStatus> statuses) {
+            final List<io.casehub.work.api.WorkItemStatus> statuses) {
         return withTenantQuery(() ->
                 WorkItem.<WorkItem> find(
                         "parentId = ?1 AND tenancyId = ?2 AND status IN (?3)",

@@ -15,9 +15,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.TenancyConstants;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
-import io.casehub.work.runtime.model.WorkItemStatus;
+import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
@@ -194,7 +195,10 @@ class MultiInstanceCoordinatorTest {
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
             t.persist();
-            return spawnService.createGroup(t, null, null, "test", callerRef).id;
+            final WorkItemCreateRequest req = WorkItemCreateRequest.builder()
+                    .title(t.name).createdBy("test").callerRef(callerRef)
+                    .candidateGroups(t.candidateGroups).templateId(t.id).build();
+            return spawnService.createGroup(req, t, null).id;
         });
 
         final WorkItem parent = inTx(() -> WorkItem.findById(parentId));

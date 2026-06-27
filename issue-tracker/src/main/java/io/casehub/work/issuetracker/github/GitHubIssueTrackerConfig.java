@@ -48,7 +48,7 @@ public interface GitHubIssueTrackerConfig {
 
     /**
      * When {@code true}, the linked GitHub issue is automatically closed (with a comment)
-     * when the WorkItem transitions to {@link io.casehub.work.runtime.model.WorkItemStatus#COMPLETED}.
+     * when the WorkItem transitions to {@link io.casehub.work.api.WorkItemStatus#COMPLETED}.
      * Defaults to {@code false} — explicit close via the REST API or via
      * {@link GitHubIssueTrackerProvider#closeIssue} only.
      *

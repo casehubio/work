@@ -1,11 +1,9 @@
-package io.casehub.work.runtime.model;
+package io.casehub.work.api;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-
-import io.casehub.work.api.Outcome;
 
 
 public final class WorkItemCreateRequest {
@@ -13,9 +11,9 @@ public final class WorkItemCreateRequest {
     public final String title;
     public final String description;
     public final String category;
-    public final String formKey;
-    public final WorkItemPriority priority;
-    public final String assigneeId;
+    public final String                               formKey;
+    public final io.casehub.work.api.WorkItemPriority priority;
+    public final String                               assigneeId;
     public final String candidateGroups;
     public final String candidateUsers;
     public final String requiredCapabilities;
@@ -23,9 +21,9 @@ public final class WorkItemCreateRequest {
     public final String payload;
     public final Instant claimDeadline;
     public final Instant expiresAt;
-    public final Instant followUpDate;
-    public final List<WorkItemLabelRequest> labels;
-    public final Double confidenceScore;
+    public final Instant                                        followUpDate;
+    public final List<io.casehub.work.api.WorkItemLabelRequest> labels;
+    public final Double                                         confidenceScore;
     public final String callerRef;
     public final Integer claimDeadlineBusinessHours;
     public final Integer expiresAtBusinessHours;
@@ -40,6 +38,9 @@ public final class WorkItemCreateRequest {
 
     /** Optional detail appended to the CREATED audit entry. Used to record group expansion notes. */
     public final String auditDetail;
+
+    /** Tenant identifier for multi-tenant SPI callers. */
+    public final String tenancyId;
 
     private WorkItemCreateRequest(final Builder b) {
         this.title                      = b.title;
@@ -68,6 +69,7 @@ public final class WorkItemCreateRequest {
         this.excludedUsers              = b.excludedUsers;
         this.scope                      = b.scope;
         this.auditDetail                = b.auditDetail;
+        this.tenancyId                  = b.tenancyId;
     }
 
     public static Builder builder() {
@@ -107,7 +109,8 @@ public final class WorkItemCreateRequest {
                 && Objects.equals(outputDataSchema, r.outputDataSchema)
                 && Objects.equals(excludedUsers, r.excludedUsers)
                 && Objects.equals(scope, r.scope)
-                && Objects.equals(auditDetail, r.auditDetail);
+                && Objects.equals(auditDetail, r.auditDetail)
+                && Objects.equals(tenancyId, r.tenancyId);
     }
 
     @Override
@@ -116,7 +119,8 @@ public final class WorkItemCreateRequest {
                 assigneeId, candidateGroups, candidateUsers, requiredCapabilities,
                 createdBy, payload, claimDeadline, expiresAt, followUpDate, labels,
                 confidenceScore, callerRef, claimDeadlineBusinessHours, expiresAtBusinessHours,
-                templateId, permittedOutcomes, inputDataSchema, outputDataSchema, excludedUsers, scope);
+                templateId, permittedOutcomes, inputDataSchema, outputDataSchema, excludedUsers, scope,
+                auditDetail, tenancyId);
     }
 
     /** Intentionally omits payload, schemas, callerRef, and credentials — log-safety. */
@@ -132,9 +136,9 @@ public final class WorkItemCreateRequest {
         private String title;
         private String description;
         private String category;
-        private String formKey;
-        private WorkItemPriority priority;
-        private String assigneeId;
+        private String                               formKey;
+        private io.casehub.work.api.WorkItemPriority priority;
+        private String                               assigneeId;
         private String candidateGroups;
         private String candidateUsers;
         private String requiredCapabilities;
@@ -142,9 +146,9 @@ public final class WorkItemCreateRequest {
         private String payload;
         private Instant claimDeadline;
         private Instant expiresAt;
-        private Instant followUpDate;
-        private List<WorkItemLabelRequest> labels;
-        private Double confidenceScore;
+        private Instant                                        followUpDate;
+        private List<io.casehub.work.api.WorkItemLabelRequest> labels;
+        private Double                                         confidenceScore;
         private String callerRef;
         private Integer claimDeadlineBusinessHours;
         private Integer expiresAtBusinessHours;
@@ -155,6 +159,7 @@ public final class WorkItemCreateRequest {
         private String excludedUsers;
         private String scope;
         private String auditDetail;
+        private String tenancyId;
 
         private Builder() {}
 
@@ -185,14 +190,15 @@ public final class WorkItemCreateRequest {
             this.excludedUsers              = src.excludedUsers;
             this.scope                      = src.scope;
             this.auditDetail                = src.auditDetail;
+            this.tenancyId                  = src.tenancyId;
         }
 
         public Builder title(final String v)                          { this.title = v; return this; }
         public Builder description(final String v)                    { this.description = v; return this; }
         public Builder category(final String v)                       { this.category = v; return this; }
-        public Builder formKey(final String v)                        { this.formKey = v; return this; }
-        public Builder priority(final WorkItemPriority v)             { this.priority = v; return this; }
-        public Builder assigneeId(final String v)                     { this.assigneeId = v; return this; }
+        public Builder formKey(final String v)                                { this.formKey = v; return this; }
+        public Builder priority(final io.casehub.work.api.WorkItemPriority v) {this.priority = v; return this; }
+        public Builder assigneeId(final String v)                             { this.assigneeId = v; return this; }
         public Builder candidateGroups(final String v)                { this.candidateGroups = v; return this; }
         public Builder candidateUsers(final String v)                 { this.candidateUsers = v; return this; }
         public Builder requiredCapabilities(final String v)           { this.requiredCapabilities = v; return this; }
@@ -200,9 +206,9 @@ public final class WorkItemCreateRequest {
         public Builder payload(final String v)                        { this.payload = v; return this; }
         public Builder claimDeadline(final Instant v)                 { this.claimDeadline = v; return this; }
         public Builder expiresAt(final Instant v)                     { this.expiresAt = v; return this; }
-        public Builder followUpDate(final Instant v)                  { this.followUpDate = v; return this; }
-        public Builder labels(final List<WorkItemLabelRequest> v)    { this.labels = v; return this; }
-        public Builder confidenceScore(final Double v)                { this.confidenceScore = v; return this; }
+        public Builder followUpDate(final Instant v)                                  { this.followUpDate = v; return this; }
+        public Builder labels(final List<io.casehub.work.api.WorkItemLabelRequest> v) {this.labels = v; return this; }
+        public Builder confidenceScore(final Double v)                                { this.confidenceScore = v; return this; }
         public Builder callerRef(final String v)                      { this.callerRef = v; return this; }
         public Builder claimDeadlineBusinessHours(final Integer v)    { this.claimDeadlineBusinessHours = v; return this; }
         public Builder expiresAtBusinessHours(final Integer v)        { this.expiresAtBusinessHours = v; return this; }
@@ -213,6 +219,7 @@ public final class WorkItemCreateRequest {
         public Builder excludedUsers(final String v)                  { this.excludedUsers = v; return this; }
         public Builder scope(final String v)                          { this.scope = v; return this; }
         public Builder auditDetail(final String v)                    { this.auditDetail = v; return this; }
+        public Builder tenancyId(final String v)                      { this.tenancyId = v; return this; }
 
         public WorkItemCreateRequest build() {
             if (title == null || title.isBlank())
