@@ -85,8 +85,8 @@ class WorkItemEventPayloadTest {
         final WorkItemLifecycleEvent event = sampleEvent("CREATED");
         final WorkItemEventPayload payload = WorkItemEventPayload.from(event);
 
-        // payload has no WorkItem — the toEvent() result returns null from source()
-        assertThat(payload.toEvent().source()).isNull();
+        // payload has no WorkItem — the toEvent() result returns null from workItem()
+        assertThat(payload.toEvent().workItem()).isNull();
     }
 
     @Test

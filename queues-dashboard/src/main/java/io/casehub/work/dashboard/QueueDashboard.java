@@ -77,7 +77,7 @@ public class QueueDashboard {
      */
     @Transactional
     public void onLifecycleEvent(@ObservesAsync final WorkItemLifecycleEvent event) {
-        final WorkItem workItem = (WorkItem) event.source();
+        final WorkItem workItem = event.workItem();
         tenantContextRunner.runInTenantContext(workItem.tenancyId, () -> {
             final List<WorkItem> items = workItemStore.scan(WorkItemQuery.all());
             latestItems.set(List.copyOf(items));

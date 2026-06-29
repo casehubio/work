@@ -217,8 +217,7 @@ public class IssueLinkService {
             return;
         }
 
-        final io.casehub.work.runtime.model.WorkItem workItem =
-                (io.casehub.work.runtime.model.WorkItem) event.source();
+        final io.casehub.work.runtime.model.WorkItem workItem = event.workItem();
 
         for (final WorkItemIssueLink link : links) {
             final IssueTrackerProvider provider;
