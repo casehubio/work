@@ -8,7 +8,8 @@ import org.jboss.logging.Logger;
 
 import io.casehub.work.ai.repository.EscalationSummaryStore;
 import io.casehub.work.api.WorkEventType;
-import io.casehub.work.api.WorkLifecycleEvent;
+import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.runtime.model.WorkItem;
 
 /**
  * CDI observer that generates an LLM escalation summary when a WorkItem
@@ -35,14 +36,14 @@ public class EscalationSummaryObserver {
      *
      * @param event the lifecycle event; EXPIRED and CLAIM_EXPIRED are handled
      */
-    void onEscalation(@Observes final WorkLifecycleEvent event) {
+    void onEscalation(@Observes final WorkItemLifecycleEvent event) {
         final WorkEventType type = event.eventType();
         if (type != WorkEventType.EXPIRED && type != WorkEventType.CLAIM_EXPIRED) {
             return;
         }
         try {
-            final Object source = event.source();
-            if (source instanceof io.casehub.work.runtime.model.WorkItem wi) {
+            final WorkItem wi = event.workItem();
+            if (wi != null) {
                 summaryStore.put(summaryService.buildSummary(wi.id, type.name()));
             }
         } catch (final Exception e) {

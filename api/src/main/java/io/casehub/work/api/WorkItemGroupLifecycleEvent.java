@@ -6,7 +6,7 @@ import java.util.UUID;
 /**
  * Fires when a multi-instance WorkItem group changes aggregate state.
  *
- * Distinct from {@link WorkLifecycleEvent} (which fires per individual WorkItem transition).
+ * Distinct from {@code WorkItemLifecycleEvent} (which fires per individual WorkItem transition).
  * Consumers subscribe to this for group-level outcomes: dashboards, notifications, CaseHub routing.
  * The {@code callerRef} is echoed from the parent WorkItem so CaseHub can route outcomes
  * without a query.

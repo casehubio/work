@@ -3,14 +3,17 @@ package io.casehub.work.runtime.filter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+
+import io.casehub.work.runtime.model.WorkItem;
 
 class FilterActionTest {
 
     @Test
-    void apply_receivesOpaqueWorkUnit() {
-        final Object[] captured = new Object[1];
+    void apply_receivesWorkItem() {
+        final WorkItem[] captured = new WorkItem[1];
         final FilterAction action = new FilterAction() {
             @Override
             public String type() {
@@ -18,13 +21,14 @@ class FilterActionTest {
             }
 
             @Override
-            public void apply(final Object workUnit, final Map<String, Object> params) {
-                captured[0] = workUnit;
+            public void apply(final WorkItem workItem, final Map<String, Object> params) {
+                captured[0] = workItem;
             }
         };
-        final Object domain = new Object();
-        action.apply(domain, Map.of());
-        assertThat(captured[0]).isSameAs(domain);
+        final WorkItem wi = new WorkItem();
+        wi.id = UUID.randomUUID();
+        action.apply(wi, Map.of());
+        assertThat(captured[0]).isSameAs(wi);
     }
 
     @Test
@@ -36,7 +40,7 @@ class FilterActionTest {
             }
 
             @Override
-            public void apply(Object workUnit, Map<String, Object> params) {
+            public void apply(WorkItem workItem, Map<String, Object> params) {
             }
         };
         assertThat(action.type()).isEqualTo("MY_ACTION");

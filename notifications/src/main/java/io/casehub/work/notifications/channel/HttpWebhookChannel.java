@@ -7,6 +7,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import io.casehub.connectors.http.HttpHelper;
 import io.casehub.work.api.NotificationChannel;
 import io.casehub.work.api.NotificationPayload;
+import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
 
 /**
@@ -41,7 +42,8 @@ public class HttpWebhookChannel implements NotificationChannel {
     @Override
     public void send(final NotificationPayload payload) {
         try {
-            final WorkItem wi = (WorkItem) payload.event().source();
+            // NotificationPayload.event() is WorkItemEvent (api/); workItem() is on WorkItemLifecycleEvent (runtime/)
+            final WorkItem wi = ((WorkItemLifecycleEvent) payload.event()).workItem();
             final String eventType = payload.event().eventType().name();
             final String json = buildPayloadJson(eventType, wi.title, wi.category,
                     wi.status != null ? wi.status.name() : null,

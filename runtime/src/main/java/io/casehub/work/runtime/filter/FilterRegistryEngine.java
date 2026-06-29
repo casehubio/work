@@ -9,10 +9,11 @@ import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
 import io.casehub.work.api.WorkEventType;
-import io.casehub.work.api.WorkLifecycleEvent;
+import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.runtime.model.WorkItem;
 
 /**
- * Observes WorkLifecycleEvent (any subtype), evaluates all enabled filter definitions,
+ * Observes WorkItemLifecycleEvent, evaluates all enabled filter definitions,
  * and applies matching actions via the FilterAction SPI.
  *
  * <p>
@@ -20,7 +21,7 @@ import io.casehub.work.api.WorkLifecycleEvent;
  * themselves fire lifecycle events.
  *
  * <p>
- * The work unit is accessed via {@code event.source()} — no store lookup needed.
+ * The WorkItem is accessed via {@code event.workItem()} — no store lookup needed.
  * The context map for JEXL evaluation comes from {@code event.context()}.
  */
 @ApplicationScoped
@@ -54,12 +55,12 @@ public class FilterRegistryEngine {
     }
 
     /**
-     * CDI observer — fires on every work unit lifecycle transition.
+     * CDI observer — fires on every WorkItem lifecycle transition.
      * A ThreadLocal guard prevents re-entrant processing when actions themselves trigger events.
      *
      * @param event the lifecycle event
      */
-    void onLifecycleEvent(@Observes final WorkLifecycleEvent event) {
+    void onLifecycleEvent(@Observes final WorkItemLifecycleEvent event) {
         if (Boolean.TRUE.equals(RUNNING.get())) {
             return;
         }
@@ -81,13 +82,13 @@ public class FilterRegistryEngine {
      * @param event the lifecycle event
      * @param defs the filter definitions to evaluate
      */
-    void processEvent(final WorkLifecycleEvent event, final List<FilterDefinition> defs) {
+    void processEvent(final WorkItemLifecycleEvent event, final List<FilterDefinition> defs) {
         applyFilters(event, defs);
     }
 
-    private void applyFilters(final WorkLifecycleEvent event, final List<FilterDefinition> defs) {
+    private void applyFilters(final WorkItemLifecycleEvent event, final List<FilterDefinition> defs) {
         final FilterEvent filterEvent = toFilterEvent(event.eventType());
-        final Object workUnit = event.source();
+        final WorkItem workItem = event.workItem();
         for (final FilterDefinition def : defs) {
             if (!def.enabled())
                 continue;
@@ -99,7 +100,7 @@ public class FilterRegistryEngine {
                 filterActions.stream()
                         .filter(a -> a.type().equals(action.type()))
                         .findFirst()
-                        .ifPresent(a -> a.apply(workUnit, action.params()));
+                        .ifPresent(a -> a.apply(workItem, action.params()));
             }
         }
     }

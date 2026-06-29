@@ -70,7 +70,7 @@ public class NotificationDispatcher {
      */
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
     void onWorkItemEvent(@Observes(during = TransactionPhase.AFTER_SUCCESS) final WorkItemLifecycleEvent event) {
-        final WorkItem wi = (WorkItem) event.source();
+        final WorkItem wi = event.workItem();
         final String eventTypeName = event.eventType().name();
         final String category = wi.category;
         final String tenancyId = wi.tenancyId;

@@ -8,7 +8,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.casehub.work.api.WorkEventType;
-import io.casehub.work.api.WorkLifecycleEvent;
 import io.casehub.work.api.WorkItemEvent;
 import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.runtime.model.WorkItem;
@@ -16,11 +15,7 @@ import io.casehub.work.api.WorkItemStatus;
 
 /**
  * CDI event fired on every WorkItem lifecycle transition.
- * Extends {@link WorkLifecycleEvent} so quarkus-work-core observers (e.g. FilterRegistryEngine)
- * receive it automatically.
- *
- * <p>
- * The WorkItem entity is embedded so observers can access current state without
+ * Implements {@link WorkItemEvent} so observers can access current state without
  * a separate store lookup. All existing accessor methods are preserved.
  *
  * <h2>Firing contract — fires AFTER the mutation is persisted</h2>
@@ -41,7 +36,7 @@ import io.casehub.work.api.WorkItemStatus;
  * The {@code status} field in this event records the status <em>after</em> the transition.
  * No "previous status" field is provided in the event itself.
  */
-public final class WorkItemLifecycleEvent extends WorkLifecycleEvent implements WorkItemEvent {
+public final class WorkItemLifecycleEvent implements WorkItemEvent {
 
     private final String type;
     private final String sourceUri;
@@ -138,7 +133,7 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent implements 
      * The {@code workItem} entity is {@code null} on the receiving node. This is intentional:
      * the SSE endpoint serialises only the scalar fields (workItem is {@code @JsonIgnore}),
      * so SSE clients receive identical output regardless of whether the event originated
-     * locally or was reconstructed from the wire. Callers must not invoke {@link #source()}
+     * locally or was reconstructed from the wire. Callers must not invoke {@link #workItem()}
      * or {@link #context()} on wire-reconstructed events.
      */
     public static WorkItemLifecycleEvent fromWire(final String type, final String sourceUri,
@@ -188,18 +183,21 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent implements 
 
     /** When this event was created. */
     @JsonProperty("occurredAt")
+    @Override
     public Instant occurredAt() {
         return occurredAt;
     }
 
     /** Who triggered the transition. */
     @JsonProperty("actor")
+    @Override
     public String actor() {
         return actor;
     }
 
     /** Optional detail payload (e.g. resolution text, rejection reason). */
     @JsonProperty("detail")
+    @Override
     public String detail() {
         return detail;
     }
@@ -300,8 +298,6 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent implements 
                 resolution, candidateGroups, outcome, tenancyId);
     }
 
-    // ---- WorkLifecycleEvent abstract method implementations ----
-
     @JsonIgnore
     @Override
     public WorkEventType eventType() {
@@ -309,8 +305,9 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent implements 
         return WorkEventType.valueOf(name);
     }
 
+    // ---- Runtime-specific methods (not on any interface) ----
+
     @JsonIgnore
-    @Override
     public Map<String, Object> context() {
         return WorkItemContextBuilder.toMap(workItem);
     }
@@ -320,8 +317,7 @@ public final class WorkItemLifecycleEvent extends WorkLifecycleEvent implements 
      * Callers needing the CloudEvents source URI should use {@link #sourceUri()} instead.
      */
     @JsonIgnore
-    @Override
-    public Object source() {
+    public WorkItem workItem() {
         return workItem;
     }
 }

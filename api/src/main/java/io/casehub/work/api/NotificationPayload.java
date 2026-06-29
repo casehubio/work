@@ -16,7 +16,7 @@ package io.casehub.work.api;
  * @param category the category filter from the rule; null means all categories matched
  */
 public record NotificationPayload(
-        WorkLifecycleEvent event,
+        WorkItemEvent event,
         java.util.UUID ruleId,
         String channelType,
         String targetUrl,

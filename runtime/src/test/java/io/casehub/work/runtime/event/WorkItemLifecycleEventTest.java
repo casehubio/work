@@ -41,11 +41,11 @@ class WorkItemLifecycleEventTest {
     }
 
     @Test
-    void of_sourceReturnsWorkItemEntity() {
+    void of_workItemReturnsEntity() {
         UUID id = UUID.randomUUID();
         WorkItem wi = workItem(id, WorkItemStatus.ASSIGNED);
         WorkItemLifecycleEvent e = WorkItemLifecycleEvent.of("ASSIGNED", wi, "alice", null);
-        assertThat(e.source()).isSameAs(wi);
+        assertThat(e.workItem()).isSameAs(wi);
     }
 
     @Test

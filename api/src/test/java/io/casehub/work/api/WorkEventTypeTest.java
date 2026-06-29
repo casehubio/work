@@ -2,7 +2,7 @@ package io.casehub.work.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Map;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
@@ -66,24 +66,16 @@ class WorkEventTypeTest {
 
     @Test
     void concreteEvent_implementsAbstractMethods() {
-        var event = new WorkLifecycleEvent() {
-            @Override
-            public WorkEventType eventType() {
-                return WorkEventType.CREATED;
-            }
-
-            @Override
-            public Map<String, Object> context() {
-                return Map.of("id", "x");
-            }
-
-            @Override
-            public Object source() {
-                return "test-source";
-            }
+        final WorkItemRef ref = new WorkItemRef(UUID.randomUUID(), WorkItemStatus.PENDING,
+                null, null, null, null, null, null);
+        var event = new WorkItemEvent() {
+            @Override public WorkItemRef ref() { return ref; }
+            @Override public WorkEventType eventType() { return WorkEventType.CREATED; }
+            @Override public java.time.Instant occurredAt() { return java.time.Instant.now(); }
+            @Override public String actor() { return "test"; }
+            @Override public String detail() { return null; }
         };
         assertThat(event.eventType()).isEqualTo(WorkEventType.CREATED);
-        assertThat(event.context()).containsKey("id");
-        assertThat(event.source()).isEqualTo("test-source");
+        assertThat(event.ref()).isNotNull();
     }
 }

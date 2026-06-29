@@ -9,6 +9,7 @@ import io.casehub.connectors.ConnectorMessage;
 import io.casehub.connectors.teams.TeamsConnector;
 import io.casehub.work.api.NotificationChannel;
 import io.casehub.work.api.NotificationPayload;
+import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
 
 /**
@@ -35,7 +36,8 @@ public class TeamsNotificationChannel implements NotificationChannel {
     @Override
     public void send(final NotificationPayload payload) {
         try {
-            final WorkItem wi = (WorkItem) payload.event().source();
+            // NotificationPayload.event() is WorkItemEvent (api/); workItem() is on WorkItemLifecycleEvent (runtime/)
+            final WorkItem wi = ((WorkItemLifecycleEvent) payload.event()).workItem();
             final String eventType = payload.event().eventType().name();
             final String title = "[" + eventType + "] " + wi.title;
             final String body = "Category: " + wi.category

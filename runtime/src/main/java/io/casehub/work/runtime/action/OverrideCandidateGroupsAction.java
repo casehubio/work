@@ -23,8 +23,7 @@ public class OverrideCandidateGroupsAction implements FilterAction {
     }
 
     @Override
-    public void apply(final Object workUnit, final Map<String, Object> params) {
-        final WorkItem workItem = (WorkItem) workUnit;
+    public void apply(final WorkItem workItem, final Map<String, Object> params) {
         final Object groupsParam = params.get("groups");
         if (groupsParam == null) {
             return;

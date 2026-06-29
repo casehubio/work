@@ -2,16 +2,14 @@ package io.casehub.work.runtime.filter;
 
 import java.util.Map;
 
+import io.casehub.work.runtime.model.WorkItem;
+
 /**
- * SPI for actions that a filter rule can apply to a work unit when its condition matches.
+ * SPI for actions that a filter rule can apply to a WorkItem when its condition matches.
  *
  * <p>
  * Implementations must be {@code @ApplicationScoped} CDI beans. The engine resolves
  * them by matching {@link ActionDescriptor#type()} to {@link #type()}.
- *
- * <p>
- * The {@code workUnit} parameter is the domain-specific work object (e.g. {@code WorkItem}
- * in quarkus-work). Implementations cast to their expected concrete type.
  *
  * <p>
  * Built-in implementations (in quarkus-work): {@code APPLY_LABEL},
@@ -23,10 +21,10 @@ public interface FilterAction {
     String type();
 
     /**
-     * Apply this action to the given work unit.
+     * Apply this action to the given WorkItem.
      *
-     * @param workUnit the domain work object (cast to concrete type expected by this action)
+     * @param workItem the WorkItem to operate on
      * @param params action-specific parameters from the {@link ActionDescriptor}
      */
-    void apply(Object workUnit, Map<String, Object> params);
+    void apply(WorkItem workItem, Map<String, Object> params);
 }

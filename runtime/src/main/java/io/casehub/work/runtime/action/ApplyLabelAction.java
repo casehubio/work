@@ -30,8 +30,7 @@ public class ApplyLabelAction implements FilterAction {
     }
 
     @Override
-    public void apply(final Object workUnit, final Map<String, Object> params) {
-        final WorkItem workItem = (WorkItem) workUnit;
+    public void apply(final WorkItem workItem, final Map<String, Object> params) {
         final Object pathParam = params.get("path");
         if (pathParam == null || pathParam.toString().isBlank()) {
             return;

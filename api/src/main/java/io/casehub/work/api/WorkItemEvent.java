@@ -1,10 +1,19 @@
 package io.casehub.work.api;
 
+import java.time.Instant;
 import java.util.UUID;
 
 public interface WorkItemEvent {
 
     WorkItemRef ref();
+
+    WorkEventType eventType();
+
+    Instant occurredAt();
+
+    String actor();
+
+    String detail();
 
     default UUID workItemId() { return ref().id(); }
     default WorkItemStatus status() { return ref().status(); }

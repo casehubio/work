@@ -50,10 +50,10 @@ public class MultiInstanceCoordinator {
      * Receives every terminal WorkItem lifecycle event asynchronously.
      * Skips events for WorkItems that have no parent (not part of a multi-instance group).
      *
-     * @param event the lifecycle event carrying the child WorkItem as its source
+     * @param event the lifecycle event carrying the child WorkItem
      */
     void onChildTerminal(@ObservesAsync WorkItemLifecycleEvent event) {
-        final WorkItem child = (WorkItem) event.source();
+        final WorkItem child = event.workItem();
         if (child.parentId == null)
             return;
         if (!child.status.isTerminal())
