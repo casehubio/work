@@ -52,7 +52,11 @@ class MultiInstanceCoordinatorTest {
             t.requiredCount = requiredCount;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
             t.persist();
-            return templateService.instantiate(t, null, null, "test").id;
+            final var request = WorkItemCreateRequest.builder()
+                    .templateId(t.id)
+                    .createdBy("test")
+                    .build();
+            return templateService.createFromTemplate(request).id;
         });
     }
 
@@ -107,7 +111,9 @@ class MultiInstanceCoordinatorTest {
             t.onThresholdReached = "CANCEL";
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
             t.persist();
-            return templateService.instantiate(t, null, null, "test").id;
+            final var request = WorkItemCreateRequest.builder()
+                    .templateId(t.id).createdBy("test").build();
+            return templateService.createFromTemplate(request).id;
         });
 
         List<UUID> childIds = inTx(() -> WorkItem.<WorkItem> list("parentId", parentId).stream().map(w -> w.id).toList());
@@ -139,7 +145,9 @@ class MultiInstanceCoordinatorTest {
             t.onThresholdReached = "KEEP";
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
             t.persist();
-            return templateService.instantiate(t, null, null, "test").id;
+            final var request = WorkItemCreateRequest.builder()
+                    .templateId(t.id).createdBy("test").build();
+            return templateService.createFromTemplate(request).id;
         });
 
         List<UUID> childIds = inTx(() -> WorkItem.<WorkItem> list("parentId", parentId).stream().map(w -> w.id).toList());

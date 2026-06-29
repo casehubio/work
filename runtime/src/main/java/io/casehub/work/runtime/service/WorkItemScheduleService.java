@@ -13,6 +13,7 @@ import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 import org.quartz.CronExpression;
 
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemSchedule;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.WorkItemScheduleStore;
@@ -131,7 +132,11 @@ public class WorkItemScheduleService {
         }
 
         final Instant now = Instant.now();
-        templateService.instantiate(template, null, null, "schedule:" + scheduleId);
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(template.id)
+                .createdBy("schedule:" + scheduleId)
+                .build();
+        templateService.createFromTemplate(request);
         schedule.lastFiredAt = now;
         schedule.nextFireAt = computeNextFireAt(schedule.cronExpression);
         // flush here — if another node already committed, @Version mismatch → OLE → REQUIRES_NEW rolls back

@@ -665,7 +665,7 @@ Before this chapter, casehub-work had no verified GraalVM native image target. A
 **Delivered:** 2026-04-20 | **Issues:** #92
 
 **What this delivers**
-Before this chapter, each WorkItem creation required callers to supply all fields individually. After: `WorkItemTemplate` blueprints carry title, description, candidateGroups, SLA defaults, `inputDataSchema`, `outputDataSchema` (from C29), and named outcomes (from C28); `WorkItemTemplateService.instantiate()` creates WorkItems from templates with payload override and callerRef support, so consuming apps define templates once and instantiate consistent WorkItems by name.
+Before this chapter, each WorkItem creation required callers to supply all fields individually. After: `WorkItemTemplate` blueprints carry title, description, candidateGroups, SLA defaults, `inputDataSchema`, `outputDataSchema` (from C29), and named outcomes (from C28); `WorkItemTemplateService.createFromTemplate()` creates WorkItems from templates with request-wins merge semantics, so consuming apps define templates once and create consistent WorkItems by name.
 
 **Accountability gaps closed**
 - None (convenience layer — no new accountability surface)

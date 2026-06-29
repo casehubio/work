@@ -4,123 +4,141 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.UUID;
+
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 
 /**
- * Pure unit tests for WorkItemTemplate → WorkItemCreateRequest mapping.
- * No Quarkus, no DB — exercises the template-to-request conversion logic only.
+ * Pure unit tests for template merge and payload logic.
+ * No Quarkus, no DB — exercises mergeRequestWithTemplate() and mergePayload() only.
  */
 class WorkItemTemplateServiceTest {
 
-    // ── toCreateRequest: template defaults ────────────────────────────────────
+    private static final UUID DUMMY_TEMPLATE_ID = UUID.randomUUID();
+
+    // ── mergeRequestWithTemplate: template defaults ──────────────────────────
 
     @Test
-    void toCreateRequest_usesTemplateNameAsTitle_whenNoOverride() {
+    void merge_usesTemplateNameAsTitle_whenRequestTitleNull() {
         final WorkItemTemplate t = template("Contract Review");
-        final WorkItemCreateRequest req = WorkItemTemplateService.toCreateRequest(t, null, null, "system");
-        assertThat(req.title).isEqualTo("Contract Review");
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.title).isEqualTo("Contract Review");
     }
 
     @Test
-    void toCreateRequest_usesOverrideTitle_whenProvided() {
+    void merge_usesRequestTitle_whenProvided() {
         final WorkItemTemplate t = template("Default Title");
-        final WorkItemCreateRequest req = WorkItemTemplateService.toCreateRequest(t, "Specific Contract #44", null, "system");
-        assertThat(req.title).isEqualTo("Specific Contract #44");
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder()
+                .templateId(DUMMY_TEMPLATE_ID).title("Specific Contract #44").createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.title).isEqualTo("Specific Contract #44");
     }
 
     @Test
-    void toCreateRequest_copiesCategory() {
+    void merge_copiesCategory() {
         final WorkItemTemplate t = template("T");
         t.category = "legal";
-        final WorkItemCreateRequest req = WorkItemTemplateService.toCreateRequest(t, null, null, "system");
-        assertThat(req.category).isEqualTo("legal");
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.category).isEqualTo("legal");
     }
 
     @Test
-    void toCreateRequest_copiesPriority() {
+    void merge_copiesPriority() {
         final WorkItemTemplate t = template("T");
         t.priority = WorkItemPriority.HIGH;
-        final WorkItemCreateRequest req = WorkItemTemplateService.toCreateRequest(t, null, null, "system");
-        assertThat(req.priority).isEqualTo(WorkItemPriority.HIGH);
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.priority).isEqualTo(WorkItemPriority.HIGH);
     }
 
     @Test
-    void toCreateRequest_copiesCandidateGroups() {
+    void merge_copiesCandidateGroups() {
         final WorkItemTemplate t = template("T");
         t.candidateGroups = "legal-team,compliance-team";
-        final WorkItemCreateRequest req = WorkItemTemplateService.toCreateRequest(t, null, null, "system");
-        assertThat(req.candidateGroups).isEqualTo("legal-team,compliance-team");
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.candidateGroups).isEqualTo("legal-team,compliance-team");
     }
 
     @Test
-    void toCreateRequest_copiesDefaultPayload() {
+    void merge_copiesDefaultPayload() {
         final WorkItemTemplate t = template("T");
         t.defaultPayload = "{\"type\":\"nda\"}";
-        final WorkItemCreateRequest req = WorkItemTemplateService.toCreateRequest(t, null, null, "system");
-        assertThat(req.payload).isEqualTo("{\"type\":\"nda\"}");
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.payload).isEqualTo("{\"type\":\"nda\"}");
     }
 
     @Test
-    void toCreateRequest_copiesScope() {
+    void merge_copiesScope() {
         final WorkItemTemplate t = template("T");
         t.scope = "casehubio/devtown/pr-review";
-        final WorkItemCreateRequest req = WorkItemTemplateService.toCreateRequest(t, null, null, "system");
-        assertThat(req.scope).isEqualTo("casehubio/devtown/pr-review");
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.scope).isEqualTo("casehubio/devtown/pr-review");
     }
 
     @Test
-    void toCreateRequest_scopeIsNullWhenTemplateHasNoScope() {
+    void merge_scopeIsNullWhenTemplateHasNoScope() {
         final WorkItemTemplate t = template("T");
-        final WorkItemCreateRequest req = WorkItemTemplateService.toCreateRequest(t, null, null, "system");
-        assertThat(req.scope).isNull();
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.scope).isNull();
     }
 
     @Test
-    void toCreateRequest_setsCreatedBy() {
+    void merge_setsCreatedBy() {
         final WorkItemTemplate t = template("T");
-        final WorkItemCreateRequest req = WorkItemTemplateService.toCreateRequest(t, null, null, "finance-bot");
-        assertThat(req.createdBy).isEqualTo("finance-bot");
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("finance-bot").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.createdBy).isEqualTo("finance-bot");
     }
 
     @Test
-    void toCreateRequest_setsAssigneeOverride_whenProvided() {
+    void merge_setsAssigneeFromRequest() {
         final WorkItemTemplate t = template("T");
-        final WorkItemCreateRequest req = WorkItemTemplateService.toCreateRequest(t, null, "alice", "system");
-        assertThat(req.assigneeId).isEqualTo("alice");
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder()
+                .templateId(DUMMY_TEMPLATE_ID).assigneeId("alice").createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.assigneeId).isEqualTo("alice");
     }
 
     @Test
-    void toCreateRequest_nullFields_whenTemplateHasNoDefaults() {
+    void merge_nullFields_whenTemplateHasNoDefaults() {
         final WorkItemTemplate t = template("Minimal");
-        final WorkItemCreateRequest req = WorkItemTemplateService.toCreateRequest(t, null, null, "system");
-        assertThat(req.category).isNull();
-        assertThat(req.priority).isNull();
-        assertThat(req.candidateGroups).isNull();
-        assertThat(req.payload).isNull();
-        assertThat(req.assigneeId).isNull();
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.category).isNull();
+        assertThat(merged.priority).isNull();
+        assertThat(merged.candidateGroups).isNull();
+        assertThat(merged.payload).isNull();
+        assertThat(merged.assigneeId).isNull();
     }
 
     @Test
-    void toCreateRequest_setsCallerRef_whenProvided() {
+    void merge_setsCallerRef_whenProvided() {
         final WorkItemTemplate t = template("IRB Review");
         final String callerRef = "case:550e8400-e29b-41d4-a716-446655440000/pi:irb-gate";
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system", callerRef);
-        assertThat(req.callerRef).isEqualTo(callerRef);
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder()
+                .templateId(DUMMY_TEMPLATE_ID).callerRef(callerRef).createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.callerRef).isEqualTo(callerRef);
     }
 
     @Test
-    void toCreateRequest_callerRefNull_whenNotProvided() {
+    void merge_callerRefNull_whenNotProvided() {
         final WorkItemTemplate t = template("IRB Review");
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system");
-        assertThat(req.callerRef).isNull();
+        final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("system").build();
+        final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
+        assertThat(merged.callerRef).isNull();
     }
 
-    // ── parseLabels ───────────────────────────────────────────────────────────
+    // ── parseLabels ─────────────────────────────────────────────────────────
 
     @Test
     void parseLabels_returnsEmptyList_whenNull() {
@@ -156,99 +174,64 @@ class WorkItemTemplateServiceTest {
         assertThat(labels.get(0).appliedBy).isEqualTo("template");
     }
 
-    // ── toCreateRequest: payloadOverride ─────────────────────────────────────
+    // ── mergePayload ────────────────────────────────────────────────────────
 
     @Test
-    void toCreateRequest_payloadOverride_nonNull_usesOverride() {
-        final WorkItemTemplate t = template("T");
-        t.defaultPayload = "{\"type\":\"default\"}";
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system", null, "{\"type\":\"override\"}");
-        assertThat(req.payload).isEqualTo("{\"type\":\"override\"}");
+    void mergePayload_overlayNonNull_usesOverlay() {
+        final String result = WorkItemTemplateService.mergePayload("{\"type\":\"default\"}", "{\"type\":\"override\"}");
+        assertThat(result).isEqualTo("{\"type\":\"override\"}");
     }
 
     @Test
-    void toCreateRequest_payloadOverride_null_usesTemplateDefault() {
-        final WorkItemTemplate t = template("T");
-        t.defaultPayload = "{\"type\":\"default\"}";
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system", null, null);
-        assertThat(req.payload).isEqualTo("{\"type\":\"default\"}");
+    void mergePayload_overlayNull_usesBase() {
+        assertThat(WorkItemTemplateService.mergePayload("{\"type\":\"default\"}", null))
+                .isEqualTo("{\"type\":\"default\"}");
     }
 
     @Test
-    void toCreateRequest_payloadOverride_blank_usesTemplateDefault() {
-        final WorkItemTemplate t = template("T");
-        t.defaultPayload = "{\"type\":\"default\"}";
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system", null, "   ");
-        assertThat(req.payload).isEqualTo("{\"type\":\"default\"}");
+    void mergePayload_overlayBlank_usesBase() {
+        assertThat(WorkItemTemplateService.mergePayload("{\"type\":\"default\"}", "   "))
+                .isEqualTo("{\"type\":\"default\"}");
     }
 
     @Test
-    void toCreateRequest_payloadOverride_noTemplateDefault_usesOverride() {
-        final WorkItemTemplate t = template("T");
-        t.defaultPayload = null;
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system", null, "{\"case\":\"42\"}");
-        assertThat(req.payload).isEqualTo("{\"case\":\"42\"}");
+    void mergePayload_baseNull_usesOverlay() {
+        assertThat(WorkItemTemplateService.mergePayload(null, "{\"case\":\"42\"}"))
+                .isEqualTo("{\"case\":\"42\"}");
     }
 
     @Test
-    void toCreateRequest_payloadOverride_neitherSet_payloadIsNull() {
-        final WorkItemTemplate t = template("T");
-        t.defaultPayload = null;
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system", null, null);
-        assertThat(req.payload).isNull();
+    void mergePayload_disjointKeys_bothPreserved() {
+        final String result = WorkItemTemplateService.mergePayload("{\"type\":\"default\"}", "{\"case\":\"42\"}");
+        assertThat(result).contains("\"type\":\"default\"");
+        assertThat(result).contains("\"case\":\"42\"");
     }
 
     @Test
-    void toCreateRequest_mergePayload_disjointKeys_bothPreserved() {
-        final WorkItemTemplate t = template("T");
-        t.defaultPayload = "{\"type\":\"default\"}";
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system", null, "{\"case\":\"42\"}");
-        assertThat(req.payload).contains("\"type\":\"default\"");
-        assertThat(req.payload).contains("\"case\":\"42\"");
+    void mergePayload_overlayKeyWinsConflict_baseUniqueKeysPreserved() {
+        final String result = WorkItemTemplateService.mergePayload(
+                "{\"type\":\"base\",\"extra\":\"kept\"}", "{\"type\":\"override\"}");
+        assertThat(result).contains("\"type\":\"override\"");
+        assertThat(result).contains("\"extra\":\"kept\"");
     }
 
     @Test
-    void toCreateRequest_mergePayload_overlayKeyWinsConflict_baseUniqueKeysPreserved() {
-        final WorkItemTemplate t = template("T");
-        t.defaultPayload = "{\"type\":\"base\",\"extra\":\"kept\"}";
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system", null, "{\"type\":\"override\"}");
-        assertThat(req.payload).contains("\"type\":\"override\"");
-        assertThat(req.payload).contains("\"extra\":\"kept\"");
+    void mergePayload_nestedObjects_deepMerged() {
+        final String result = WorkItemTemplateService.mergePayload("{\"data\":{\"x\":1}}", "{\"data\":{\"y\":2}}");
+        assertThat(result).contains("\"x\":1");
+        assertThat(result).contains("\"y\":2");
     }
 
     @Test
-    void toCreateRequest_mergePayload_nestedObjects_deepMerged() {
-        final WorkItemTemplate t = template("T");
-        t.defaultPayload = "{\"data\":{\"x\":1}}";
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system", null, "{\"data\":{\"y\":2}}");
-        assertThat(req.payload).contains("\"x\":1");
-        assertThat(req.payload).contains("\"y\":2");
+    void mergePayload_nonObjectOverlay_overlayWins() {
+        final String result = WorkItemTemplateService.mergePayload("{\"type\":\"base\"}", "\"just a string\"");
+        assertThat(result).isEqualTo("\"just a string\"");
     }
 
     @Test
-    void toCreateRequest_mergePayload_nonObjectOverlay_overlayWins() {
-        final WorkItemTemplate t = template("T");
-        t.defaultPayload = "{\"type\":\"base\"}";
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system", null, "\"just a string\"");
-        assertThat(req.payload).isEqualTo("\"just a string\"");
-    }
-
-    @Test
-    void toCreateRequest_mergePayload_arrayOverlay_overlayWins() {
-        final WorkItemTemplate t = template("T");
-        t.defaultPayload = "{\"type\":\"base\"}";
-        final WorkItemCreateRequest req =
-            WorkItemTemplateService.toCreateRequest(t, null, null, "system", null, "[1,2,3]");
-        assertThat(req.payload).isEqualTo("[1,2,3]");
+    void mergePayload_arrayOverlay_overlayWins() {
+        final String result = WorkItemTemplateService.mergePayload("{\"type\":\"base\"}", "[1,2,3]");
+        assertThat(result).isEqualTo("[1,2,3]");
     }
 
     @Test
@@ -262,7 +245,7 @@ class WorkItemTemplateServiceTest {
                 .isEqualTo("{\"key\":\"value\"}");
     }
 
-    // ── Helper ────────────────────────────────────────────────────────────────
+    // ── Helper ───────────────────────────────────────────────────────────────
 
     private WorkItemTemplate template(final String name) {
         final WorkItemTemplate t = new WorkItemTemplate();

@@ -12,6 +12,7 @@ import jakarta.ws.rs.core.MediaType;
 
 import org.jboss.logging.Logger;
 
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.runtime.api.AuditEntryResponse;
 import io.casehub.work.runtime.model.AuditEntry;
@@ -103,8 +104,12 @@ public class FormSchemaScenario {
         // Step 2: instantiate the template → first WorkItem
         final String description2 = "Instantiate template → first WorkItem for valid-resolution path";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 2, total, description2);
-        final WorkItem wi1 = templateService.instantiate(template, "Review Services Agreement: TechCorp Ltd",
-                null, ACTOR_ADMIN);
+        final var request1 = WorkItemCreateRequest.builder()
+                .templateId(template.id)
+                .title("Review Services Agreement: TechCorp Ltd")
+                .createdBy(ACTOR_ADMIN)
+                .build();
+        final WorkItem wi1 = templateService.createFromTemplate(request1);
         steps.add(new StepLog(2, description2, wi1.id));
 
         // Step 3: legal-reviewer claims and starts the first WorkItem
@@ -123,8 +128,12 @@ public class FormSchemaScenario {
         // Step 5: instantiate the template again → second WorkItem for the invalid-resolution path
         final String description5 = "Instantiate template → second WorkItem for invalid-resolution path";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 5, total, description5);
-        final WorkItem wi2 = templateService.instantiate(template, "Review SaaS Agreement: Acme Corp",
-                null, ACTOR_ADMIN);
+        final var request2 = WorkItemCreateRequest.builder()
+                .templateId(template.id)
+                .title("Review SaaS Agreement: Acme Corp")
+                .createdBy(ACTOR_ADMIN)
+                .build();
+        final WorkItem wi2 = templateService.createFromTemplate(request2);
         steps.add(new StepLog(5, description5, wi2.id));
 
         // Step 6: claim and start the second WorkItem

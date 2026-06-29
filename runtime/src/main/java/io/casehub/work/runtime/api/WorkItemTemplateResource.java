@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.casehub.work.api.Outcome;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
 import io.casehub.work.runtime.service.WorkItemTemplateValidationService;
@@ -563,20 +564,21 @@ public class WorkItemTemplateResource {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(Map.of("error", "createdBy is required")).build();
         }
-        return templateService.findById(id)
-                .map(t -> {
-                    try {
-                        final var wi = templateService.instantiate(
-                                t, request.title(), request.assigneeId(), request.createdBy());
-                        return Response.status(Response.Status.CREATED)
-                                .entity(WorkItemMapper.toResponse(wi)).build();
-                    } catch (IllegalArgumentException e) {
-                        return Response.status(Response.Status.BAD_REQUEST)
-                                .entity(Map.of("error", e.getMessage())).build();
-                    }
-                })
-                .orElseGet(() -> Response.status(Response.Status.NOT_FOUND)
-                        .entity(Map.of("error", "Template not found")).build());
+        try {
+            final var createRequest = WorkItemCreateRequest.builder()
+                    .templateId(id)
+                    .title(request.title())
+                    .assigneeId(request.assigneeId())
+                    .createdBy(request.createdBy())
+                    .build();
+            final var wi = templateService.createFromTemplate(createRequest);
+            return Response.status(Response.Status.CREATED)
+                    .entity(WorkItemMapper.toResponse(wi)).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(e.getMessage().startsWith("Template not found")
+                    ? Response.Status.NOT_FOUND : Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", e.getMessage())).build();
+        }
     }
 
     private Map<String, Object> toResponse(final WorkItemTemplate t) {

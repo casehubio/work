@@ -5,8 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.casehub.platform.api.identity.GroupMember;
 import io.casehub.platform.api.identity.GroupMembershipProvider;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemTemplate;
+import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -18,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +36,9 @@ class WorkItemTemplateServiceResolutionTest {
 
     @Inject
     WorkItemTemplateService templateService;
+
+    @Inject
+    AuditEntryStore auditStore;
 
     /**
      * Configurable @Alternative GroupMembershipProvider for tests.
@@ -129,25 +136,35 @@ class WorkItemTemplateServiceResolutionTest {
 
     @Test
     void instantiate_payloadOverride_deepMergedWithTemplateDefault() {
-        final WorkItemTemplate t = persist("Clinical Trial Consent");
-        t.defaultPayload = "{\"type\":\"default\"}";
+        final WorkItemTemplate t = persistWith("Clinical Trial Consent", tmpl -> {
+            tmpl.defaultPayload = "{\"type\":\"default\"}";
+        });
 
-        final var workItem = templateService.instantiate(
-            t, null, null, "casehub-engine", "case:x/pi:y", "{\"trialId\":\"T-99\"}");
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(t.id)
+                .createdBy("casehub-engine")
+                .callerRef("case:x/pi:y")
+                .payload("{\"trialId\":\"T-99\"}")
+                .build();
+        final var workItem = templateService.createFromTemplate(request);
 
         assertThat(workItem).isNotNull();
-        // Deep merge: disjoint keys from both are preserved; override wins on conflict
         assertThat(workItem.payload).contains("\"type\":\"default\"");
         assertThat(workItem.payload).contains("\"trialId\":\"T-99\"");
     }
 
     @Test
     void instantiate_nullPayloadOverride_usesTemplateDefault() {
-        final WorkItemTemplate t = persist("AML Check");
-        t.defaultPayload = "{\"type\":\"aml\"}";
+        final WorkItemTemplate t = persistWith("AML Check", tmpl -> {
+            tmpl.defaultPayload = "{\"type\":\"aml\"}";
+        });
 
-        final var workItem = templateService.instantiate(
-            t, null, null, "casehub-engine", "case:x/pi:y", null);
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(t.id)
+                .createdBy("casehub-engine")
+                .callerRef("case:x/pi:y")
+                .build();
+        final var workItem = templateService.createFromTemplate(request);
 
         assertThat(workItem).isNotNull();
         assertThat(workItem.payload).isEqualTo("{\"type\":\"aml\"}");
@@ -160,10 +177,15 @@ class WorkItemTemplateServiceResolutionTest {
         TestGroupMembershipProvider.configure("legal-team",
                 Set.of(new GroupMember("alice", "Alice")));
 
-        final WorkItemTemplate t = persist("Contract Review");
-        t.excludedGroups = "legal-team";
+        final WorkItemTemplate t = persistWith("Contract Review", tmpl -> {
+            tmpl.excludedGroups = "legal-team";
+        });
 
-        final WorkItem workItem = templateService.instantiate(t, null, null, "system");
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(t.id)
+                .createdBy("system")
+                .build();
+        final WorkItem workItem = templateService.createFromTemplate(request);
 
         assertThat(workItem.excludedUsers).contains("alice");
     }
@@ -173,11 +195,16 @@ class WorkItemTemplateServiceResolutionTest {
         TestGroupMembershipProvider.configure("finance-team",
                 Set.of(new GroupMember("bob", "Bob")));
 
-        final WorkItemTemplate t = persist("Budget Approval");
-        t.excludedUsers = "carol";
-        t.excludedGroups = "finance-team";
+        final WorkItemTemplate t = persistWith("Budget Approval", tmpl -> {
+            tmpl.excludedUsers = "carol";
+            tmpl.excludedGroups = "finance-team";
+        });
 
-        final WorkItem workItem = templateService.instantiate(t, null, null, "system");
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(t.id)
+                .createdBy("system")
+                .build();
+        final WorkItem workItem = templateService.createFromTemplate(request);
 
         assertThat(workItem.excludedUsers).contains("carol");
         assertThat(workItem.excludedUsers).contains("bob");
@@ -185,14 +212,49 @@ class WorkItemTemplateServiceResolutionTest {
 
     @Test
     void instantiate_excludedGroups_unknownGroupProducesNullExcludedUsers() {
-        // TestGroupMembershipProvider returns empty for unconfigured groups
-        final WorkItemTemplate t = persist("Unopened Task");
-        t.excludedGroups = "unknown-group";
-        t.excludedUsers = null;
+        final WorkItemTemplate t = persistWith("Unopened Task", tmpl -> {
+            tmpl.excludedGroups = "unknown-group";
+            tmpl.excludedUsers = null;
+        });
 
-        final WorkItem workItem = templateService.instantiate(t, null, null, "system");
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(t.id)
+                .createdBy("system")
+                .build();
+        final WorkItem workItem = templateService.createFromTemplate(request);
 
         assertThat(workItem.excludedUsers).isNull();
+    }
+
+    @Test
+    void createFromTemplate_excludedGroups_producesAuditDetail() {
+        TestGroupMembershipProvider.configure("audit-test-group",
+                Set.of(new GroupMember("user-x", "User X"), new GroupMember("user-y", "User Y")));
+
+        final WorkItemTemplate t = persistWith("Audit Test Template", tmpl -> {
+            tmpl.excludedGroups = "audit-test-group";
+        });
+
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(t.id)
+                .createdBy("system")
+                .build();
+        final WorkItem workItem = templateService.createFromTemplate(request);
+
+        assertThat(workItem.excludedUsers).contains("user-x");
+        assertThat(workItem.excludedUsers).contains("user-y");
+
+        // Verify audit entry contains expansion detail
+        final java.util.List<AuditEntry> auditEntries = auditStore.findByWorkItemId(workItem.id);
+        assertThat(auditEntries).hasSizeGreaterThanOrEqualTo(1);
+        final AuditEntry createdEvent = auditEntries.stream()
+                .filter(e -> e.event.equals("CREATED"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(createdEvent.detail).contains("excludedGroups");
+        assertThat(createdEvent.detail).contains("audit-test-group");
+        assertThat(createdEvent.detail).contains("resolved to");
+        assertThat(createdEvent.detail).contains("actor(s)");
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
@@ -203,6 +265,17 @@ class WorkItemTemplateServiceResolutionTest {
         t.name = name;
         t.createdBy = "test";
         t.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
+        WorkItemTemplate.persist(t);
+        return t;
+    }
+
+    @Transactional
+    WorkItemTemplate persistWith(final String name, final Consumer<WorkItemTemplate> customizer) {
+        final WorkItemTemplate t = new WorkItemTemplate();
+        t.name = name;
+        t.createdBy = "test";
+        t.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
+        customizer.accept(t);
         WorkItemTemplate.persist(t);
         return t;
     }

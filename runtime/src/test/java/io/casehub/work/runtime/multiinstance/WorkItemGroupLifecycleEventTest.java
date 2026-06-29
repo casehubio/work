@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.GroupStatus;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemGroupLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemTemplate;
@@ -54,7 +55,11 @@ class WorkItemGroupLifecycleEventTest {
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
             t.persist();
-            return templateService.instantiate(t, null, null, "test").id;
+            final var request = WorkItemCreateRequest.builder()
+                    .templateId(t.id)
+                    .createdBy("test")
+                    .build();
+            return templateService.createFromTemplate(request).id;
         });
 
         final List<UUID> children = inTx(() ->
@@ -85,7 +90,11 @@ class WorkItemGroupLifecycleEventTest {
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
             t.persist();
-            return templateService.instantiate(t, null, null, "test").id;
+            final var request = WorkItemCreateRequest.builder()
+                    .templateId(t.id)
+                    .createdBy("test")
+                    .build();
+            return templateService.createFromTemplate(request).id;
         });
 
         final List<UUID> children = inTx(() ->
@@ -125,7 +134,12 @@ class WorkItemGroupLifecycleEventTest {
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
             t.persist();
-            return templateService.instantiate(t, null, null, "test", callerRef).id;
+            final var request = WorkItemCreateRequest.builder()
+                    .templateId(t.id)
+                    .createdBy("test")
+                    .callerRef(callerRef)
+                    .build();
+            return templateService.createFromTemplate(request).id;
         });
 
         final List<UUID> childIds = inTx(() ->

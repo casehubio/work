@@ -2,6 +2,7 @@ package io.casehub.work.runtime.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
@@ -36,8 +37,12 @@ class WorkItemTemplateInstantiateTest {
         final WorkItemTemplate template = persistedTemplate("IRB Review", null);
         final String callerRef = "case:550e8400-e29b-41d4-a716-446655440000/pi:irb-gate";
 
-        final WorkItem workItem =
-            templateService.instantiate(template, null, null, "system:engine", callerRef);
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(template.id)
+                .createdBy("system:engine")
+                .callerRef(callerRef)
+                .build();
+        final WorkItem workItem = templateService.createFromTemplate(request);
 
         assertThat(workItem.callerRef).isEqualTo(callerRef);
     }
@@ -47,8 +52,12 @@ class WorkItemTemplateInstantiateTest {
         final WorkItemTemplate template = persistedTemplate("Parallel Review", 3);
         final String callerRef = "case:550e8400-e29b-41d4-a716-446655440000/pi:review-gate";
 
-        final WorkItem parent =
-            templateService.instantiate(template, null, null, "system:engine", callerRef);
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(template.id)
+                .createdBy("system:engine")
+                .callerRef(callerRef)
+                .build();
+        final WorkItem parent = templateService.createFromTemplate(request);
 
         assertThat(parent).isNotNull();
         assertThat(parent.callerRef).isEqualTo(callerRef);
@@ -58,8 +67,11 @@ class WorkItemTemplateInstantiateTest {
     void instantiate_4arg_callerRefIsNull() {
         final WorkItemTemplate template = persistedTemplate("Human Task", null);
 
-        final WorkItem workItem =
-            templateService.instantiate(template, null, null, "system");
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(template.id)
+                .createdBy("system")
+                .build();
+        final WorkItem workItem = templateService.createFromTemplate(request);
 
         assertThat(workItem.callerRef).isNull();
     }

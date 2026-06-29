@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.TenancyConstants;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
@@ -44,7 +45,11 @@ class MultiInstanceCreateTest {
         template.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         template.persist();
 
-        WorkItem parent = templateService.instantiate(template, null, null, "test");
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(template.id)
+                .createdBy("test")
+                .build();
+        WorkItem parent = templateService.createFromTemplate(request);
 
         assertThat(parent.parentId).isNull(); // parent has no parent
         assertThat(parent.id).isNotNull();
@@ -80,7 +85,11 @@ class MultiInstanceCreateTest {
         template.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         template.persist();
 
-        WorkItem item = templateService.instantiate(template, null, null, "test");
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(template.id)
+                .createdBy("test")
+                .build();
+        WorkItem item = templateService.createFromTemplate(request);
 
         assertThat(item.parentId).isNull();
         assertThat(WorkItem.count("parentId", item.id)).isZero();

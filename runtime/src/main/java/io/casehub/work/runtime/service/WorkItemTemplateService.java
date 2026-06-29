@@ -28,9 +28,9 @@ import io.casehub.work.runtime.multiinstance.MultiInstanceSpawnService;
  * Service for creating and instantiating {@link WorkItemTemplate} records.
  *
  * <p>
- * The unit-testable static methods ({@link #toCreateRequest} and {@link #parseLabels})
+ * The unit-testable static methods ({@link #mergeRequestWithTemplate} and {@link #parseLabels})
  * contain the pure mapping logic with no CDI or JPA dependencies. The CDI methods
- * ({@link #instantiate}) delegate to these statics for easy testing.
+ * ({@link #createFromTemplate}) delegate to these statics for easy testing.
  */
 @ApplicationScoped
 public class WorkItemTemplateService {
@@ -50,131 +50,6 @@ public class WorkItemTemplateService {
     @Inject
     io.casehub.work.runtime.repository.WorkItemTemplateStore templateStore;
 
-    /**
-     * Instantiate a {@link WorkItemTemplate} into a new PENDING {@link WorkItem}.
-     *
-     * <p>
-     * The WorkItem is created with the template's defaults. The caller may supply:
-     * <ul>
-     * <li>{@code titleOverride} — if null, {@link WorkItemTemplate#name} is used as the title</li>
-     * <li>{@code assigneeIdOverride} — if non-null, the WorkItem is pre-assigned</li>
-     * <li>{@code createdBy} — who or what triggered the instantiation</li>
-     * </ul>
-     *
-     * <p>
-     * After the WorkItem is created, any labels from {@link WorkItemTemplate#labelPaths}
-     * are applied as MANUAL labels. This happens inside the same transaction.
-     *
-     * @param template the template to instantiate; must not be null
-     * @param titleOverride optional title; defaults to template name
-     * @param assigneeIdOverride optional direct assignee; overrides candidateGroups routing
-     * @param createdBy the actor (user or system) triggering instantiation
-     * @return the newly created PENDING WorkItem with all template defaults applied
-     */
-    @Transactional
-    public WorkItem instantiate(
-            final WorkItemTemplate template,
-            final String titleOverride,
-            final String assigneeIdOverride,
-            final String createdBy) {
-        return instantiate(template, titleOverride, assigneeIdOverride, createdBy, null);
-    }
-
-    /**
-     * Instantiate a {@link WorkItemTemplate} into a new PENDING {@link WorkItem}.
-     *
-     * <p>
-     * When invoked via the 4-arg overload, this method runs within the caller's
-     * transaction — the 4-arg delegates via a direct Java call ({@code this.instantiate(...)})
-     * which bypasses the CDI proxy and does not apply this method's own
-     * {@code @Transactional}. The annotation is active only for direct external callers
-     * of this 5-arg overload.
-     *
-     * @param template the template to instantiate; must not be null
-     * @param titleOverride optional title; defaults to template name
-     * @param assigneeIdOverride optional direct assignee; overrides candidateGroups routing
-     * @param createdBy the actor (user or system) triggering instantiation
-     * @param callerRef opaque routing key for engine adapters; null for human-initiated creation.
-     *                  For multi-instance templates, stored on the parent WorkItem so lifecycle
-     *                  events carry the routing signal to engine adapters.
-     * @return the newly created PENDING WorkItem with all template defaults applied
-     */
-    @Transactional
-    public WorkItem instantiate(
-            final WorkItemTemplate template,
-            final String titleOverride,
-            final String assigneeIdOverride,
-            final String createdBy,
-            final String callerRef) {
-        return instantiate(template, titleOverride, assigneeIdOverride, createdBy, callerRef, null);
-    }
-
-    /**
-     * Instantiate a {@link WorkItemTemplate} into a new PENDING {@link WorkItem},
-     * optionally overriding the payload with engine-provided context data.
-     *
-     * <p>
-     * For multi-instance templates, {@code payloadOverride} is not forwarded to
-     * {@code MultiInstanceSpawnService} in this release — the template's
-     * {@link WorkItemTemplate#defaultPayload} is used for each child instance.
-     *
-     * @param template the template to instantiate; must not be null
-     * @param titleOverride optional title; defaults to template name
-     * @param assigneeIdOverride optional direct assignee; overrides candidateGroups routing
-     * @param createdBy the actor (user or system) triggering instantiation
-     * @param callerRef opaque routing key for engine adapters; null for human-initiated creation
-     * @param payloadOverride if non-null and non-blank, used as the WorkItem payload instead of
-     *                        {@link WorkItemTemplate#defaultPayload}; enables engine adapters to
-     *                        inject case context ({@code inputMapping} output) into the task
-     * @return the newly created PENDING WorkItem with all template defaults applied
-     */
-    @Transactional
-    public WorkItem instantiate(
-            final WorkItemTemplate template,
-            final String titleOverride,
-            final String assigneeIdOverride,
-            final String createdBy,
-            final String callerRef,
-            final String payloadOverride) {
-
-        // Expand excludedGroups → actor IDs before any creation path
-        final String expandedExcludedUsers = templateExpander.expandExcludedUsers(template);
-
-        if (template.instanceCount != null) {
-            if (payloadOverride != null && !payloadOverride.isBlank()) {
-                // payloadOverride is not forwarded to multi-instance spawning in this release
-                LOG.warnf("payloadOverride ignored for multi-instance template '%s' (casehubio/work#175)", template.id);
-            }
-            final WorkItemCreateRequest groupRequest = toCreateRequest(
-                    template, titleOverride, assigneeIdOverride, createdBy, callerRef, null);
-            final WorkItemCreateRequest mergedGroupRequest = expandedExcludedUsers != null
-                    ? groupRequest.toBuilder().excludedUsers(expandedExcludedUsers).build()
-                    : groupRequest;
-            return multiInstanceSpawnService.get()
-                    .createGroup(mergedGroupRequest, template, expandedExcludedUsers);
-        }
-
-        WorkItemCreateRequest request =
-            toCreateRequest(template, titleOverride, assigneeIdOverride, createdBy, callerRef, payloadOverride);
-        // Only rebuild when expansion actually added new actor IDs; no-op when all group members
-        // were already in excludedUsers or when groups resolved to empty (NoOp provider).
-        if (expandedExcludedUsers != null && !expandedExcludedUsers.equals(request.excludedUsers)) {
-            final String auditDetail = buildExpansionAuditDetail(template, expandedExcludedUsers);
-            request = request.toBuilder()
-                    .excludedUsers(expandedExcludedUsers)
-                    .auditDetail(auditDetail)
-                    .build();
-        }
-        WorkItem workItem = workItemService.create(request);
-
-        // Apply template labels as MANUAL — the filter engine may add INFERRED on top
-        final List<WorkItemLabel> labels = parseLabels(template);
-        for (final WorkItemLabel label : labels) {
-            workItem = workItemService.addLabel(workItem.id, label.path, label.appliedBy);
-        }
-
-        return workItem;
-    }
 
     /**
      * Create a WorkItem from a template using request-wins merge semantics.
@@ -202,7 +77,13 @@ public class WorkItemTemplateService {
 
         final String expandedExcludedUsers = templateExpander.expandExcludedUsers(template);
 
-        final WorkItemCreateRequest merged = mergeRequestWithTemplate(template, request, expandedExcludedUsers);
+        WorkItemCreateRequest merged = mergeRequestWithTemplate(template, request, expandedExcludedUsers);
+
+        // Audit trail for excludedGroups expansion — mirrors the instantiate() pattern
+        if (expandedExcludedUsers != null && !expandedExcludedUsers.equals(template.excludedUsers)) {
+            final String auditDetail = buildExpansionAuditDetail(template, expandedExcludedUsers);
+            merged = merged.toBuilder().excludedUsers(expandedExcludedUsers).auditDetail(auditDetail).build();
+        }
 
         if (template.instanceCount != null) {
             return multiInstanceSpawnService.get()
@@ -271,99 +152,6 @@ public class WorkItemTemplateService {
                 .build();
     }
 
-    /**
-     * Convert a template and optional overrides into a {@link WorkItemCreateRequest}.
-     *
-     * <p>
-     * Static for unit testability — no CDI or JPA dependency.
-     *
-     * @param template the template providing defaults
-     * @param titleOverride if non-null and non-blank, used as the title; otherwise template name
-     * @param assigneeIdOverride if non-null, set as the direct assignee
-     * @param createdBy the actor triggering the instantiation
-     * @return the create request ready for {@link WorkItemService#create}
-     */
-    public static WorkItemCreateRequest toCreateRequest(
-            final WorkItemTemplate template,
-            final String titleOverride,
-            final String assigneeIdOverride,
-            final String createdBy) {
-        return toCreateRequest(template, titleOverride, assigneeIdOverride, createdBy, null, null);
-    }
-
-    /**
-     * Convert a template and optional overrides into a {@link WorkItemCreateRequest}.
-     *
-     * <p>
-     * Static for unit testability — no CDI or JPA dependency.
-     *
-     * @param template the template providing defaults
-     * @param titleOverride if non-null and non-blank, used as the title; otherwise template name
-     * @param assigneeIdOverride if non-null, set as the direct assignee
-     * @param createdBy the actor triggering the instantiation
-     * @param callerRef opaque routing key set by engine adapters (null for human-initiated creation)
-     * @return the create request ready for {@link WorkItemService#create}
-     */
-    public static WorkItemCreateRequest toCreateRequest(
-            final WorkItemTemplate template,
-            final String titleOverride,
-            final String assigneeIdOverride,
-            final String createdBy,
-            final String callerRef) {
-        return toCreateRequest(template, titleOverride, assigneeIdOverride, createdBy, callerRef, null);
-    }
-
-    /**
-     * Convert a template and optional overrides into a {@link WorkItemCreateRequest}.
-     *
-     * <p>
-     * Static for unit testability — no CDI or JPA dependency.
-     *
-     * @param template the template providing defaults
-     * @param titleOverride if non-null and non-blank, used as the title; otherwise template name
-     * @param assigneeIdOverride if non-null, set as the direct assignee
-     * @param createdBy the actor triggering the instantiation
-     * @param callerRef opaque routing key set by engine adapters (null for human-initiated creation)
-     * @param payloadOverride if non-null and non-blank, used as the payload instead of
-     *                        {@link WorkItemTemplate#defaultPayload}; null falls back to template default
-     * @return the create request ready for {@link WorkItemService#create}
-     */
-    public static WorkItemCreateRequest toCreateRequest(
-            final WorkItemTemplate template,
-            final String titleOverride,
-            final String assigneeIdOverride,
-            final String createdBy,
-            final String callerRef,
-            final String payloadOverride) {
-
-        final String title = (titleOverride != null && !titleOverride.isBlank())
-                ? titleOverride
-                : template.name;
-
-        final String payload = mergePayload(template.defaultPayload, payloadOverride);
-
-        return WorkItemCreateRequest.builder()
-                .title(title)
-                .description(template.description)
-                .category(template.category)
-                .priority(template.priority)
-                .assigneeId(assigneeIdOverride)
-                .candidateGroups(template.candidateGroups)
-                .candidateUsers(template.candidateUsers)
-                .requiredCapabilities(template.requiredCapabilities)
-                .createdBy(createdBy)
-                .payload(payload)
-                .callerRef(callerRef)
-                .claimDeadlineBusinessHours(template.defaultClaimBusinessHours)
-                .expiresAtBusinessHours(template.defaultExpiryBusinessHours)
-                .templateId(template.id)
-                .permittedOutcomes(OutcomeCodecs.decodeOutcomes(template.outcomes))
-                .inputDataSchema(template.inputDataSchema)
-                .outputDataSchema(template.outputDataSchema)
-                .excludedUsers(template.excludedUsers)
-                .scope(template.scope)
-                .build();
-    }
 
     /**
      * Deep-merges two JSON payloads. When both are JSON objects, overlay keys win on conflict

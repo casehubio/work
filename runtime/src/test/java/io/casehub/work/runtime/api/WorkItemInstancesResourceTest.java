@@ -13,6 +13,7 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.TenancyConstants;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
@@ -38,7 +39,11 @@ class WorkItemInstancesResourceTest {
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
             t.persist();
-            return templateService.instantiate(t, null, null, "test").id.toString();
+            final var request = WorkItemCreateRequest.builder()
+                    .templateId(t.id)
+                    .createdBy("test")
+                    .build();
+            return templateService.createFromTemplate(request).id.toString();
         });
 
         given()

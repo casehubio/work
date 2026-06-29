@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.GroupStatus;
+import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemRootView;
@@ -60,7 +61,11 @@ class MultiInstanceInboxTest {
         t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         t.persist();
 
-        WorkItem parent = templateService.instantiate(t, null, null, "test");
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(t.id)
+                .createdBy("test")
+                .build();
+        WorkItem parent = templateService.createFromTemplate(request);
         List<WorkItemRootView> roots = store.scanRoots(null, null, List.of(t.candidateGroups));
 
         assertThat(roots).anyMatch(r -> r.workItem().id.equals(parent.id)
@@ -84,7 +89,11 @@ class MultiInstanceInboxTest {
         t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         t.persist();
 
-        WorkItem parent = templateService.instantiate(t, null, null, "test");
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(t.id)
+                .createdBy("test")
+                .build();
+        WorkItem parent = templateService.createFromTemplate(request);
 
         // User in child-group has visibility into children, not coordinator parent directly
         List<WorkItemRootView> roots = store.scanRoots(null, null, List.of(uniqueGroup));
@@ -105,7 +114,11 @@ class MultiInstanceInboxTest {
         t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         t.persist();
 
-        templateService.instantiate(t, null, null, "test");
+        final var request = WorkItemCreateRequest.builder()
+                .templateId(t.id)
+                .createdBy("test")
+                .build();
+        templateService.createFromTemplate(request);
 
         List<WorkItemRootView> roots = store.scanRoots(null, null, List.of(uniqueGroup));
 
