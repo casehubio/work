@@ -1,4 +1,4 @@
-package io.casehub.work.api;
+package io.casehub.work.api.spi;
 
 import java.time.Duration;
 import java.time.Instant;

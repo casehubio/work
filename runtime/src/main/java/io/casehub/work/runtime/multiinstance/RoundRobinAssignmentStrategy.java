@@ -11,10 +11,10 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 
 import io.casehub.work.api.AssignmentDecision;
-import io.casehub.work.api.InstanceAssignmentStrategy;
+import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceContext;
 import io.casehub.work.api.SelectionContext;
-import io.casehub.work.api.WorkerSelectionStrategy;
+import io.casehub.work.api.spi.WorkerSelectionStrategy;
 import io.casehub.work.core.strategy.ClaimFirstStrategy;
 import io.casehub.work.core.strategy.LeastLoadedStrategy;
 import io.casehub.work.core.strategy.RoundRobinStrategy;

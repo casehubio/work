@@ -10,7 +10,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.transaction.Transactional;
 
-import io.casehub.work.api.InstanceAssignmentStrategy;
+import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceConfig;
 import io.casehub.work.api.MultiInstanceContext;
 import io.casehub.work.api.ParentRole;

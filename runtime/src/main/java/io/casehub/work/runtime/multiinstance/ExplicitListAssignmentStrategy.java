@@ -5,7 +5,7 @@ import java.util.List;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Named;
 
-import io.casehub.work.api.InstanceAssignmentStrategy;
+import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceContext;
 import io.casehub.work.runtime.model.WorkItem;
 

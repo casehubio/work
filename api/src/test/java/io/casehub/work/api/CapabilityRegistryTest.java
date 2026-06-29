@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Set;
 
+import io.casehub.work.api.spi.CapabilityRegistry;
 import org.junit.jupiter.api.Test;
 
 class CapabilityRegistryTest {

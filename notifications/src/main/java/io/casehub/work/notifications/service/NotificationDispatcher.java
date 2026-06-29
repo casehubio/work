@@ -1,5 +1,19 @@
 package io.casehub.work.notifications.service;
 
+import io.casehub.work.api.spi.NotificationChannel;
+import io.casehub.work.api.NotificationPayload;
+import io.casehub.work.notifications.model.WorkItemNotificationRule;
+import io.casehub.work.notifications.repository.NotificationRuleStore;
+import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.service.TenantContextRunner;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.TransactionPhase;
+import jakarta.enterprise.inject.Instance;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -8,21 +22,6 @@ import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
-import jakarta.enterprise.event.TransactionPhase;
-import jakarta.enterprise.inject.Instance;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-
-import io.casehub.work.api.NotificationChannel;
-import io.casehub.work.api.NotificationPayload;
-import io.casehub.work.notifications.model.WorkItemNotificationRule;
-import io.casehub.work.notifications.repository.NotificationRuleStore;
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.service.TenantContextRunner;
 
 /**
  * CDI observer that dispatches outbound notifications on WorkItem lifecycle events.

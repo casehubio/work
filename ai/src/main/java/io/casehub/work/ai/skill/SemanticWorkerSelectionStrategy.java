@@ -1,27 +1,25 @@
 package io.casehub.work.ai.skill;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import jakarta.annotation.Priority;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Alternative;
-import jakarta.inject.Inject;
-
-import org.jboss.logging.Logger;
-
 import io.casehub.work.ai.config.WorkItemsAiConfig;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.Capability;
 import io.casehub.work.api.SelectionContext;
-import io.casehub.work.api.SkillMatcher;
 import io.casehub.work.api.SkillProfile;
-import io.casehub.work.api.SkillProfileProvider;
+import io.casehub.work.api.spi.SkillProfileProvider;
 import io.casehub.work.api.WorkerCandidate;
-import io.casehub.work.api.WorkerSelectionStrategy;
+import io.casehub.work.api.spi.SkillMatcher;
+import io.casehub.work.api.spi.WorkerSelectionStrategy;
 import io.casehub.work.core.strategy.LeastLoadedStrategy;
+import jakarta.annotation.Priority;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Alternative;
+import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Assigns work to the candidate whose skill profile best matches the work item's

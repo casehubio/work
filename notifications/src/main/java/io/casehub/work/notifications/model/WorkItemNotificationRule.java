@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.spi.NotificationChannel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -28,7 +29,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * <h2>Delivery</h2>
  * <p>
  * When a rule matches, {@code NotificationDispatcher} calls the {@link
- * io.casehub.work.api.NotificationChannel} CDI bean whose {@code channelType()}
+ * NotificationChannel} CDI bean whose {@code channelType()}
  * equals {@link #channelType} with a {@link io.casehub.work.api.NotificationPayload}
  * built from this rule and the lifecycle event.
  */
@@ -44,7 +45,7 @@ public class WorkItemNotificationRule extends PanacheEntityBase {
 
     /**
      * The notification channel to use — matched against
-     * {@link io.casehub.work.api.NotificationChannel#channelType()}.
+     * {@link NotificationChannel#channelType()}.
      * Built-in values: {@code "http-webhook"}, {@code "slack"}, {@code "teams"}.
      */
     @Column(name = "channel_type", nullable = false, length = 50)

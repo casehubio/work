@@ -15,7 +15,7 @@ import jakarta.enterprise.inject.Alternative;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.api.Capability;
-import io.casehub.work.api.CapabilityRegistry;
+import io.casehub.work.api.spi.CapabilityRegistry;
 import io.casehub.work.api.WorkCapabilities;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;

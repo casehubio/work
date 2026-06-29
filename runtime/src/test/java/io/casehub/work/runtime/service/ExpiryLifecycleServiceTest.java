@@ -15,6 +15,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 
+import io.casehub.work.api.spi.WorkerSelectionStrategy;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.NotificationOptions;
 import jakarta.enterprise.util.TypeLiteral;
@@ -27,9 +28,9 @@ import io.casehub.platform.api.preferences.MapPreferences;
 import io.casehub.platform.api.preferences.PreferenceProvider;
 import io.casehub.work.api.BreachDecision;
 import io.casehub.work.api.ClaimSlaContext;
-import io.casehub.work.api.ClaimSlaPolicy;
+import io.casehub.work.api.spi.ClaimSlaPolicy;
 import io.casehub.work.api.SlaBreachContext;
-import io.casehub.work.api.SlaBreachPolicy;
+import io.casehub.work.api.spi.SlaBreachPolicy;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.PolicyDecision;
 import io.casehub.work.api.SelectionContext;
@@ -112,7 +113,7 @@ class ExpiryLifecycleServiceTest {
         }
     }
 
-    static class CapturingStrategy implements io.casehub.work.api.WorkerSelectionStrategy {
+    static class CapturingStrategy implements WorkerSelectionStrategy {
         final List<SelectionContext> calls = new ArrayList<>();
 
         @Override

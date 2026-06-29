@@ -10,7 +10,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import io.casehub.work.api.ChildSpec;
-import io.casehub.work.api.SpawnPort;
+import io.casehub.work.api.spi.SpawnPort;
 import io.casehub.work.api.SpawnRequest;
 import io.casehub.work.api.SpawnResult;
 import io.casehub.work.api.SpawnedChild;

@@ -1,4 +1,7 @@
-package io.casehub.work.api;
+package io.casehub.work.api.spi;
+
+import io.casehub.work.api.SkillProfile;
+import io.casehub.work.api.WorkerCandidate;
 
 import java.util.Set;
 

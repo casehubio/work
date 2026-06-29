@@ -1,15 +1,14 @@
 package io.casehub.work.ai.skill;
 
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
-
+import io.casehub.work.ai.repository.WorkerSkillProfileStore;
+import io.casehub.work.api.SkillProfile;
+import io.casehub.work.api.spi.SkillProfileProvider;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import io.casehub.work.ai.repository.WorkerSkillProfileStore;
-import io.casehub.work.api.SkillProfile;
-import io.casehub.work.api.SkillProfileProvider;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Reads a worker's skill profile from the {@link WorkerSkillProfile} entity.

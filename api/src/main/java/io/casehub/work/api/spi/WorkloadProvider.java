@@ -1,4 +1,6 @@
-package io.casehub.work.api;
+package io.casehub.work.api.spi;
+
+import io.casehub.work.api.WorkerCandidate;
 
 /**
  * SPI for querying the active work count for a worker.

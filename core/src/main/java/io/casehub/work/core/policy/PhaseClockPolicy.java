@@ -6,7 +6,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 
 import io.casehub.work.api.ClaimSlaContext;
-import io.casehub.work.api.ClaimSlaPolicy;
+import io.casehub.work.api.spi.ClaimSlaPolicy;
 
 /**
  * {@link ClaimSlaPolicy} that grants each pool phase a full window but enforces a hard cap.

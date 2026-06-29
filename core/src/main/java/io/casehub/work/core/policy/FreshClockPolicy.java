@@ -6,7 +6,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 
 import io.casehub.work.api.ClaimSlaContext;
-import io.casehub.work.api.ClaimSlaPolicy;
+import io.casehub.work.api.spi.ClaimSlaPolicy;
 
 /**
  * {@link ClaimSlaPolicy} that resets the full pool window on every return to pool.

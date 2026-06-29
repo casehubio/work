@@ -15,8 +15,8 @@ import java.util.stream.Collectors;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import io.casehub.work.api.BusinessCalendar;
-import io.casehub.work.api.HolidayCalendar;
+import io.casehub.work.api.spi.BusinessCalendar;
+import io.casehub.work.api.spi.HolidayCalendar;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 
 /**

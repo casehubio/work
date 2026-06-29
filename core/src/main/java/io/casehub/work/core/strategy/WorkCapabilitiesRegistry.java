@@ -3,7 +3,7 @@ package io.casehub.work.core.strategy;
 import java.util.Set;
 
 import io.casehub.work.api.Capability;
-import io.casehub.work.api.CapabilityRegistry;
+import io.casehub.work.api.spi.CapabilityRegistry;
 import io.casehub.work.api.WorkCapabilities;
 
 /**

@@ -1,4 +1,7 @@
-package io.casehub.work.api;
+package io.casehub.work.api.spi;
+
+import io.casehub.work.api.SpawnRequest;
+import io.casehub.work.api.SpawnResult;
 
 import java.util.UUID;
 

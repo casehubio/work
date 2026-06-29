@@ -6,7 +6,7 @@ import io.quarkus.arc.DefaultBean;
 
 import io.casehub.work.api.BreachDecision;
 import io.casehub.work.api.SlaBreachContext;
-import io.casehub.work.api.SlaBreachPolicy;
+import io.casehub.work.api.spi.SlaBreachPolicy;
 
 /**
  * Default {@link SlaBreachPolicy} — fails every breach with a diagnostic reason.

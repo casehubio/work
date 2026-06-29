@@ -4,7 +4,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 
-import io.casehub.work.api.ExclusionPolicy;
+import io.casehub.work.api.spi.ExclusionPolicy;
 import io.casehub.work.api.PolicyDecision;
 
 /**

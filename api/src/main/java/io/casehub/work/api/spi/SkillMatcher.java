@@ -1,4 +1,7 @@
-package io.casehub.work.api;
+package io.casehub.work.api.spi;
+
+import io.casehub.work.api.SelectionContext;
+import io.casehub.work.api.SkillProfile;
 
 /**
  * SPI for scoring a worker's {@link SkillProfile} against a work item's

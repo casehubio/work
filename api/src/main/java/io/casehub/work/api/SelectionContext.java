@@ -1,5 +1,7 @@
 package io.casehub.work.api;
 
+import io.casehub.work.api.spi.WorkerSelectionStrategy;
+
 import java.util.Set;
 
 /**

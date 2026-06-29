@@ -1,5 +1,7 @@
 package io.casehub.work.api;
 
+import io.casehub.work.api.spi.WorkerSelectionStrategy;
+
 /**
  * Immutable outcome of a {@link WorkerSelectionStrategy#select} call.
  *

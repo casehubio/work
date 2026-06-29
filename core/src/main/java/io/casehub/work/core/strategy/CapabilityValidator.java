@@ -10,7 +10,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import io.casehub.work.api.Capability;
-import io.casehub.work.api.CapabilityRegistry;
+import io.casehub.work.api.spi.CapabilityRegistry;
 import io.casehub.work.api.UnknownCapabilityException;
 import io.casehub.work.api.ValidationMode;
 

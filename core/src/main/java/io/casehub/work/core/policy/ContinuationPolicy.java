@@ -6,7 +6,7 @@ import java.time.Instant;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import io.casehub.work.api.ClaimSlaContext;
-import io.casehub.work.api.ClaimSlaPolicy;
+import io.casehub.work.api.spi.ClaimSlaPolicy;
 
 /**
  * Default {@link ClaimSlaPolicy}: remaining pool time carries forward.

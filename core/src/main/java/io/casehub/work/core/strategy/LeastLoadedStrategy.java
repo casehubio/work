@@ -8,7 +8,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.SelectionContext;
 import io.casehub.work.api.WorkerCandidate;
-import io.casehub.work.api.WorkerSelectionStrategy;
+import io.casehub.work.api.spi.WorkerSelectionStrategy;
 
 /**
  * Pre-assigns WorkItems to the candidate with the fewest active WorkItems.

@@ -5,7 +5,7 @@ import java.util.List;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import io.casehub.work.api.WorkerCandidate;
-import io.casehub.work.api.WorkerRegistry;
+import io.casehub.work.api.spi.WorkerRegistry;
 
 /**
  * Default WorkerRegistry — returns empty list for all groups.

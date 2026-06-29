@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import io.casehub.work.api.HolidayCalendar;
+import io.casehub.work.api.spi.HolidayCalendar;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 
 /**

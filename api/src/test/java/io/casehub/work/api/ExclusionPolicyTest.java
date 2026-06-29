@@ -2,6 +2,7 @@ package io.casehub.work.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.casehub.work.api.spi.ExclusionPolicy;
 import org.junit.jupiter.api.Test;
 
 /**

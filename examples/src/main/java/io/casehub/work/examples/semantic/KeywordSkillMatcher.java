@@ -10,7 +10,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 
 import io.casehub.work.api.SelectionContext;
-import io.casehub.work.api.SkillMatcher;
+import io.casehub.work.api.spi.SkillMatcher;
 import io.casehub.work.api.SkillProfile;
 
 /**

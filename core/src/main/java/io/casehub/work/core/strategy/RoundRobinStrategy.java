@@ -13,7 +13,7 @@ import jakarta.inject.Inject;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.SelectionContext;
 import io.casehub.work.api.WorkerCandidate;
-import io.casehub.work.api.WorkerSelectionStrategy;
+import io.casehub.work.api.spi.WorkerSelectionStrategy;
 
 /**
  * Distributes WorkItems sequentially across candidates in round-robin order.

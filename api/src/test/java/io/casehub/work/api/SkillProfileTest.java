@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Map;
 import java.util.Set;
 
+import io.casehub.work.api.spi.SkillMatcher;
+import io.casehub.work.api.spi.SkillProfileProvider;
 import org.junit.jupiter.api.Test;
 
 class SkillProfileTest {
@@ -39,15 +41,15 @@ class SkillProfileTest {
 
     @Test
     void skillProfileProvider_canImplementWithLambda() {
-        SkillProfileProvider p = (workerId, caps) -> SkillProfile.ofNarrative("skills: " + String.join(", ", caps));
-        final var profile = p.getProfile("alice", Set.of("legal", "nda"));
+        SkillProfileProvider p       = (workerId, caps) -> SkillProfile.ofNarrative("skills: " + String.join(", ", caps));
+        final var            profile = p.getProfile("alice", Set.of("legal", "nda"));
         assertThat(profile.narrative()).contains("legal");
     }
 
     @Test
     void skillMatcher_canImplementWithLambda() {
-        SkillMatcher m = (profile, ctx) -> profile.narrative().length();
-        final var ctx = new SelectionContext("legal", null, null, null, null, null, null, null);
+        SkillMatcher m   = (profile, ctx) -> profile.narrative().length();
+        final var    ctx = new SelectionContext("legal", null, null, null, null, null, null, null);
         assertThat(m.score(SkillProfile.ofNarrative("expert"), ctx)).isEqualTo(6.0);
     }
 }

@@ -1,5 +1,7 @@
 package io.casehub.work.api;
 
+import io.casehub.work.api.spi.SlaBreachPolicy;
+
 import java.util.Set;
 import java.util.UUID;
 

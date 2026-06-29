@@ -12,7 +12,6 @@ import java.time.ZonedDateTime;
 
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.api.HolidayCalendar;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 
 /**

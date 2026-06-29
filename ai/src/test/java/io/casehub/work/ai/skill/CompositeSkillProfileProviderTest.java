@@ -1,15 +1,14 @@
 package io.casehub.work.ai.skill;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.work.api.SkillProfile;
+import io.casehub.work.api.spi.SkillProfileProvider;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.junit.jupiter.api.Test;
-
-import io.casehub.work.api.SkillProfile;
-import io.casehub.work.api.SkillProfileProvider;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class CompositeSkillProfileProviderTest {
 

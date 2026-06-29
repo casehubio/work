@@ -12,7 +12,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.Set;
 
-import io.casehub.work.api.HolidayCalendar;
+import io.casehub.work.api.spi.HolidayCalendar;
 
 /**
  * {@link HolidayCalendar} backed by an iCal ({@code .ics}) feed.

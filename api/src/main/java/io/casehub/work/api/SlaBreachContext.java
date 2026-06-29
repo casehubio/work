@@ -2,6 +2,7 @@ package io.casehub.work.api;
 
 import io.casehub.platform.api.path.Path;
 import io.casehub.platform.api.preferences.Preferences;
+import io.casehub.work.api.spi.SlaBreachPolicy;
 
 /**
  * Context passed to {@link SlaBreachPolicy#onBreach} describing the breach event.

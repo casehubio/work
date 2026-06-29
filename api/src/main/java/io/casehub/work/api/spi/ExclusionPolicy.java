@@ -1,4 +1,6 @@
-package io.casehub.work.api;
+package io.casehub.work.api.spi;
+
+import io.casehub.work.api.PolicyDecision;
 
 /**
  * SPI for evaluating whether a user is excluded from acting on a WorkItem.

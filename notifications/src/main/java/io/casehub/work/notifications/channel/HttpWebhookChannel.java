@@ -1,14 +1,13 @@
 package io.casehub.work.notifications.channel;
 
-import java.util.logging.Logger;
-
-import jakarta.enterprise.context.ApplicationScoped;
-
 import io.casehub.connectors.http.HttpHelper;
-import io.casehub.work.api.NotificationChannel;
+import io.casehub.work.api.spi.NotificationChannel;
 import io.casehub.work.api.NotificationPayload;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
+import jakarta.enterprise.context.ApplicationScoped;
+
+import java.util.logging.Logger;
 
 /**
  * Generic HTTP webhook {@link NotificationChannel}.

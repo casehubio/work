@@ -4,7 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 
-import io.casehub.work.api.HolidayCalendar;
+import io.casehub.work.api.spi.HolidayCalendar;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.quarkus.arc.DefaultBean;
 

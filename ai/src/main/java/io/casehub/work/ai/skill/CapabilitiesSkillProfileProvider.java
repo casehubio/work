@@ -1,12 +1,11 @@
 package io.casehub.work.ai.skill;
 
-import java.util.Set;
-
+import io.casehub.work.api.SkillProfile;
+import io.casehub.work.api.spi.SkillProfileProvider;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 
-import io.casehub.work.api.SkillProfile;
-import io.casehub.work.api.SkillProfileProvider;
+import java.util.Set;
 
 /**
  * Builds a {@link SkillProfile} by joining the worker's declared capability tags.

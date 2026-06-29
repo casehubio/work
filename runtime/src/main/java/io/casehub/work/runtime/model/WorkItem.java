@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.spi.ClaimSlaPolicy;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -212,7 +213,7 @@ public class WorkItem extends PanacheEntityBase {
 
     /**
      * Total seconds this item has spent in the unclaimed pool across all previous
-     * PENDING phases. Updated when the item is claimed; used by {@link io.casehub.work.api.ClaimSlaPolicy}
+     * PENDING phases. Updated when the item is claimed; used by {@link ClaimSlaPolicy}
      * to compute the remaining pool budget.
      */
     @Column(name = "accumulated_unclaimed_seconds", nullable = false)

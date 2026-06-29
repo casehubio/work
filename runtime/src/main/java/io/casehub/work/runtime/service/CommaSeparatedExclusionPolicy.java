@@ -2,7 +2,7 @@ package io.casehub.work.runtime.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import io.casehub.work.api.ExclusionPolicy;
+import io.casehub.work.api.spi.ExclusionPolicy;
 import io.casehub.work.api.PolicyDecision;
 import io.quarkus.arc.DefaultBean;
 

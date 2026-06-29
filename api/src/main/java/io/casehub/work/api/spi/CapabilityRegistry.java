@@ -1,4 +1,6 @@
-package io.casehub.work.api;
+package io.casehub.work.api.spi;
+
+import io.casehub.work.api.Capability;
 
 import java.util.Set;
 

@@ -1,4 +1,9 @@
-package io.casehub.work.api;
+package io.casehub.work.api.spi;
+
+import io.casehub.work.api.AssignmentDecision;
+import io.casehub.work.api.AssignmentTrigger;
+import io.casehub.work.api.SelectionContext;
+import io.casehub.work.api.WorkerCandidate;
 
 import java.util.List;
 import java.util.Set;

@@ -1,18 +1,17 @@
 package io.casehub.work.ai.skill;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.work.api.SelectionContext;
+import io.casehub.work.api.SkillProfile;
+import io.casehub.work.api.spi.SkillProfileProvider;
+import io.casehub.work.api.WorkerCandidate;
+import io.casehub.work.api.spi.SkillMatcher;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import io.casehub.work.api.SelectionContext;
-import io.casehub.work.api.SkillMatcher;
-import io.casehub.work.api.SkillProfile;
-import io.casehub.work.api.SkillProfileProvider;
-import io.casehub.work.api.WorkerCandidate;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class SemanticStrategyTest {
 

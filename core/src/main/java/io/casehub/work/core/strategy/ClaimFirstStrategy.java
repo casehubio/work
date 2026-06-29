@@ -9,7 +9,7 @@ import jakarta.enterprise.inject.Alternative;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.SelectionContext;
 import io.casehub.work.api.WorkerCandidate;
-import io.casehub.work.api.WorkerSelectionStrategy;
+import io.casehub.work.api.spi.WorkerSelectionStrategy;
 
 /**
  * No-op worker selection strategy — leaves all WorkItems in the open pool.

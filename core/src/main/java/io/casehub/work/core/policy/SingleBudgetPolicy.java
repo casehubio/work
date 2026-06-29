@@ -6,7 +6,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 
 import io.casehub.work.api.ClaimSlaContext;
-import io.casehub.work.api.ClaimSlaPolicy;
+import io.casehub.work.api.spi.ClaimSlaPolicy;
 
 /**
  * {@link ClaimSlaPolicy} with a single fixed budget from submission time.

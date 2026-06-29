@@ -11,6 +11,7 @@ import java.util.UUID;
 import io.casehub.platform.api.path.Path;
 import io.casehub.platform.api.preferences.MapPreferences;
 
+import io.casehub.work.api.spi.SlaBreachPolicy;
 import org.junit.jupiter.api.Test;
 
 class SlaBreachPolicyTest {

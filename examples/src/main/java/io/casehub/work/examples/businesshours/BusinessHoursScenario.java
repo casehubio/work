@@ -16,7 +16,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import io.casehub.work.api.BusinessCalendar;
+import io.casehub.work.api.spi.BusinessCalendar;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;

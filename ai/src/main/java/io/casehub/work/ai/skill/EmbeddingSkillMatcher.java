@@ -12,7 +12,7 @@ import org.jboss.logging.Logger;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import io.casehub.work.api.Capability;
 import io.casehub.work.api.SelectionContext;
-import io.casehub.work.api.SkillMatcher;
+import io.casehub.work.api.spi.SkillMatcher;
 import io.casehub.work.api.SkillProfile;
 
 /**

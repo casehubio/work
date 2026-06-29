@@ -1,5 +1,15 @@
 package io.casehub.work.ai.skill;
 
+import io.casehub.work.api.SkillProfile;
+import io.casehub.work.api.spi.SkillProfileProvider;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.runtime.repository.WorkItemStore;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Alternative;
+import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -7,18 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Alternative;
-import jakarta.inject.Inject;
-
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-
-import io.casehub.work.api.SkillProfile;
-import io.casehub.work.api.SkillProfileProvider;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
 
 /**
  * Builds a {@link SkillProfile} from a worker's completed WorkItem history.

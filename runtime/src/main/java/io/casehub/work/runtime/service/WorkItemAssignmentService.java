@@ -11,12 +11,12 @@ import jakarta.inject.Inject;
 
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.AssignmentTrigger;
-import io.casehub.work.api.ExclusionPolicy;
+import io.casehub.work.api.spi.ExclusionPolicy;
 import io.casehub.work.api.SelectionContext;
 import io.casehub.work.api.WorkerCandidate;
-import io.casehub.work.api.WorkerRegistry;
-import io.casehub.work.api.WorkerSelectionStrategy;
-import io.casehub.work.api.WorkloadProvider;
+import io.casehub.work.api.spi.WorkerRegistry;
+import io.casehub.work.api.spi.WorkerSelectionStrategy;
+import io.casehub.work.api.spi.WorkloadProvider;
 import io.casehub.work.core.strategy.ClaimFirstStrategy;
 import io.casehub.work.core.strategy.LeastLoadedStrategy;
 import io.casehub.work.core.strategy.RoundRobinStrategy;

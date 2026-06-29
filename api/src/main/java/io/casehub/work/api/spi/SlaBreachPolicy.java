@@ -1,4 +1,7 @@
-package io.casehub.work.api;
+package io.casehub.work.api.spi;
+
+import io.casehub.work.api.BreachDecision;
+import io.casehub.work.api.SlaBreachContext;
 
 /**
  * SPI: decides what happens when a WorkItem breaches its SLA deadline.
