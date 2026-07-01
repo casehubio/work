@@ -77,6 +77,18 @@ public class WorkItemSpiAdapter implements WorkItemCreator, WorkItemLifecycle {
         }
     }
 
+    @Override
+    public void obsoleteByCallerRef(final String callerRef) {
+        workItemService.findByCallerRef(callerRef).ifPresent(wi -> {
+            try {
+                workItemService.obsolete(wi.id, "system", "Consumed by caller");
+            } catch (final IllegalStateException e) {
+                if (isTerminal(wi.id)) return;
+                throw e;
+            }
+        });
+    }
+
     private boolean isTerminal(final UUID id) {
         return workItemService.findById(id)
                 .map(wi -> wi.status != null && wi.status.isTerminal())

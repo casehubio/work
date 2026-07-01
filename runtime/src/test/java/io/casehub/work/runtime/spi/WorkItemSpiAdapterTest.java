@@ -140,6 +140,45 @@ class WorkItemSpiAdapterTest {
     }
 
     @Test
+    void obsoleteByCallerRef_delegatesToService() {
+        final WorkItem entity = new WorkItem();
+        entity.id = UUID.randomUUID();
+        entity.status = WorkItemStatus.PENDING;
+        entity.callerRef = "ref-1";
+        when(workItemService.findByCallerRef("ref-1")).thenReturn(Optional.of(entity));
+        when(workItemService.obsolete(entity.id, "system", "Consumed by caller")).thenReturn(entity);
+
+        adapter.obsoleteByCallerRef("ref-1");
+
+        verify(workItemService).obsolete(entity.id, "system", "Consumed by caller");
+    }
+
+    @Test
+    void obsoleteByCallerRef_idempotentOnTerminal() {
+        final WorkItem entity = new WorkItem();
+        entity.id = UUID.randomUUID();
+        entity.status = WorkItemStatus.COMPLETED;
+        entity.callerRef = "ref-1";
+        when(workItemService.findByCallerRef("ref-1")).thenReturn(Optional.of(entity));
+        when(workItemService.obsolete(entity.id, "system", "Consumed by caller"))
+                .thenThrow(new IllegalStateException("Cannot obsolete"));
+        when(workItemService.findById(entity.id)).thenReturn(Optional.of(entity));
+
+        adapter.obsoleteByCallerRef("ref-1");
+
+        verify(workItemService).obsolete(entity.id, "system", "Consumed by caller");
+    }
+
+    @Test
+    void obsoleteByCallerRef_noMatch_isNoOp() {
+        when(workItemService.findByCallerRef("ref-absent")).thenReturn(Optional.empty());
+
+        adapter.obsoleteByCallerRef("ref-absent");
+
+        verify(workItemService, never()).obsolete(any(), any(), any());
+    }
+
+    @Test
     void complete_idempotentOnTerminal() {
         final UUID id = UUID.randomUUID();
         final WorkItem entity = new WorkItem();
