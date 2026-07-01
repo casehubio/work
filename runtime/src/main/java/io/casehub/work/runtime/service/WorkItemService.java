@@ -799,9 +799,7 @@ public class WorkItemService {
      * @return an Optional containing the WorkItem if found
      */
     public Optional<WorkItem> findByCallerRef(final String callerRef) {
-        return workItemStore.scanAll().stream()
-                .filter(w -> callerRef.equals(w.callerRef))
-                .findFirst();
+        return workItemStore.findByCallerRef(callerRef);
     }
 
     /**
