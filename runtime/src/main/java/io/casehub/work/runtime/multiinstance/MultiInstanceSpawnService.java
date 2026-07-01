@@ -11,6 +11,7 @@ import jakarta.inject.Named;
 import jakarta.transaction.Transactional;
 
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
+import io.casehub.work.api.GroupStatus;
 import io.casehub.work.api.MultiInstanceConfig;
 import io.casehub.work.api.MultiInstanceContext;
 import io.casehub.work.api.ParentRole;
@@ -84,6 +85,7 @@ public class MultiInstanceSpawnService {
         group.onThresholdReached = template.onThresholdReached;
         group.allowSameAssignee = Boolean.TRUE.equals(template.allowSameAssignee);
         group.parentRole = template.parentRole != null ? template.parentRole : ParentRole.COORDINATOR.name();
+        group.groupStatus = GroupStatus.IN_PROGRESS;
         group.tenancyId = parent.tenancyId;
         group.persist();
 

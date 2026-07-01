@@ -15,5 +15,13 @@ public enum GroupStatus {
     /**
      * Threshold reached but with majority rejection or escalation — group rejected.
      */
-    REJECTED
+    REJECTED;
+
+    public boolean isTerminal() {
+        return this == COMPLETED || this == REJECTED;
+    }
+
+    public boolean isActive() {
+        return this == IN_PROGRESS;
+    }
 }

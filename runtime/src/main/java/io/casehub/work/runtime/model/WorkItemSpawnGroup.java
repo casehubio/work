@@ -6,6 +6,8 @@ import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -13,6 +15,7 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import io.casehub.work.api.GroupStatus;
 
 /**
  * Tracks a batch of child WorkItems spawned together from a common parent.
@@ -114,6 +117,11 @@ public class WorkItemSpawnGroup extends PanacheEntityBase {
     /** True once the group outcome has been determined and the parent transitioned. */
     @Column(name = "policy_triggered", nullable = false)
     public boolean policyTriggered = false;
+
+    /** Current aggregate status of the group (IN_PROGRESS, COMPLETED, REJECTED). Null for non-multi-instance groups. */
+    @Column(name = "group_status", length = 15)
+    @Enumerated(EnumType.STRING)
+    public GroupStatus groupStatus;
 
     @PrePersist
     void prePersist() {

@@ -35,7 +35,7 @@ Each module owns its own version range. Flyway enforces uniqueness across all mo
 
 | Range | Module |
 |---|---|
-| V1–V999 | `runtime` (sequential, at V36); `casehub-work-ai` also occupies V14 filling a deliberate gap — no more optional-module migrations in this range |
+| V1–V999 | `runtime` (sequential, at V39); `casehub-work-ai` also occupies V14 filling a deliberate gap — no more optional-module migrations in this range |
 | V1000–V1009 | casehub-ledger base (delivered by dependency) — `ledger_entry`, `actor_trust_score`, `ledger_supplement`, `ledger_entry_archive`, `actor_identity` tables |
 | V2000–V2999 | `casehub-work-queues` and `casehub-work-ledger` (shared 2000s block) |
 | V3000–V3999 | `casehub-work-notifications` |

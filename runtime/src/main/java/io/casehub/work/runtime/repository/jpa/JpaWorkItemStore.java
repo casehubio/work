@@ -264,11 +264,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                 final WorkItemSpawnGroup group = spawnGroupStore.findMultiInstanceByParentId(id).orElse(null);
                 final int childCount = (int) WorkItem.count("parentId = ?1 AND tenancyId = ?2", id, tenancyId);
                 if (group != null) {
-                    final GroupStatus status = group.policyTriggered
-                            ? (group.completedCount >= group.requiredCount
-                                    ? GroupStatus.COMPLETED
-                                    : GroupStatus.REJECTED)
-                            : GroupStatus.IN_PROGRESS;
+                    final GroupStatus status = group.groupStatus != null ? group.groupStatus : GroupStatus.IN_PROGRESS;
                     return new WorkItemRootView(root, childCount, group.completedCount, group.requiredCount, status);
                 }
                 return new WorkItemRootView(root, childCount, null, null, null);

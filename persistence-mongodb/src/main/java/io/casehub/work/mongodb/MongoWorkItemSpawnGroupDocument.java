@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.bson.codecs.pojo.annotations.BsonId;
 
+import io.casehub.work.api.GroupStatus;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.quarkus.mongodb.panache.PanacheMongoEntityBase;
 import io.quarkus.mongodb.panache.common.MongoEntity;
@@ -35,6 +36,7 @@ public class MongoWorkItemSpawnGroupDocument extends PanacheMongoEntityBase {
     public int completedCount;
     public int rejectedCount;
     public boolean policyTriggered;
+    public String groupStatus;
 
     /** Convert a domain {@link WorkItemSpawnGroup} to a MongoDB document. */
     public static MongoWorkItemSpawnGroupDocument from(final WorkItemSpawnGroup group) {
@@ -53,6 +55,7 @@ public class MongoWorkItemSpawnGroupDocument extends PanacheMongoEntityBase {
         doc.completedCount = group.completedCount;
         doc.rejectedCount = group.rejectedCount;
         doc.policyTriggered = group.policyTriggered;
+        doc.groupStatus = group.groupStatus != null ? group.groupStatus.name() : null;
         return doc;
     }
 
@@ -73,6 +76,7 @@ public class MongoWorkItemSpawnGroupDocument extends PanacheMongoEntityBase {
         group.completedCount = completedCount;
         group.rejectedCount = rejectedCount;
         group.policyTriggered = policyTriggered;
+        group.groupStatus = groupStatus != null ? GroupStatus.valueOf(groupStatus) : null;
         return group;
     }
 }

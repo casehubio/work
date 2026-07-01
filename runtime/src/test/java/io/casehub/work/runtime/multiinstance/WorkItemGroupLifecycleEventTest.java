@@ -39,6 +39,9 @@ class WorkItemGroupLifecycleEventTest {
     @Inject
     EventCapture capture;
 
+    @Inject
+    io.casehub.work.runtime.repository.WorkItemSpawnGroupStore spawnGroupStore;
+
     @BeforeEach
     void clearCapture() {
         capture.clear();
@@ -162,6 +165,113 @@ class WorkItemGroupLifecycleEventTest {
 
         assertThat(capture.byStatus(parentId, GroupStatus.COMPLETED).get(0).callerRef())
                 .isEqualTo(callerRef);
+    }
+
+    @Test
+    void spawnGroup_hasInProgressStatus_afterCreation() {
+        final UUID parentId = inTx(() -> {
+            WorkItemTemplate t = new WorkItemTemplate();
+            t.name = "GroupStatusInProgressTest";
+            t.candidateGroups = "g";
+            t.createdBy = "test";
+            t.instanceCount = 3;
+            t.requiredCount = 2;
+            t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
+            t.persist();
+            final var request = WorkItemCreateRequest.builder()
+                    .templateId(t.id)
+                    .createdBy("test")
+                    .build();
+            return templateService.createFromTemplate(request).id;
+        });
+
+        final io.casehub.work.runtime.model.WorkItemSpawnGroup group =
+                inTx(() -> spawnGroupStore.findMultiInstanceByParentId(parentId).orElseThrow());
+        assertThat(group.groupStatus).isEqualTo(GroupStatus.IN_PROGRESS);
+    }
+
+    @Test
+    void groupStatus_isCompleted_afterThresholdMet() {
+        final UUID parentId = inTx(() -> {
+            WorkItemTemplate t = new WorkItemTemplate();
+            t.name = "GroupStatusCompletedTest";
+            t.candidateGroups = "g";
+            t.createdBy = "test";
+            t.instanceCount = 3;
+            t.requiredCount = 2;
+            t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
+            t.persist();
+            final var request = WorkItemCreateRequest.builder()
+                    .templateId(t.id)
+                    .createdBy("test")
+                    .build();
+            return templateService.createFromTemplate(request).id;
+        });
+
+        final List<UUID> children = inTx(() ->
+                WorkItem.<WorkItem>list("parentId", parentId).stream().map(w -> w.id).toList());
+
+        // Complete requiredCount (2) children to trigger threshold
+        for (final UUID c : children.subList(0, 2)) {
+            inTx(() -> workItemService.claim(c, "a"));
+            inTx(() -> workItemService.start(c, "a"));
+            inTx(() -> workItemService.complete(c, "a", "ok", null));
+        }
+
+        // Wait for async policy processing
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .until(() -> {
+                    final io.casehub.work.runtime.model.WorkItemSpawnGroup group =
+                            inTx(() -> spawnGroupStore.findMultiInstanceByParentId(parentId).orElseThrow());
+                    return group.groupStatus == GroupStatus.COMPLETED;
+                });
+
+        final io.casehub.work.runtime.model.WorkItemSpawnGroup group =
+                inTx(() -> spawnGroupStore.findMultiInstanceByParentId(parentId).orElseThrow());
+        assertThat(group.groupStatus).isEqualTo(GroupStatus.COMPLETED);
+    }
+
+    @Test
+    void groupStatus_isRejected_whenThresholdUnreachable() {
+        final UUID parentId = inTx(() -> {
+            WorkItemTemplate t = new WorkItemTemplate();
+            t.name = "GroupStatusRejectedTest";
+            t.candidateGroups = "g";
+            t.createdBy = "test";
+            t.instanceCount = 3;
+            t.requiredCount = 2;
+            t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
+            t.persist();
+            final var request = WorkItemCreateRequest.builder()
+                    .templateId(t.id)
+                    .createdBy("test")
+                    .build();
+            return templateService.createFromTemplate(request).id;
+        });
+
+        final List<UUID> children = inTx(() ->
+                WorkItem.<WorkItem>list("parentId", parentId).stream().map(w -> w.id).toList());
+
+        // Reject 2 of 3 children — threshold becomes unreachable (only 1 remains, need 2)
+        for (final UUID c : children.subList(0, 2)) {
+            inTx(() -> workItemService.claim(c, "a"));
+            inTx(() -> workItemService.start(c, "a"));
+            inTx(() -> workItemService.reject(c, "a", "denied", null));
+        }
+
+        // Wait for async policy processing
+        Awaitility.await()
+                .atMost(Duration.ofSeconds(5))
+                .until(() -> {
+                    final io.casehub.work.runtime.model.WorkItemSpawnGroup group =
+                            inTx(() -> spawnGroupStore.findMultiInstanceByParentId(parentId).orElseThrow());
+                    return group.groupStatus == GroupStatus.REJECTED;
+                });
+
+        final io.casehub.work.runtime.model.WorkItemSpawnGroup group =
+                inTx(() -> spawnGroupStore.findMultiInstanceByParentId(parentId).orElseThrow());
+        assertThat(group.groupStatus).isEqualTo(GroupStatus.REJECTED);
     }
 
     @Transactional

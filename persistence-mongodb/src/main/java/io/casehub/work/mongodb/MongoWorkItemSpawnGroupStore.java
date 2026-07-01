@@ -87,6 +87,7 @@ public class MongoWorkItemSpawnGroupStore implements WorkItemSpawnGroupStore {
                     Updates.set("completedCount", group.completedCount),
                     Updates.set("rejectedCount", group.rejectedCount),
                     Updates.set("policyTriggered", group.policyTriggered),
+                    Updates.set("groupStatus", group.groupStatus != null ? group.groupStatus.name() : null),
                     Updates.inc("version", 1L));
 
             final MongoWorkItemSpawnGroupDocument result = (MongoWorkItemSpawnGroupDocument)

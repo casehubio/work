@@ -94,6 +94,7 @@ public class MultiInstanceGroupPolicy {
 
     private WorkItemGroupLifecycleEvent resolve(final WorkItemSpawnGroup group, final GroupStatus outcome) {
         group.policyTriggered = true;
+        group.groupStatus = outcome;
 
         if (outcome == GroupStatus.COMPLETED) {
             workItemService.completeFromSystem(group.parentId, "system:multi-instance",

@@ -78,9 +78,7 @@ public class WorkItemInstancesResource {
         }
 
         final List<WorkItem> children = workItemStore.findByParentId(parentId);
-        final GroupStatus status = group.policyTriggered
-                ? (group.completedCount >= group.requiredCount ? GroupStatus.COMPLETED : GroupStatus.REJECTED)
-                : GroupStatus.IN_PROGRESS;
+        final GroupStatus status = group.groupStatus != null ? group.groupStatus : GroupStatus.IN_PROGRESS;
 
         return Response.ok(new InstancesResponse(
                 parentId,
