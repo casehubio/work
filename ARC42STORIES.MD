@@ -1864,7 +1864,7 @@ Full decision records: `docs/adr/`
 
 | Item | Detail |
 |---|---|
-| Notification duplication | `casehub-work-notifications` ships Slack/Teams directly; delegated to `casehub-connectors` connector SPI via casehubio/parent#5 |
+| Notification duplication | `casehub-work-notifications` ships Slack/Teams directly; delegation to `casehub-connectors` connector SPI tracked in casehubio/parent#5 (closed) |
 | `WorkItemLabel.path` still String | `LabelDefinition.path` migrated to `casehub-platform-api Path` type (C34); `WorkItemLabel.path` migration deferred — M-scale, requires REST API change |
 | queues-dashboard Tamboui dependency | Tamboui UI framework is a POC dependency; not production-hardened |
 
