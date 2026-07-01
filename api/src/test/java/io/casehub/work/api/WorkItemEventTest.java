@@ -23,7 +23,7 @@ class WorkItemEventTest {
     void defaultMethods_delegateToRef() {
         final UUID id = UUID.randomUUID();
         final WorkItemRef ref = new WorkItemRef(id, WorkItemStatus.IN_PROGRESS, "caller-1",
-                "bob", "{\"x\":1}", "team-b", "rejected", "tenant-2");
+                "bob", "{\"x\":1}", "team-b", "rejected", "tenant-2", "{\"data\":true}");
 
         final WorkItemEvent event = event(ref);
 
@@ -40,7 +40,7 @@ class WorkItemEventTest {
     @Test
     void defaultMethods_handleNullRefFields() {
         final WorkItemRef ref = new WorkItemRef(UUID.randomUUID(), WorkItemStatus.PENDING,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
 
         final WorkItemEvent event = event(ref);
 

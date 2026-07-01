@@ -67,7 +67,7 @@ class WorkEventTypeTest {
     @Test
     void concreteEvent_implementsAbstractMethods() {
         final WorkItemRef ref = new WorkItemRef(UUID.randomUUID(), WorkItemStatus.PENDING,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, null);
         var event = new WorkItemEvent() {
             @Override public WorkItemRef ref() { return ref; }
             @Override public WorkEventType eventType() { return WorkEventType.CREATED; }

@@ -86,6 +86,7 @@ public class WorkItemSpiAdapter implements WorkItemCreator, WorkItemLifecycle {
     static WorkItemRef toRef(final WorkItem wi) {
         return new WorkItemRef(
                 wi.id, wi.status, wi.callerRef, wi.assigneeId,
-                wi.resolution, wi.candidateGroups, wi.outcome, wi.tenancyId);
+                wi.resolution, wi.candidateGroups, wi.outcome, wi.tenancyId,
+                wi.payload);
     }
 }
