@@ -37,6 +37,8 @@ public enum WorkEventType {
     SLA_EXTENDED,
     /** An external signal was received and routed to this work unit. */
     SIGNAL_RECEIVED,
+    /** Actor explicitly escalated the WorkItem to a different candidate group. */
+    MANUALLY_ESCALATED,
     /** Actor reported progress (percentComplete, statusNote). */
     PROGRESS_UPDATE,
     /** A label was added to the WorkItem. */

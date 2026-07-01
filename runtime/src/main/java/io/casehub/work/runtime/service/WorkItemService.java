@@ -659,6 +659,33 @@ public class WorkItemService {
     }
 
     @Transactional
+    public WorkItem escalate(final UUID id, final String actor,
+                             final String targetGroup, final String reason) {
+        final WorkItem item = requireWorkItem(id);
+        if (item.status.isTerminal()) {
+            throw new IllegalStateException("Cannot escalate WorkItem in status: " + item.status);
+        }
+        item.candidateGroups = targetGroup;
+        item.assigneeId = null;
+        item.status = WorkItemStatus.PENDING;
+        final Instant now = Instant.now();
+        item.lastReturnedToPoolAt = now;
+        item.claimDeadline = claimSlaPolicy.computePoolDeadline(buildClaimSlaContext(item, now));
+        assignmentService.assign(item, AssignmentTrigger.SLA_ESCALATED);
+        final WorkItem saved = workItemStore.put(item);
+        timerService.cancelClaimDeadline(saved.id);
+        if (saved.claimDeadline != null) {
+            timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
+        }
+        if (saved.expiresAt != null) {
+            timerService.rescheduleExpiry(saved.id, saved.expiresAt);
+        }
+        audit(saved.id, "MANUALLY_ESCALATED", actor, reason);
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("MANUALLY_ESCALATED", saved, actor, reason));
+        return saved;
+    }
+
+    @Transactional
     public WorkItem cancelFromSystem(final UUID id, final String actorId, final String reason) {
         final WorkItem item = requireWorkItem(id);
         if (item.status.isTerminal())

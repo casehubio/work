@@ -413,4 +413,53 @@ class WorkItemNativeIT {
                 .body("auditTrail[2].event", equalTo("STARTED"))
                 .body("auditTrail[3].event", equalTo("COMPLETED"));
     }
+
+    // -------------------------------------------------------------------------
+    // Escalate
+    // -------------------------------------------------------------------------
+
+    @Test
+    void escalate_pendingToNewGroup() {
+        String id = createWorkItem("Escalate native");
+        given().contentType(ContentType.JSON).queryParam("actor", "manager")
+                .body("""
+                        {"targetGroup":"senior-team","reason":"complex case"}
+                        """)
+                .when().put("/workitems/{id}/escalate", id)
+                .then().statusCode(200)
+                .body("status", equalTo("PENDING"))
+                .body("candidateGroups", equalTo("senior-team"))
+                .body("assigneeId", nullValue());
+    }
+
+    @Test
+    void escalate_assignedToNewGroup() {
+        String id = createWorkItem("Escalate assigned");
+        given().queryParam("claimant", "alice").when().put("/workitems/{id}/claim", id);
+        given().contentType(ContentType.JSON).queryParam("actor", "manager")
+                .body("""
+                        {"targetGroup":"tier-2","reason":"needs specialist"}
+                        """)
+                .when().put("/workitems/{id}/escalate", id)
+                .then().statusCode(200)
+                .body("status", equalTo("PENDING"))
+                .body("candidateGroups", equalTo("tier-2"))
+                .body("assigneeId", nullValue());
+    }
+
+    @Test
+    void escalate_terminalItem_returns409() {
+        String id = createWorkItem("Escalate terminal");
+        given().queryParam("actor", "system")
+                .body("{\"reason\":\"cancelled\"}")
+                .contentType(ContentType.JSON)
+                .when().put("/workitems/{id}/cancel", id);
+        given().contentType(ContentType.JSON).queryParam("actor", "manager")
+                .body("""
+                        {"targetGroup":"senior-team","reason":"too late"}
+                        """)
+                .when().put("/workitems/{id}/escalate", id)
+                .then().statusCode(409)
+                .body("error", containsString("Cannot escalate"));
+    }
 }

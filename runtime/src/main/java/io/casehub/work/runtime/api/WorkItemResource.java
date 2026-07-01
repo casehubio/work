@@ -356,6 +356,21 @@ public class WorkItemResource {
     }
 
     @PUT
+    @Path("/{id}/escalate")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response escalate(@PathParam("id") final UUID id,
+            @QueryParam("actor") final String actor,
+            final EscalateRequest body) {
+        try {
+            final WorkItem saved = workItemService.escalate(id, actor, body.targetGroup(), body.reason());
+            return Response.ok(WorkItemMapper.toResponse(saved)).build();
+        } catch (final IllegalStateException e) {
+            return Response.status(Response.Status.CONFLICT)
+                    .entity(java.util.Map.of("error", e.getMessage())).build();
+        }
+    }
+
+    @PUT
     @Path("/{id}/progress")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response progress(@PathParam("id") final UUID id,
