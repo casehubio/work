@@ -106,28 +106,29 @@ public interface WorkItemStore {
     }
 
     /**
-     * Find a WorkItem by its caller reference.
+     * Find a WorkItem by its caller reference, returning the most recently created match.
      *
      * <p>
      * {@code callerRef} is the opaque string set by the caller when the WorkItem was created
-     * (e.g. {@code "case:{caseId}/pi:{planItemId}"}). At most one WorkItem should exist per
-     * callerRef; if multiple exist the first result is returned.
+     * (e.g. {@code "case:{caseId}/pi:{planItemId}"}). When multiple WorkItems share the same
+     * callerRef, the most recently created is returned.
      *
      * <p>
      * The default implementation performs a linear scan via {@link #scanAll()} — override in
      * JPA/SQL stores for an indexed query.
      *
      * @param callerRef the caller reference to look up; must not be {@code null}
-     * @return an {@link Optional} containing the matching WorkItem, or empty if not found
+     * @return an {@link Optional} containing the most recently created matching WorkItem, or empty if not found
      */
     default Optional<WorkItem> findByCallerRef(String callerRef) {
         return scanAll().stream()
                 .filter(wi -> callerRef.equals(wi.callerRef))
-                .findFirst();
+                .max(java.util.Comparator.comparing(wi -> wi.createdAt));
     }
 
     /**
-     * Find a non-terminal (active) WorkItem by its caller reference.
+     * Find a non-terminal (active) WorkItem by its caller reference, returning the most
+     * recently created match.
      *
      * <p>
      * {@code callerRef} is the opaque string set by the caller when the WorkItem was created
@@ -140,13 +141,13 @@ public interface WorkItemStore {
      * JPA/SQL stores for an indexed query on {@code callerRef} with a status filter.
      *
      * @param callerRef the caller reference to look up; must not be {@code null}
-     * @return an {@link Optional} containing the matching active WorkItem, or empty if not found or only terminal copies exist
+     * @return an {@link Optional} containing the most recently created active WorkItem, or empty
      */
     default Optional<WorkItem> findActiveByCallerRef(String callerRef) {
         return scanAll().stream()
                 .filter(wi -> callerRef.equals(wi.callerRef))
                 .filter(wi -> wi.status != null && wi.status.isActive())
-                .findFirst();
+                .max(java.util.Comparator.comparing(wi -> wi.createdAt));
     }
 
     /**

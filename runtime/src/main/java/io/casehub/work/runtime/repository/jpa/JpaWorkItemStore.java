@@ -61,14 +61,15 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
     @Override
     public Optional<WorkItem> findByCallerRef(final String callerRef) {
         return withTenantQuery(() ->
-                WorkItem.find("callerRef = ?1 AND tenancyId = ?2", callerRef, currentPrincipal.tenancyId())
+                WorkItem.find("callerRef = ?1 AND tenancyId = ?2 ORDER BY createdAt DESC",
+                        callerRef, currentPrincipal.tenancyId())
                         .firstResultOptional());
     }
 
     @Override
     public Optional<WorkItem> findActiveByCallerRef(final String callerRef) {
         return withTenantQuery(() ->
-                WorkItem.find("callerRef = ?1 AND status NOT IN (?2) AND tenancyId = ?3",
+                WorkItem.find("callerRef = ?1 AND status NOT IN (?2) AND tenancyId = ?3 ORDER BY createdAt DESC",
                         callerRef, WorkItemStatus.TERMINAL_STATUSES, currentPrincipal.tenancyId())
                         .firstResultOptional());
     }
