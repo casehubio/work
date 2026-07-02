@@ -114,8 +114,8 @@ public class MongoWorkItemStore implements WorkItemStore {
     public Optional<WorkItem> findByCallerRef(final String callerRef) {
         final Document filter = new Document("callerRef", callerRef)
                 .append("tenancyId", currentPrincipal.tenancyId());
-        final MongoWorkItemDocument doc = MongoWorkItemDocument.find(filter)
-                .sort(new Document("createdAt", -1)).firstResult();
+        final MongoWorkItemDocument doc = MongoWorkItemDocument.find(filter,
+                new Document("createdAt", -1)).firstResult();
         return Optional.ofNullable(doc).map(MongoWorkItemDocument::toDomain);
     }
 
@@ -126,8 +126,8 @@ public class MongoWorkItemStore implements WorkItemStore {
         final Document filter = new Document("callerRef", callerRef)
                 .append("status", new Document("$nin", terminalNames))
                 .append("tenancyId", currentPrincipal.tenancyId());
-        final MongoWorkItemDocument doc = MongoWorkItemDocument.find(filter)
-                .sort(new Document("createdAt", -1)).firstResult();
+        final MongoWorkItemDocument doc = MongoWorkItemDocument.find(filter,
+                new Document("createdAt", -1)).firstResult();
         return Optional.ofNullable(doc).map(MongoWorkItemDocument::toDomain);
     }
 
