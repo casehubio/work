@@ -1756,7 +1756,7 @@ Not closed here: distribution of events (L6), tamper-evident audit (L5).
 
 **`EscalationSummaryObserver` observes `WorkItemLifecycleEvent`.** When EXPIRED or CLAIM_EXPIRED is received, the observer calls `EscalationSummaryService` which sends the WorkItem context to an LLM and stores the response in the `escalation_summary` table (V4001 migration). The V4001 migration lives at `ai/src/main/resources/db/work/migration/V4001__escalation_summary.sql`.
 
-**`NormativeResolution` enum bridges issue tracker vocabulary to WorkItem transitions.** GitHub `closed/completed` → DONE → WorkItem COMPLETED. GitHub `closed/not_planned` → DECLINE → WorkItem CANCELLED. Jira `Won't Do` → DECLINE → WorkItem CANCELLED. Jira `Done` → DONE → WorkItem COMPLETED. `WebhookEventHandler` translates inbound webhook payloads to `NormativeResolution` and calls `WorkItemService` directly.
+**`NormativeResolution` enum bridges issue tracker vocabulary to WorkItem transitions.** GitHub `closed/completed` → DONE → WorkItem COMPLETED. GitHub `closed/not_planned` → DECLINE → WorkItem CANCELLED. Jira `Won't Do` → DECLINE → WorkItem CANCELLED. Jira `Done` → DONE → WorkItem COMPLETED. `WebhookEventHandler` translates inbound webhook payloads to `NormativeResolution` and calls `WorkItemService` directly. For the complete normative mapping — all 12 WorkItemStatus values to CommitmentState, all 26 WorkEventType values to MessageType — see `docs/NORMATIVE-ALIGNMENT.md` (#159).
 
 **`MongoWorkItemStore` `@ApplicationScoped @Alternative @Priority(1)`.** CDI selects this implementation over the default JPA-based `WorkItemStore` when `casehub-work-persistence-mongodb` is on the classpath. No configuration flag is required — classpath presence alone activates the MongoDB backend.
 
@@ -1894,4 +1894,7 @@ Full decision records: `docs/adr/`
 | Chapter | A delivery unit in Arc42Stories — a vertical cut through architectural layers delivering one platform-visible capability end-to-end |
 | Journey | A major arc of related Chapters; casehub-work has three: Core Platform, Enterprise Capabilities, Lifecycle Enrichment |
 | Layer | A horizontal architectural concern; casehub-work defines seven internal layers (L1–L7) |
-| NormativeResolution | Enum (DONE / DECLINE / FAILURE) bridging issue tracker vocabulary to WorkItem transitions; defined in `casehub-work-api` |
+| NormativeResolution | Enum (DONE / DECLINE / FAILURE) bridging issue tracker vocabulary to WorkItem transitions; defined in `casehub-work-api`; see `docs/NORMATIVE-ALIGNMENT.md` §7 |
+| Speech act | A communicative act in the Qhorus normative model — one of 9 types: QUERY, COMMAND, RESPONSE, STATUS, DECLINE, HANDOFF, DONE, FAILURE, EVENT; WorkItem lifecycle events map to these via `docs/NORMATIVE-ALIGNMENT.md` §4 |
+| CommitmentState | Lifecycle state of an obligation in the Qhorus CommitmentStore — OPEN, ACKNOWLEDGED, FULFILLED, DECLINED, FAILED, DELEGATED, EXPIRED; WorkItemStatus maps to these via `docs/NORMATIVE-ALIGNMENT.md` §3 |
+| Normative alignment | The documented mapping between casehub-work lifecycle concepts and Qhorus normative concepts; see `docs/NORMATIVE-ALIGNMENT.md` |

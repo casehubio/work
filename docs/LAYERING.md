@@ -199,3 +199,21 @@ WorkItemLifecycleEvent(SPAWNED,   workItemId, status, actor, ...)
 **Reusability.** Any application — with or without CaseHub — can use casehub-work for human task management. The primitives are useful standalone. CaseHub adds orchestration on top; it does not replace the primitives.
 
 **Intuitive taxonomy.** A developer reading either codebase knows immediately what it owns. casehub-work answers: "how is this WorkItem created, assigned, tracked, and completed?" CaseHub answers: "what work needs to happen in this case, and in what order?"
+
+---
+
+## Normative alignment
+
+This document covers the CaseHub-vs-casehub-work boundary — what each system
+owns and how they interact. A separate axis of alignment exists between
+casehub-work and the Qhorus normative layer (speech acts, commitment states,
+deontic logic).
+
+casehub-work is the human-agent extension of the Qhorus normative model.
+WorkItem lifecycle transitions map to speech acts (COMMAND, DONE, FAILURE,
+DECLINE, HANDOFF, STATUS). The mapping is direct for most transitions but
+diverges where human-agent concepts have no machine-agent equivalent
+(SUSPENDED, sub-delegation, OBSOLETE).
+
+See [`docs/NORMATIVE-ALIGNMENT.md`](NORMATIVE-ALIGNMENT.md) for the complete
+mapping tables and semantic conflict documentation.
