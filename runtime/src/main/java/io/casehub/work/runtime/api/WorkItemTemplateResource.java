@@ -381,6 +381,7 @@ public class WorkItemTemplateResource {
         t.excludedUsers = request.excludedUsers();
         t.excludedGroups = request.excludedGroups();
         t.scope = request.scope();
+        t.version++;
         try {
             WorkItemTemplateValidationService.validate(t);
         } catch (final IllegalArgumentException e) {
@@ -529,6 +530,7 @@ public class WorkItemTemplateResource {
 
         // createdBy is intentionally not patchable — silently ignored if present
 
+        t.version++;
         try {
             WorkItemTemplateValidationService.validate(t);
         } catch (final IllegalArgumentException e) {
@@ -584,6 +586,7 @@ public class WorkItemTemplateResource {
     private Map<String, Object> toResponse(final WorkItemTemplate t) {
         final java.util.LinkedHashMap<String, Object> m = new java.util.LinkedHashMap<>();
         m.put("id", t.id);
+        m.put("version", t.version);
         m.put("name", t.name);
         m.put("description", t.description);
         m.put("category", t.category);

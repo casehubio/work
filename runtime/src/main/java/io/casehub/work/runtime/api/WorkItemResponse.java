@@ -60,6 +60,8 @@ public record WorkItemResponse(
          * to resolve outcome display names.
          */
         UUID templateId,
+        /** Version of the template used at instantiation; null for non-template WorkItems. */
+        Long templateVersion,
         /**
          * The named outcome recorded at completion. Null until COMPLETED.
          * Validated against permittedOutcomes at completion time.

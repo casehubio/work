@@ -295,6 +295,15 @@ public class WorkItem extends PanacheEntityBase {
     public UUID templateId;
 
     /**
+     * Version of the WorkItemTemplate at the time this item was instantiated.
+     * Null for items created directly (not via template). Together with
+     * {@link #templateId}, enables full audit of which template version
+     * governed this WorkItem's schema and permitted outcomes.
+     */
+    @Column(name = "template_version")
+    public Long templateVersion;
+
+    /**
      * JSON array of permitted outcome names snapshotted from the template at instantiation.
      * Example: {@code ["approved","rejected","needs-revision"]}
      * Null means no constraint — any outcome (or none) is accepted at completion.

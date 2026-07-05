@@ -52,6 +52,8 @@ public record WorkItemWithAuditResponse(
         Long version,
         /** UUID of the template this item was instantiated from; null for direct creation. */
         UUID templateId,
+        /** Version of the template used at instantiation; null for non-template WorkItems. */
+        Long templateVersion,
         /** Named outcome recorded at completion; null until COMPLETED. */
         String outcome,
         /** Permitted outcome names snapshotted from the template; null means no constraint. */

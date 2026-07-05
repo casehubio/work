@@ -141,6 +141,7 @@ public class WorkItemTemplateService {
                 .expiresAtBusinessHours(request.expiresAtBusinessHours != null
                         ? request.expiresAtBusinessHours : template.defaultExpiryBusinessHours)
                 .templateId(request.templateId)
+                .templateVersion(template.version)
                 .permittedOutcomes(request.permittedOutcomes != null
                         ? request.permittedOutcomes
                         : OutcomeCodecs.decodeOutcomes(template.outcomes))

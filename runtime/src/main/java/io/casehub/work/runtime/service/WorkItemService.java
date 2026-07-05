@@ -115,6 +115,7 @@ public class WorkItemService {
         item.callerRef = request.callerRef;
         item.followUpDate = request.followUpDate;
         item.templateId = request.templateId;
+        item.templateVersion = request.templateVersion;
         item.permittedOutcomes = WorkItemTemplateService.encodeOutcomes(request.permittedOutcomes);
         item.inputDataSchema = request.inputDataSchema;
         item.outputDataSchema = request.outputDataSchema;
