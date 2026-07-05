@@ -1,6 +1,7 @@
 package io.casehub.work.runtime.event;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.casehub.work.api.WorkEventType;
 import io.casehub.work.api.WorkItemEvent;
 import io.casehub.work.api.WorkItemRef;
+import io.casehub.work.api.WorkCloudEventTypes;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 
@@ -92,7 +94,7 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
     public static WorkItemLifecycleEvent of(final String eventName, final WorkItem workItem,
             final String actor, final String detail) {
         return new WorkItemLifecycleEvent(
-                "io.casehub.work.workitem." + eventName.toLowerCase(),
+                WorkCloudEventTypes.PREFIX + eventName.toLowerCase(Locale.ROOT),
                 "/workitems/" + workItem.id,
                 workItem.id.toString(),
                 workItem.id, workItem.status, Instant.now(),
@@ -116,7 +118,7 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
             final String actor, final String detail,
             final String rationale, final String planRef) {
         return new WorkItemLifecycleEvent(
-                "io.casehub.work.workitem." + eventName.toLowerCase(),
+                WorkCloudEventTypes.PREFIX + eventName.toLowerCase(Locale.ROOT),
                 "/workitems/" + workItem.id,
                 workItem.id.toString(),
                 workItem.id, workItem.status, Instant.now(),

@@ -19,6 +19,7 @@ import jakarta.inject.Inject;
 
 import org.jboss.logging.Logger;
 
+import io.casehub.work.api.WorkCloudEventTypes;
 import io.casehub.work.api.WorkItemGroupLifecycleEvent;
 
 @ApplicationScoped
@@ -45,7 +46,7 @@ public class WorkCloudEventAdapter {
     }
 
     public void onGroupLifecycle(@ObservesAsync final WorkItemGroupLifecycleEvent event) {
-        buildAndFire("io.casehub.work.group." + event.groupStatus().name().toLowerCase(Locale.ROOT),
+        buildAndFire(WorkCloudEventTypes.GROUP_PREFIX + event.groupStatus().name().toLowerCase(Locale.ROOT),
                 URI.create("/workitems/groups/" + event.groupId()),
                 event.groupId().toString(),
                 event.occurredAt(),
@@ -73,7 +74,7 @@ public class WorkCloudEventAdapter {
                 .withData(data);
 
         if (tenancyId != null) {
-            builder = builder.withExtension("tenancyid", tenancyId);
+            builder = builder.withExtension(WorkCloudEventTypes.EXT_TENANCY_ID, tenancyId);
         }
 
         cloudEventBus.fireAsync(builder.build())

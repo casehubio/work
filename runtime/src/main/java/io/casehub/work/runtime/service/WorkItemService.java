@@ -819,10 +819,9 @@ public class WorkItemService {
     }
 
     /**
-     * Finds a WorkItem by its callerRef. Used only during JVM startup recovery by
-     * casehub-engine's HumanTaskRecoveryService — not called on the hot path.
+     * Finds a WorkItem by its callerRef.
      *
-     * @param callerRef the callerRef to match (format: "case:{caseId}/pi:{planItemId}")
+     * @param callerRef the callerRef to match
      * @return an Optional containing the WorkItem if found
      */
     public Optional<WorkItem> findByCallerRef(final String callerRef) {

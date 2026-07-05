@@ -25,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import io.cloudevents.CloudEvent;
 
 import io.casehub.work.api.GroupStatus;
+import io.casehub.work.api.WorkCloudEventTypes;
 import io.casehub.work.api.WorkItemGroupLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
@@ -44,6 +45,17 @@ class WorkCloudEventAdapterTest {
     void setUp() {
         adapter = new WorkCloudEventAdapter(cloudEventBus, objectMapper);
         when(cloudEventBus.fireAsync(any())).thenReturn(CompletableFuture.completedFuture(null));
+    }
+
+    @Test
+    void onWorkItemLifecycle_typeMatchesWorkCloudEventTypes() {
+        final WorkItem wi = workItem(UUID.randomUUID(), WorkItemStatus.PENDING, "tenant-1");
+        final WorkItemLifecycleEvent event = WorkItemLifecycleEvent.of("CREATED", wi, "actor", null);
+
+        adapter.onWorkItemLifecycle(event);
+
+        final CloudEvent ce = captureCloudEvent();
+        assertThat(ce.getType()).isEqualTo(WorkCloudEventTypes.CREATED);
     }
 
     @Test
