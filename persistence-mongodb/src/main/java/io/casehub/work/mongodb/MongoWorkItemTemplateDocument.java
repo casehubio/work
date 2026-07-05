@@ -49,6 +49,7 @@ public class MongoWorkItemTemplateDocument extends PanacheMongoEntityBase {
     public String assignmentStrategy;
     public String onThresholdReached;
     public Boolean allowSameAssignee;
+    public long version;
     public String createdBy;
     public Instant createdAt;
 
@@ -82,6 +83,7 @@ public class MongoWorkItemTemplateDocument extends PanacheMongoEntityBase {
         doc.assignmentStrategy = template.assignmentStrategy;
         doc.onThresholdReached = template.onThresholdReached;
         doc.allowSameAssignee = template.allowSameAssignee;
+        doc.version = template.version;
         doc.createdBy = template.createdBy;
         doc.createdAt = template.createdAt;
         return doc;
@@ -117,6 +119,7 @@ public class MongoWorkItemTemplateDocument extends PanacheMongoEntityBase {
         template.assignmentStrategy = assignmentStrategy;
         template.onThresholdReached = onThresholdReached;
         template.allowSameAssignee = allowSameAssignee;
+        template.version = version;
         template.createdBy = createdBy;
         template.createdAt = createdAt;
         return template;

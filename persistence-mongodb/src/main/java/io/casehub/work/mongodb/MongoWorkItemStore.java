@@ -180,7 +180,7 @@ public class MongoWorkItemStore implements WorkItemStore {
         final List<Document> ands = new ArrayList<>();
 
         // Tenant filtering
-        ands.add(new Document("tenancyId", currentPrincipal.tenancyId()));
+        ands.add(new Document("tenancyId", q.tenancyId() != null ? q.tenancyId() : currentPrincipal.tenancyId()));
 
         // Assignment — OR logic across three dimensions
         final boolean hasAssigneeId = q.assigneeId() != null;

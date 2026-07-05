@@ -387,6 +387,7 @@ public class WorkItemTemplateResource {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(Map.of("error", e.getMessage())).build();
         }
+        t.version++;
 
         return Response.ok(toResponse(t)).build();
     }
@@ -535,6 +536,7 @@ public class WorkItemTemplateResource {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(Map.of("error", e.getMessage())).build();
         }
+        t.version++;
 
         return Response.ok(toResponse(t)).build();
     }
@@ -584,6 +586,7 @@ public class WorkItemTemplateResource {
     private Map<String, Object> toResponse(final WorkItemTemplate t) {
         final java.util.LinkedHashMap<String, Object> m = new java.util.LinkedHashMap<>();
         m.put("id", t.id);
+        m.put("version", t.version);
         m.put("name", t.name);
         m.put("description", t.description);
         m.put("category", t.category);

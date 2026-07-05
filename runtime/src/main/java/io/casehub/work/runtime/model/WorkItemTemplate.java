@@ -207,6 +207,14 @@ public class WorkItemTemplate extends PanacheEntityBase {
     @Column(name = "allow_same_assignee")
     public Boolean allowSameAssignee;
 
+    /**
+     * Monotonically increasing version number. Starts at 1 on creation,
+     * incremented on every content update. WorkItems record this at instantiation
+     * to trace which template version governed their schema.
+     */
+    @Column(name = "version", nullable = false)
+    public long version;
+
     /** Who created this template. */
     @Column(name = "created_by", nullable = false, length = 255)
     public String createdBy;
@@ -222,6 +230,9 @@ public class WorkItemTemplate extends PanacheEntityBase {
         }
         if (createdAt == null) {
             createdAt = Instant.now();
+        }
+        if (version == 0) {
+            version = 1;
         }
     }
 }

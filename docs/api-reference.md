@@ -56,6 +56,7 @@ Returned by most lifecycle endpoints.
 | `callerRef` | string (nullable) | Opaque caller-supplied routing key |
 | `version` | long | JPA optimistic lock version |
 | `templateId` | UUID (nullable) | Template this item was instantiated from |
+| `templateVersion` | long (nullable) | Version of the template at instantiation |
 | `outcome` | string (nullable) | Named outcome at completion |
 | `permittedOutcomes` | Outcome[] (nullable) | Each: `name`, `displayName`, `condition` |
 | `inputDataSchema` | string (nullable) | JSON Schema for payload validation |
@@ -775,7 +776,7 @@ Create a WorkItem template.
 | `scope` | string | no | |
 | `createdBy` | string | yes | |
 
-**Response:** `201 Created`
+**Response:** `201 Created` — includes `version` (long, starts at 1)
 
 **Error:** `400`, `409` (name conflict)
 

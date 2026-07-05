@@ -363,4 +363,75 @@ class WorkItemTemplateTest {
                 .body("name", equalTo("SameName"))
                 .body("category", equalTo("finance"));
     }
+
+    // ── Template versioning (#180) ───────────────────────────────────────────
+
+    @Test
+    void createTemplate_startsAtVersion1() {
+        given().contentType(ContentType.JSON)
+                .body("{\"name\":\"Versioned\",\"createdBy\":\"admin\"}")
+                .post("/workitem-templates")
+                .then()
+                .statusCode(201)
+                .body("version", equalTo(1));
+    }
+
+    @Test
+    void updateTemplate_incrementsVersion() {
+        final String id = given().contentType(ContentType.JSON)
+                .body("{\"name\":\"Bump\",\"createdBy\":\"admin\"}")
+                .post("/workitem-templates")
+                .then().statusCode(201).extract().path("id");
+
+        given().contentType(ContentType.JSON)
+                .body("{\"name\":\"Bump\",\"category\":\"updated\"}")
+                .put("/workitem-templates/" + id)
+                .then()
+                .statusCode(200)
+                .body("version", equalTo(2));
+
+        given().contentType(ContentType.JSON)
+                .body("{\"name\":\"Bump\",\"category\":\"updated-again\"}")
+                .put("/workitem-templates/" + id)
+                .then()
+                .statusCode(200)
+                .body("version", equalTo(3));
+    }
+
+    @Test
+    void patchTemplate_incrementsVersion() {
+        final String id = given().contentType(ContentType.JSON)
+                .body("{\"name\":\"PatchBump\",\"createdBy\":\"admin\"}")
+                .post("/workitem-templates")
+                .then().statusCode(201).extract().path("id");
+
+        given().contentType("application/merge-patch+json")
+                .body("{\"category\":\"patched\"}")
+                .patch("/workitem-templates/" + id)
+                .then()
+                .statusCode(200)
+                .body("version", equalTo(2));
+    }
+
+    @Test
+    void instantiate_setsTemplateVersionOnWorkItem() {
+        final String templateId = given().contentType(ContentType.JSON)
+                .body("{\"name\":\"InstVer\",\"category\":\"ops\",\"createdBy\":\"admin\"}")
+                .post("/workitem-templates")
+                .then().statusCode(201).extract().path("id");
+
+        // Update to version 2
+        given().contentType(ContentType.JSON)
+                .body("{\"name\":\"InstVer\",\"category\":\"ops-v2\"}")
+                .put("/workitem-templates/" + templateId)
+                .then().statusCode(200);
+
+        // Instantiate — should record version 2
+        given().contentType(ContentType.JSON)
+                .body("{\"createdBy\":\"alice\"}")
+                .post("/workitem-templates/" + templateId + "/instantiate")
+                .then()
+                .statusCode(201)
+                .body("templateVersion", equalTo(2));
+    }
 }

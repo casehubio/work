@@ -36,6 +36,7 @@ import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.AuditEntryStore;
+import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
 
@@ -114,6 +115,7 @@ public class WorkItemService {
         item.callerRef = request.callerRef;
         item.followUpDate = request.followUpDate;
         item.templateId = request.templateId;
+        item.templateVersion = request.templateVersion;
         item.permittedOutcomes = WorkItemTemplateService.encodeOutcomes(request.permittedOutcomes);
         item.inputDataSchema = request.inputDataSchema;
         item.outputDataSchema = request.outputDataSchema;
@@ -515,6 +517,20 @@ public class WorkItemService {
 
     public Optional<WorkItem> findById(final UUID id) {
         return workItemStore.get(id);
+    }
+
+    /**
+     * Scan WorkItems matching the given query criteria.
+     *
+     * <p>
+     * Tenant isolation is enforced by the store: if {@link WorkItemQuery#tenancyId()}
+     * is set, it is used as the filter; otherwise the current principal's tenant applies.
+     *
+     * @param query the query criteria; must not be {@code null}
+     * @return list of matching work items; may be empty, never null
+     */
+    public List<WorkItem> scan(final WorkItemQuery query) {
+        return workItemStore.scan(query);
     }
 
     @Transactional

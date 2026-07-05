@@ -73,6 +73,7 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
     public String parentId;
     public String scope;
     public String templateId;
+    public Long templateVersion;
     public String permittedOutcomes;
     public List<String> excludedUsers = new ArrayList<>();
     public String outcome;
@@ -127,6 +128,7 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
         doc.parentId = wi.parentId != null ? wi.parentId.toString() : null;
         doc.scope = wi.scope;
         doc.templateId = wi.templateId != null ? wi.templateId.toString() : null;
+        doc.templateVersion = wi.templateVersion;
         doc.permittedOutcomes = wi.permittedOutcomes;
         doc.excludedUsers = splitCsv(wi.excludedUsers);
         doc.outcome = wi.outcome;
@@ -185,6 +187,7 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
         wi.parentId = parentId != null ? UUID.fromString(parentId) : null;
         wi.scope = scope;
         wi.templateId = templateId != null ? UUID.fromString(templateId) : null;
+        wi.templateVersion = templateVersion;
         wi.permittedOutcomes = permittedOutcomes;
         wi.excludedUsers = joinCsv(excludedUsers);
         wi.outcome = outcome;

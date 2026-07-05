@@ -39,6 +39,9 @@ public final class WorkItemCreateRequest {
     /** Optional detail appended to the CREATED audit entry. Used to record group expansion notes. */
     public final String auditDetail;
 
+    /** Version of the template used at instantiation; null for non-template WorkItems. */
+    public final Long templateVersion;
+
     /** Tenant identifier for multi-tenant SPI callers. */
     public final String tenancyId;
 
@@ -69,6 +72,7 @@ public final class WorkItemCreateRequest {
         this.excludedUsers              = b.excludedUsers;
         this.scope                      = b.scope;
         this.auditDetail                = b.auditDetail;
+        this.templateVersion            = b.templateVersion;
         this.tenancyId                  = b.tenancyId;
     }
 
@@ -110,6 +114,7 @@ public final class WorkItemCreateRequest {
                 && Objects.equals(excludedUsers, r.excludedUsers)
                 && Objects.equals(scope, r.scope)
                 && Objects.equals(auditDetail, r.auditDetail)
+                && Objects.equals(templateVersion, r.templateVersion)
                 && Objects.equals(tenancyId, r.tenancyId);
     }
 
@@ -120,7 +125,7 @@ public final class WorkItemCreateRequest {
                 createdBy, payload, claimDeadline, expiresAt, followUpDate, labels,
                 confidenceScore, callerRef, claimDeadlineBusinessHours, expiresAtBusinessHours,
                 templateId, permittedOutcomes, inputDataSchema, outputDataSchema, excludedUsers, scope,
-                auditDetail, tenancyId);
+                auditDetail, templateVersion, tenancyId);
     }
 
     /** Intentionally omits payload, schemas, callerRef, and credentials — log-safety. */
@@ -159,6 +164,7 @@ public final class WorkItemCreateRequest {
         private String excludedUsers;
         private String scope;
         private String auditDetail;
+        private Long templateVersion;
         private String tenancyId;
 
         private Builder() {}
@@ -190,6 +196,7 @@ public final class WorkItemCreateRequest {
             this.excludedUsers              = src.excludedUsers;
             this.scope                      = src.scope;
             this.auditDetail                = src.auditDetail;
+            this.templateVersion            = src.templateVersion;
             this.tenancyId                  = src.tenancyId;
         }
 
@@ -219,6 +226,7 @@ public final class WorkItemCreateRequest {
         public Builder excludedUsers(final String v)                  { this.excludedUsers = v; return this; }
         public Builder scope(final String v)                          { this.scope = v; return this; }
         public Builder auditDetail(final String v)                    { this.auditDetail = v; return this; }
+        public Builder templateVersion(final Long v)                 { this.templateVersion = v; return this; }
         public Builder tenancyId(final String v)                      { this.tenancyId = v; return this; }
 
         public WorkItemCreateRequest build() {
