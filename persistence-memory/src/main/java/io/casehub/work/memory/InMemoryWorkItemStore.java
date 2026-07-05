@@ -103,7 +103,7 @@ public class InMemoryWorkItemStore implements WorkItemStore {
      */
     @Override
     public List<WorkItem> scan(final WorkItemQuery query) {
-        final String tenancyId = currentPrincipal.tenancyId();
+        final String tenancyId = query.tenancyId() != null ? query.tenancyId() : currentPrincipal.tenancyId();
         return store.values().stream()
                 .filter(wi -> tenancyId.equals(wi.tenancyId))
                 .filter(wi -> matchesAssignment(wi, query))

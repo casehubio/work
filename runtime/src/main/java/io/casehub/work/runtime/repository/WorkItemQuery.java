@@ -66,6 +66,9 @@ public final class WorkItemQuery {
     // Outcome
     private final String outcome;
 
+    // Tenant
+    private final String tenancyId;
+
     private WorkItemQuery(final Builder b) {
         this.assigneeId = b.assigneeId;
         this.candidateGroups = b.candidateGroups;
@@ -79,6 +82,7 @@ public final class WorkItemQuery {
         this.claimDeadlineOrBefore = b.claimDeadlineOrBefore;
         this.labelPattern = b.labelPattern;
         this.outcome = b.outcome;
+        this.tenancyId = b.tenancyId;
     }
 
     // ── Static factories for common patterns ─────────────────────────────────
@@ -259,6 +263,17 @@ public final class WorkItemQuery {
         return outcome;
     }
 
+    /**
+     * Returns the tenant id filter, or {@code null} if not constrained.
+     * When {@code null}, store implementations fall back to the current
+     * principal's tenant.
+     *
+     * @return tenancy id filter value
+     */
+    public String tenancyId() {
+        return tenancyId;
+    }
+
     /** Returns a builder pre-populated with this query's values for incremental modification. */
     public Builder toBuilder() {
         return new Builder()
@@ -273,7 +288,8 @@ public final class WorkItemQuery {
                 .expiresAtOrBefore(expiresAtOrBefore)
                 .claimDeadlineOrBefore(claimDeadlineOrBefore)
                 .labelPattern(labelPattern)
-                .outcome(outcome);
+                .outcome(outcome)
+                .tenancyId(tenancyId);
     }
 
     /**
@@ -302,6 +318,7 @@ public final class WorkItemQuery {
         private Instant claimDeadlineOrBefore;
         private String labelPattern;
         private String outcome;
+        private String tenancyId;
 
         /**
          * Sets the assignee id constraint.
@@ -432,6 +449,18 @@ public final class WorkItemQuery {
          */
         public Builder outcome(final String v) {
             this.outcome = v;
+            return this;
+        }
+
+        /**
+         * Sets the tenant id constraint. When {@code null}, store implementations
+         * fall back to the current principal's tenant.
+         *
+         * @param v the tenancy id; {@code null} means use current principal
+         * @return this builder
+         */
+        public Builder tenancyId(final String v) {
+            this.tenancyId = v;
             return this;
         }
 

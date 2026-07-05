@@ -64,6 +64,7 @@ class WorkItemServiceTest {
         @Override
         public List<WorkItem> scan(WorkItemQuery query) {
             return store.values().stream()
+                    .filter(wi -> query.tenancyId() == null || query.tenancyId().equals(wi.tenancyId))
                     .filter(wi -> matchesAssignment(wi, query))
                     .filter(wi -> matchesFilters(wi, query))
                     .toList();
@@ -1560,5 +1561,78 @@ class WorkItemServiceTest {
         final UUID id = wi.id;
         assertThatThrownBy(() -> service.progress(id, "alice", 50, "too late"))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    // -------------------------------------------------------------------------
+    // scan (#286)
+    // -------------------------------------------------------------------------
+
+    @Test
+    void scan_byStatus_returnsMatchingItems() {
+        service.create(basicRequest());
+        WorkItem wi2 = service.create(basicRequest());
+        service.claim(wi2.id, "alice");
+
+        List<WorkItem> pending = service.scan(
+                WorkItemQuery.builder().status(WorkItemStatus.PENDING).build());
+        assertThat(pending).hasSize(1);
+        assertThat(pending.get(0).status).isEqualTo(WorkItemStatus.PENDING);
+
+        List<WorkItem> assigned = service.scan(
+                WorkItemQuery.builder().status(WorkItemStatus.ASSIGNED).build());
+        assertThat(assigned).hasSize(1);
+        assertThat(assigned.get(0).id).isEqualTo(wi2.id);
+    }
+
+    @Test
+    void scan_all_returnsAllItems() {
+        service.create(basicRequest());
+        service.create(basicRequest());
+        service.create(basicRequest());
+
+        List<WorkItem> all = service.scan(WorkItemQuery.all());
+        assertThat(all).hasSize(3);
+    }
+
+    @Test
+    void scan_byTenancyId_filtersCorrectly() {
+        WorkItem wi1 = service.create(basicRequest());
+        wi1.tenancyId = "tenant-A";
+        repo.put(wi1);
+
+        WorkItem wi2 = service.create(basicRequest());
+        wi2.tenancyId = "tenant-B";
+        repo.put(wi2);
+
+        List<WorkItem> tenantA = service.scan(
+                WorkItemQuery.builder().tenancyId("tenant-A").build());
+        assertThat(tenantA).hasSize(1);
+        assertThat(tenantA.get(0).tenancyId).isEqualTo("tenant-A");
+
+        List<WorkItem> tenantB = service.scan(
+                WorkItemQuery.builder().tenancyId("tenant-B").build());
+        assertThat(tenantB).hasSize(1);
+        assertThat(tenantB.get(0).tenancyId).isEqualTo("tenant-B");
+    }
+
+    @Test
+    void scan_byStatusAndCategory_combinesFilters() {
+        WorkItem wi1 = service.create(WorkItemCreateRequest.builder()
+                .title("Legal review").category("legal").createdBy("system").build());
+        WorkItem wi2 = service.create(WorkItemCreateRequest.builder()
+                .title("Finance review").category("finance").createdBy("system").build());
+        service.claim(wi2.id, "alice");
+
+        List<WorkItem> pendingLegal = service.scan(
+                WorkItemQuery.builder().status(WorkItemStatus.PENDING).category("legal").build());
+        assertThat(pendingLegal).hasSize(1);
+        assertThat(pendingLegal.get(0).id).isEqualTo(wi1.id);
+    }
+
+    @Test
+    void scan_emptyResult_returnsEmptyList() {
+        List<WorkItem> result = service.scan(
+                WorkItemQuery.builder().status(WorkItemStatus.COMPLETED).build());
+        assertThat(result).isEmpty();
     }
 }

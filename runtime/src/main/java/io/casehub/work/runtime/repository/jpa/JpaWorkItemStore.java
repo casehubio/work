@@ -82,7 +82,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
 
             // ── Tenant isolation — always first ──────────────────────────────────
             jpql.append("tenancyId = :tenancyId");
-            params.put("tenancyId", currentPrincipal.tenancyId());
+            params.put("tenancyId", query.tenancyId() != null ? query.tenancyId() : currentPrincipal.tenancyId());
 
         // ── Assignment — OR logic ────────────────────────────────────────────
         final boolean hasAssigneeId = query.assigneeId() != null;
