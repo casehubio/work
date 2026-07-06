@@ -23,6 +23,11 @@ FilterChain derivation graph, and QueueView named queries. The core extension is
       <artifactId>casehub-work</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-work-rest</artifactId>
+      <version>${project.version}</version>
+    </dependency>
 
     <!-- Platform canonical JQ evaluator (caches compiled queries) -->
     <dependency>

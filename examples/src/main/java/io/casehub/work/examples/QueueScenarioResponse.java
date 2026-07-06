@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import io.casehub.work.ledger.api.dto.ActorTrustScoreResponse;
 import io.casehub.work.ledger.api.dto.LedgerEntryResponse;
-import io.casehub.work.runtime.api.AuditEntryResponse;
+import io.casehub.work.api.AuditEntryResponse;
 
 /**
  * Response returned by the Document Queue scenario (Scenario 4).

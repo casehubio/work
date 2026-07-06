@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import io.casehub.work.examples.StepLog;
-import io.casehub.work.runtime.api.AuditEntryResponse;
+import io.casehub.work.api.AuditEntryResponse;
 
 /**
  * Response returned by the queue module scenario.

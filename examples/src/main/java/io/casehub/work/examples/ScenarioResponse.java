@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import io.casehub.work.ledger.api.dto.LedgerEntryResponse;
-import io.casehub.work.runtime.api.AuditEntryResponse;
+import io.casehub.work.api.AuditEntryResponse;
 
 /**
  * Response returned by single-WorkItem scenario endpoints (Scenarios 1–3).

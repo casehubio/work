@@ -17,7 +17,7 @@ import jakarta.ws.rs.core.Response;
 
 import io.casehub.work.queues.model.WorkItemQueueState;
 import io.casehub.work.queues.repository.QueueStateStore;
-import io.casehub.work.runtime.api.WorkItemMapper;
+import io.casehub.work.rest.WorkItemMapper;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItemStatus;

@@ -23,6 +23,11 @@ Contains a minimal Quarkus app embedding the extension, packaged and tested via
       <artifactId>casehub-work</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-work-rest</artifactId>
+      <version>${project.version}</version>
+    </dependency>
 
     <!-- Optional reporting module -->
     <dependency>

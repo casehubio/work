@@ -22,6 +22,11 @@ through in-memory stores. Uses casehub-work-persistence-memory with a dummy H2 d
       <artifactId>casehub-work</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-work-rest</artifactId>
+      <version>${project.version}</version>
+    </dependency>
 
     <dependency>
       <groupId>io.casehub</groupId>

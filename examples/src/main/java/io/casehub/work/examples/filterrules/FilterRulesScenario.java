@@ -13,7 +13,7 @@ import jakarta.ws.rs.core.MediaType;
 import org.jboss.logging.Logger;
 
 import io.casehub.work.examples.StepLog;
-import io.casehub.work.runtime.api.AuditEntryResponse;
+import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.runtime.filter.FilterRule;
 import io.casehub.work.runtime.model.AuditEntry;

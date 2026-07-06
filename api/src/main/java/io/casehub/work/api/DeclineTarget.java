@@ -12,7 +12,7 @@ import io.casehub.platform.api.preferences.SingleValuePreference;
  * <p>Configure the scope-level default via {@link #KEY} through
  * {@link io.casehub.platform.api.preferences.PreferenceProvider}.
  * Override per WorkItem at delegation time via
- * {@link io.casehub.work.runtime.api.DelegateRequest#declineTarget()}.
+ * {@code DelegateRequest.declineTarget()} (in the REST module).
  */
 public enum DeclineTarget implements SingleValuePreference {
 

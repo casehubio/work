@@ -110,7 +110,7 @@ internal architectural concerns added incrementally across 35 build Chapters:
 | Layer | Concern |
 |---|---|
 | L1 Domain Baseline | WorkItem + AuditEntry entities, Storage SPI, JPA defaults, WorkItemService — the inbox foundation |
-| L2 REST API | WorkItemResource (7 sub-resources), DTOs, exception mappers, OpenAPI |
+| L2 REST API | `casehub-work-rest` module — WorkItemResource (7 sub-resources), DTOs, exception mappers, OpenAPI. Opt-in via dependency; extracted from runtime in #292 |
 | L3 Lifecycle Engine | ExpiryTimerJob, ClaimDeadlineTimerJob, ClaimSlaPolicy SPI, SlaBreachPolicy SPI, CDI lifecycle events |
 | L4 Label System | LabelVocabulary, MANUAL/INFERRED label persistence, FilterEngine (JEXL/JQ/Lambda), QueueView |
 | L5 Ledger Integration | WorkItemLedgerEntry (JOINED from LedgerEntry), hash chain, peer attestation, EigenTrust |
@@ -139,11 +139,15 @@ C4Container
   title casehub-work — Layer Architecture
 
   Container_Boundary(b1, "Layer: L1 Domain Baseline") {
-    Container(api, "casehub-work-api", "Pure Java", "SPI contracts: WorkerSelectionStrategy, SlaBreachPolicy, ClaimSlaPolicy, ExclusionPolicy, SpawnPort, NotificationChannel, Capability")
+    Container(api, "casehub-work-api", "Pure Java", "SPI contracts: WorkerSelectionStrategy, SlaBreachPolicy, ClaimSlaPolicy, ExclusionPolicy, SpawnPort, NotificationChannel, Capability, AuditEntryResponse")
     Container(core, "casehub-work-core", "Jandex library", "WorkBroker, LeastLoadedStrategy, ClaimFirstStrategy, RoundRobinStrategy, CapabilityValidator")
-    Container(runtime, "casehub-work", "Quarkus extension", "WorkItem entity, WorkItemService, JpaWorkItemStore, AuditEntryStore, Flyway V1–V36")
+    Container(runtime, "casehub-work", "Quarkus extension", "WorkItem entity, WorkItemService, JpaWorkItemStore, AuditEntryStore, Flyway V1–V41")
     Container(deploy, "casehub-work-deployment", "Quarkus deployment", "Build-time processors, feature registration, native config")
     Container(pmem, "casehub-work-persistence-memory", "In-memory persistence", "InMemoryWorkItemStore, InMemoryAuditEntryStore, InMemoryWorkItemNoteStore, InMemoryIssueLinkStore @Alternative @Priority(100)")
+  }
+
+  Container_Boundary(b2, "Layer: L2 REST API") {
+    Container(rest, "casehub-work-rest", "Jandex library", "JAX-RS resources (12), request/response DTOs, exception mappers, WorkItemMapper — opt-in REST surface")
   }
 
   Container_Boundary(b4, "Layer: L4 Label System") {
@@ -176,7 +180,8 @@ C4Container
 |---|---|---|---|
 | `api/` | `casehub-work-api` | Pure Java SPI | WorkerSelectionStrategy, SlaBreachPolicy, BreachDecision (sealed), ClaimSlaPolicy, ExclusionPolicy, SpawnPort, NotificationChannel, Capability, WorkItemCallerRef; depends on `casehub-platform-api` |
 | `core/` | `casehub-work-core` | Jandex library | WorkBroker, LeastLoadedStrategy, ClaimFirstStrategy, RoundRobinStrategy, CapabilityValidator; used by casehub-engine without pulling in JPA or REST |
-| `runtime/` | `casehub-work` | Quarkus extension | WorkItem + AuditEntry entities, WorkItemService, WorkItemAssignmentService, ExpiryLifecycleService, REST resources (7), Flyway V1–V36 at `db/work/migration/` |
+| `runtime/` | `casehub-work` | Quarkus extension | WorkItem + AuditEntry entities, WorkItemService, WorkItemAssignmentService, ExpiryLifecycleService, Flyway V1–V41 at `db/work/migration/` |
+| `rest/` | `casehub-work-rest` | Jandex library | JAX-RS resources (12), request/response DTOs, exception mappers, WorkItemMapper; opt-in REST surface extracted from runtime (#292) |
 | `deployment/` | `casehub-work-deployment` | Quarkus deployment | Build-time processor, feature registration, `casehub.work.*` native config |
 | `persistence-memory/` | `casehub-work-persistence-memory` | In-memory persistence | InMemoryWorkItemStore, InMemoryAuditEntryStore, InMemoryWorkItemNoteStore, InMemoryIssueLinkStore, InMemoryRoutingCursorStore — `@Alternative @Priority(100)` (Tier 3) |
 | `queues/` | `casehub-work-queues` | Optional extension | LabelVocabulary, MANUAL/INFERRED label persistence, FilterEngine (JEXL/JQ/Lambda), FilterChain, QueueView, WorkItemQueueEventBroadcaster SPI |

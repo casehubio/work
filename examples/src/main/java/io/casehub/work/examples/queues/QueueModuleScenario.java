@@ -19,7 +19,7 @@ import io.casehub.work.examples.StepLog;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.queues.model.QueueView;
 import io.casehub.work.queues.model.WorkItemQueueState;
-import io.casehub.work.runtime.api.AuditEntryResponse;
+import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.work.api.WorkItemLabelRequest;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
