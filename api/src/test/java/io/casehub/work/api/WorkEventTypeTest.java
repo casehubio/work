@@ -16,7 +16,7 @@ class WorkEventTypeTest {
                         "DELEGATED", "DELEGATION_ACCEPTED", "DELEGATION_DECLINED", "RELEASED",
                         "SUSPENDED", "RESUMED", "CANCELLED", "OBSOLETE", "EXPIRED", "CLAIM_EXPIRED",
                         "SPAWNED", "ESCALATED", "DEADLINE_EXTENDED", "SLA_REASSIGNED", "SLA_EXTENDED",
-                        "SIGNAL_RECEIVED", "PROGRESS_UPDATE", "LABEL_ADDED", "LABEL_REMOVED");
+                        "SIGNAL_RECEIVED", "MANUALLY_ESCALATED", "PROGRESS_UPDATE", "LABEL_ADDED", "LABEL_REMOVED");
     }
 
     @Test
