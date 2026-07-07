@@ -27,7 +27,7 @@ Returned by most lifecycle endpoints.
 | `id` | UUID | |
 | `title` | string | |
 | `description` | string | |
-| `category` | string | |
+| `types` | string[] | Hierarchical type paths |
 | `formKey` | string | UI form reference |
 | `status` | WorkItemStatus | See [WorkItemStatus](#workitemstatus) |
 | `priority` | WorkItemPriority | `LOW`, `MEDIUM`, `HIGH`, `URGENT` |
@@ -97,7 +97,7 @@ Creates a new WorkItem in `PENDING` status. If no `expiresAt` is supplied, expir
 |---|---|---|---|
 | `title` | string | yes | |
 | `description` | string | no | |
-| `category` | string | no | Classification label (e.g. `finance`, `legal`) |
+| `types` | string[] | no | Hierarchical type paths (e.g. `["legal"]`, `["finance/audit"]`) |
 | `formKey` | string | no | UI form reference |
 | `priority` | WorkItemPriority | no | `LOW` / `MEDIUM` / `HIGH` / `URGENT`, defaults to `MEDIUM` |
 | `assigneeId` | string | no | Direct assignee; null for candidate-based routing |
@@ -127,7 +127,7 @@ curl -X POST http://localhost:8080/workitems \
   -H 'Content-Type: application/json' \
   -d '{
     "title": "Review contract for Acme Corp",
-    "category": "legal",
+    "types": ["legal"],
     "priority": "HIGH",
     "candidateGroups": "legal-team",
     "createdBy": "contract-service",
@@ -166,7 +166,7 @@ Aggregate inbox counts for dashboard widgets.
 | `candidateUser` | string | no | |
 | `status` | WorkItemStatus | no | |
 | `priority` | WorkItemPriority | no | |
-| `category` | string | no | |
+| `type` | string | no | Hierarchical type filter (ancestor matching) |
 
 **Response:** `200 OK`
 **Body:** `InboxSummary`
@@ -194,7 +194,7 @@ Returns WorkItems visible to the requesting user or group with multi-instance st
 | `candidateUser` | string | no | |
 | `status` | WorkItemStatus | no | |
 | `priority` | WorkItemPriority | no | |
-| `category` | string | no | |
+| `type` | string | no | Hierarchical type filter (ancestor matching) |
 | `followUp` | boolean | no | Filter to items with `followUpDate` in the past |
 | `outcome` | string | no | |
 
@@ -751,7 +751,7 @@ Create a WorkItem template.
 |---|---|---|---|
 | `name` | string | yes | Unique template name |
 | `description` | string | no | |
-| `category` | string | no | |
+| `typePaths` | string | no | JSON array of type paths applied at instantiation |
 | `priority` | string | no | `LOW`/`MEDIUM`/`HIGH`/`URGENT` |
 | `candidateGroups` | string | no | Comma-separated |
 | `candidateUsers` | string | no | Comma-separated |
@@ -1258,7 +1258,7 @@ Ad-hoc filter evaluation against a synthetic WorkItem without persisting.
 |---|---|---|---|
 | `conditionLanguage` | string | yes | `jexl` or `jq` |
 | `conditionExpression` | string | yes | |
-| `workItem` | object | yes | `title`, `status`, `priority`, `assigneeId`, `category` |
+| `workItem` | object | yes | `title`, `status`, `priority`, `assigneeId`, `types` |
 
 **Response:** `200 OK`
 **Body:** `matches` (boolean)
@@ -1279,7 +1279,7 @@ Cross-WorkItem audit history query. All filters optional and combinable. Paginat
 | `from` | ISO-8601 | no | Inclusive lower bound on `occurredAt` |
 | `to` | ISO-8601 | no | Inclusive upper bound |
 | `event` | string | no | Exact match on event type (e.g. `COMPLETED`) |
-| `category` | string | no | Filter to WorkItems in that category |
+| `type` | string | no | Hierarchical type filter |
 | `page` | int | no | Zero-based (default `0`) |
 | `size` | int | no | Page size (default `20`, max `100`) |
 
@@ -1457,12 +1457,12 @@ Create a notification rule.
 | `channelType` | string | yes | `webhook` or `slack` |
 | `targetUrl` | string | yes | |
 | `eventTypes` | string | yes | Comma-separated event types |
-| `category` | string | no | Optional filter |
+| `types` | string | no | Optional type filter |
 | `secret` | string | no | Webhook HMAC secret |
 | `enabled` | boolean | no | Default `true` |
 
 **Response:** `201 Created`
-**Body:** `id`, `channelType`, `targetUrl`, `eventTypes`, `category`, `enabled`, `createdAt` (secret intentionally omitted)
+**Body:** `id`, `channelType`, `targetUrl`, `eventTypes`, `types`, `enabled`, `createdAt` (secret intentionally omitted)
 
 ---
 
@@ -1516,10 +1516,10 @@ List rules, optionally filtered by channel type.
 
 SLA breach report — WorkItems that exceeded their expiry deadline.
 
-**Query parameters:** `from` (ISO-8601), `to` (ISO-8601), `category` (string), `priority` (string) — all optional
+**Query parameters:** `from` (ISO-8601), `to` (ISO-8601), `type` (string), `priority` (string) — all optional
 
 **Response:** `200 OK`
-**Body:** `SlaBreachReport` — `items` (array of `workItemId`, `category`, `priority`, `expiresAt`, `completedAt`, `status`, `breachDurationMinutes`), `summary` (`totalBreached`, `avgBreachDurationMinutes`, `byCategory` map)
+**Body:** `SlaBreachReport` — `items` (array of `workItemId`, `type`, `priority`, `expiresAt`, `completedAt`, `status`, `breachDurationMinutes`), `summary` (`totalBreached`, `avgBreachDurationMinutes`, `byType` map)
 
 ---
 
@@ -1528,10 +1528,10 @@ SLA breach report — WorkItems that exceeded their expiry deadline.
 Actor performance report.
 
 **Path parameter:** `actorId` — string
-**Query parameters:** `from` (ISO-8601), `to` (ISO-8601), `category` (string) — all optional
+**Query parameters:** `from` (ISO-8601), `to` (ISO-8601), `type` (string) — all optional
 
 **Response:** `200 OK`
-**Body:** `ActorReport` — `actorId`, `totalAssigned`, `totalCompleted`, `totalRejected`, `avgCompletionMinutes` (nullable), `byCategory` map
+**Body:** `ActorReport` — `actorId`, `totalAssigned`, `totalCompleted`, `totalRejected`, `avgCompletionMinutes` (nullable), `byType` map
 
 ---
 
@@ -1550,7 +1550,7 @@ Throughput report — created vs completed counts over time buckets.
 
 Queue health snapshot.
 
-**Query parameters:** `category` (string), `priority` (string) — all optional
+**Query parameters:** `type` (string), `priority` (string) — all optional
 
 **Response:** `200 OK`
 **Body:** `QueueHealthReport` — `timestamp`, `overdueCount`, `pendingCount`, `avgPendingAgeSeconds`, `oldestUnclaimedCreatedAt`, `criticalOverdueCount`

@@ -129,9 +129,14 @@ public class NotificationDispatcher {
         if (!rule.parsedEventTypes().contains(eventType)) {
             return false;
         }
-        // null rule types = wildcard; otherwise must match one of the types
-        if (rule.types != null && !types.contains(rule.types)) {
-            return false;
+        if (rule.types != null) {
+            if (types == null || types.isEmpty()) {
+                return false;
+            }
+            final String ruleType = rule.types;
+            boolean matched = types.stream().anyMatch(t ->
+                    t.equals(ruleType) || t.startsWith(ruleType + "/"));
+            if (!matched) return false;
         }
         return true;
     }

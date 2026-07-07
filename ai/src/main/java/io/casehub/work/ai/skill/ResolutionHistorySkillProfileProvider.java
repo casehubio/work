@@ -61,6 +61,8 @@ public class ResolutionHistorySkillProfileProvider implements SkillProfileProvid
                         wi -> wi.completedAt != null ? wi.completedAt : Instant.EPOCH,
                         Comparator.reverseOrder()))
                 .limit(historyLimit)
+                // Primary type only: avoids double-counting multi-typed items in the frequency map.
+                // LinkedHashSet preserves insertion order, so iterator().next() is deterministic.
                 .collect(Collectors.groupingBy(wi -> wi.types.iterator().next().path, Collectors.counting()));
 
         if (frequencies.isEmpty()) {

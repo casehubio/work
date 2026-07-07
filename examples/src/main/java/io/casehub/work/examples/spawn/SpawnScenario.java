@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.POST;
@@ -100,10 +103,16 @@ public class SpawnScenario {
                 "quarkus-work fires per-child events and makes no decisions about completion — that belongs to CaseHub");
     }
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     private WorkItemTemplate template(final String name, final String category) {
         final WorkItemTemplate t = new WorkItemTemplate();
         t.name = name;
-        t.typePaths = "[\"" + category + "\"]";
+        try {
+            t.typePaths = MAPPER.writeValueAsString(List.of(category));
+        } catch (final JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize typePaths", e);
+        }
         t.createdBy = "spawn-scenario";
         t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         t.persist();

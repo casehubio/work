@@ -27,7 +27,7 @@ RESPONSE=$(curl -s -X POST "$BASE" \
   -d '{
     "title": "Approve expense report",
     "description": "Q1 travel expenses for Alice — $1,840. Approve or reject.",
-    "category": "finance",
+    "types": ["finance"],
     "priority": "MEDIUM",
     "candidateGroups": "finance-team",
     "createdBy": "expense-service",
@@ -321,7 +321,7 @@ class ExpenseApprovalFlowTest {
     void createWorkItem_setsDefaultPriority() {
         WorkItemCreateRequest request = WorkItemCreateRequest.builder()
             .title("Approve expense")
-            .category("finance")
+            .types(List.of("finance"))
             .assigneeId("alice")
             .createdBy("test")
             .build();
@@ -395,7 +395,7 @@ This approach gives fast test execution — CDI wiring without full Quarkus boot
 
 - Not thread-safe — designed for single-threaded test use only.
 - `put()` assigns a random UUID if `workItem.id` is null.
-- `scan(WorkItemQuery.inbox(...))` matches using OR across `assigneeId`, `candidateGroups`, and `candidateUserId`, then applies AND for status, priority, category, and followUp filters — identical semantics to the JPA implementation.
+- `scan(WorkItemQuery.inbox(...))` matches using OR across `assigneeId`, `candidateGroups`, and `candidateUserId`, then applies AND for status, priority, type, and followUp filters — identical semantics to the JPA implementation.
 - `scan(WorkItemQuery.expired(now))` returns items in `PENDING`, `ASSIGNED`, `IN_PROGRESS`, or `SUSPENDED` whose `expiresAt` is in the past.
 - `scan(WorkItemQuery.claimExpired(now))` returns `PENDING` items whose `claimDeadline` is in the past.
 - Candidate group matching uses exact comma-separated token comparison — `"bob"` does not match `"bobby"`.
@@ -615,7 +615,7 @@ This avoids a transitive dependency on Quarkus Hibernate ORM, Flyway, and all Wo
 
 `WorkBroker` (in `casehub-work-core`) is the generic assignment engine. `WorkItemAssignmentService` calls it on every WorkItem creation, release, and delegation:
 
-1. Build `SelectionContext` from the WorkItem fields (`category`, `priority`, `title`, `description`, `candidateUsers`, `candidateGroups`, `requiredCapabilities`).
+1. Build `SelectionContext` from the WorkItem fields (`types`, `priority`, `title`, `description`, `candidateUsers`, `candidateGroups`, `requiredCapabilities`).
 2. Resolve `WorkerCandidate` list from `candidateUsers` + `WorkerRegistry.resolveGroup()`.
 3. Populate `activeWorkItemCount` for each candidate via `WorkloadProvider.getActiveWorkCount()`.
 4. Invoke the active `WorkerSelectionStrategy.select(context, candidates)`.

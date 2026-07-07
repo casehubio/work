@@ -25,7 +25,7 @@ class SpawnIdempotencyTest {
 
         final String parentId = given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "parent", "typePaths", "[\"test\"]", "createdBy", "test"))
+                .body(Map.of("title", "parent", "types", List.of("test"), "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201).extract().path("id");
 
@@ -65,7 +65,7 @@ class SpawnIdempotencyTest {
 
         final String parentId = given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "parent2", "typePaths", "[\"test\"]", "createdBy", "test"))
+                .body(Map.of("title", "parent2", "types", List.of("test"), "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201).extract().path("id");
 
@@ -104,7 +104,7 @@ class SpawnIdempotencyTest {
 
         final String parentId = given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "scope-parent", "typePaths", "[\"test\"]", "createdBy", "test"))
+                .body(Map.of("title", "scope-parent", "types", List.of("test"), "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201).extract().path("id");
 

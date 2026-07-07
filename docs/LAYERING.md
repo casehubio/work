@@ -79,7 +79,7 @@ casehub-work is the **human task primitive layer**. It provides the mechanics of
 - casehub-work fires events; it does not react to them to drive other WorkItems
 
 **Templates:**
-- Blueprints for WorkItem creation — category, priority, groups, SLA, labels
+- Blueprints for WorkItem creation — types, priority, groups, SLA, labels
 - Instantiation from template in a single API call
 
 **Queues and filters:**

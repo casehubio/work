@@ -120,7 +120,7 @@ public class WorkItemNotificationRule extends PanacheEntityBase {
 
     /**
      * Enabled rules that match a given event type.
-     * Category filtering is done in-memory after this query.
+     * Type filtering is done in-memory after this query.
      */
     public static List<WorkItemNotificationRule> findEnabledForEventType(final String eventType) {
         // eventTypes is a comma-separated string; use LIKE for a simple contains check.

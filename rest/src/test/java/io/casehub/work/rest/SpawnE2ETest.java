@@ -106,7 +106,7 @@ class SpawnE2ETest {
 
     private String createWorkItem(final String category) {
         return given().contentType(ContentType.JSON)
-                .body(Map.of("title", "parent-" + category, "typePaths", "[\"" + category + "\"]", "createdBy", "test"))
+                .body(Map.of("title", "parent-" + category, "types", List.of(category), "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201).extract().path("id");
     }

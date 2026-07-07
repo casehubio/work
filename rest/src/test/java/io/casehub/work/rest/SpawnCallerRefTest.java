@@ -3,6 +3,7 @@ package io.casehub.work.rest;
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ class SpawnCallerRefTest {
     void callerRef_roundTrips_whenSetOnCreate() {
         final var body = Map.of(
                 "title", "callerRef round-trip test",
-                "typePaths", "[\"test\"]",
+                "types", List.of("test"),
                 "createdBy", "test-system",
                 "callerRef", "case:loan-123/pi:credit-1");
 
@@ -40,7 +41,7 @@ class SpawnCallerRefTest {
     void callerRef_null_whenNotProvided() {
         final var body = Map.of(
                 "title", "no callerRef",
-                "typePaths", "[\"test\"]",
+                "types", List.of("test"),
                 "createdBy", "test-system");
 
         final String id = given()
@@ -63,7 +64,7 @@ class SpawnCallerRefTest {
         final String longRef = "x".repeat(512);
         final var body = Map.of(
                 "title", "long callerRef test",
-                "typePaths", "[\"test\"]",
+                "types", List.of("test"),
                 "createdBy", "test-system",
                 "callerRef", longRef);
 

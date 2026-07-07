@@ -3,6 +3,9 @@ package io.casehub.work.examples.formschema;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.POST;
@@ -54,6 +57,7 @@ public class FormSchemaScenario {
     private static final String ACTOR_REVIEWER = "legal-reviewer";
     private static final String CATEGORY = "contract-review";
     private static final String TEMPLATE_NAME = "Contract Review Form";
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private static final String OUTPUT_DATA_SCHEMA = """
             {
@@ -93,7 +97,11 @@ public class FormSchemaScenario {
         final WorkItemTemplate template = new WorkItemTemplate();
         template.name = TEMPLATE_NAME;
         template.description = "Contract review requiring a structured resolution";
-        template.typePaths = "[\"" + CATEGORY + "\"]";
+        try {
+            template.typePaths = MAPPER.writeValueAsString(List.of(CATEGORY));
+        } catch (final JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize typePaths", e);
+        }
         template.candidateGroups = ACTOR_REVIEWER;
         template.outputDataSchema = OUTPUT_DATA_SCHEMA;
         template.createdBy = ACTOR_ADMIN;

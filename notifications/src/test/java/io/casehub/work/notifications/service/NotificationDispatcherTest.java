@@ -49,6 +49,25 @@ class NotificationDispatcherTest {
     }
 
     @Test
+    void matchesTypes_true_whenWorkItemTypeIsDescendantOfRuleType() {
+        final WorkItemNotificationRule rule = ruleFor("ASSIGNED", "legal");
+        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of("legal/contract"))).isTrue();
+        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of("legal/nda/renewal"))).isTrue();
+    }
+
+    @Test
+    void matchesTypes_false_whenRuleTypeIsDeeperThanWorkItemType() {
+        final WorkItemNotificationRule rule = ruleFor("ASSIGNED", "legal/contract");
+        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of("legal"))).isFalse();
+    }
+
+    @Test
+    void matchesTypes_false_whenRuleTypeIsPrefixButNotAncestor() {
+        final WorkItemNotificationRule rule = ruleFor("ASSIGNED", "leg");
+        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of("legal"))).isFalse();
+    }
+
+    @Test
     void matchesTypes_false_whenWorkItemTypesEmptyButRuleHasTypes() {
         final WorkItemNotificationRule rule = ruleFor("ASSIGNED", "loan-application");
         assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of())).isFalse();
