@@ -65,7 +65,7 @@ public class SpawnScenario {
         final WorkItem parent = workItemService.create(WorkItemCreateRequest.builder()
                 .title("Loan Application #" + UUID.randomUUID().toString().substring(0, 8))
                 .description("Parallel approval checks for loan application")
-                .category("loan-application")
+                .types(List.of("loan-application"))
                 .createdBy("finance-system")
                 .build());
         steps.add(new StepLog(2, "Creates loan-application WorkItem (parent)", parent.id));
@@ -103,7 +103,7 @@ public class SpawnScenario {
     private WorkItemTemplate template(final String name, final String category) {
         final WorkItemTemplate t = new WorkItemTemplate();
         t.name = name;
-        t.category = category;
+        t.typePaths = "[\"" + category + "\"]";
         t.createdBy = "spawn-scenario";
         t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         t.persist();

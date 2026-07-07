@@ -32,12 +32,12 @@ public class ReportResource {
     public SlaBreachReport slaBreaches(
             @QueryParam("from") final String from,
             @QueryParam("to") final String to,
-            @QueryParam("category") final String category,
+            @QueryParam("type") final String type,
             @QueryParam("priority") final String priority) {
         return reportService.slaBreaches(
                 parseInstant(from, "from"),
                 parseInstant(to, "to"),
-                category,
+                type,
                 parsePriority(priority));
     }
 
@@ -47,12 +47,12 @@ public class ReportResource {
             @PathParam("actorId") final String actorId,
             @QueryParam("from") final String from,
             @QueryParam("to") final String to,
-            @QueryParam("category") final String category) {
+            @QueryParam("type") final String type) {
         return reportService.actorPerformance(
                 actorId,
                 parseInstant(from, "from"),
                 parseInstant(to, "to"),
-                category);
+                type);
     }
 
     @GET
@@ -77,9 +77,9 @@ public class ReportResource {
     @GET
     @Path("/queue-health")
     public QueueHealthReport queueHealth(
-            @QueryParam("category") final String category,
+            @QueryParam("type") final String type,
             @QueryParam("priority") final String priority) {
-        return reportService.queueHealth(category, parsePriority(priority));
+        return reportService.queueHealth(type, parsePriority(priority));
     }
 
     private static WorkItemPriority parsePriority(final String priority) {

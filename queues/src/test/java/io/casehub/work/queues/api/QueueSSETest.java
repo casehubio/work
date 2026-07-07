@@ -41,11 +41,11 @@ class QueueSSETest {
 
     @Test
     void queueSse_happyPath_addedEventAppearsWhenWorkItemEntersQueue() throws Exception {
-        // Filter that routes items with category 'sse-queue-cat' to label 'sse-queue-ev/item'
+        // Filter that routes items with type 'sse-queue-cat' to label 'sse-queue-ev/item'
         given().contentType(ContentType.JSON)
                 .body("""
                         {"name":"SSE queue filter","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"category == 'sse-queue-cat'",
+                         "conditionExpression":"types.contains('sse-queue-cat')",
                          "actions":[{"type":"APPLY_LABEL","labelPath":"sse-queue-ev/item"}]}
                         """)
                 .post("/filters").then().statusCode(201);
@@ -74,7 +74,7 @@ class QueueSSETest {
         Thread.sleep(400);
 
         given().contentType(ContentType.JSON)
-                .body("{\"title\":\"SSE test item\",\"createdBy\":\"test\",\"category\":\"sse-queue-cat\"}")
+                .body("{\"title\":\"SSE test item\",\"createdBy\":\"test\",\"types\":[\"sse-queue-cat\"]}")
                 .post("/workitems").then().statusCode(201);
 
         assertThat(latch.await(4, TimeUnit.SECONDS))

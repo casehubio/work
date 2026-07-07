@@ -2,7 +2,9 @@ package io.casehub.work.runtime.model;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import io.casehub.work.api.spi.ClaimSlaPolicy;
@@ -72,9 +74,6 @@ public class WorkItem extends PanacheEntityBase {
 
     /** Detailed description of what needs to be done. */
     public String description;
-
-    /** Logical category or process classification (e.g. "approval", "review"). */
-    public String category;
 
     /** Key identifying the UI form to render for this work item. */
     @Column(name = "form_key")
@@ -239,6 +238,15 @@ public class WorkItem extends PanacheEntityBase {
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "work_item_label", joinColumns = @JoinColumn(name = "work_item_id"))
     public List<WorkItemLabel> labels = new ArrayList<>();
+
+    /**
+     * Types attached to this WorkItem.
+     * Types are hierarchical paths (e.g. "approval", "compliance/audit") that classify
+     * the WorkItem for routing, filtering, and reporting.
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "work_item_type", joinColumns = @JoinColumn(name = "work_item_id"))
+    public Set<WorkItemType> types = new LinkedHashSet<>();
 
     // -------------------------------------------------------------------------
     // AI metadata

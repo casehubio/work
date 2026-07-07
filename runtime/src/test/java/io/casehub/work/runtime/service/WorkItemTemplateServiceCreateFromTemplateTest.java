@@ -2,6 +2,7 @@ package io.casehub.work.runtime.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.UUID;
 
 import io.casehub.work.api.WorkItemCreateRequest;
@@ -41,7 +42,7 @@ class WorkItemTemplateServiceCreateFromTemplateTest {
         final WorkItemCreateRequest request = WorkItemCreateRequest.builder()
                 .title("Custom Title")
                 .description("Custom Desc")
-                .category("custom-cat")
+                .types(List.of("custom/type"))
                 .priority(WorkItemPriority.URGENT)
                 .candidateGroups("custom-group")
                 .candidateUsers("custom-user")
@@ -54,7 +55,7 @@ class WorkItemTemplateServiceCreateFromTemplateTest {
 
         assertThat(merged.title).isEqualTo("Custom Title");
         assertThat(merged.description).isEqualTo("Custom Desc");
-        assertThat(merged.category).isEqualTo("custom-cat");
+        assertThat(merged.types).containsExactly("custom/type");
         assertThat(merged.priority).isEqualTo(WorkItemPriority.URGENT);
         assertThat(merged.candidateGroups).isEqualTo("custom-group");
         assertThat(merged.candidateUsers).isEqualTo("custom-user");
@@ -75,7 +76,7 @@ class WorkItemTemplateServiceCreateFromTemplateTest {
         assertThat(merged.title).isEqualTo("test-title");
         // Template defaults used for everything else
         assertThat(merged.description).isEqualTo("Template Desc");
-        assertThat(merged.category).isEqualTo("template-cat");
+        assertThat(merged.types).containsExactly("template/type");
         assertThat(merged.priority).isEqualTo(WorkItemPriority.HIGH);
         assertThat(merged.candidateGroups).isEqualTo("grp-a,grp-b");
         assertThat(merged.candidateUsers).isEqualTo("user-a");
@@ -251,7 +252,7 @@ class WorkItemTemplateServiceCreateFromTemplateTest {
     private static WorkItemTemplate templateWithAllDefaults() {
         final WorkItemTemplate t = templateWith("Template Name");
         t.description = "Template Desc";
-        t.category = "template-cat";
+        t.typePaths = "[\"template/type\"]";
         t.priority = WorkItemPriority.HIGH;
         t.candidateGroups = "grp-a,grp-b";
         t.candidateUsers = "user-a";

@@ -117,19 +117,19 @@ class InboxFilterTest {
     void inbox_categoryFilter_returnsOnlyMatchingItems() {
         final String user = uniqueUser();
         createItem(user, """
-                {"title":"Legal item","createdBy":"test","candidateUsers":"%s","category":"legal"}
+                {"title":"Legal item","createdBy":"test","candidateUsers":"%s","types":["legal"]}
                 """.formatted(user));
         createItem(user, """
-                {"title":"Finance item","createdBy":"test","candidateUsers":"%s","category":"finance"}
+                {"title":"Finance item","createdBy":"test","candidateUsers":"%s","types":["finance"]}
                 """.formatted(user));
 
         given().queryParam("candidateUser", user)
-                .queryParam("category", "legal")
+                .queryParam("type", "legal")
                 .get("/workitems/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].item.category", equalTo("legal"));
+                .body("[0].item.types[0]", equalTo("legal"));
     }
 
     @Test

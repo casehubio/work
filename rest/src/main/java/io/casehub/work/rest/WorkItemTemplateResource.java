@@ -59,7 +59,7 @@ public class WorkItemTemplateResource {
      *
      * @param name display name (required); used as default WorkItem title
      * @param description optional description of what this template is for
-     * @param category default WorkItem category
+     * @param typePaths JSON array of type paths applied at instantiation
      * @param priority default WorkItem priority
      * @param candidateGroups default comma-separated candidate groups
      * @param candidateUsers default comma-separated candidate users
@@ -86,7 +86,7 @@ public class WorkItemTemplateResource {
     public record CreateTemplateRequest(
             String name,
             String description,
-            String category,
+            String typePaths,
             String priority,
             String candidateGroups,
             String candidateUsers,
@@ -142,7 +142,7 @@ public class WorkItemTemplateResource {
      *
      * @param name                       required; must be unique across all templates
      * @param description                optional free-text description
-     * @param category                   optional process classification
+     * @param typePaths                  optional JSON array of type paths to auto-apply
      * @param priority                   optional default priority (LOW/MEDIUM/HIGH/URGENT)
      * @param candidateGroups            optional comma-separated group IDs
      * @param candidateUsers             optional comma-separated user IDs
@@ -168,7 +168,7 @@ public class WorkItemTemplateResource {
     public record UpdateTemplateRequest(
             String name,
             String description,
-            String category,
+            String typePaths,
             String priority,
             String candidateGroups,
             String candidateUsers,
@@ -228,7 +228,7 @@ public class WorkItemTemplateResource {
         final WorkItemTemplate t = new WorkItemTemplate();
         t.name = request.name();
         t.description = request.description();
-        t.category = request.category();
+        t.typePaths = request.typePaths();
         t.priority = request.priority() != null
                 ? io.casehub.work.api.WorkItemPriority.valueOf(request.priority())
                 : null;
@@ -356,7 +356,7 @@ public class WorkItemTemplateResource {
 
         t.name = request.name();
         t.description = request.description();
-        t.category = request.category();
+        t.typePaths = request.typePaths();
         t.priority = request.priority() != null
                 ? io.casehub.work.api.WorkItemPriority.valueOf(request.priority())
                 : null;
@@ -437,7 +437,7 @@ public class WorkItemTemplateResource {
 
         // String fields
         if (patch.has("description"))          t.description = textOrNull(patch, "description");
-        if (patch.has("category"))             t.category = textOrNull(patch, "category");
+        if (patch.has("typePaths"))            t.typePaths = textOrNull(patch, "typePaths");
         if (patch.has("candidateGroups"))      t.candidateGroups = textOrNull(patch, "candidateGroups");
         if (patch.has("candidateUsers"))       t.candidateUsers = textOrNull(patch, "candidateUsers");
         if (patch.has("requiredCapabilities")) t.requiredCapabilities = textOrNull(patch, "requiredCapabilities");
@@ -589,7 +589,7 @@ public class WorkItemTemplateResource {
         m.put("version", t.version);
         m.put("name", t.name);
         m.put("description", t.description);
-        m.put("category", t.category);
+        m.put("typePaths", t.typePaths);
         m.put("priority", t.priority != null ? t.priority.name() : null);
         m.put("candidateGroups", t.candidateGroups);
         m.put("candidateUsers", t.candidateUsers);

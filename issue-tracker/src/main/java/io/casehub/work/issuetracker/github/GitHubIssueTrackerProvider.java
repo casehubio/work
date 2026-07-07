@@ -287,12 +287,12 @@ public class GitHubIssueTrackerProvider implements IssueTrackerProvider {
      * Computes three namespaced label sets from the WorkItem:
      * <ul>
      *   <li>{@code priority:urgent|high|medium|low}
-     *   <li>{@code category:<value>} — only when category is set
+     *   <li>{@code type:<value>} — only when types are set
      *   <li>{@code status:pending|assigned|in-progress|delegated|suspended|escalated}
      *       — omitted for terminal statuses (issue is closed instead)
      *   <li>WorkItem label paths (e.g. {@code legal/contracts/nda})
      * </ul>
-     * Managed labels ({@code priority:*}, {@code category:*}, {@code status:*}) are
+     * Managed labels ({@code priority:*}, {@code type:*}, {@code status:*}) are
      * replaced on every sync. User-applied labels on the GitHub Issue are preserved.
      * Labels are auto-created on first use per repository.
      *
@@ -320,7 +320,7 @@ public class GitHubIssueTrackerProvider implements IssueTrackerProvider {
             final java.util.List<String> existingLabels = new java.util.ArrayList<>();
             issue.path("labels").forEach(l -> {
                 final String name = l.path("name").asText("");
-                if (!name.startsWith("priority:") && !name.startsWith("category:")
+                if (!name.startsWith("priority:") && !name.startsWith("type:")
                         && !name.startsWith("status:")) {
                     existingLabels.add(name); // preserve user-applied labels
                 }
@@ -366,9 +366,11 @@ public class GitHubIssueTrackerProvider implements IssueTrackerProvider {
         // Priority
         labels.add(priorityLabel(workItem.priority));
 
-        // Category
-        if (workItem.category != null && !workItem.category.isBlank()) {
-            labels.add("category:" + workItem.category.toLowerCase());
+        // Types
+        for (final io.casehub.work.runtime.model.WorkItemType type : workItem.types) {
+            if (type.path != null && !type.path.isBlank()) {
+                labels.add("type:" + type.path.toLowerCase());
+            }
         }
 
         // Status (omitted for terminal — issue state handles that)
@@ -442,7 +444,7 @@ public class GitHubIssueTrackerProvider implements IssueTrackerProvider {
         if (name.startsWith("status:suspended")) return "FBBF24";
         if (name.startsWith("status:delegated")) return "A78BFA";
         if (name.startsWith("status:escalated")) return "F43F5E";
-        if (name.startsWith("category:")) return "D1FAE5";
+        if (name.startsWith("type:")) return "D1FAE5";
         return "CCCCCC"; // default for WorkItem label paths
     }
 

@@ -102,7 +102,12 @@ public class WorkItemService {
         item.status = WorkItemStatus.PENDING;
         item.title = request.title;
         item.description = request.description;
-        item.category = request.category;
+        if (request.types != null) {
+            for (final String typePath : request.types) {
+                Path.parse(typePath);
+                item.types.add(new io.casehub.work.runtime.model.WorkItemType(typePath));
+            }
+        }
         item.formKey = request.formKey;
         item.priority = request.priority != null ? request.priority : WorkItemPriority.MEDIUM;
         item.assigneeId = request.assigneeId;
@@ -782,7 +787,7 @@ public class WorkItemService {
      * Clone a WorkItem — creates a new PENDING WorkItem copying operational fields from the source.
      *
      * <p>
-     * <strong>Copied:</strong> title (optionally overridden), description, category, formKey, priority,
+     * <strong>Copied:</strong> title (optionally overridden), description, types, formKey, priority,
      * candidateGroups, candidateUsers, requiredCapabilities, payload, MANUAL labels.
      *
      * <p>
@@ -814,7 +819,7 @@ public class WorkItemService {
         final WorkItemCreateRequest req = WorkItemCreateRequest.builder()
                 .title(title)
                 .description(source.description)
-                .category(source.category)
+                .types(source.types.stream().map(t -> t.path).toList())
                 .formKey(source.formKey)
                 .priority(source.priority)
                 .candidateGroups(source.candidateGroups)

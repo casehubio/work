@@ -1,6 +1,7 @@
 package io.casehub.work.runtime.event;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -56,6 +57,7 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
     private final String assigneeId;
     private final String resolution;
     private final String candidateGroups;
+    private final List<String> types;
     private final WorkItem workItem;
 
     private WorkItemLifecycleEvent(final String type, final String sourceUri, final String subject,
@@ -63,6 +65,7 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
             final String actor, final String detail, final String rationale, final String planRef,
             final String outcome, final String tenancyId,
             final String callerRef, final String assigneeId, final String resolution, final String candidateGroups,
+            final List<String> types,
             final WorkItem workItem) {
         this.type = type;
         this.sourceUri = sourceUri;
@@ -80,6 +83,7 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
         this.assigneeId = assigneeId;
         this.resolution = resolution;
         this.candidateGroups = candidateGroups;
+        this.types = types;
         this.workItem = workItem;
     }
 
@@ -100,6 +104,7 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
                 workItem.id, workItem.status, Instant.now(),
                 actor, detail, null, null, workItem.outcome, workItem.tenancyId,
                 workItem.callerRef, workItem.assigneeId, workItem.resolution, workItem.candidateGroups,
+                workItem.types.stream().map(t -> t.path).toList(),
                 workItem);
     }
 
@@ -124,6 +129,7 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
                 workItem.id, workItem.status, Instant.now(),
                 actor, detail, rationale, planRef, workItem.outcome, workItem.tenancyId,
                 workItem.callerRef, workItem.assigneeId, workItem.resolution, workItem.candidateGroups,
+                workItem.types.stream().map(t -> t.path).toList(),
                 workItem);
     }
 
@@ -142,10 +148,11 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
             final String subject, final UUID workItemId, final WorkItemStatus status,
             final Instant occurredAt, final String actor, final String detail,
             final String rationale, final String planRef, final String outcome, final String tenancyId,
-            final String callerRef, final String assigneeId, final String resolution, final String candidateGroups) {
+            final String callerRef, final String assigneeId, final String resolution, final String candidateGroups,
+            final List<String> types) {
         return new WorkItemLifecycleEvent(type, sourceUri, subject, workItemId, status,
                 occurredAt, actor, detail, rationale, planRef, outcome, tenancyId,
-                callerRef, assigneeId, resolution, candidateGroups, null);
+                callerRef, assigneeId, resolution, candidateGroups, types, null);
     }
 
     // ---- Existing accessors preserved (same names as old record components) ----
@@ -280,6 +287,16 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
     @JsonProperty("candidateGroups")
     public String candidateGroups() {
         return candidateGroups;
+    }
+
+    /**
+     * The types from the WorkItem (path-based type classification).
+     * For wire-reconstructed events, this is stored independently; for local events,
+     * it is read from the embedded workItem entity.
+     */
+    @JsonProperty("types")
+    public List<String> types() {
+        return types;
     }
 
     // ---- WorkItemEvent interface implementation ----

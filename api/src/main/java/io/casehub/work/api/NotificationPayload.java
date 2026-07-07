@@ -13,7 +13,7 @@ package io.casehub.work.api;
  * @param channelType the channel type string (e.g. {@code "slack"})
  * @param targetUrl the destination URL or address for this notification
  * @param secret optional HMAC secret for signed channels; null if not configured
- * @param category the category filter from the rule; null means all categories matched
+ * @param types the type filter from the rule; null means all types matched
  */
 public record NotificationPayload(
         WorkItemEvent event,
@@ -21,5 +21,5 @@ public record NotificationPayload(
         String channelType,
         String targetUrl,
         String secret,
-        String category) {
+        String types) {
 }

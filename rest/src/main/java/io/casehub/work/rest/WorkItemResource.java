@@ -122,7 +122,7 @@ public class WorkItemResource {
      *
      * <p>
      * Supports the same filter parameters as {@code GET /inbox} (assignee,
-     * candidateGroup, category, priority, status). All parameters are optional;
+     * candidateGroup, type, priority, status). All parameters are optional;
      * omitting them returns counts across all WorkItems.
      */
     @GET
@@ -133,15 +133,15 @@ public class WorkItemResource {
             @QueryParam("candidateUser") final String candidateUser,
             @QueryParam("status") final WorkItemStatus status,
             @QueryParam("priority") final WorkItemPriority priority,
-            @QueryParam("category") final String category) {
+            @QueryParam("type") final String type) {
 
         final WorkItemQuery.Builder qb = WorkItemQuery.inbox(assignee, candidateGroups, candidateUser).toBuilder();
         if (status != null)
             qb.status(status);
         if (priority != null)
             qb.priority(priority);
-        if (category != null)
-            qb.category(category);
+        if (type != null)
+            qb.type(type);
 
         return InboxSummaryBuilder.build(workItemStore.scan(qb.build()), Instant.now());
     }
@@ -176,13 +176,19 @@ public class WorkItemResource {
             @QueryParam("candidateUser") final String candidateUser,
             @QueryParam("status") final WorkItemStatus status,
             @QueryParam("priority") final WorkItemPriority priority,
-            @QueryParam("category") final String category,
+            @QueryParam("type") final String type,
             @QueryParam("followUp") final Boolean followUp,
             @QueryParam("outcome") final String outcome) {
         Stream<WorkItemRootView> stream = workItemStore.scanRoots(assignee, candidateUser, candidateGroups).stream();
         if (status != null)   stream = stream.filter(v -> Objects.equals(v.workItem().status, status));
         if (priority != null) stream = stream.filter(v -> Objects.equals(v.workItem().priority, priority));
-        if (category != null) stream = stream.filter(v -> category.equals(v.workItem().category));
+        if (type != null) {
+            final io.casehub.platform.api.path.Path queryPath = io.casehub.platform.api.path.Path.parse(type);
+            stream = stream.filter(v -> v.workItem().types.stream().anyMatch(t -> {
+                final io.casehub.platform.api.path.Path typePath = io.casehub.platform.api.path.Path.parse(t.path);
+                return typePath.equals(queryPath) || queryPath.isAncestorOf(typePath);
+            }));
+        }
         if (followUp != null) stream = stream.filter(v -> Boolean.TRUE.equals(followUp)
                 ? v.workItem().followUpDate != null
                 : v.workItem().followUpDate == null);

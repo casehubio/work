@@ -85,7 +85,7 @@ public class LabellingScenario {
         final WorkItemCreateRequest request = WorkItemCreateRequest.builder()
                 .title("Customer support: login failure for VIP client")
                 .description("VIP client unable to log in since platform upgrade — urgent resolution required")
-                .category("support")
+                .types(List.of("support"))
                 .priority(WorkItemPriority.MEDIUM)
                 .createdBy(ACTOR_CREATOR)
                 .payload("{\"clientId\": \"CLIENT-VIP-9912\", \"channel\": \"email\"}")

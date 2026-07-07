@@ -55,13 +55,13 @@ class FullPipelineTest {
         var filterId = given().contentType(ContentType.JSON)
                 .body("""
                         {"name":"Cascade filter","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"category == 'cascade-test-unique'",
+                         "conditionExpression":"types.contains('cascade-test-unique')",
                          "actions":[{"type":"APPLY_LABEL","labelPath":"cascade/unique-marker"}]}""")
                 .post("/filters").then().statusCode(201).extract().path("id");
 
         var workItemId = given().contentType(ContentType.JSON)
                 .body("""
-                        {"title":"Cascade test","category":"cascade-test-unique","createdBy":"alice"}""")
+                        {"title":"Cascade test","types":["cascade-test-unique"],"createdBy":"alice"}""")
                 .post("/workitems").then().statusCode(201).extract().path("id");
 
         // Verify INFERRED label applied

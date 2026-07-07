@@ -45,7 +45,7 @@ public class JexlConditionEvaluator implements WorkItemExpressionEvaluator {
         map.put("status", wi.status != null ? wi.status.name() : "UNKNOWN");
         map.put("priority", wi.priority != null ? wi.priority.name() : "MEDIUM");
         map.put("assigneeId", wi.assigneeId); // intentionally null-able for null-checks in expressions
-        map.put("category", wi.category);
+        map.put("types", wi.types.stream().map(t -> t.path).toList());
         map.put("title", wi.title != null ? wi.title : "");
         map.put("description", wi.description != null ? wi.description : "");
         map.put("candidateGroups", wi.candidateGroups != null ? wi.candidateGroups : "");

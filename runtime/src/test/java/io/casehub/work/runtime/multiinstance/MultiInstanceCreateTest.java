@@ -37,7 +37,7 @@ class MultiInstanceCreateTest {
     void instantiatingMultiInstanceTemplateCreatesParentAndNChildren() {
         WorkItemTemplate template = new WorkItemTemplate();
         template.name = "Approval";
-        template.category = "approval";
+        template.typePaths = "[\"approval\"]";
         template.candidateGroups = "reviewers";
         template.createdBy = "test";
         template.instanceCount = 3;

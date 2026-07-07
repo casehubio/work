@@ -51,7 +51,7 @@ public class FilterResource {
     }
 
     public record AdHocWorkItem(String title, String status, String priority,
-            String assigneeId, String category) {
+            String assigneeId, List<String> types) {
     }
 
     @GET
@@ -141,7 +141,11 @@ public class FilterResource {
             wi.status = parseStatus(req.workItem().status());
             wi.priority = parsePriority(req.workItem().priority());
             wi.assigneeId = req.workItem().assigneeId();
-            wi.category = req.workItem().category();
+            if (req.workItem().types() != null) {
+                for (final String typePath : req.workItem().types()) {
+                    wi.types.add(new io.casehub.work.runtime.model.WorkItemType(typePath));
+                }
+            }
         }
         return Response
                 .ok(Map.of("matches",

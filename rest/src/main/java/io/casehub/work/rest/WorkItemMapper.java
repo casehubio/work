@@ -15,7 +15,9 @@ public final class WorkItemMapper {
 
     public static WorkItemResponse toResponse(final WorkItem wi) {
         return new WorkItemResponse(
-                wi.id, wi.title, wi.description, wi.category, wi.formKey,
+                wi.id, wi.title, wi.description,
+                wi.types == null ? List.of() : wi.types.stream().map(t -> t.path).toList(),
+                wi.formKey,
                 wi.status, wi.priority, wi.assigneeId, wi.owner,
                 wi.candidateGroups, wi.candidateUsers, wi.requiredCapabilities,
                 wi.createdBy, wi.delegationDeclineTarget, wi.delegationChain,
@@ -46,7 +48,9 @@ public final class WorkItemMapper {
         final List<WorkItemLabelResponse> labelResponses = wi.labels == null ? List.of()
                 : wi.labels.stream().map(WorkItemMapper::toLabelResponse).toList();
         return new WorkItemWithAuditResponse(
-                wi.id, wi.title, wi.description, wi.category, wi.formKey,
+                wi.id, wi.title, wi.description,
+                wi.types == null ? List.of() : wi.types.stream().map(t -> t.path).toList(),
+                wi.formKey,
                 wi.status, wi.priority, wi.assigneeId, wi.owner,
                 wi.candidateGroups, wi.candidateUsers, wi.requiredCapabilities,
                 wi.createdBy, wi.delegationDeclineTarget, wi.delegationChain,
@@ -69,7 +73,7 @@ public final class WorkItemMapper {
         return WorkItemCreateRequest.builder()
                 .title(req.title())
                 .description(req.description())
-                .category(req.category())
+                .types(req.types())
                 .formKey(req.formKey())
                 .priority(req.priority())
                 .assigneeId(req.assigneeId())

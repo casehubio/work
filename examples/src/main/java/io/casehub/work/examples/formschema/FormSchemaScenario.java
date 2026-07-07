@@ -93,7 +93,7 @@ public class FormSchemaScenario {
         final WorkItemTemplate template = new WorkItemTemplate();
         template.name = TEMPLATE_NAME;
         template.description = "Contract review requiring a structured resolution";
-        template.category = CATEGORY;
+        template.typePaths = "[\"" + CATEGORY + "\"]";
         template.candidateGroups = ACTOR_REVIEWER;
         template.outputDataSchema = OUTPUT_DATA_SCHEMA;
         template.createdBy = ACTOR_ADMIN;

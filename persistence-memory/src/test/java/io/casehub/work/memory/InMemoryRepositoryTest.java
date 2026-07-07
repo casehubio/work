@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemType;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemQuery;
@@ -171,15 +172,32 @@ class InMemoryRepositoryTest {
     }
 
     @Test
-    void findInbox_categoryFilter() {
+    void scan_byType_exactMatch() {
         final WorkItem wi = workItem(WorkItemStatus.PENDING);
-        wi.assigneeId = "alice";
-        wi.category = "finance";
+        wi.types.add(new WorkItemType("compliance/audit"));
         workItemStore.put(wi);
 
-        final List<WorkItem> result = workItemStore.scan(
-                WorkItemQuery.inbox("alice", null, null).toBuilder().category("legal").build());
+        final List<WorkItem> result = workItemStore.scan(WorkItemQuery.builder().type("compliance/audit").build());
+        assertThat(result).hasSize(1);
+    }
 
+    @Test
+    void scan_byType_ancestorMatch() {
+        final WorkItem wi = workItem(WorkItemStatus.PENDING);
+        wi.types.add(new WorkItemType("compliance/audit"));
+        workItemStore.put(wi);
+
+        final List<WorkItem> result = workItemStore.scan(WorkItemQuery.builder().type("compliance").build());
+        assertThat(result).hasSize(1);
+    }
+
+    @Test
+    void scan_byType_noMatch() {
+        final WorkItem wi = workItem(WorkItemStatus.PENDING);
+        wi.types.add(new WorkItemType("approval"));
+        workItemStore.put(wi);
+
+        final List<WorkItem> result = workItemStore.scan(WorkItemQuery.builder().type("compliance").build());
         assertThat(result).isEmpty();
     }
 

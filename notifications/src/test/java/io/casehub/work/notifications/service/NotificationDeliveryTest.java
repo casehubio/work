@@ -10,6 +10,7 @@ import static io.restassured.RestAssured.given;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 
+import java.util.List;
 import java.util.Map;
 
 import jakarta.inject.Inject;
@@ -69,7 +70,7 @@ class NotificationDeliveryTest {
 
         final String id = given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "Delivery test", "category", "test", "createdBy", "test"))
+                .body(Map.of("title", "Delivery test", "types", List.of("test"), "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201)
                 .extract().path("id");
@@ -102,7 +103,7 @@ class NotificationDeliveryTest {
 
         given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "Signed delivery", "category", "test", "createdBy", "test"))
+                .body(Map.of("title", "Signed delivery", "types", List.of("test"), "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201);
 
@@ -112,7 +113,7 @@ class NotificationDeliveryTest {
     }
 
     @Test
-    void categoryFilter_onlyFiresForMatchingCategory() {
+    void typesFilter_onlyFiresForMatchingTypes() {
         final String hookUrl = "http://localhost:" + wireMock.port() + "/hook";
 
         given()
@@ -121,21 +122,21 @@ class NotificationDeliveryTest {
                         "channelType", "http-webhook",
                         "targetUrl", hookUrl,
                         "eventTypes", "CREATED",
-                        "category", "loan-application"))
+                        "types", "loan-application"))
                 .when().post("/workitem-notification-rules")
                 .then().statusCode(201);
 
-        // Create WorkItem with DIFFERENT category — should NOT trigger
+        // Create WorkItem with DIFFERENT type — should NOT trigger
         given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "Legal item", "category", "legal", "createdBy", "test"))
+                .body(Map.of("title", "Legal item", "types", List.of("legal"), "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201);
 
-        // Create WorkItem with MATCHING category — SHOULD trigger
+        // Create WorkItem with MATCHING type — SHOULD trigger
         given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "Loan item", "category", "loan-application", "createdBy", "test"))
+                .body(Map.of("title", "Loan item", "types", List.of("loan-application"), "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201);
 
@@ -160,7 +161,7 @@ class NotificationDeliveryTest {
 
         given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "Disabled rule test", "category", "test", "createdBy", "test"))
+                .body(Map.of("title", "Disabled rule test", "types", List.of("test"), "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201);
 
@@ -184,7 +185,7 @@ class NotificationDeliveryTest {
 
         given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "Slack test item", "category", "test", "createdBy", "test"))
+                .body(Map.of("title", "Slack test item", "types", List.of("test"), "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201);
 
@@ -209,7 +210,7 @@ class NotificationDeliveryTest {
 
         final String id = given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "Resilience test", "category", "test", "createdBy", "test"))
+                .body(Map.of("title", "Resilience test", "types", List.of("test"), "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201)
                 .extract().path("id");

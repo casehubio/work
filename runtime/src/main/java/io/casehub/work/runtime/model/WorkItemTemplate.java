@@ -20,7 +20,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * <h2>What templates are for</h2>
  * <p>
  * Many WorkItems follow repeatable patterns: every loan application needs the same
- * category, candidateGroups, expiry window, and payload structure. Every security
+ * types, candidateGroups, expiry window, and payload structure. Every security
  * incident triage follows the same priority and routing. Templates capture these
  * patterns once, then each instantiation creates a correctly-configured WorkItem
  * in a single API call rather than repeating a 15-field body.
@@ -34,7 +34,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * <li>{@code assigneeId} — for direct assignment at creation time</li>
  * <li>{@code createdBy} — who or what triggered the instantiation</li>
  * </ul>
- * All other fields ({@link #category}, {@link #priority}, {@link #candidateGroups},
+ * All other fields ({@link #typePaths}, {@link #priority}, {@link #candidateGroups},
  * etc.) are copied from the template without override.
  *
  * <h2>Labels</h2>
@@ -63,10 +63,6 @@ public class WorkItemTemplate extends PanacheEntityBase {
     /** Optional description of what this template is for. */
     @Column(columnDefinition = "TEXT")
     public String description;
-
-    /** Default category copied to every instantiated WorkItem. */
-    @Column(length = 255)
-    public String category;
 
     /** Default priority; null means the WorkItem will use the system default (MEDIUM). */
     @Enumerated(EnumType.STRING)
@@ -129,6 +125,14 @@ public class WorkItemTemplate extends PanacheEntityBase {
      */
     @Column(name = "label_paths", columnDefinition = "TEXT")
     public String labelPaths;
+
+    /**
+     * JSON array of type path strings applied at instantiation.
+     * Example: {@code ["approval", "compliance/audit"]}
+     * Stored as a JSON string; parsed and validated via Path.parse() at instantiation time.
+     */
+    @Column(name = "type_paths", columnDefinition = "TEXT")
+    public String typePaths;
 
     /**
      * JSON array of named outcome definitions for this template.

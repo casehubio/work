@@ -46,7 +46,7 @@ public class NotificationRuleResource {
             String channelType,
             String targetUrl,
             String eventTypes,
-            String category,
+            String types,
             String secret,
             Boolean enabled) {
     }
@@ -73,7 +73,7 @@ public class NotificationRuleResource {
         rule.channelType = req.channelType();
         rule.targetUrl = req.targetUrl();
         rule.eventTypes = req.eventTypes();
-        rule.category = req.category();
+        rule.types = req.types();
         rule.secret = req.secret();
         rule.enabled = req.enabled() == null || req.enabled();
         ruleStore.put(rule);
@@ -125,8 +125,8 @@ public class NotificationRuleResource {
         if (req.eventTypes() != null && !req.eventTypes().isBlank()) {
             rule.eventTypes = req.eventTypes();
         }
-        if (req.category() != null) {
-            rule.category = req.category().isBlank() ? null : req.category();
+        if (req.types() != null) {
+            rule.types = req.types().isBlank() ? null : req.types();
         }
         if (req.secret() != null) {
             rule.secret = req.secret().isBlank() ? null : req.secret();
@@ -160,7 +160,7 @@ public class NotificationRuleResource {
                 "channelType", rule.channelType,
                 "targetUrl", rule.targetUrl,
                 "eventTypes", rule.eventTypes,
-                "category", rule.category != null ? rule.category : "",
+                "types", rule.types != null ? rule.types : "",
                 "enabled", rule.enabled,
                 "createdAt", rule.createdAt.toString());
         // secret intentionally omitted from responses

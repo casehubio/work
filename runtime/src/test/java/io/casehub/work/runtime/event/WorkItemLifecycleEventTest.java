@@ -120,7 +120,7 @@ class WorkItemLifecycleEventTest {
                 "io.casehub.work.workitem.completed", "/workitems/" + id, id.toString(),
                 id, WorkItemStatus.COMPLETED, java.time.Instant.now(), "alice", null, null, null,
                 "approved", "tenant-1",
-                "case:1/pi:2", "alice", "{}", "team-a");
+                "case:1/pi:2", "alice", "{}", "team-a", java.util.List.of("approval"));
 
         final io.casehub.work.api.WorkItemRef ref = wireEvent.ref();
 

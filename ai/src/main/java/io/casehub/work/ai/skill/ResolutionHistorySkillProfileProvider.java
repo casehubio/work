@@ -56,12 +56,12 @@ public class ResolutionHistorySkillProfileProvider implements SkillProfileProvid
                 .stream()
                 .filter(wi -> workerId.equals(wi.assigneeId)
                         && wi.status == WorkItemStatus.COMPLETED
-                        && wi.category != null)
+                        && !wi.types.isEmpty())
                 .sorted(Comparator.comparing(
                         wi -> wi.completedAt != null ? wi.completedAt : Instant.EPOCH,
                         Comparator.reverseOrder()))
                 .limit(historyLimit)
-                .collect(Collectors.groupingBy(wi -> wi.category, Collectors.counting()));
+                .collect(Collectors.groupingBy(wi -> wi.types.iterator().next().path, Collectors.counting()));
 
         if (frequencies.isEmpty()) {
             return SkillProfile.ofNarrative("");

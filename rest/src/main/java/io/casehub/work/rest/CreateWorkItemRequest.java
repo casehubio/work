@@ -9,7 +9,7 @@ import io.casehub.work.api.WorkItemPriority;
 public record CreateWorkItemRequest(
         String title,
         String description,
-        String category,
+        List<String> types,
         String formKey,
         WorkItemPriority priority,
         String assigneeId,
@@ -38,7 +38,7 @@ public record CreateWorkItemRequest(
     public static final class Builder {
         private String title;
         private String description;
-        private String category;
+        private List<String> types;
         private String formKey;
         private WorkItemPriority priority;
         private String assigneeId;
@@ -60,7 +60,7 @@ public record CreateWorkItemRequest(
 
         public Builder title(final String v)                          { this.title = v; return this; }
         public Builder description(final String v)                    { this.description = v; return this; }
-        public Builder category(final String v)                       { this.category = v; return this; }
+        public Builder types(final List<String> v)                    { this.types = v; return this; }
         public Builder formKey(final String v)                        { this.formKey = v; return this; }
         public Builder priority(final WorkItemPriority v)             { this.priority = v; return this; }
         public Builder assigneeId(final String v)                     { this.assigneeId = v; return this; }
@@ -81,7 +81,7 @@ public record CreateWorkItemRequest(
         public Builder scope(final String v)                          { this.scope = v; return this; }
 
         public CreateWorkItemRequest build() {
-            return new CreateWorkItemRequest(title, description, category, formKey,
+            return new CreateWorkItemRequest(title, description, types, formKey,
                     priority, assigneeId, candidateGroups, candidateUsers,
                     requiredCapabilities, createdBy, payload, claimDeadline,
                     expiresAt, followUpDate, labels, confidenceScore, callerRef,

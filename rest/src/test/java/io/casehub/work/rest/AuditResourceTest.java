@@ -189,7 +189,7 @@ class AuditResourceTest {
                 .body("total", greaterThanOrEqualTo(1));
     }
 
-    // ── Filter by category ────────────────────────────────────────────────────
+    // ── filter by type ────────────────────────────────────────────────────
 
     @Test
     void filterByCategory_returnsOnlyEntriesForThatCategory() {
@@ -201,7 +201,7 @@ class AuditResourceTest {
         final String id2 = createWorkItem(otherCat, actor);
 
         given().queryParam("actorId", actor)
-                .queryParam("category", cat)
+                .queryParam("type", cat)
                 .get("/audit")
                 .then()
                 .statusCode(200)
@@ -320,10 +320,10 @@ class AuditResourceTest {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private String createWorkItem(final String category, final String createdBy) {
+    private String createWorkItem(final String type, final String createdBy) {
         return given().contentType(ContentType.JSON)
-                .body("{\"title\":\"Audit Test\",\"category\":\"" + category
-                        + "\",\"createdBy\":\"" + createdBy + "\"}")
+                .body("{\"title\":\"Audit Test\",\"types\":[\"" + type
+                        + "\"],\"createdBy\":\"" + createdBy + "\"}")
                 .post("/workitems")
                 .then().statusCode(201).extract().path("id");
     }

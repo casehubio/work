@@ -23,7 +23,7 @@ import io.casehub.work.api.WorkItemStatus;
  *
  * <p>
  * All other fields ({@code status}, {@code statusIn}, {@code priority},
- * {@code category}, {@code followUpBefore}, {@code expiresAtOrBefore},
+ * {@code type}, {@code followUpBefore}, {@code expiresAtOrBefore},
  * {@code claimDeadlineOrBefore}, {@code labelPattern}) are combined with
  * <b>AND</b> logic on top of the assignment match. A {@code null} value means
  * "no constraint on this dimension".
@@ -53,7 +53,7 @@ public final class WorkItemQuery {
     private final WorkItemStatus status;
     private final List<WorkItemStatus> statusIn;
     private final WorkItemPriority priority;
-    private final String category;
+    private final String type;
     private final Instant followUpBefore;
 
     // Time predicates
@@ -76,7 +76,7 @@ public final class WorkItemQuery {
         this.status = b.status;
         this.statusIn = b.statusIn;
         this.priority = b.priority;
-        this.category = b.category;
+        this.type = b.type;
         this.followUpBefore = b.followUpBefore;
         this.expiresAtOrBefore = b.expiresAtOrBefore;
         this.claimDeadlineOrBefore = b.claimDeadlineOrBefore;
@@ -210,12 +210,16 @@ public final class WorkItemQuery {
     }
 
     /**
-     * Returns the category filter, or {@code null} if not constrained.
+     * Returns the type filter, or {@code null} if not constrained.
+     * <p>
+     * Matches WorkItems whose {@code types} set contains a type equal to
+     * or descended from this query value. For example, {@code type("compliance")}
+     * matches a WorkItem with type {@code "compliance/audit"}.
      *
-     * @return category filter value
+     * @return type filter value (path-based ancestor match)
      */
-    public String category() {
-        return category;
+    public String type() {
+        return type;
     }
 
     /**
@@ -283,7 +287,7 @@ public final class WorkItemQuery {
                 .status(status)
                 .statusIn(statusIn)
                 .priority(priority)
-                .category(category)
+                .type(type)
                 .followUpBefore(followUpBefore)
                 .expiresAtOrBefore(expiresAtOrBefore)
                 .claimDeadlineOrBefore(claimDeadlineOrBefore)
@@ -312,7 +316,7 @@ public final class WorkItemQuery {
         private WorkItemStatus status;
         private List<WorkItemStatus> statusIn;
         private WorkItemPriority priority;
-        private String category;
+        private String type;
         private Instant followUpBefore;
         private Instant expiresAtOrBefore;
         private Instant claimDeadlineOrBefore;
@@ -387,13 +391,14 @@ public final class WorkItemQuery {
         }
 
         /**
-         * Sets the category constraint.
+         * Sets the type constraint. Matches WorkItems whose {@code types} set
+         * contains a type equal to or descended from this value.
          *
-         * @param v the category; {@code null} means unconstrained
+         * @param v the type path; {@code null} means unconstrained
          * @return this builder
          */
-        public Builder category(final String v) {
-            this.category = v;
+        public Builder type(final String v) {
+            this.type = v;
             return this;
         }
 

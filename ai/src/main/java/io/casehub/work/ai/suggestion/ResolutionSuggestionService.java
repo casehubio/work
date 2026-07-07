@@ -103,21 +103,22 @@ public class ResolutionSuggestionService {
     }
 
     private List<WorkItem> findExamples(final WorkItem workItem) {
-        // First try: same category (most informative)
-        if (workItem.category != null && !workItem.category.isBlank()) {
-            final List<WorkItem> byCat = completedWithResolution(workItem.category);
-            if (!byCat.isEmpty()) {
-                return byCat;
+        // First try: same type (most informative)
+        if (!workItem.types.isEmpty()) {
+            final String primaryType = workItem.types.iterator().next().path;
+            final List<WorkItem> byType = completedWithResolution(primaryType);
+            if (!byType.isEmpty()) {
+                return byType;
             }
         }
         // Fallback: any completed item with a resolution
         return completedWithResolution(null);
     }
 
-    private List<WorkItem> completedWithResolution(final String category) {
+    private List<WorkItem> completedWithResolution(final String type) {
         final WorkItemQuery query = WorkItemQuery.builder()
                 .status(WorkItemStatus.COMPLETED)
-                .category(category)
+                .type(type)
                 .build();
         return workItemStore.scan(query).stream()
                 .filter(wi -> wi.resolution != null && !wi.resolution.isBlank())
@@ -131,8 +132,10 @@ public class ResolutionSuggestionService {
         final StringBuilder sb = new StringBuilder();
         sb.append("You are a work item resolution assistant.\n\n");
 
-        if (current.category != null && !current.category.isBlank()) {
-            sb.append("Category: ").append(current.category).append("\n\n");
+        if (!current.types.isEmpty()) {
+            sb.append("Types: ").append(current.types.stream()
+                    .map(t -> t.path)
+                    .collect(Collectors.joining(", "))).append("\n\n");
         }
 
         sb.append("The following are past resolutions for similar work items:\n\n");

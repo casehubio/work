@@ -26,7 +26,7 @@ public class MongoWorkItemTemplateDocument extends PanacheMongoEntityBase {
     public String tenancyId;
     public String name;
     public String description;
-    public String category;
+    public String typePaths;
     public String priority;
     public String candidateGroups;
     public String candidateUsers;
@@ -60,7 +60,7 @@ public class MongoWorkItemTemplateDocument extends PanacheMongoEntityBase {
         doc.tenancyId = template.tenancyId;
         doc.name = template.name;
         doc.description = template.description;
-        doc.category = template.category;
+        doc.typePaths = template.typePaths;
         doc.priority = template.priority != null ? template.priority.name() : null;
         doc.candidateGroups = template.candidateGroups;
         doc.candidateUsers = template.candidateUsers;
@@ -96,7 +96,7 @@ public class MongoWorkItemTemplateDocument extends PanacheMongoEntityBase {
         template.tenancyId = tenancyId;
         template.name = name;
         template.description = description;
-        template.category = category;
+        template.typePaths = typePaths;
         template.priority = priority != null ? WorkItemPriority.valueOf(priority) : null;
         template.candidateGroups = candidateGroups;
         template.candidateUsers = candidateUsers;

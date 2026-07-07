@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -31,7 +32,7 @@ class BusinessHoursIntegrationTest {
 
         final var body = Map.of(
                 "title", "BH expiry test",
-                "category", "test",
+                "types", List.of("test"),
                 "createdBy", "test",
                 "expiresAtBusinessHours", 8);
 
@@ -60,7 +61,7 @@ class BusinessHoursIntegrationTest {
 
         final var body = Map.of(
                 "title", "BH claim test",
-                "category", "test",
+                "types", List.of("test"),
                 "createdBy", "test",
                 "claimDeadlineBusinessHours", 2);
 
@@ -85,7 +86,7 @@ class BusinessHoursIntegrationTest {
         final Instant absolute = Instant.now().plus(72, ChronoUnit.HOURS);
         final var body = Map.of(
                 "title", "Precedence test",
-                "category", "test",
+                "types", List.of("test"),
                 "createdBy", "test",
                 "expiresAt", absolute.toString(),
                 "expiresAtBusinessHours", 1);
@@ -117,7 +118,7 @@ class BusinessHoursIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(Map.of(
                         "name", "BH template test",
-                        "category", "bh-test",
+                        "types", List.of("bh-test"),
                         "createdBy", "test",
                         "defaultExpiryBusinessHours", 8))
                 .when().post("/workitem-templates")
@@ -151,7 +152,7 @@ class BusinessHoursIntegrationTest {
                 .contentType(ContentType.JSON)
                 .body(Map.of(
                         "title", "BH vs wall clock",
-                        "category", "test",
+                        "types", List.of("test"),
                         "createdBy", "test",
                         "expiresAtBusinessHours", 8))
                 .when().post("/workitems")

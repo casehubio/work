@@ -19,13 +19,13 @@ class SpawnIdempotencyTest {
     void sameIdempotencyKey_sameParent_returnsExistingGroup() {
         final String tmplId = given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("name", "idem-tmpl", "category", "test", "createdBy", "test"))
+                .body(Map.of("name", "idem-tmpl", "typePaths", "[\"test\"]", "createdBy", "test"))
                 .when().post("/workitem-templates")
                 .then().statusCode(201).extract().path("id");
 
         final String parentId = given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "parent", "category", "test", "createdBy", "test"))
+                .body(Map.of("title", "parent", "typePaths", "[\"test\"]", "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201).extract().path("id");
 
@@ -59,13 +59,13 @@ class SpawnIdempotencyTest {
     void differentIdempotencyKey_sameParent_createsNewGroup() {
         final String tmplId = given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("name", "idem-tmpl2", "category", "test", "createdBy", "test"))
+                .body(Map.of("name", "idem-tmpl2", "typePaths", "[\"test\"]", "createdBy", "test"))
                 .when().post("/workitem-templates")
                 .then().statusCode(201).extract().path("id");
 
         final String parentId = given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "parent2", "category", "test", "createdBy", "test"))
+                .body(Map.of("title", "parent2", "typePaths", "[\"test\"]", "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201).extract().path("id");
 
@@ -98,13 +98,13 @@ class SpawnIdempotencyTest {
         // Verifies GET /spawn-groups/{id} returns ONLY children of that specific group
         final String tmplId = given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("name", "scope-tmpl", "category", "test", "createdBy", "test"))
+                .body(Map.of("name", "scope-tmpl", "typePaths", "[\"test\"]", "createdBy", "test"))
                 .when().post("/workitem-templates")
                 .then().statusCode(201).extract().path("id");
 
         final String parentId = given()
                 .contentType(ContentType.JSON)
-                .body(Map.of("title", "scope-parent", "category", "test", "createdBy", "test"))
+                .body(Map.of("title", "scope-parent", "typePaths", "[\"test\"]", "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201).extract().path("id");
 

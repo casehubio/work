@@ -22,7 +22,7 @@ class ActorPerformanceReportTest {
                 .body("totalAssigned", notNullValue())
                 .body("totalCompleted", notNullValue())
                 .body("totalRejected", notNullValue())
-                .body("byCategory", notNullValue());
+                .body("byType", notNullValue());
     }
 
     @Test
@@ -94,18 +94,18 @@ class ActorPerformanceReportTest {
     }
 
     @Test
-    void byCategory_countsCompletedPerCategory() {
-        final String actor = "bycat-" + System.nanoTime();
-        final String catA = "bca-" + System.nanoTime();
-        final String catB = "bcb-" + System.nanoTime();
-        claimStartComplete(createWorkItem(catA), actor);
-        claimStartComplete(createWorkItem(catA), actor);
-        claimStartComplete(createWorkItem(catB), actor);
+    void byType_countsCompletedPerType() {
+        final String actor = "bytype-" + System.nanoTime();
+        final String typeA = "bca-" + System.nanoTime();
+        final String typeB = "bcb-" + System.nanoTime();
+        claimStartComplete(createWorkItem(typeA), actor);
+        claimStartComplete(createWorkItem(typeA), actor);
+        claimStartComplete(createWorkItem(typeB), actor);
 
         final var resp = given().get("/workitems/reports/actors/" + actor)
                 .then().statusCode(200).extract().response();
-        assertThat((Integer) resp.path("byCategory." + catA)).isGreaterThanOrEqualTo(2);
-        assertThat((Integer) resp.path("byCategory." + catB)).isGreaterThanOrEqualTo(1);
+        assertThat((Integer) resp.path("byType." + typeA)).isGreaterThanOrEqualTo(2);
+        assertThat((Integer) resp.path("byType." + typeB)).isGreaterThanOrEqualTo(1);
     }
 
     @Test
@@ -131,14 +131,14 @@ class ActorPerformanceReportTest {
     }
 
     @Test
-    void filterByCategory_scopesCountsToThatCategory() {
-        final String actor = "catscope-" + System.nanoTime();
-        final String catA = "cs-a-" + System.nanoTime();
-        final String catB = "cs-b-" + System.nanoTime();
-        claimStartComplete(createWorkItem(catA), actor);
-        claimStartComplete(createWorkItem(catB), actor);
+    void filterByType_scopesCountsToThatType() {
+        final String actor = "typescope-" + System.nanoTime();
+        final String typeA = "cs-a-" + System.nanoTime();
+        final String typeB = "cs-b-" + System.nanoTime();
+        claimStartComplete(createWorkItem(typeA), actor);
+        claimStartComplete(createWorkItem(typeB), actor);
 
-        final int inA = given().queryParam("category", catA)
+        final int inA = given().queryParam("type", typeA)
                 .get("/workitems/reports/actors/" + actor)
                 .then().statusCode(200).extract().path("totalCompleted");
         assertThat(inA).isEqualTo(1);
@@ -147,18 +147,18 @@ class ActorPerformanceReportTest {
     @Test
     void e2e_fullLifecycle_allCountsCorrect() {
         final String actor = "e2eactor-" + System.nanoTime();
-        final String cat = "e2ecat-" + System.nanoTime();
+        final String type = "e2etype-" + System.nanoTime();
 
-        claimStartComplete(createWorkItem(cat), actor);
-        claimStartComplete(createWorkItem(cat), actor);
+        claimStartComplete(createWorkItem(type), actor);
+        claimStartComplete(createWorkItem(type), actor);
 
-        final String rejId = createWorkItem(cat);
+        final String rejId = createWorkItem(type);
         given().put("/workitems/" + rejId + "/claim?claimant=" + actor).then().statusCode(200);
         given().put("/workitems/" + rejId + "/start?actor=" + actor).then().statusCode(200);
         given().contentType(ContentType.JSON).body("{\"reason\":\"blocked\"}")
                 .put("/workitems/" + rejId + "/reject?actor=" + actor).then().statusCode(200);
 
-        final String inFlightId = createWorkItem(cat);
+        final String inFlightId = createWorkItem(type);
         given().put("/workitems/" + inFlightId + "/claim?claimant=" + actor).then().statusCode(200);
 
         final var resp = given().get("/workitems/reports/actors/" + actor)
@@ -167,12 +167,12 @@ class ActorPerformanceReportTest {
         assertThat((Integer) resp.path("totalRejected")).isGreaterThanOrEqualTo(1);
         assertThat((Integer) resp.path("totalAssigned")).isGreaterThanOrEqualTo(4);
         assertThat((Float) resp.path("avgCompletionMinutes")).isGreaterThanOrEqualTo(0f);
-        assertThat((Integer) resp.path("byCategory." + cat)).isGreaterThanOrEqualTo(2);
+        assertThat((Integer) resp.path("byType." + type)).isGreaterThanOrEqualTo(2);
     }
 
-    private String createWorkItem(final String category) {
+    private String createWorkItem(final String type) {
         return given().contentType(ContentType.JSON)
-                .body("{\"title\":\"Perf Test\",\"category\":\"" + category + "\",\"createdBy\":\"test\"}")
+                .body("{\"title\":\"Perf Test\",\"types\":[\"" + type + "\"],\"createdBy\":\"test\"}")
                 .post("/workitems").then().statusCode(201).extract().path("id");
     }
 

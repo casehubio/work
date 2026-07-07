@@ -134,7 +134,7 @@ class EscalationSummaryServiceTest {
         wi.id = UUID.randomUUID();
         wi.title = "Review quarterly contracts";
         wi.description = "Legal review of all Q2 contracts";
-        wi.category = "legal";
+        wi.types.add(new io.casehub.work.runtime.model.WorkItemType("legal"));
         wi.status = WorkItemStatus.PENDING;
         wi.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
         wi.createdAt = Instant.now();

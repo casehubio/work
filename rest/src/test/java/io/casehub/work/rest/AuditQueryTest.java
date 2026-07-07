@@ -24,7 +24,7 @@ class AuditQueryTest {
         assertThat(q.from()).isNull();
         assertThat(q.to()).isNull();
         assertThat(q.event()).isNull();
-        assertThat(q.category()).isNull();
+        assertThat(q.type()).isNull();
         assertThat(q.page()).isZero();
         assertThat(q.size()).isEqualTo(20);
     }
@@ -39,7 +39,7 @@ class AuditQueryTest {
                 .from(from)
                 .to(to)
                 .event("COMPLETED")
-                .category("finance")
+                .type("finance")
                 .page(2)
                 .size(50)
                 .build();
@@ -48,7 +48,7 @@ class AuditQueryTest {
         assertThat(q.from()).isEqualTo(from);
         assertThat(q.to()).isEqualTo(to);
         assertThat(q.event()).isEqualTo("COMPLETED");
-        assertThat(q.category()).isEqualTo("finance");
+        assertThat(q.type()).isEqualTo("finance");
         assertThat(q.page()).isEqualTo(2);
         assertThat(q.size()).isEqualTo(50);
     }
@@ -58,7 +58,7 @@ class AuditQueryTest {
         final AuditQuery q = AuditQuery.builder().actorId("bob").build();
         assertThat(q.actorId()).isEqualTo("bob");
         assertThat(q.event()).isNull();
-        assertThat(q.category()).isNull();
+        assertThat(q.type()).isNull();
     }
 
     @Test

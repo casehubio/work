@@ -52,7 +52,7 @@ class WorkItemLifecycleEventOutcomeTest {
                 java.time.Instant.now(),
                 "alice", null, null, null,
                 "approved", "test-tenant",
-                null, null, null, null);
+                null, null, null, null, java.util.List.of());
 
         assertThat(event.outcome()).isEqualTo("approved");
     }

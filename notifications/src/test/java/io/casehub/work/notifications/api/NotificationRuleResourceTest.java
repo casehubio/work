@@ -42,24 +42,24 @@ class NotificationRuleResourceTest {
     }
 
     @Test
-    void create_withCategoryFilter_returns201() {
+    void create_withTypesFilter_returns201() {
         final String id = given()
                 .contentType(ContentType.JSON)
                 .body(Map.of(
                         "channelType", "slack",
                         "targetUrl", "https://hooks.slack.com/test",
                         "eventTypes", "ASSIGNED",
-                        "category", "loan-application"))
+                        "types", "loan-application"))
                 .when().post("/workitem-notification-rules")
                 .then().statusCode(201)
                 .extract().path("id");
 
-        final String category = given()
+        final String types = given()
                 .when().get("/workitem-notification-rules/" + id)
                 .then().statusCode(200)
-                .extract().path("category");
+                .extract().path("types");
 
-        assertThat(category).isEqualTo("loan-application");
+        assertThat(types).isEqualTo("loan-application");
     }
 
     @Test

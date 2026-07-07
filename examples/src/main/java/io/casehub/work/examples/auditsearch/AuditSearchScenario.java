@@ -128,11 +128,11 @@ public class AuditSearchScenario {
                 AuditQuery.builder().event("COMPLETED").build());
         steps.add(new StepLog(7, description7 + " — found " + completionEventCount + " completions", null));
 
-        // Step 8: query audit by category=procurement
-        final String description8 = "Query audit trail by category=procurement";
+        // Step 8: query audit by type=procurement
+        final String description8 = "Query audit trail by type=procurement";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 8, total, description8);
         final long procurementAuditCount = auditStore.count(
-                AuditQuery.builder().category("procurement").build());
+                AuditQuery.builder().type("procurement").build());
         steps.add(new StepLog(8, description8 + " — found " + procurementAuditCount + " entries", null));
 
         return new AuditSearchResponse(
@@ -148,7 +148,7 @@ public class AuditSearchScenario {
         return WorkItemCreateRequest.builder()
                 .title(title)
                 .description("Procurement approval required for vendor onboarding")
-                .category("procurement")
+                .types(List.of("procurement"))
                 .priority(WorkItemPriority.MEDIUM)
                 .createdBy(ACTOR_CREATOR)
                 .build();

@@ -72,7 +72,10 @@ public class EmbeddingSkillMatcher implements SkillMatcher {
         final String capabilitiesText = ctx.requiredCapabilities() == null || ctx.requiredCapabilities().isEmpty()
                 ? null
                 : ctx.requiredCapabilities().stream().map(Capability::id).collect(Collectors.joining(" "));
-        return Stream.of(ctx.title(), ctx.description(), capabilitiesText, ctx.category())
+        final String typesText = ctx.types() == null || ctx.types().isEmpty()
+                ? null
+                : String.join(" ", ctx.types());
+        return Stream.of(ctx.title(), ctx.description(), capabilitiesText, typesText)
                 .filter(s -> s != null && !s.isBlank())
                 .collect(Collectors.joining(" "));
     }

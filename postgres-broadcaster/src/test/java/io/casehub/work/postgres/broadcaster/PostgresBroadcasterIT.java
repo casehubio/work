@@ -176,7 +176,7 @@ class PostgresBroadcasterIT {
     WorkItem createWorkItem(final String title) {
         final WorkItemCreateRequest req = WorkItemCreateRequest.builder()
                 .title(title)
-                .category("test")
+                .types(List.of("test"))
                 .createdBy("test-system")
                 .build();
         return workItemService.create(req);

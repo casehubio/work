@@ -144,7 +144,9 @@ class ResolutionSuggestionServiceTest {
         final WorkItem wi = new WorkItem();
         wi.id = UUID.randomUUID();
         wi.title = "Test work item";
-        wi.category = category;
+        if (category != null) {
+            wi.types.add(new io.casehub.work.runtime.model.WorkItemType(category));
+        }
         wi.status = status;
         wi.resolution = resolution;
         wi.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;

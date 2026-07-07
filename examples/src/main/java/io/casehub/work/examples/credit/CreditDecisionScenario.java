@@ -91,7 +91,7 @@ public class CreditDecisionScenario {
         final WorkItemCreateRequest request = WorkItemCreateRequest.builder()
                 .title("Loan review: LOAN-8821")
                 .description("Regulated credit decision for personal loan application LOAN-8821")
-                .category("credit-decision")
+                .types(List.of("credit-decision"))
                 .priority(WorkItemPriority.HIGH)
                 .createdBy(ACTOR_CREATOR)
                 .payload("{\"loanId\": \"LOAN-8821\", \"amount\": 25000, \"currency\": \"GBP\"}")

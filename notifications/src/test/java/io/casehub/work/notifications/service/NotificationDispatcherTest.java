@@ -28,37 +28,37 @@ class NotificationDispatcherTest {
     }
 
     @Test
-    void matchesCategory_true_whenRuleCategoryIsNull() {
-        // null category = wildcard — matches any category
+    void matchesTypes_true_whenRuleTypesIsNull() {
+        // null types = wildcard — matches any types
         final WorkItemNotificationRule rule = ruleFor("ASSIGNED", null);
-        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", "loan")).isTrue();
-        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", "legal")).isTrue();
-        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", null)).isTrue();
+        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of("loan"))).isTrue();
+        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of("legal"))).isTrue();
+        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of())).isTrue();
     }
 
     @Test
-    void matchesCategory_true_whenCategoryMatches() {
+    void matchesTypes_true_whenTypesMatch() {
         final WorkItemNotificationRule rule = ruleFor("ASSIGNED", "loan-application");
-        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", "loan-application")).isTrue();
+        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of("loan-application"))).isTrue();
     }
 
     @Test
-    void matchesCategory_false_whenCategoryDiffers() {
+    void matchesTypes_false_whenTypesDiffer() {
         final WorkItemNotificationRule rule = ruleFor("ASSIGNED", "loan-application");
-        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", "legal")).isFalse();
+        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of("legal"))).isFalse();
     }
 
     @Test
-    void matchesCategory_false_whenWorkItemCategoryIsNullButRuleHasCategory() {
+    void matchesTypes_false_whenWorkItemTypesEmptyButRuleHasTypes() {
         final WorkItemNotificationRule rule = ruleFor("ASSIGNED", "loan-application");
-        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", null)).isFalse();
+        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of())).isFalse();
     }
 
     @Test
     void disabledRule_neverMatches() {
         final WorkItemNotificationRule rule = ruleFor("ASSIGNED", null);
         rule.enabled = false;
-        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", null)).isFalse();
+        assertThat(NotificationDispatcher.matches(rule, "ASSIGNED", java.util.List.of())).isFalse();
     }
 
     @Test
@@ -68,25 +68,25 @@ class NotificationDispatcherTest {
         final WorkItemNotificationRule r3 = ruleFor("ASSIGNED,COMPLETED", "loan");
         final List<WorkItemNotificationRule> rules = List.of(r1, r2, r3);
 
-        final List<WorkItemNotificationRule> matched = NotificationDispatcher.filterMatching(rules, "ASSIGNED", "loan");
+        final List<WorkItemNotificationRule> matched = NotificationDispatcher.filterMatching(rules, "ASSIGNED", java.util.List.of("loan"));
         assertThat(matched).containsExactlyInAnyOrder(r1, r3);
     }
 
     @Test
     void filterMatchingRules_emptyList_returnsEmpty() {
-        assertThat(NotificationDispatcher.filterMatching(List.of(), "ASSIGNED", "loan"))
+        assertThat(NotificationDispatcher.filterMatching(List.of(), "ASSIGNED", java.util.List.of("loan")))
                 .isEmpty();
     }
 
     // ── helper ────────────────────────────────────────────────────────────────
 
-    private static WorkItemNotificationRule ruleFor(final String eventTypes, final String category) {
+    private static WorkItemNotificationRule ruleFor(final String eventTypes, final String types) {
         final WorkItemNotificationRule rule = new WorkItemNotificationRule();
         rule.id = UUID.randomUUID();
         rule.channelType = "test";
         rule.targetUrl = "https://example.com/hook";
         rule.eventTypes = eventTypes;
-        rule.category = category;
+        rule.types = types;
         rule.enabled = true;
         return rule;
     }

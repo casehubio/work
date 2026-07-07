@@ -137,12 +137,13 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
             params.put("priority", query.priority());
         }
 
-        if (query.category() != null) {
+        if (query.type() != null) {
             if (jpql.length() > 0) {
                 jpql.append(" AND ");
             }
-            jpql.append("category = :category");
-            params.put("category", query.category());
+            jpql.append("id IN (SELECT w.id FROM WorkItem w JOIN w.types t WHERE t.path = :type OR t.path LIKE :typePrefix)");
+            params.put("type", query.type());
+            params.put("typePrefix", query.type() + "/%");
         }
 
         if (query.outcome() != null) {

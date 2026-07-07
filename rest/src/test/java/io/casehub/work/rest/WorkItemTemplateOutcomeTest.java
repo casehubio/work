@@ -35,7 +35,7 @@ class WorkItemTemplateOutcomeTest {
     void createTemplate_withOutcomes_storesAndReturnsOutcomesList() {
         given().contentType(ContentType.JSON)
                 .body("""
-                        {"name":"Loan Approval","category":"finance",
+                        {"name":"Loan Approval","typePaths":"[\\"finance\\\"]",
                          "outcomes":[
                            {"name":"approved","displayName":"Approved"},
                            {"name":"rejected","displayName":"Rejected"},
@@ -57,7 +57,7 @@ class WorkItemTemplateOutcomeTest {
     void createTemplate_withoutOutcomes_returnsNullOrEmptyOutcomes() {
         given().contentType(ContentType.JSON)
                 .body("""
-                        {"name":"Free-form Task","category":"general","createdBy":"admin"}
+                        {"name":"Free-form Task","typePaths":"[\\"general\\\"]","createdBy":"admin"}
                         """)
                 .post("/workitem-templates")
                 .then()
@@ -71,7 +71,7 @@ class WorkItemTemplateOutcomeTest {
         // Create template with outcomes
         final String templateId = given().contentType(ContentType.JSON)
                 .body("""
-                        {"name":"Review Task","category":"review",
+                        {"name":"Review Task","typePaths":"[\\"review\\\"]",
                          "outcomes":[
                            {"name":"approved","displayName":"Approved"},
                            {"name":"needs-revision","displayName":"Needs Revision"}
@@ -102,7 +102,7 @@ class WorkItemTemplateOutcomeTest {
     void instantiateTemplate_withoutOutcomes_permittedOutcomesIsNull() {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("""
-                        {"name":"Simple Task","category":"ops","createdBy":"admin"}
+                        {"name":"Simple Task","typePaths":"[\\"ops\\\"]","createdBy":"admin"}
                         """)
                 .post("/workitem-templates")
                 .then()

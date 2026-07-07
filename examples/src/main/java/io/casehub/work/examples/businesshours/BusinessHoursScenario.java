@@ -65,7 +65,7 @@ public class BusinessHoursScenario {
         final WorkItem wi = workItemService.create(WorkItemCreateRequest.builder()
                 .title("Loan application review — 48 business-hour SLA")
                 .description("Review and approve or reject the loan application within 48 business hours.")
-                .category("loan-approval")
+                .types(List.of("loan-approval"))
                 .priority(WorkItemPriority.HIGH)
                 .candidateGroups("loan-officers")
                 .createdBy("finance-system")

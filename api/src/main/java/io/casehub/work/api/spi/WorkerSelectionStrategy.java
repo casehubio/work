@@ -30,7 +30,7 @@ public interface WorkerSelectionStrategy {
     /**
      * Select an assignment outcome from the resolved candidate list.
      *
-     * @param context minimal WorkItem context (category, priority, capabilities, pools)
+     * @param context minimal WorkItem context (types, priority, capabilities, pools)
      * @param candidates resolved candidates with pre-populated {@code activeWorkItemCount}
      * @return assignment decision; never null — use {@link AssignmentDecision#noChange()}
      *         to leave the WorkItem unassigned

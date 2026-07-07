@@ -2,6 +2,7 @@ package io.casehub.work.api;
 
 import io.casehub.work.api.spi.WorkerSelectionStrategy;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -9,7 +10,7 @@ import java.util.Set;
  *
  * <p>Decouples strategies from the WorkItem JPA entity.
  *
- * @param category WorkItem category (may be null)
+ * @param types WorkItem type paths (may be null or empty)
  * @param priority WorkItemPriority name e.g. "HIGH" (may be null)
  * @param requiredCapabilities capabilities the assignee must possess (empty set = no requirement);
  *     matched against worker capability tags using exact case-sensitive equality
@@ -20,7 +21,7 @@ import java.util.Set;
  * @param excludedUsers comma-separated user IDs excluded from this WorkItem (may be null)
  */
 public record SelectionContext(
-        String category,
+        List<String> types,
         String priority,
         Set<Capability> requiredCapabilities,
         String candidateGroups,

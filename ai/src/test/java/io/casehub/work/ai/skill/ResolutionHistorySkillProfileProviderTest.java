@@ -19,7 +19,9 @@ class ResolutionHistorySkillProfileProviderTest {
         final var wi = new WorkItem();
         wi.id = UUID.randomUUID();
         wi.assigneeId = assignee;
-        wi.category = category;
+        if (category != null) {
+            wi.types.add(new io.casehub.work.runtime.model.WorkItemType(category));
+        }
         wi.status = WorkItemStatus.COMPLETED;
         wi.completedAt = completedAt;
         wi.title = "T";

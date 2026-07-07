@@ -8,5 +8,5 @@ public record ActorReport(
         long totalCompleted,
         long totalRejected,
         Double avgCompletionMinutes,
-        Map<String, Long> byCategory) {
+        Map<String, Long> byType) {
 }

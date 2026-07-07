@@ -71,7 +71,7 @@ public class NotificationDispatcher {
     void onWorkItemEvent(@Observes(during = TransactionPhase.AFTER_SUCCESS) final WorkItemLifecycleEvent event) {
         final WorkItem wi = event.workItem();
         final String eventTypeName = event.eventType().name();
-        final String category = wi.category;
+        final List<String> types = wi.types.stream().map(t -> t.path).toList();
         final String tenancyId = wi.tenancyId;
 
         // Load rules in a new transaction (AFTER_SUCCESS means we're outside the original tx)
@@ -83,7 +83,7 @@ public class NotificationDispatcher {
             return;
         }
 
-        final List<WorkItemNotificationRule> matched = filterMatching(candidates, eventTypeName, category);
+        final List<WorkItemNotificationRule> matched = filterMatching(candidates, eventTypeName, types);
         if (matched.isEmpty()) {
             return;
         }
@@ -100,7 +100,7 @@ public class NotificationDispatcher {
 
             final NotificationPayload payload = new NotificationPayload(
                     event, rule.id, rule.channelType, rule.targetUrl,
-                    rule.secret, rule.category);
+                    rule.secret, rule.types);
 
             CompletableFuture.runAsync(() -> {
                 tenantContextRunner.runInTenantContext(tenancyId, () -> {
@@ -118,34 +118,34 @@ public class NotificationDispatcher {
     // ── package-private statics for unit testing ──────────────────────────────
 
     /**
-     * Returns {@code true} if the rule matches the given event type and category.
+     * Returns {@code true} if the rule matches the given event type and types.
      * Exposed for unit testing without CDI or database.
      */
     static boolean matches(final WorkItemNotificationRule rule,
-            final String eventType, final String category) {
+            final String eventType, final List<String> types) {
         if (!rule.enabled) {
             return false;
         }
         if (!rule.parsedEventTypes().contains(eventType)) {
             return false;
         }
-        // null rule category = wildcard; otherwise must match exactly
-        if (rule.category != null && !rule.category.equals(category)) {
+        // null rule types = wildcard; otherwise must match one of the types
+        if (rule.types != null && !types.contains(rule.types)) {
             return false;
         }
         return true;
     }
 
     /**
-     * Filter a list of rules to those matching the given event type and category.
+     * Filter a list of rules to those matching the given event type and types.
      * Exposed for unit testing without CDI or database.
      */
     static List<WorkItemNotificationRule> filterMatching(
             final List<WorkItemNotificationRule> rules,
             final String eventType,
-            final String category) {
+            final List<String> types) {
         return rules.stream()
-                .filter(r -> matches(r, eventType, category))
+                .filter(r -> matches(r, eventType, types))
                 .toList();
     }
 

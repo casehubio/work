@@ -39,7 +39,7 @@ public class TeamsNotificationChannel implements NotificationChannel {
             final WorkItem wi = ((WorkItemLifecycleEvent) payload.event()).workItem();
             final String eventType = payload.event().eventType().name();
             final String title = "[" + eventType + "] " + wi.title;
-            final String body = "Category: " + wi.category
+            final String body = "Types: " + String.join(", ", wi.types.stream().map(t -> t.path).toList())
                     + " | Status: " + (wi.status != null ? wi.status.name() : "—")
                     + (wi.assigneeId != null ? " | Assignee: " + wi.assigneeId : "")
                     + (wi.priority != null ? " | Priority: " + wi.priority.name() : "");

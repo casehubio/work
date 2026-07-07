@@ -29,11 +29,11 @@ class QueueHealthReportTest {
 
     @Test
     void pendingCount_includesPendingItems() {
-        final String cat = "pending-" + System.nanoTime();
-        createItem(cat, null, null);
-        createItem(cat, null, null);
+        final String type = "pending-" + System.nanoTime();
+        createItem(type, null, null);
+        createItem(type, null, null);
 
-        final int count = given().queryParam("category", cat)
+        final int count = given().queryParam("type", type)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().path("pendingCount");
         assertThat(count).isGreaterThanOrEqualTo(2);
@@ -41,14 +41,14 @@ class QueueHealthReportTest {
 
     @Test
     void pendingCount_excludesCompletedItems() {
-        final String cat = "pend-excl-" + System.nanoTime();
-        final String id = createItem(cat, null, null);
+        final String type = "pend-excl-" + System.nanoTime();
+        final String id = createItem(type, null, null);
         given().put("/workitems/" + id + "/claim?claimant=actor").then().statusCode(200);
         given().put("/workitems/" + id + "/start?actor=actor").then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
                 .put("/workitems/" + id + "/complete?actor=actor").then().statusCode(200);
 
-        final int count = given().queryParam("category", cat)
+        final int count = given().queryParam("type", type)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().path("pendingCount");
         assertThat(count).isZero();
@@ -56,10 +56,10 @@ class QueueHealthReportTest {
 
     @Test
     void overdueCount_includesActiveItemsPastExpiry() {
-        final String cat = "overdue-" + System.nanoTime();
-        createItem(cat, Instant.now().minus(5, ChronoUnit.MINUTES).toString(), null);
+        final String type = "overdue-" + System.nanoTime();
+        createItem(type, Instant.now().minus(5, ChronoUnit.MINUTES).toString(), null);
 
-        final int overdue = given().queryParam("category", cat)
+        final int overdue = given().queryParam("type", type)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(overdue).isGreaterThanOrEqualTo(1);
@@ -67,14 +67,14 @@ class QueueHealthReportTest {
 
     @Test
     void overdueCount_excludesCompletedItems() {
-        final String cat = "overdue-compl-" + System.nanoTime();
-        final String id = createItem(cat, Instant.now().minus(5, ChronoUnit.MINUTES).toString(), null);
+        final String type = "overdue-compl-" + System.nanoTime();
+        final String id = createItem(type, Instant.now().minus(5, ChronoUnit.MINUTES).toString(), null);
         given().put("/workitems/" + id + "/claim?claimant=a").then().statusCode(200);
         given().put("/workitems/" + id + "/start?actor=a").then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
                 .put("/workitems/" + id + "/complete?actor=a").then().statusCode(200);
 
-        final int overdue = given().queryParam("category", cat)
+        final int overdue = given().queryParam("type", type)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(overdue).isZero();
@@ -82,10 +82,10 @@ class QueueHealthReportTest {
 
     @Test
     void overdueCount_excludesFutureExpiry() {
-        final String cat = "not-overdue-" + System.nanoTime();
-        createItem(cat, Instant.now().plus(1, ChronoUnit.HOURS).toString(), null);
+        final String type = "not-overdue-" + System.nanoTime();
+        createItem(type, Instant.now().plus(1, ChronoUnit.HOURS).toString(), null);
 
-        final int overdue = given().queryParam("category", cat)
+        final int overdue = given().queryParam("type", type)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(overdue).isZero();
@@ -93,12 +93,12 @@ class QueueHealthReportTest {
 
     @Test
     void criticalOverdueCount_isSubsetOfOverdueCount() {
-        final String cat = "crit-" + System.nanoTime();
+        final String type = "crit-" + System.nanoTime();
         final String past = Instant.now().minus(5, ChronoUnit.MINUTES).toString();
-        createItem(cat, past, "URGENT");
-        createItem(cat, past, "MEDIUM");
+        createItem(type, past, "URGENT");
+        createItem(type, past, "MEDIUM");
 
-        final var resp = given().queryParam("category", cat)
+        final var resp = given().queryParam("type", type)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().response();
 
@@ -110,10 +110,10 @@ class QueueHealthReportTest {
 
     @Test
     void avgPendingAgeSeconds_isNonNegative() {
-        final String cat = "age-" + System.nanoTime();
-        createItem(cat, null, null);
+        final String type = "age-" + System.nanoTime();
+        createItem(type, null, null);
 
-        final int age = given().queryParam("category", cat)
+        final int age = given().queryParam("type", type)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().path("avgPendingAgeSeconds");
         assertThat(age).isGreaterThanOrEqualTo(0);
@@ -121,7 +121,7 @@ class QueueHealthReportTest {
 
     @Test
     void oldestUnclaimedCreatedAt_isNullWhenNoPendingItems() {
-        given().queryParam("category", "empty-queue-" + System.nanoTime())
+        given().queryParam("type", "empty-queue-" + System.nanoTime())
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200)
                 .body("oldestUnclaimedCreatedAt", nullValue());
@@ -129,29 +129,29 @@ class QueueHealthReportTest {
 
     @Test
     void oldestUnclaimedCreatedAt_isPresentWhenPendingItemsExist() {
-        final String cat = "oldest-" + System.nanoTime();
-        createItem(cat, null, null);
+        final String type = "oldest-" + System.nanoTime();
+        createItem(type, null, null);
 
-        given().queryParam("category", cat)
+        given().queryParam("type", type)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200)
                 .body("oldestUnclaimedCreatedAt", notNullValue());
     }
 
     @Test
-    void filterByCategory_scopesAllCounts() {
-        final String catA = "qa-" + System.nanoTime();
-        final String catB = "qb-" + System.nanoTime();
+    void filterByType_scopesAllCounts() {
+        final String typeA = "qa-" + System.nanoTime();
+        final String typeB = "qb-" + System.nanoTime();
         final String past = Instant.now().minus(5, ChronoUnit.MINUTES).toString();
-        createItem(catA, past, null);
-        createItem(catB, past, null);
+        createItem(typeA, past, null);
+        createItem(typeB, past, null);
 
-        final int overdueA = given().queryParam("category", catA)
+        final int overdueA = given().queryParam("type", typeA)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(overdueA).isGreaterThanOrEqualTo(1);
 
-        final int overdueB = given().queryParam("category", catB)
+        final int overdueB = given().queryParam("type", typeB)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(overdueB).isGreaterThanOrEqualTo(1);
@@ -159,12 +159,12 @@ class QueueHealthReportTest {
 
     @Test
     void filterByPriority_scopesOverdueToPriority() {
-        final String cat = "prio-qh-" + System.nanoTime();
+        final String type = "prio-qh-" + System.nanoTime();
         final String past = Instant.now().minus(5, ChronoUnit.MINUTES).toString();
-        createItem(cat, past, "HIGH");
-        createItem(cat, past, "LOW");
+        createItem(type, past, "HIGH");
+        createItem(type, past, "LOW");
 
-        final int highOverdue = given().queryParam("category", cat).queryParam("priority", "HIGH")
+        final int highOverdue = given().queryParam("type", type).queryParam("priority", "HIGH")
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(highOverdue).isEqualTo(1);
@@ -179,14 +179,14 @@ class QueueHealthReportTest {
 
     @Test
     void allItemsCompleted_allCountsZero() {
-        final String cat = "allcompl-" + System.nanoTime();
-        final String id = createItem(cat, null, null);
+        final String type = "allcompl-" + System.nanoTime();
+        final String id = createItem(type, null, null);
         given().put("/workitems/" + id + "/claim?claimant=a").then().statusCode(200);
         given().put("/workitems/" + id + "/start?actor=a").then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
                 .put("/workitems/" + id + "/complete?actor=a").then().statusCode(200);
 
-        final var resp = given().queryParam("category", cat)
+        final var resp = given().queryParam("type", type)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().response();
 
@@ -198,19 +198,19 @@ class QueueHealthReportTest {
 
     @Test
     void e2e_mixedQueue_allFieldsCorrect() {
-        final String cat = "e2e-qh-" + System.nanoTime();
+        final String type = "e2e-qh-" + System.nanoTime();
         final String past = Instant.now().minus(5, ChronoUnit.MINUTES).toString();
 
-        createItem(cat, past, "URGENT"); // overdue + critical overdue
-        createItem(cat, null, null); // pending, not overdue
+        createItem(type, past, "URGENT"); // overdue + critical overdue
+        createItem(type, null, null); // pending, not overdue
 
-        final String doneId = createItem(cat, null, null);
+        final String doneId = createItem(type, null, null);
         given().put("/workitems/" + doneId + "/claim?claimant=a").then().statusCode(200);
         given().put("/workitems/" + doneId + "/start?actor=a").then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
                 .put("/workitems/" + doneId + "/complete?actor=a").then().statusCode(200);
 
-        final var resp = given().queryParam("category", cat)
+        final var resp = given().queryParam("type", type)
                 .get("/workitems/reports/queue-health")
                 .then().statusCode(200).extract().response();
 
@@ -221,9 +221,9 @@ class QueueHealthReportTest {
         assertThat((Integer) resp.path("avgPendingAgeSeconds")).isGreaterThanOrEqualTo(0);
     }
 
-    private String createItem(final String category, final String expiresAt, final String priority) {
-        final StringBuilder body = new StringBuilder("{\"title\":\"QH Test\",\"category\":\"")
-                .append(category).append("\",\"createdBy\":\"test\"");
+    private String createItem(final String type, final String expiresAt, final String priority) {
+        final StringBuilder body = new StringBuilder("{\"title\":\"QH Test\",\"types\":[\"")
+                .append(type).append("\"],\"createdBy\":\"test\"");
         if (expiresAt != null) {
             body.append(",\"expiresAt\":\"").append(expiresAt).append("\"");
         }

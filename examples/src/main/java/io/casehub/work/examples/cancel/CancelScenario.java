@@ -80,7 +80,7 @@ public class CancelScenario {
         final WorkItemCreateRequest request = WorkItemCreateRequest.builder()
                 .title("Software licence request: JetBrains IDE")
                 .description("Individual developer licence for IntelliJ IDEA Ultimate Edition")
-                .category("procurement")
+                .types(List.of("procurement"))
                 .priority(WorkItemPriority.MEDIUM)
                 .candidateUsers(ACTOR_MANAGER)
                 .createdBy(ACTOR_CREATOR)

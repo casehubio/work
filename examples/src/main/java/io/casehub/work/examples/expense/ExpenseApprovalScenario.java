@@ -76,7 +76,7 @@ public class ExpenseApprovalScenario {
         final WorkItemCreateRequest request = WorkItemCreateRequest.builder()
                 .title("Expense report: team offsite Q2")
                 .description("Team offsite expenses for Q2, including travel and accommodation")
-                .category("expense-approval")
+                .types(List.of("expense-approval"))
                 .priority(WorkItemPriority.HIGH)
                 .assigneeId(ACTOR_ASSIGNEE)
                 .createdBy(ACTOR_CREATOR)

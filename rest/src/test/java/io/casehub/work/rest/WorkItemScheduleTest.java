@@ -164,7 +164,7 @@ class WorkItemScheduleTest {
         assertThat(created).isGreaterThanOrEqualTo(1);
 
         // Verify a WorkItem was created with the template's category
-        given().queryParam("category", "schedule-test-cat")
+        given().queryParam("type", "schedule-test-cat")
                 .get("/workitems")
                 .then().statusCode(200)
                 .body("$", org.hamcrest.Matchers.hasSize(greaterThanOrEqualTo(1)));
@@ -174,7 +174,7 @@ class WorkItemScheduleTest {
 
     private String createTemplate() {
         return given().contentType(ContentType.JSON)
-                .body("{\"name\":\"Schedule template\",\"category\":\"schedule-test-cat\",\"createdBy\":\"admin\"}")
+                .body("{\"name\":\"Schedule template\",\"typePaths\":\"schedule-test-cat\",\"createdBy\":\"admin\"}")
                 .post("/workitem-templates").then().statusCode(201).extract().path("id");
     }
 

@@ -4,7 +4,7 @@ import java.time.Instant;
 
 public record SlaBreachItem(
         String workItemId,
-        String category,
+        String types,
         String priority,
         Instant expiresAt,
         Instant completedAt,

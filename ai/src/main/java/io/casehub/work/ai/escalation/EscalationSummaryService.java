@@ -128,8 +128,10 @@ public class EscalationSummaryService {
         if (wi.description != null && !wi.description.isBlank()) {
             sb.append("Description: ").append(wi.description).append("\n");
         }
-        if (wi.category != null) {
-            sb.append("Category: ").append(wi.category).append("\n");
+        if (!wi.types.isEmpty()) {
+            sb.append("Types: ").append(wi.types.stream()
+                    .map(t -> t.path)
+                    .collect(java.util.stream.Collectors.joining(", "))).append("\n");
         }
         sb.append("Escalation reason: ").append(escalationReason).append("\n\n");
 

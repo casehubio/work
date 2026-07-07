@@ -38,7 +38,7 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
     public String tenancyId;
     public String title;
     public String description;
-    public String category;
+    public List<String> types = new ArrayList<>();
     public String formKey;
     public String status;
     public String priority;
@@ -94,7 +94,7 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
         doc.tenancyId = wi.tenancyId;
         doc.title = wi.title;
         doc.description = wi.description;
-        doc.category = wi.category;
+        doc.types = wi.types.stream().map(t -> t.path).toList();
         doc.formKey = wi.formKey;
         doc.status = wi.status != null ? wi.status.name() : null;
         doc.priority = wi.priority != null ? wi.priority.name() : null;
@@ -153,7 +153,9 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
         wi.tenancyId = tenancyId;
         wi.title = title;
         wi.description = description;
-        wi.category = category;
+        for (final String typePath : types) {
+            wi.types.add(new io.casehub.work.runtime.model.WorkItemType(typePath));
+        }
         wi.formKey = formKey;
         wi.status = status != null ? WorkItemStatus.valueOf(status) : null;
         wi.priority = priority != null ? WorkItemPriority.valueOf(priority) : null;

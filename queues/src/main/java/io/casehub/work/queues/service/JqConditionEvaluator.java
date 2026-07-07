@@ -42,7 +42,7 @@ public class JqConditionEvaluator implements WorkItemExpressionEvaluator {
         map.put("priority", wi.priority != null ? wi.priority.name() : null);
         map.put("assigneeId", wi.assigneeId);
         map.put("candidateGroups", wi.candidateGroups);
-        map.put("category", wi.category);
+        map.put("types", wi.types.stream().map(t -> t.path).toList());
         map.put("title", wi.title);
         map.put("description", wi.description);
         map.put("labels", wi.labels != null

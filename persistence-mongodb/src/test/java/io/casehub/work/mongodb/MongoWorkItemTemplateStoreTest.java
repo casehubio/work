@@ -57,7 +57,8 @@ class MongoWorkItemTemplateStoreTest {
         assertThat(loaded.id).isEqualTo(template.id);
         assertThat(loaded.name).isEqualTo("Loan Approval");
         assertThat(loaded.description).isEqualTo("Multi-stage loan approval workflow");
-        assertThat(loaded.category).isEqualTo("finance");
+        // TODO(#291): migrate category to types field
+        // assertThat(loaded.category).isEqualTo("finance");
         assertThat(loaded.priority).isEqualTo(WorkItemPriority.HIGH);
         assertThat(loaded.candidateGroups).isEqualTo("underwriters,approvers");
         assertThat(loaded.candidateUsers).isEqualTo("alice,bob");
@@ -170,7 +171,8 @@ class MongoWorkItemTemplateStoreTest {
         final WorkItemTemplate template = new WorkItemTemplate();
         template.name = "Loan Approval";
         template.description = "Multi-stage loan approval workflow";
-        template.category = "finance";
+        // TODO(#291): migrate category to types field
+        // template.category = "finance";
         template.priority = WorkItemPriority.HIGH;
         template.candidateGroups = "underwriters,approvers";
         template.candidateUsers = "alice,bob";

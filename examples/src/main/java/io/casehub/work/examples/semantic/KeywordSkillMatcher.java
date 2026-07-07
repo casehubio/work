@@ -49,7 +49,7 @@ public class KeywordSkillMatcher implements SkillMatcher {
     }
 
     private String requirementText(final SelectionContext ctx) {
-        return Stream.of(ctx.title(), ctx.description(), ctx.category())
+        return Stream.of(ctx.title(), ctx.description(), (ctx.types() != null ? String.join(" ", ctx.types()) : ""))
                 .filter(s -> s != null && !s.isBlank())
                 .collect(Collectors.joining(" "));
     }

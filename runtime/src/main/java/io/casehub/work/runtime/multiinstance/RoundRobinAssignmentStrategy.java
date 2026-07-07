@@ -95,7 +95,7 @@ public class RoundRobinAssignmentStrategy implements InstanceAssignmentStrategy 
             final String filteredUsers = filterOut(parent.candidateUsers, excluded);
 
             final SelectionContext selCtx = new SelectionContext(
-                    child.category,
+                    child.types != null ? child.types.stream().map(t -> t.path).toList() : List.of(),
                     child.priority != null ? child.priority.name() : null,
                     CapabilityParser.parseLenient(child.requiredCapabilities),
                     parent.candidateGroups,

@@ -37,10 +37,10 @@ class FilterRegistryEngineTest {
         engine = new FilterRegistryEngine(new JexlConditionEvaluator(), List.of(capturingAction));
     }
 
-    private WorkItemLifecycleEvent event(final WorkEventType type, final String category) {
+    private WorkItemLifecycleEvent event(final WorkEventType type, final String title) {
         final WorkItem wi = new WorkItem();
         wi.id = UUID.randomUUID();
-        wi.category = category;
+        wi.title = title;
         wi.status = io.casehub.work.api.WorkItemStatus.PENDING;
         return WorkItemLifecycleEvent.of(type.name(), wi, "test", null);
     }
@@ -48,18 +48,18 @@ class FilterRegistryEngineTest {
     @Test
     void matchingCondition_actionFired() {
         final var def = FilterDefinition.onAdd("test", "desc", true,
-                "workItem.category == 'finance'", Map.of(),
+                "workItem.title == 'finance'", Map.of(),
                 List.of(ActionDescriptor.of("CAPTURE", Map.of())));
         final var evt = event(WorkEventType.CREATED, "finance");
         engine.processEvent(evt, List.of(def));
         assertThat(capturedWorkItems).hasSize(1);
-        assertThat(capturedWorkItems.get(0).category).isEqualTo("finance");
+        assertThat(capturedWorkItems.get(0).title).isEqualTo("finance");
     }
 
     @Test
     void nonMatchingCondition_actionNotFired() {
         final var def = FilterDefinition.onAdd("test", "desc", true,
-                "workItem.category == 'legal'", Map.of(),
+                "workItem.title == 'legal'", Map.of(),
                 List.of(ActionDescriptor.of("CAPTURE", Map.of())));
         final var evt = event(WorkEventType.CREATED, "finance");
         engine.processEvent(evt, List.of(def));
@@ -69,7 +69,7 @@ class FilterRegistryEngineTest {
     @Test
     void disabledDefinition_actionNotFired() {
         final var def = FilterDefinition.onAdd("test", "desc", false,
-                "workItem.category == 'finance'", Map.of(),
+                "workItem.title == 'finance'", Map.of(),
                 List.of(ActionDescriptor.of("CAPTURE", Map.of())));
         final var evt = event(WorkEventType.CREATED, "finance");
         engine.processEvent(evt, List.of(def));
@@ -79,7 +79,7 @@ class FilterRegistryEngineTest {
     @Test
     void wrongEventType_actionNotFired() {
         final var def = FilterDefinition.onAdd("test", "desc", true,
-                "workItem.category == 'finance'", Map.of(),
+                "workItem.title == 'finance'", Map.of(),
                 List.of(ActionDescriptor.of("CAPTURE", Map.of())));
         final var evt = event(WorkEventType.ASSIGNED, "finance");
         engine.processEvent(evt, List.of(def));
@@ -89,7 +89,7 @@ class FilterRegistryEngineTest {
     @Test
     void unknownActionType_ignoredGracefully() {
         final var def = FilterDefinition.onAdd("test", "desc", true,
-                "workItem.category == 'finance'", Map.of(),
+                "workItem.title == 'finance'", Map.of(),
                 List.of(ActionDescriptor.of("UNKNOWN_ACTION", Map.of())));
         final var evt = event(WorkEventType.CREATED, "finance");
         engine.processEvent(evt, List.of(def));
@@ -112,7 +112,7 @@ class FilterRegistryEngineTest {
         };
         engine = new FilterRegistryEngine(new JexlConditionEvaluator(), List.of(selfFiringAction));
         final var def = FilterDefinition.onAdd("test", "desc", true,
-                "workItem.category == 'finance'", Map.of(),
+                "workItem.title == 'finance'", Map.of(),
                 List.of(ActionDescriptor.of("SELF_FIRE", Map.of())));
         final var evt = event(WorkEventType.CREATED, "finance");
         engine.processEvent(evt, List.of(def));

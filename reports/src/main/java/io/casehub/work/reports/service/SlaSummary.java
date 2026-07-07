@@ -5,5 +5,5 @@ import java.util.Map;
 public record SlaSummary(
         long totalBreached,
         double avgBreachDurationMinutes,
-        Map<String, Long> byCategory) {
+        Map<String, Long> byType) {
 }

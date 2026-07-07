@@ -20,7 +20,7 @@ class WorkItemCreateRequestTest {
         final io.casehub.work.api.WorkItemCreateRequest req = io.casehub.work.api.WorkItemCreateRequest.builder()
                                                                                                        .title("Review contract")
                                                                                                        .description("desc")
-                                                                                                       .category("legal")
+                                                                                                       .types(List.of("legal"))
                                                                                                        .formKey("form-1")
                                                                                                        .priority(io.casehub.work.api.WorkItemPriority.HIGH)
                                                                                                        .assigneeId("alice")
@@ -47,7 +47,7 @@ class WorkItemCreateRequestTest {
 
         assertEquals("Review contract", req.title);
         assertEquals("desc", req.description);
-        assertEquals("legal", req.category);
+        assertEquals(List.of("legal"), req.types);
         assertEquals("form-1", req.formKey);
         assertEquals(io.casehub.work.api.WorkItemPriority.HIGH, req.priority);
         assertEquals("alice", req.assigneeId);
@@ -80,7 +80,7 @@ class WorkItemCreateRequestTest {
 
         assertEquals("Minimal", req.title);
         assertNull(req.description);
-        assertNull(req.category);
+        assertNull(req.types);
         assertNull(req.formKey);
         assertNull(req.priority);
         assertNull(req.assigneeId);
@@ -127,7 +127,7 @@ class WorkItemCreateRequestTest {
         final io.casehub.work.api.WorkItemCreateRequest original = io.casehub.work.api.WorkItemCreateRequest.builder()
                                                                                                             .title("original")
                                                                                                             .description("desc")
-                                                                                                            .category("legal")
+                                                                                                            .types(List.of("legal"))
                                                                                                             .formKey("form-1")
                                                                                                             .priority(io.casehub.work.api.WorkItemPriority.HIGH)
                                                                                                             .assigneeId("alice")
@@ -156,7 +156,7 @@ class WorkItemCreateRequestTest {
 
         assertEquals("copy", copy.title);
         assertEquals("desc", copy.description);
-        assertEquals("legal", copy.category);
+        assertEquals(List.of("legal"), copy.types);
         assertEquals("form-1", copy.formKey);
         assertEquals(io.casehub.work.api.WorkItemPriority.HIGH, copy.priority);
         assertEquals("alice", copy.assigneeId);
@@ -194,9 +194,9 @@ class WorkItemCreateRequestTest {
 
     @Test
     void equals_andHashCode_areConsistent() {
-        final io.casehub.work.api.WorkItemCreateRequest a = io.casehub.work.api.WorkItemCreateRequest.builder().title("x").category("y").build();
-        final io.casehub.work.api.WorkItemCreateRequest b = io.casehub.work.api.WorkItemCreateRequest.builder().title("x").category("y").build();
-        final io.casehub.work.api.WorkItemCreateRequest c = io.casehub.work.api.WorkItemCreateRequest.builder().title("x").category("z").build();
+        final io.casehub.work.api.WorkItemCreateRequest a = io.casehub.work.api.WorkItemCreateRequest.builder().title("x").types(List.of("y")).build();
+        final io.casehub.work.api.WorkItemCreateRequest b = io.casehub.work.api.WorkItemCreateRequest.builder().title("x").types(List.of("y")).build();
+        final io.casehub.work.api.WorkItemCreateRequest c = io.casehub.work.api.WorkItemCreateRequest.builder().title("x").types(List.of("z")).build();
 
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());

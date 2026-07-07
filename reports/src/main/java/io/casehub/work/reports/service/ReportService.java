@@ -22,12 +22,12 @@ public class ReportService extends TenantAwareStore {
 
     @Transactional
     public SlaBreachReport slaBreaches(final Instant from, final Instant to,
-            final String category, final WorkItemPriority priority) {
-        return withTenantQuery(() -> slaBreachesInternal(from, to, category, priority));
+            final String type, final WorkItemPriority priority) {
+        return withTenantQuery(() -> slaBreachesInternal(from, to, type, priority));
     }
 
     private SlaBreachReport slaBreachesInternal(final Instant from, final Instant to,
-            final String category, final WorkItemPriority priority) {
+            final String type, final WorkItemPriority priority) {
         final Instant now = Instant.now();
 
         final StringBuilder jpql = new StringBuilder(
@@ -44,8 +44,8 @@ public class ReportService extends TenantAwareStore {
         if (to != null) {
             jpql.append(" AND w.expiresAt <= :to");
         }
-        if (category != null && !category.isBlank()) {
-            jpql.append(" AND w.category = :category");
+        if (type != null && !type.isBlank()) {
+            jpql.append(" AND EXISTS (SELECT t FROM w.types t WHERE t.path = :type)");
         }
         if (priority != null) {
             jpql.append(" AND w.priority = :priority");
@@ -66,8 +66,8 @@ public class ReportService extends TenantAwareStore {
         if (to != null) {
             q.setParameter("to", to);
         }
-        if (category != null && !category.isBlank()) {
-            q.setParameter("category", category);
+        if (type != null && !type.isBlank()) {
+            q.setParameter("type", type);
         }
         if (priority != null) {
             q.setParameter("priority", priority);
@@ -76,43 +76,46 @@ public class ReportService extends TenantAwareStore {
         final List<WorkItem> breached = q.getResultList();
 
         final List<SlaBreachItem> items = new ArrayList<>();
-        final Map<String, Long> byCategory = new LinkedHashMap<>();
+        final Map<String, Long> byType = new LinkedHashMap<>();
         long totalMinutes = 0;
 
         for (final WorkItem wi : breached) {
             final Instant end = wi.completedAt != null ? wi.completedAt : now;
             final long mins = Math.max(0, ChronoUnit.MINUTES.between(wi.expiresAt, end));
+            final String typesString = wi.types.stream()
+                    .map(t -> t.path)
+                    .collect(java.util.stream.Collectors.joining(", "));
             items.add(new SlaBreachItem(
                     wi.id.toString(),
-                    wi.category,
+                    typesString,
                     wi.priority != null ? wi.priority.name() : null,
                     wi.expiresAt,
                     wi.completedAt,
                     wi.status.name(),
                     mins));
             totalMinutes += mins;
-            if (wi.category != null) {
-                byCategory.merge(wi.category, 1L, Long::sum);
+            for (final io.casehub.work.runtime.model.WorkItemType wiType : wi.types) {
+                byType.merge(wiType.path, 1L, Long::sum);
             }
         }
 
         final double avg = breached.isEmpty() ? 0.0 : (double) totalMinutes / breached.size();
         return new SlaBreachReport(items,
-                new SlaSummary(breached.size(), Math.round(avg * 10.0) / 10.0, byCategory));
+                new SlaSummary(breached.size(), Math.round(avg * 10.0) / 10.0, byType));
     }
 
 
     @Transactional
     public ActorReport actorPerformance(final String actorId, final Instant from,
-            final Instant to, final String category) {
-        return withTenantQuery(() -> actorPerformanceInternal(actorId, from, to, category));
+            final Instant to, final String type) {
+        return withTenantQuery(() -> actorPerformanceInternal(actorId, from, to, type));
     }
 
     private ActorReport actorPerformanceInternal(final String actorId, final Instant from,
-            final Instant to, final String category) {
-        final long totalAssigned = countAuditEvents(actorId, "ASSIGNED", from, to, category);
-        final long totalCompleted = countAuditEvents(actorId, "COMPLETED", from, to, category);
-        final long totalRejected = countAuditEvents(actorId, "REJECTED", from, to, category);
+            final Instant to, final String type) {
+        final long totalAssigned = countAuditEvents(actorId, "ASSIGNED", from, to, type);
+        final long totalCompleted = countAuditEvents(actorId, "COMPLETED", from, to, type);
+        final long totalRejected = countAuditEvents(actorId, "REJECTED", from, to, type);
 
         // avg(completedAt - assignedAt) for items completed by this actor
         final StringBuilder avgJpql = new StringBuilder(
@@ -126,8 +129,8 @@ public class ReportService extends TenantAwareStore {
         if (to != null) {
             avgJpql.append(" AND w.completedAt <= :to");
         }
-        if (category != null && !category.isBlank()) {
-            avgJpql.append(" AND w.category = :category");
+        if (type != null && !type.isBlank()) {
+            avgJpql.append(" AND EXISTS (SELECT t FROM w.types t WHERE t.path = :type)");
         }
 
         final TypedQuery<Object[]> avgQ = em.createQuery(avgJpql.toString(), Object[].class);
@@ -139,8 +142,8 @@ public class ReportService extends TenantAwareStore {
         if (to != null) {
             avgQ.setParameter("to", to);
         }
-        if (category != null && !category.isBlank()) {
-            avgQ.setParameter("category", category);
+        if (type != null && !type.isBlank()) {
+            avgQ.setParameter("type", type);
         }
 
         final List<Object[]> rows = avgQ.getResultList();
@@ -154,46 +157,46 @@ public class ReportService extends TenantAwareStore {
                         .findFirst()
                         .orElse(null);
 
-        // byCategory via GROUP BY — no N+1
-        final StringBuilder catJpql = new StringBuilder(
-                "SELECT w.category, COUNT(w) FROM WorkItem w"
+        // byType — join types collection, group by type path
+        final StringBuilder typeJpql = new StringBuilder(
+                "SELECT t.path, COUNT(w) FROM WorkItem w JOIN w.types t"
                         + " WHERE w.tenancyId = :tenancyId"
                         + " AND w.assigneeId = :actorId"
                         + " AND w.status = :completed");
         if (from != null) {
-            catJpql.append(" AND w.completedAt >= :from");
+            typeJpql.append(" AND w.completedAt >= :from");
         }
         if (to != null) {
-            catJpql.append(" AND w.completedAt <= :to");
+            typeJpql.append(" AND w.completedAt <= :to");
         }
-        if (category != null && !category.isBlank()) {
-            catJpql.append(" AND w.category = :category");
+        if (type != null && !type.isBlank()) {
+            typeJpql.append(" AND t.path = :type");
         }
-        catJpql.append(" GROUP BY w.category");
+        typeJpql.append(" GROUP BY t.path");
 
-        final TypedQuery<Object[]> catQ = em.createQuery(catJpql.toString(), Object[].class);
-        catQ.setParameter("tenancyId", currentPrincipal.tenancyId());
-        catQ.setParameter("actorId", actorId);
-        catQ.setParameter("completed", WorkItemStatus.COMPLETED);
+        final TypedQuery<Object[]> typeQ = em.createQuery(typeJpql.toString(), Object[].class);
+        typeQ.setParameter("tenancyId", currentPrincipal.tenancyId());
+        typeQ.setParameter("actorId", actorId);
+        typeQ.setParameter("completed", WorkItemStatus.COMPLETED);
         if (from != null) {
-            catQ.setParameter("from", from);
+            typeQ.setParameter("from", from);
         }
         if (to != null) {
-            catQ.setParameter("to", to);
+            typeQ.setParameter("to", to);
         }
-        if (category != null && !category.isBlank()) {
-            catQ.setParameter("category", category);
+        if (type != null && !type.isBlank()) {
+            typeQ.setParameter("type", type);
         }
 
-        final Map<String, Long> byCategory = new LinkedHashMap<>();
-        for (final Object[] row : catQ.getResultList()) {
+        final Map<String, Long> byType = new LinkedHashMap<>();
+        for (final Object[] row : typeQ.getResultList()) {
             if (row[0] != null) {
-                byCategory.put((String) row[0], (Long) row[1]);
+                byType.put((String) row[0], (Long) row[1]);
             }
         }
 
         return new ActorReport(actorId, totalAssigned, totalCompleted, totalRejected,
-                avgCompletionMinutes, byCategory);
+                avgCompletionMinutes, byType);
     }
 
 
@@ -208,11 +211,11 @@ public class ReportService extends TenantAwareStore {
     }
 
     @Transactional
-    public QueueHealthReport queueHealth(final String category, final WorkItemPriority priority) {
-        return withTenantQuery(() -> queueHealthInternal(category, priority));
+    public QueueHealthReport queueHealth(final String type, final WorkItemPriority priority) {
+        return withTenantQuery(() -> queueHealthInternal(type, priority));
     }
 
-    private QueueHealthReport queueHealthInternal(final String category, final WorkItemPriority priority) {
+    private QueueHealthReport queueHealthInternal(final String type, final WorkItemPriority priority) {
         final Instant now = Instant.now();
         final List<WorkItemStatus> activeStatuses = java.util.Arrays.stream(WorkItemStatus.values())
                 .filter(WorkItemStatus::isActive).toList();
@@ -222,8 +225,8 @@ public class ReportService extends TenantAwareStore {
                 "SELECT COUNT(w) FROM WorkItem w WHERE w.tenancyId = :tenancyId"
                         + " AND w.expiresAt IS NOT NULL"
                         + " AND w.expiresAt < :now AND w.status IN :activeStatuses");
-        if (category != null && !category.isBlank()) {
-            overdueJpql.append(" AND w.category = :category");
+        if (type != null && !type.isBlank()) {
+            overdueJpql.append(" AND EXISTS (SELECT t FROM w.types t WHERE t.path = :type)");
         }
         if (priority != null) {
             overdueJpql.append(" AND w.priority = :priority");
@@ -233,8 +236,8 @@ public class ReportService extends TenantAwareStore {
         overdueQ.setParameter("tenancyId", currentPrincipal.tenancyId());
         overdueQ.setParameter("now", now);
         overdueQ.setParameter("activeStatuses", activeStatuses);
-        if (category != null && !category.isBlank()) {
-            overdueQ.setParameter("category", category);
+        if (type != null && !type.isBlank()) {
+            overdueQ.setParameter("type", type);
         }
         if (priority != null) {
             overdueQ.setParameter("priority", priority);
@@ -247,8 +250,8 @@ public class ReportService extends TenantAwareStore {
                         + " AND w.expiresAt IS NOT NULL"
                         + " AND w.expiresAt < :now AND w.status IN :activeStatuses"
                         + " AND w.priority = :critical");
-        if (category != null && !category.isBlank()) {
-            critJpql.append(" AND w.category = :category");
+        if (type != null && !type.isBlank()) {
+            critJpql.append(" AND EXISTS (SELECT t FROM w.types t WHERE t.path = :type)");
         }
 
         final TypedQuery<Long> critQ = em.createQuery(critJpql.toString(), Long.class);
@@ -256,8 +259,8 @@ public class ReportService extends TenantAwareStore {
         critQ.setParameter("now", now);
         critQ.setParameter("activeStatuses", activeStatuses);
         critQ.setParameter("critical", WorkItemPriority.URGENT);
-        if (category != null && !category.isBlank()) {
-            critQ.setParameter("category", category);
+        if (type != null && !type.isBlank()) {
+            critQ.setParameter("type", type);
         }
         final long criticalOverdueCount = critQ.getSingleResult();
 
@@ -265,8 +268,8 @@ public class ReportService extends TenantAwareStore {
         final StringBuilder pendingJpql = new StringBuilder(
                 "SELECT w.createdAt FROM WorkItem w WHERE w.tenancyId = :tenancyId"
                         + " AND w.status = :pending");
-        if (category != null && !category.isBlank()) {
-            pendingJpql.append(" AND w.category = :category");
+        if (type != null && !type.isBlank()) {
+            pendingJpql.append(" AND EXISTS (SELECT t FROM w.types t WHERE t.path = :type)");
         }
         if (priority != null) {
             pendingJpql.append(" AND w.priority = :priority");
@@ -275,8 +278,8 @@ public class ReportService extends TenantAwareStore {
         final TypedQuery<Instant> pendingQ = em.createQuery(pendingJpql.toString(), Instant.class);
         pendingQ.setParameter("tenancyId", currentPrincipal.tenancyId());
         pendingQ.setParameter("pending", WorkItemStatus.PENDING);
-        if (category != null && !category.isBlank()) {
-            pendingQ.setParameter("category", category);
+        if (type != null && !type.isBlank()) {
+            pendingQ.setParameter("type", type);
         }
         if (priority != null) {
             pendingQ.setParameter("priority", priority);
@@ -295,7 +298,7 @@ public class ReportService extends TenantAwareStore {
     }
 
     private long countAuditEvents(final String actorId, final String event,
-            final Instant from, final Instant to, final String category) {
+            final Instant from, final Instant to, final String type) {
         final StringBuilder jpql = new StringBuilder(
                 "SELECT COUNT(a) FROM AuditEntry a WHERE a.tenancyId = :tenancyId"
                         + " AND a.actor = :actorId AND a.event = :event");
@@ -305,9 +308,9 @@ public class ReportService extends TenantAwareStore {
         if (to != null) {
             jpql.append(" AND a.occurredAt <= :to");
         }
-        if (category != null && !category.isBlank()) {
+        if (type != null && !type.isBlank()) {
             jpql.append(" AND a.workItemId IN"
-                    + " (SELECT w.id FROM WorkItem w WHERE w.tenancyId = :tenancyId AND w.category = :category)");
+                    + " (SELECT w.id FROM WorkItem w JOIN w.types t WHERE w.tenancyId = :tenancyId AND t.path = :type)");
         }
 
         final TypedQuery<Long> q = em.createQuery(jpql.toString(), Long.class);
@@ -320,8 +323,8 @@ public class ReportService extends TenantAwareStore {
         if (to != null) {
             q.setParameter("to", to);
         }
-        if (category != null && !category.isBlank()) {
-            q.setParameter("category", category);
+        if (type != null && !type.isBlank()) {
+            q.setParameter("type", type);
         }
         return q.getSingleResult();
     }

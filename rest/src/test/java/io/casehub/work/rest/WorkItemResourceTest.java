@@ -624,7 +624,7 @@ class WorkItemResourceTest {
     }
 
     // -------------------------------------------------------------------------
-    // Gap-filling: error response bodies, priority/category filtering
+    // Gap-filling: error response bodies, priority/type filtering
     // -------------------------------------------------------------------------
 
     // Error response body format
@@ -648,7 +648,7 @@ class WorkItemResourceTest {
                 .body("error", notNullValue());
     }
 
-    // Priority and category filtering
+    // Priority and type filtering
     @Test
     void inbox_filterByPriority() {
         // Create HIGH priority item
@@ -679,20 +679,20 @@ class WorkItemResourceTest {
     void inbox_filterByCategory() {
         given().contentType(ContentType.JSON)
                 .body("""
-                        {"title":"Finance task","category":"finance","priority":"MEDIUM","createdBy":"system"}
+                        {"title":"Finance task","types":["finance"],"priority":"MEDIUM","createdBy":"system"}
                         """)
                 .when().post("/workitems")
                 .then().statusCode(201);
         String legalId = given().contentType(ContentType.JSON)
                 .body("""
-                        {"title":"Legal task","category":"legal","priority":"MEDIUM","createdBy":"system"}
+                        {"title":"Legal task","types":["legal"],"priority":"MEDIUM","createdBy":"system"}
                         """)
                 .when().post("/workitems")
                 .then().statusCode(201)
                 .extract().path("id");
 
         List<String> ids = given()
-                .queryParam("category", "finance")
+                .queryParam("type", "finance")
                 .when().get("/workitems/inbox")
                 .then().statusCode(200)
                 .extract().jsonPath().getList("id");

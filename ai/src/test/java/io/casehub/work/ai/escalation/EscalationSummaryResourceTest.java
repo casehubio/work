@@ -46,7 +46,7 @@ class EscalationSummaryResourceTest {
     void list_noEscalations_returnsEmptyList() {
         final Response create = given()
                 .contentType("application/json")
-                .body("{\"title\":\"Review contract\",\"category\":\"legal\",\"createdBy\":\"system\"}")
+                .body("{\"title\":\"Review contract\",\"types\":[\"legal\"],\"createdBy\":\"system\"}")
                 .when().post("/workitems")
                 .then().statusCode(201)
                 .extract().response();
@@ -68,7 +68,7 @@ class EscalationSummaryResourceTest {
         final WorkItemCreateRequest req = WorkItemCreateRequest.builder()
                 .title("Approve expense claim")
                 .description("Team offsite expenses Q2")
-                .category("finance")
+                .types(List.of("finance"))
                 .priority(WorkItemPriority.MEDIUM)
                 .createdBy("test-system")
                 .expiresAt(Instant.now().minusSeconds(10)) // already expired

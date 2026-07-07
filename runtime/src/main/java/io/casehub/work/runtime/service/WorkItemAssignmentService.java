@@ -129,7 +129,7 @@ public class WorkItemAssignmentService {
         final WorkerSelectionStrategy strategy = activeStrategy();
         final List<WorkerCandidate> candidates = resolveCandidates(workItem);
         final SelectionContext context = new SelectionContext(
-                workItem.category,
+                workItem.types != null ? workItem.types.stream().map(t -> t.path).toList() : java.util.List.of(),
                 workItem.priority != null ? workItem.priority.name() : null,
                 CapabilityParser.parseLenient(workItem.requiredCapabilities),
                 workItem.candidateGroups,

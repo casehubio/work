@@ -136,7 +136,7 @@ public class QueueLifecycleScenario {
         // the after-state has the queue → ADDED fires.
         final WorkItemCreateRequest createReq = WorkItemCreateRequest.builder()
                 .title("Queue lifecycle demo item")
-                .category("demo")
+                .types(List.of("demo"))
                 .priority(WorkItemPriority.HIGH)
                 .createdBy("demo")
                 .build();

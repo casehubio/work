@@ -22,6 +22,7 @@ import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.model.WorkItemTemplate;
+import io.casehub.work.runtime.service.WorkItemTemplateService;
 import io.casehub.work.runtime.service.WorkItemService;
 
 /**
@@ -132,7 +133,7 @@ public class MultiInstanceSpawnService {
         return WorkItemCreateRequest.builder()
                 .title(template.name + " [" + (index + 1) + "/" + template.instanceCount + "]")
                 .description(template.description)
-                .category(template.category)
+                .types(WorkItemTemplateService.parseTypes(template).stream().map(t -> t.path).toList())
                 .priority(template.priority)
                 .candidateGroups(template.candidateGroups)
                 .candidateUsers(template.candidateUsers)

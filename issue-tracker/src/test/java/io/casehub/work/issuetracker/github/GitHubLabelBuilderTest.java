@@ -49,7 +49,7 @@ class GitHubLabelBuilderTest {
         final WorkItem wi = workItem(WorkItemStatus.IN_PROGRESS, WorkItemPriority.HIGH, "finance");
         final List<String> labels = provider.labels(wi);
 
-        assertThat(labels).contains("priority:high", "category:finance", "status:in-progress");
+        assertThat(labels).contains("priority:high", "type:finance", "status:in-progress");
     }
 
     // ── Correctness — priority ────────────────────────────────────────────────
@@ -138,25 +138,25 @@ class GitHubLabelBuilderTest {
     @Test
     void category_producesLabel() {
         assertThat(provider.labels(workItem(WorkItemStatus.PENDING, WorkItemPriority.MEDIUM, "legal")))
-                .contains("category:legal");
+                .contains("type:legal");
     }
 
     @Test
     void category_isLowercased() {
         assertThat(provider.labels(workItem(WorkItemStatus.PENDING, WorkItemPriority.MEDIUM, "Finance")))
-                .contains("category:finance");
+                .contains("type:finance");
     }
 
     @Test
     void category_null_noLabel() {
         assertThat(provider.labels(workItem(WorkItemStatus.PENDING, WorkItemPriority.MEDIUM, null)))
-                .noneMatch(l -> l.startsWith("category:"));
+                .noneMatch(l -> l.startsWith("type:"));
     }
 
     @Test
     void category_blank_noLabel() {
         assertThat(provider.labels(workItem(WorkItemStatus.PENDING, WorkItemPriority.MEDIUM, "  ")))
-                .noneMatch(l -> l.startsWith("category:"));
+                .noneMatch(l -> l.startsWith("type:"));
     }
 
     // ── Correctness — WorkItem labels ─────────────────────────────────────────
@@ -189,7 +189,9 @@ class GitHubLabelBuilderTest {
         final WorkItem wi = new WorkItem();
         wi.status = status;
         wi.priority = priority;
-        wi.category = category;
+        if (category != null) {
+            wi.types.add(new io.casehub.work.runtime.model.WorkItemType(category));
+        }
         return wi;
     }
 }

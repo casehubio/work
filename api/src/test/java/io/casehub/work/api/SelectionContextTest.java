@@ -2,6 +2,7 @@ package io.casehub.work.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -11,10 +12,10 @@ class SelectionContextTest {
     @Test
     void constructor_setsAllFields() {
         final SelectionContext ctx = new SelectionContext(
-                "finance", "HIGH",
+                List.of("finance"), "HIGH",
                 Set.of(Capability.of("audit"), Capability.of("legal")),
                 "finance-team", "alice,bob", null, null, null);
-        assertThat(ctx.category()).isEqualTo("finance");
+        assertThat(ctx.types()).isEqualTo(List.of("finance"));
         assertThat(ctx.priority()).isEqualTo("HIGH");
         assertThat(ctx.requiredCapabilities()).containsExactlyInAnyOrder(
                 Capability.of("audit"), Capability.of("legal"));
@@ -25,7 +26,7 @@ class SelectionContextTest {
     @Test
     void constructor_acceptsNullFields() {
         final SelectionContext ctx = new SelectionContext(null, null, Set.of(), null, null, null, null, null);
-        assertThat(ctx.category()).isNull();
+        assertThat(ctx.types()).isNull();
         assertThat(ctx.candidateGroups()).isNull();
     }
 

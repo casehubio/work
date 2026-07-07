@@ -40,7 +40,7 @@ class WorkItemCloneTest {
                 .post("/workitems/" + sourceId + "/clone")
                 .then().statusCode(201)
                 .body("title", containsString("Full item"))
-                .body("category", equalTo("test-category"))
+                .body("types[0]", equalTo("test-category"))
                 .body("priority", equalTo("HIGH"))
                 .body("candidateGroups", equalTo("team-a"))
                 .body("payload", equalTo("{\"key\":\"value\"}"))
@@ -134,7 +134,7 @@ class WorkItemCloneTest {
     private String createFull() {
         return given().contentType(ContentType.JSON)
                 .body("""
-                        {"title":"Full item","category":"test-category","priority":"HIGH",
+                        {"title":"Full item","types":["test-category"],"priority":"HIGH",
                          "candidateGroups":"team-a","createdBy":"sys",
                          "payload":"{\\"key\\":\\"value\\"}"}
                         """)

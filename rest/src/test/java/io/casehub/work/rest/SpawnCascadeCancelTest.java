@@ -105,14 +105,14 @@ class SpawnCascadeCancelTest {
     // helpers
     private String createTemplate(final String name) {
         return given().contentType(ContentType.JSON)
-                .body(Map.of("name", name, "category", name, "createdBy", "test"))
+                .body(Map.of("name", name, "typePaths", "[\"" + name + "\"]", "createdBy", "test"))
                 .when().post("/workitem-templates")
                 .then().statusCode(201).extract().path("id");
     }
 
     private String createWorkItem(final String category) {
         return given().contentType(ContentType.JSON)
-                .body(Map.of("title", "parent-" + category, "category", category, "createdBy", "test"))
+                .body(Map.of("title", "parent-" + category, "typePaths", "[\"" + category + "\"]", "createdBy", "test"))
                 .when().post("/workitems")
                 .then().statusCode(201).extract().path("id");
     }

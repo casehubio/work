@@ -21,8 +21,8 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * <ul>
  * <li>{@link #eventTypes} — comma-separated {@code WorkEventType} names. A rule
  * matches when the event type appears in this list.</li>
- * <li>{@link #category} — optional WorkItem category filter. {@code null} means
- * match all categories.</li>
+ * <li>{@link #types} — optional WorkItem type filter. {@code null} means
+ * match all types.</li>
  * <li>{@link #enabled} — disabled rules are never evaluated.</li>
  * </ul>
  *
@@ -66,11 +66,11 @@ public class WorkItemNotificationRule extends PanacheEntityBase {
     public String eventTypes;
 
     /**
-     * Optional category filter. {@code null} matches all categories.
+     * Optional type filter. {@code null} matches all types.
      * Example: {@code "loan-application"}.
      */
-    @Column(name = "category", length = 255)
-    public String category;
+    @Column(name = "types", length = 255)
+    public String types;
 
     /**
      * Optional HMAC-SHA256 secret for signed HTTP webhook delivery.

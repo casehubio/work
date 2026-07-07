@@ -48,7 +48,7 @@ class WorkItemTemplateTest {
     void createTemplate_returns201_withId() {
         given().contentType(ContentType.JSON)
                 .body("""
-                        {"name":"Loan Approval","category":"finance","priority":"HIGH",
+                        {"name":"Loan Approval","typePaths":"[\\"finance\\"]","priority":"HIGH",
                          "candidateGroups":"loan-officers","defaultExpiryHours":48,
                          "createdBy":"admin"}
                         """)
@@ -57,7 +57,7 @@ class WorkItemTemplateTest {
                 .statusCode(201)
                 .body("id", notNullValue())
                 .body("name", equalTo("Loan Approval"))
-                .body("category", equalTo("finance"))
+                .body("typePaths", equalTo("[\"finance\"]"))
                 .body("priority", equalTo("HIGH"))
                 .body("candidateGroups", equalTo("loan-officers"))
                 .body("defaultExpiryHours", equalTo(48))
@@ -67,7 +67,7 @@ class WorkItemTemplateTest {
     @Test
     void createTemplate_returns400_whenNameMissing() {
         given().contentType(ContentType.JSON)
-                .body("{\"category\":\"finance\",\"createdBy\":\"admin\"}")
+                .body("{\"typePaths\":\"[\\\"finance\\\"]\",\"createdBy\":\"admin\"}")
                 .post("/workitem-templates")
                 .then()
                 .statusCode(400);
@@ -83,7 +83,7 @@ class WorkItemTemplateTest {
     @Test
     void createTemplate_returns400_whenCreatedByMissing() {
         given().contentType(ContentType.JSON)
-                .body("{\"name\":\"Test\",\"category\":\"ops\"}")
+                .body("{\"name\":\"Test\",\"typePaths\":\"[\\\"ops\\\"]\"}")
                 .post("/workitem-templates")
                 .then()
                 .statusCode(400);
@@ -96,7 +96,7 @@ class WorkItemTemplateTest {
                 .post("/workitem-templates")
                 .then()
                 .statusCode(201)
-                .body("category", nullValue())
+                .body("typePaths", nullValue())
                 .body("priority", nullValue())
                 .body("defaultExpiryHours", nullValue());
     }
@@ -106,7 +106,7 @@ class WorkItemTemplateTest {
     @Test
     void listTemplates_includesCreatedTemplate() {
         given().contentType(ContentType.JSON)
-                .body("{\"name\":\"Security Triage Template\",\"category\":\"security\",\"createdBy\":\"admin\"}")
+                .body("{\"name\":\"Security Triage Template\",\"typePaths\":\"[\\\"security\\\"]\",\"createdBy\":\"admin\"}")
                 .post("/workitem-templates")
                 .then().statusCode(201);
 
@@ -121,7 +121,7 @@ class WorkItemTemplateTest {
     @Test
     void getTemplate_returnsById() {
         final String id = given().contentType(ContentType.JSON)
-                .body("{\"name\":\"Compliance Review\",\"category\":\"legal\",\"createdBy\":\"admin\"}")
+                .body("{\"name\":\"Compliance Review\",\"typePaths\":\"[\\\"legal\\\"]\",\"createdBy\":\"admin\"}")
                 .post("/workitem-templates")
                 .then().statusCode(201)
                 .extract().path("id");
@@ -131,7 +131,7 @@ class WorkItemTemplateTest {
                 .statusCode(200)
                 .body("id", equalTo(id))
                 .body("name", equalTo("Compliance Review"))
-                .body("category", equalTo("legal"));
+                .body("typePaths", equalTo("[\"legal\"]"));
     }
 
     @Test
@@ -167,7 +167,7 @@ class WorkItemTemplateTest {
     void instantiate_createsWorkItemWithTemplateDefaults() {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("""
-                        {"name":"NDA Review","category":"legal","priority":"HIGH",
+                        {"name":"NDA Review","typePaths":"[\\"legal\\"]","priority":"HIGH",
                          "candidateGroups":"legal-team","defaultExpiryHours":72,
                          "defaultPayload":"{\\\"type\\\":\\\"nda\\\"}",
                          "createdBy":"admin"}
@@ -182,7 +182,7 @@ class WorkItemTemplateTest {
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
-                .body("category", equalTo("legal"))
+                .body("types[0]", equalTo("legal"))
                 .body("priority", equalTo("HIGH"))
                 .body("candidateGroups", equalTo("legal-team"))
                 .body("payload", equalTo("{\"type\":\"nda\"}"))
@@ -210,7 +210,7 @@ class WorkItemTemplateTest {
     @Test
     void instantiate_withTitleOverride_usesProvidedTitle() {
         final String templateId = given().contentType(ContentType.JSON)
-                .body("{\"name\":\"Finance Review\",\"category\":\"finance\",\"createdBy\":\"admin\"}")
+                .body("{\"name\":\"Finance Review\",\"typePaths\":\"[\\\"finance\\\"]\",\"createdBy\":\"admin\"}")
                 .post("/workitem-templates")
                 .then().statusCode(201)
                 .extract().path("id");
@@ -221,7 +221,7 @@ class WorkItemTemplateTest {
                 .then()
                 .statusCode(201)
                 .body("title", equalTo("Q4 budget reallocation — £50k"))
-                .body("category", equalTo("finance")); // still from template
+                .body("types[0]", equalTo("finance")); // still from template
     }
 
     @Test
@@ -253,7 +253,7 @@ class WorkItemTemplateTest {
     void instantiate_preservesTemplateLabels() {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("""
-                        {"name":"Labelled Template","category":"ops",
+                        {"name":"Labelled Template","typePaths":"[\\"ops\\"]",
                          "labelPaths":"[\\"intake/triage\\",\\"priority/high\\"]",
                          "createdBy":"admin"}
                         """)
@@ -276,17 +276,17 @@ class WorkItemTemplateTest {
     @Test
     void updateTemplate_returns200_withUpdatedFields() {
         final String id = given().contentType(ContentType.JSON)
-                .body("{\"name\":\"Original\",\"category\":\"legal\",\"createdBy\":\"admin\"}")
+                .body("{\"name\":\"Original\",\"typePaths\":\"[\\\"legal\\\"]\",\"createdBy\":\"admin\"}")
                 .post("/workitem-templates")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
-                .body("{\"name\":\"Updated\",\"category\":\"finance\",\"candidateGroups\":\"ops\"}")
+                .body("{\"name\":\"Updated\",\"typePaths\":\"[\\\"finance\\\"]\",\"candidateGroups\":\"ops\"}")
                 .put("/workitem-templates/" + id)
                 .then()
                 .statusCode(200)
                 .body("name", equalTo("Updated"))
-                .body("category", equalTo("finance"))
+                .body("typePaths", equalTo("[\"finance\"]"))
                 .body("candidateGroups", equalTo("ops"))
                 .body("createdBy", equalTo("admin"));
     }
@@ -356,12 +356,12 @@ class WorkItemTemplateTest {
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
-                .body("{\"name\":\"SameName\",\"category\":\"finance\"}")
+                .body("{\"name\":\"SameName\",\"typePaths\":\"[\\\"finance\\\"]\"}")
                 .put("/workitem-templates/" + id)
                 .then()
                 .statusCode(200)
                 .body("name", equalTo("SameName"))
-                .body("category", equalTo("finance"));
+                .body("typePaths", equalTo("[\"finance\"]"));
     }
 
     // ── Template versioning (#180) ───────────────────────────────────────────
@@ -384,14 +384,14 @@ class WorkItemTemplateTest {
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
-                .body("{\"name\":\"Bump\",\"category\":\"updated\"}")
+                .body("{\"name\":\"Bump\",\"typePaths\":\"[\\\"updated\\\"]\"}")
                 .put("/workitem-templates/" + id)
                 .then()
                 .statusCode(200)
                 .body("version", equalTo(2));
 
         given().contentType(ContentType.JSON)
-                .body("{\"name\":\"Bump\",\"category\":\"updated-again\"}")
+                .body("{\"name\":\"Bump\",\"typePaths\":\"[\\\"updated-again\\\"]\"}")
                 .put("/workitem-templates/" + id)
                 .then()
                 .statusCode(200)
@@ -406,7 +406,7 @@ class WorkItemTemplateTest {
                 .then().statusCode(201).extract().path("id");
 
         given().contentType("application/merge-patch+json")
-                .body("{\"category\":\"patched\"}")
+                .body("{\"typePaths\":\"[\\\"patched\\\"]\"}")
                 .patch("/workitem-templates/" + id)
                 .then()
                 .statusCode(200)
@@ -416,13 +416,13 @@ class WorkItemTemplateTest {
     @Test
     void instantiate_setsTemplateVersionOnWorkItem() {
         final String templateId = given().contentType(ContentType.JSON)
-                .body("{\"name\":\"InstVer\",\"category\":\"ops\",\"createdBy\":\"admin\"}")
+                .body("{\"name\":\"InstVer\",\"typePaths\":\"[\\\"ops\\\"]\",\"createdBy\":\"admin\"}")
                 .post("/workitem-templates")
                 .then().statusCode(201).extract().path("id");
 
         // Update to version 2
         given().contentType(ContentType.JSON)
-                .body("{\"name\":\"InstVer\",\"category\":\"ops-v2\"}")
+                .body("{\"name\":\"InstVer\",\"typePaths\":\"[\\\"ops-v2\\\"]\"}")
                 .put("/workitem-templates/" + templateId)
                 .then().statusCode(200);
 

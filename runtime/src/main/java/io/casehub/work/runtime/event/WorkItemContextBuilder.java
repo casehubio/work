@@ -38,7 +38,7 @@ public final class WorkItemContextBuilder {
         map.put("version", workItem.version);
         map.put("title", workItem.title);
         map.put("description", workItem.description);
-        map.put("category", workItem.category);
+        map.put("types", workItem.types != null ? workItem.types.stream().map(t -> t.path).toList() : List.of());
         map.put("formKey", workItem.formKey);
         map.put("status", workItem.status);
         map.put("priority", workItem.priority);
@@ -69,6 +69,7 @@ public final class WorkItemContextBuilder {
         map.put("callerRef", workItem.callerRef);
         map.put("parentId", workItem.parentId != null ? workItem.parentId.toString() : null);
         map.put("templateId", workItem.templateId != null ? workItem.templateId.toString() : null);
+        map.put("templateVersion", workItem.templateVersion);
         // Expose as List<String> (names only) for backward compat with existing filter rule expressions
         final List<Outcome> permittedDefs = OutcomeCodecs.decodePermittedOutcomes(workItem.permittedOutcomes);
         map.put("permittedOutcomes",

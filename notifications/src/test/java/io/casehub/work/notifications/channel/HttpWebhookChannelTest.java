@@ -44,10 +44,10 @@ class HttpWebhookChannelTest {
     @Test
     void buildPayloadJson_containsRequiredFields() {
         final var json = HttpWebhookChannel.buildPayloadJson("ASSIGNED", "Loan review",
-                "loan", "ASSIGNED", "alice", "HIGH", "ref-1");
+                java.util.List.of("loan", "finance"), "ASSIGNED", "alice", "HIGH", "ref-1");
         assertThat(json).contains("\"eventType\":\"ASSIGNED\"");
         assertThat(json).contains("\"title\":\"Loan review\"");
-        assertThat(json).contains("\"category\":\"loan\"");
+        assertThat(json).contains("\"types\":[\"loan\",\"finance\"]");
         assertThat(json).contains("\"status\":\"ASSIGNED\"");
         assertThat(json).contains("\"assigneeId\":\"alice\"");
         assertThat(json).contains("\"priority\":\"HIGH\"");
@@ -57,7 +57,7 @@ class HttpWebhookChannelTest {
     @Test
     void buildPayloadJson_nullFieldsHandled() {
         assertThatCode(() -> HttpWebhookChannel.buildPayloadJson(
-                "CREATED", "Title", "cat", "PENDING", null, "MEDIUM", null))
+                "CREATED", "Title", java.util.List.of("general"), "PENDING", null, "MEDIUM", null))
                 .doesNotThrowAnyException();
     }
 

@@ -43,11 +43,11 @@ class WorkItemQueueEventTest {
 
     @Test
     void added_whenFilterAppliesInferredLabelMatchingQueue() {
-        // Filter: category == 'qevt-cat-unique' → apply label 'qevt-inferred/cat'
+        // Filter: types contains 'qevt-cat-unique' → apply label 'qevt-inferred/cat'
         given().contentType(ContentType.JSON)
                 .body("""
-                        {"name":"QEvt cat filter","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"category == 'qevt-cat-unique'",
+                        {"name":"QEvt type filter","scope":"ORG","conditionLanguage":"jexl",
+                         "conditionExpression":"types.contains('qevt-cat-unique')",
                          "actions":[{"type":"APPLY_LABEL","labelPath":"qevt-inferred/cat"}]}""")
                 .post("/filters").then().statusCode(201);
 
@@ -56,7 +56,7 @@ class WorkItemQueueEventTest {
         final String itemId = given().contentType(ContentType.JSON)
                 .body("""
                         {"title":"Inferred label added test","createdBy":"alice",
-                         "category":"qevt-cat-unique"}""")
+                         "types":["qevt-cat-unique"]}""")
                 .post("/workitems").then().statusCode(201).extract().path("id");
 
         final var added = capture.eventsOfType(QueueEventType.ADDED);
@@ -93,11 +93,11 @@ class WorkItemQueueEventTest {
 
     @Test
     void removed_notFiredDuringIntermediateLabelStrip() {
-        // Filter: category == 'qevt-stable' → apply 'qevt-stable/marker'
+        // Filter: types contains 'qevt-stable' → apply 'qevt-stable/marker'
         given().contentType(ContentType.JSON)
                 .body("""
                         {"name":"QEvt stable filter","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"category == 'qevt-stable'",
+                         "conditionExpression":"types.contains('qevt-stable')",
                          "actions":[{"type":"APPLY_LABEL","labelPath":"qevt-stable/marker"}]}""")
                 .post("/filters").then().statusCode(201);
 
@@ -106,7 +106,7 @@ class WorkItemQueueEventTest {
         final String itemId = given().contentType(ContentType.JSON)
                 .body("""
                         {"title":"Stable membership test","createdBy":"alice",
-                         "category":"qevt-stable"}""")
+                         "types":["qevt-stable"]}""")
                 .post("/workitems").then().statusCode(201).extract().path("id");
 
         capture.clear();
@@ -124,11 +124,11 @@ class WorkItemQueueEventTest {
 
     @Test
     void changed_whenItemStaysInQueueAfterReEvaluation() {
-        // Filter: category == 'qevt-changed' → apply 'qevt-changed/marker'
+        // Filter: types contains 'qevt-changed' → apply 'qevt-changed/marker'
         given().contentType(ContentType.JSON)
                 .body("""
                         {"name":"QEvt changed filter","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"category == 'qevt-changed'",
+                         "conditionExpression":"types.contains('qevt-changed')",
                          "actions":[{"type":"APPLY_LABEL","labelPath":"qevt-changed/marker"}]}""")
                 .post("/filters").then().statusCode(201);
 
@@ -136,7 +136,7 @@ class WorkItemQueueEventTest {
 
         final String itemId = given().contentType(ContentType.JSON)
                 .body("""
-                        {"title":"Changed test","createdBy":"alice","category":"qevt-changed"}""")
+                        {"title":"Changed test","createdBy":"alice","types":["qevt-changed"]}""")
                 .post("/workitems").then().statusCode(201).extract().path("id");
 
         capture.clear(); // ignore ADDED from creation
@@ -158,7 +158,7 @@ class WorkItemQueueEventTest {
         given().contentType(ContentType.JSON)
                 .body("""
                         {"name":"QEvt no-dup filter","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"category == 'qevt-nodup'",
+                         "conditionExpression":"types.contains('qevt-nodup')",
                          "actions":[{"type":"APPLY_LABEL","labelPath":"qevt-nodup/marker"}]}""")
                 .post("/filters").then().statusCode(201);
 
@@ -166,7 +166,7 @@ class WorkItemQueueEventTest {
 
         final String itemId = given().contentType(ContentType.JSON)
                 .body("""
-                        {"title":"No dup added test","createdBy":"alice","category":"qevt-nodup"}""")
+                        {"title":"No dup added test","createdBy":"alice","types":["qevt-nodup"]}""")
                 .post("/workitems").then().statusCode(201).extract().path("id");
 
         capture.clear();

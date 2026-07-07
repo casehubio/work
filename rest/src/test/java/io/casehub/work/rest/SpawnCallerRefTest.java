@@ -17,7 +17,7 @@ class SpawnCallerRefTest {
     void callerRef_roundTrips_whenSetOnCreate() {
         final var body = Map.of(
                 "title", "callerRef round-trip test",
-                "category", "test",
+                "typePaths", "[\"test\"]",
                 "createdBy", "test-system",
                 "callerRef", "case:loan-123/pi:credit-1");
 
@@ -40,7 +40,7 @@ class SpawnCallerRefTest {
     void callerRef_null_whenNotProvided() {
         final var body = Map.of(
                 "title", "no callerRef",
-                "category", "test",
+                "typePaths", "[\"test\"]",
                 "createdBy", "test-system");
 
         final String id = given()
@@ -63,7 +63,7 @@ class SpawnCallerRefTest {
         final String longRef = "x".repeat(512);
         final var body = Map.of(
                 "title", "long callerRef test",
-                "category", "test",
+                "typePaths", "[\"test\"]",
                 "createdBy", "test-system",
                 "callerRef", longRef);
 

@@ -51,7 +51,7 @@ public class AuditResource {
      * @param from inclusive lower bound on occurredAt (ISO 8601)
      * @param to inclusive upper bound on occurredAt (ISO 8601)
      * @param event exact match on event type (e.g. "COMPLETED")
-     * @param category filter to WorkItems whose category matches
+     * @param type filter to WorkItems whose types contain this path (exact or ancestor match)
      * @param page zero-based page number (default 0)
      * @param size page size, capped at 100 (default 20)
      * @return paginated audit entry envelope
@@ -62,7 +62,7 @@ public class AuditResource {
             @QueryParam("from") final String from,
             @QueryParam("to") final String to,
             @QueryParam("event") final String event,
-            @QueryParam("category") final String category,
+            @QueryParam("type") final String type,
             @QueryParam("page") @DefaultValue("0") final int page,
             @QueryParam("size") @DefaultValue("20") final int size) {
 
@@ -71,7 +71,7 @@ public class AuditResource {
                 .from(from != null ? Instant.parse(from) : null)
                 .to(to != null ? Instant.parse(to) : null)
                 .event(event)
-                .category(category)
+                .type(type)
                 .page(page)
                 .size(size)
                 .build();

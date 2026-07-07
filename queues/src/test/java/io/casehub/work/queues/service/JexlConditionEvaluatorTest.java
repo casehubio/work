@@ -62,10 +62,12 @@ class JexlConditionEvaluatorTest {
     }
 
     @Test
-    void evaluate_category() {
+    void evaluate_types() {
         var wi = wi(WorkItemStatus.PENDING, WorkItemPriority.MEDIUM, null);
-        wi.category = "legal";
-        assertThat(evaluator.evaluate(wi, ExpressionDescriptor.of(evaluator.language(), "category == 'legal'"))).isTrue();
+        wi.types.add(new io.casehub.work.runtime.model.WorkItemType("legal"));
+        // JEXL context maps types as List<String> of paths — use contains()
+        assertThat(evaluator.evaluate(wi, ExpressionDescriptor.of(evaluator.language(), "types.contains('legal')"))).isTrue();
+        assertThat(evaluator.evaluate(wi, ExpressionDescriptor.of(evaluator.language(), "types.contains('finance')"))).isFalse();
     }
 
     @Test

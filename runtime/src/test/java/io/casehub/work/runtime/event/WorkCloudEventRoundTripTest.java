@@ -52,7 +52,7 @@ class WorkCloudEventRoundTripTest {
         final WorkItemTemplate template = new WorkItemTemplate();
         template.id = UUID.randomUUID();
         template.name = "Test Template " + UUID.randomUUID();
-        template.category = "test-category";
+        template.typePaths = "[\"test-type\"]";
         template.priority = WorkItemPriority.HIGH;
         template.candidateGroups = "test-group";
         template.defaultExpiryHours = 48;
@@ -87,7 +87,7 @@ class WorkCloudEventRoundTripTest {
         assertThat(workItem.callerRef).isEqualTo(ceId);
         assertThat(workItem.payload).isEqualTo(payload);
         assertThat(workItem.createdBy).isEqualTo("cloudevent:" + source);
-        assertThat(workItem.category).isEqualTo("test-category");
+        assertThat(workItem.types).extracting(t -> t.path).containsExactly("test-type");
         assertThat(workItem.priority).isEqualTo(WorkItemPriority.HIGH);
         assertThat(workItem.candidateGroups).isEqualTo("test-group");
 

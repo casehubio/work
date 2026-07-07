@@ -220,9 +220,10 @@ public class MongoWorkItemStore implements WorkItemStore {
             ands.add(new Document("priority", q.priority().name()));
         }
 
-        // Category
-        if (q.category() != null) {
-            ands.add(new Document("category", q.category()));
+        // Type — ancestor matching via regex
+        if (q.type() != null) {
+            ands.add(new Document("types",
+                    new Document("$regex", "^" + java.util.regex.Pattern.quote(q.type()) + "(/|$)")));
         }
 
         // FollowUpBefore — field must exist (not null) and be <= threshold

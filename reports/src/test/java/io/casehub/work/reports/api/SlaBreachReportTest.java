@@ -31,43 +31,43 @@ class SlaBreachReportTest {
                 .body("summary", notNullValue())
                 .body("summary.totalBreached", notNullValue())
                 .body("summary.avgBreachDurationMinutes", notNullValue())
-                .body("summary.byCategory", notNullValue());
+                .body("summary.byType", notNullValue());
     }
 
     // ── Happy path: breach detection ──────────────────────────────────────────
 
     @Test
     void completedAfterExpiry_isBreached() {
-        final String cat = "breach-" + System.nanoTime();
+        final String type = "breach-" + System.nanoTime();
         final String expiresAt = Instant.now().minus(2, ChronoUnit.MINUTES).toString();
-        final String id = createWithExpiry("Breached WI", cat, expiresAt);
+        final String id = createWithExpiry("Breached WI", type, expiresAt);
         claimStartComplete(id, "reviewer");
 
-        given().queryParam("category", cat).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items.workItemId", hasItem(id));
     }
 
     @Test
     void completedBeforeExpiry_isNotBreached() {
-        final String cat = "ontime-" + System.nanoTime();
+        final String type = "ontime-" + System.nanoTime();
         final String expiresAt = Instant.now().plus(24, ChronoUnit.HOURS).toString();
-        final String id = createWithExpiry("On-time WI", cat, expiresAt);
+        final String id = createWithExpiry("On-time WI", type, expiresAt);
         claimStartComplete(id, "reviewer");
 
-        given().queryParam("category", cat).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", empty());
     }
 
     @Test
     void openItemPastDeadline_isBreached() {
-        final String cat = "open-breach-" + System.nanoTime();
+        final String type = "open-breach-" + System.nanoTime();
         final String expiresAt = Instant.now().minus(5, ChronoUnit.MINUTES).toString();
-        createWithExpiry("Open Past Deadline", cat, expiresAt);
+        createWithExpiry("Open Past Deadline", type, expiresAt);
         // leave open — still a breach
 
-        given().queryParam("category", cat).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items.workItemId", notNullValue());
     }
@@ -76,26 +76,26 @@ class SlaBreachReportTest {
 
     @Test
     void itemWithNoExpiresAt_neverAppears() {
-        final String cat = "no-expiry-" + System.nanoTime();
+        final String type = "no-expiry-" + System.nanoTime();
         final String id = given().contentType(ContentType.JSON)
-                .body("{\"title\":\"No Expiry\",\"category\":\"" + cat + "\",\"createdBy\":\"test\"}")
+                .body("{\"title\":\"No Expiry\",\"types\":[\"" + type + "\"],\"createdBy\":\"test\"}")
                 .post("/workitems").then().statusCode(201).extract().path("id");
         claimStartComplete(id, "reviewer");
 
-        given().queryParam("category", cat).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", empty());
     }
 
     @Test
     void completedBeforeExpiry_isNotBreached_boundary() {
-        final String cat = "boundary-" + System.nanoTime();
+        final String type = "boundary-" + System.nanoTime();
         // expires in far future — completed now is clearly before expiry
         final String expiresAt = Instant.now().plus(1, ChronoUnit.HOURS).toString();
-        final String id = createWithExpiry("Boundary WI", cat, expiresAt);
+        final String id = createWithExpiry("Boundary WI", type, expiresAt);
         claimStartComplete(id, "reviewer");
 
-        given().queryParam("category", cat).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", empty());
     }
@@ -104,9 +104,9 @@ class SlaBreachReportTest {
 
     @Test
     void filterByFrom_excludesItemsBeforeWindow() {
-        final String cat = "from-filter-" + System.nanoTime();
+        final String type = "from-filter-" + System.nanoTime();
         final String expiresAt = Instant.now().minus(10, ChronoUnit.MINUTES).toString();
-        final String id = createWithExpiry("Old Breach", cat, expiresAt);
+        final String id = createWithExpiry("Old Breach", type, expiresAt);
         claimStartComplete(id, "reviewer");
 
         given().queryParam("from", "2099-01-01T00:00:00Z")
@@ -117,29 +117,29 @@ class SlaBreachReportTest {
 
     @Test
     void filterByTo_excludesItemsAfterWindow() {
-        final String cat = "to-filter-" + System.nanoTime();
+        final String type = "to-filter-" + System.nanoTime();
         final String expiresAt = Instant.now().minus(2, ChronoUnit.MINUTES).toString();
-        final String id = createWithExpiry("Future Breach", cat, expiresAt);
+        final String id = createWithExpiry("Future Breach", type, expiresAt);
         claimStartComplete(id, "reviewer");
 
         given().queryParam("to", "2000-01-01T00:00:00Z")
-                .queryParam("category", cat)
+                .queryParam("type", type)
                 .get("/workitems/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", empty());
     }
 
     @Test
-    void filterByCategory_returnsOnlyThatCategory() {
-        final String catA = "sla-a-" + System.nanoTime();
-        final String catB = "sla-b-" + System.nanoTime();
+    void filterByType_returnsOnlyThatType() {
+        final String typeA = "sla-a-" + System.nanoTime();
+        final String typeB = "sla-b-" + System.nanoTime();
         final String expiresAt = Instant.now().minus(2, ChronoUnit.MINUTES).toString();
-        final String idA = createWithExpiry("A", catA, expiresAt);
-        final String idB = createWithExpiry("B", catB, expiresAt);
+        final String idA = createWithExpiry("A", typeA, expiresAt);
+        final String idB = createWithExpiry("B", typeB, expiresAt);
         claimStartComplete(idA, "r");
         claimStartComplete(idB, "r");
 
-        given().queryParam("category", catA).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", typeA).get("/workitems/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items.workItemId", hasItem(idA))
                 .body("items.workItemId", not(hasItem(idB)));
@@ -147,14 +147,14 @@ class SlaBreachReportTest {
 
     @Test
     void filterByPriority_returnsOnlyMatchingPriority() {
-        final String cat = "prio-" + System.nanoTime();
+        final String type = "prio-" + System.nanoTime();
         final String expiresAt = Instant.now().minus(2, ChronoUnit.MINUTES).toString();
-        final String highId = createWithExpiryAndPriority("High", cat, expiresAt, "HIGH");
-        final String lowId = createWithExpiryAndPriority("Low", cat, expiresAt, "LOW");
+        final String highId = createWithExpiryAndPriority("High", type, expiresAt, "HIGH");
+        final String lowId = createWithExpiryAndPriority("Low", type, expiresAt, "LOW");
         claimStartComplete(highId, "r");
         claimStartComplete(lowId, "r");
 
-        given().queryParam("priority", "HIGH").queryParam("category", cat)
+        given().queryParam("priority", "HIGH").queryParam("type", type)
                 .get("/workitems/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items.workItemId", hasItem(highId))
@@ -179,16 +179,16 @@ class SlaBreachReportTest {
 
     @Test
     void breachedItem_hasAllRequiredFields() {
-        final String cat = "fields-" + System.nanoTime();
+        final String type = "fields-" + System.nanoTime();
         final String expiresAt = Instant.now().minus(2, ChronoUnit.MINUTES).toString();
-        final String id = createWithExpiry("Fields Test", cat, expiresAt);
+        final String id = createWithExpiry("Fields Test", type, expiresAt);
         claimStartComplete(id, "reviewer");
 
-        given().queryParam("category", cat).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", hasSize(1))
                 .body("items[0].workItemId", equalTo(id))
-                .body("items[0].category", equalTo(cat))
+                .body("items[0].types", equalTo(type))
                 .body("items[0].priority", notNullValue())
                 .body("items[0].expiresAt", notNullValue())
                 .body("items[0].status", notNullValue())
@@ -199,12 +199,12 @@ class SlaBreachReportTest {
 
     @Test
     void summary_totalBreached_matchesItemCount() {
-        final String cat = "sumtotal-" + System.nanoTime();
+        final String type = "sumtotal-" + System.nanoTime();
         final String expiresAt = Instant.now().minus(2, ChronoUnit.MINUTES).toString();
-        createWithExpiry("S1", cat, expiresAt);
-        createWithExpiry("S2", cat, expiresAt);
+        createWithExpiry("S1", type, expiresAt);
+        createWithExpiry("S2", type, expiresAt);
 
-        final int total = given().queryParam("category", cat)
+        final int total = given().queryParam("type", type)
                 .get("/workitems/reports/sla-breaches")
                 .then().statusCode(200).extract().path("summary.totalBreached");
         assertThat(total).isGreaterThanOrEqualTo(2);
@@ -212,32 +212,32 @@ class SlaBreachReportTest {
 
     @Test
     void summary_avgBreachDurationMinutes_isPositive() {
-        final String cat = "avgbreach-" + System.nanoTime();
+        final String type = "avgbreach-" + System.nanoTime();
         final String expiresAt = Instant.now().minus(5, ChronoUnit.MINUTES).toString();
-        final String id = createWithExpiry("Avg Test", cat, expiresAt);
+        final String id = createWithExpiry("Avg Test", type, expiresAt);
         claimStartComplete(id, "reviewer");
 
-        final float avg = given().queryParam("category", cat)
+        final float avg = given().queryParam("type", type)
                 .get("/workitems/reports/sla-breaches")
                 .then().statusCode(200).extract().path("summary.avgBreachDurationMinutes");
         assertThat(avg).isGreaterThan(0f);
     }
 
     @Test
-    void summary_byCategory_groupsCorrectly() {
-        final String catX = "bcx-" + System.nanoTime();
-        final String catY = "bcy-" + System.nanoTime();
+    void summary_byType_groupsCorrectly() {
+        final String typeX = "bcx-" + System.nanoTime();
+        final String typeY = "bcy-" + System.nanoTime();
         final String expiresAt = Instant.now().minus(2, ChronoUnit.MINUTES).toString();
-        createWithExpiry("X1", catX, expiresAt);
-        createWithExpiry("Y1", catY, expiresAt);
-        createWithExpiry("Y2", catY, expiresAt);
+        createWithExpiry("X1", typeX, expiresAt);
+        createWithExpiry("Y1", typeY, expiresAt);
+        createWithExpiry("Y2", typeY, expiresAt);
 
         // Use `from` to get a unique cache key — the no-filter key is shared with the structure test
         final var resp = given().queryParam("from", "2020-01-01T00:00:00Z")
                 .get("/workitems/reports/sla-breaches")
                 .then().statusCode(200).extract().response();
-        assertThat((Object) resp.path("summary.byCategory." + catX)).isNotNull();
-        assertThat((Object) resp.path("summary.byCategory." + catY)).isNotNull();
+        assertThat((Object) resp.path("summary.byType." + typeX)).isNotNull();
+        assertThat((Object) resp.path("summary.byType." + typeY)).isNotNull();
     }
 
     // ── Robustness ────────────────────────────────────────────────────────────
@@ -255,18 +255,18 @@ class SlaBreachReportTest {
 
     @Test
     void e2e_mixedCompliance_onlyBreachesInList() {
-        final String cat = "e2e-sla-" + System.nanoTime();
+        final String type = "e2e-sla-" + System.nanoTime();
         final String past = Instant.now().minus(3, ChronoUnit.MINUTES).toString();
         final String future = Instant.now().plus(1, ChronoUnit.HOURS).toString();
 
-        final String b1 = createWithExpiry("Late 1", cat, past);
-        final String b2 = createWithExpiry("Late 2", cat, past);
-        final String ok = createWithExpiry("On Time", cat, future);
+        final String b1 = createWithExpiry("Late 1", type, past);
+        final String b2 = createWithExpiry("Late 2", type, past);
+        final String ok = createWithExpiry("On Time", type, future);
         claimStartComplete(b1, "r");
         claimStartComplete(b2, "r");
         claimStartComplete(ok, "r");
 
-        given().queryParam("category", cat).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items.workItemId", hasItem(b1))
                 .body("items.workItemId", hasItem(b2))
@@ -276,18 +276,18 @@ class SlaBreachReportTest {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private String createWithExpiry(final String title, final String category, final String expiresAt) {
+    private String createWithExpiry(final String title, final String type, final String expiresAt) {
         return given().contentType(ContentType.JSON)
-                .body("{\"title\":\"" + title + "\",\"category\":\"" + category
-                        + "\",\"expiresAt\":\"" + expiresAt + "\",\"createdBy\":\"test\"}")
+                .body("{\"title\":\"" + title + "\",\"types\":[\"" + type
+                        + "\"],\"expiresAt\":\"" + expiresAt + "\",\"createdBy\":\"test\"}")
                 .post("/workitems").then().statusCode(201).extract().path("id");
     }
 
-    private String createWithExpiryAndPriority(final String title, final String cat,
+    private String createWithExpiryAndPriority(final String title, final String type,
             final String expiresAt, final String priority) {
         return given().contentType(ContentType.JSON)
-                .body("{\"title\":\"" + title + "\",\"category\":\"" + cat
-                        + "\",\"priority\":\"" + priority
+                .body("{\"title\":\"" + title + "\",\"types\":[\"" + type
+                        + "\"],\"priority\":\"" + priority
                         + "\",\"expiresAt\":\"" + expiresAt + "\",\"createdBy\":\"test\"}")
                 .post("/workitems").then().statusCode(201).extract().path("id");
     }

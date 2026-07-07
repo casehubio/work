@@ -10,7 +10,7 @@ public final class WorkItemCreateRequest {
 
     public final String title;
     public final String description;
-    public final String category;
+    public final List<String> types;
     public final String                               formKey;
     public final io.casehub.work.api.WorkItemPriority priority;
     public final String                               assigneeId;
@@ -48,7 +48,7 @@ public final class WorkItemCreateRequest {
     private WorkItemCreateRequest(final Builder b) {
         this.title                      = b.title;
         this.description                = b.description;
-        this.category                   = b.category;
+        this.types                      = b.types;
         this.formKey                    = b.formKey;
         this.priority                   = b.priority;
         this.assigneeId                 = b.assigneeId;
@@ -90,7 +90,7 @@ public final class WorkItemCreateRequest {
         if (!(o instanceof WorkItemCreateRequest r)) return false;
         return Objects.equals(title, r.title)
                 && Objects.equals(description, r.description)
-                && Objects.equals(category, r.category)
+                && Objects.equals(types, r.types)
                 && Objects.equals(formKey, r.formKey)
                 && Objects.equals(priority, r.priority)
                 && Objects.equals(assigneeId, r.assigneeId)
@@ -120,7 +120,7 @@ public final class WorkItemCreateRequest {
 
     @Override
     public int hashCode() {
-        return Objects.hash(title, description, category, formKey, priority,
+        return Objects.hash(title, description, types, formKey, priority,
                 assigneeId, candidateGroups, candidateUsers, requiredCapabilities,
                 createdBy, payload, claimDeadline, expiresAt, followUpDate, labels,
                 confidenceScore, callerRef, claimDeadlineBusinessHours, expiresAtBusinessHours,
@@ -131,8 +131,8 @@ public final class WorkItemCreateRequest {
     /** Intentionally omits payload, schemas, callerRef, and credentials — log-safety. */
     @Override
     public String toString() {
-        return "WorkItemCreateRequest{title='" + title + "', category='" + category
-                + "', priority=" + priority + ", assigneeId='" + assigneeId
+        return "WorkItemCreateRequest{title='" + title + "', types=" + types
+                + ", priority=" + priority + ", assigneeId='" + assigneeId
                 + "', candidateGroups='" + candidateGroups + "'}";
     }
 
@@ -140,7 +140,7 @@ public final class WorkItemCreateRequest {
 
         private String title;
         private String description;
-        private String category;
+        private List<String> types;
         private String                               formKey;
         private io.casehub.work.api.WorkItemPriority priority;
         private String                               assigneeId;
@@ -172,7 +172,7 @@ public final class WorkItemCreateRequest {
         private Builder(final WorkItemCreateRequest src) {
             this.title                      = src.title;
             this.description                = src.description;
-            this.category                   = src.category;
+            this.types                      = src.types;
             this.formKey                    = src.formKey;
             this.priority                   = src.priority;
             this.assigneeId                 = src.assigneeId;
@@ -202,7 +202,7 @@ public final class WorkItemCreateRequest {
 
         public Builder title(final String v)                          { this.title = v; return this; }
         public Builder description(final String v)                    { this.description = v; return this; }
-        public Builder category(final String v)                       { this.category = v; return this; }
+        public Builder types(final List<String> v)                    { this.types = v; return this; }
         public Builder formKey(final String v)                                { this.formKey = v; return this; }
         public Builder priority(final io.casehub.work.api.WorkItemPriority v) {this.priority = v; return this; }
         public Builder assigneeId(final String v)                             { this.assigneeId = v; return this; }

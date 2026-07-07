@@ -82,9 +82,9 @@ public class JpaAuditEntryStore extends TenantAwareStore implements AuditEntrySt
         if (query.event() != null && !query.event().isBlank()) {
             predicates.add("a.event = :event");
         }
-        if (query.category() != null && !query.category().isBlank()) {
-            // Subquery to filter by WorkItem category — tenant-scoped subquery
-            predicates.add("a.workItemId IN (SELECT w.id FROM WorkItem w WHERE w.category = :category AND w.tenancyId = :tenancyId)");
+        if (query.type() != null && !query.type().isBlank()) {
+            // Subquery to filter by WorkItem type path — tenant-scoped subquery
+            predicates.add("a.workItemId IN (SELECT w.id FROM WorkItem w JOIN w.types t WHERE t.path = :type AND w.tenancyId = :tenancyId)");
         }
 
         if (!predicates.isEmpty()) {
@@ -114,8 +114,8 @@ public class JpaAuditEntryStore extends TenantAwareStore implements AuditEntrySt
         if (query.event() != null && !query.event().isBlank()) {
             q.setParameter("event", query.event());
         }
-        if (query.category() != null && !query.category().isBlank()) {
-            q.setParameter("category", query.category());
+        if (query.type() != null && !query.type().isBlank()) {
+            q.setParameter("type", query.type());
         }
     }
 }

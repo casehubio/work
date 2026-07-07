@@ -131,7 +131,7 @@ public class WorkItemSpawnService implements SpawnPort {
             final WorkItemCreateRequest createRequest = WorkItemCreateRequest.builder()
                     .title(template.name)
                     .description(template.description)
-                    .category(template.category)
+                    .types(WorkItemTemplateService.parseTypes(template).stream().map(t -> t.path).toList())
                     .priority(template.priority)
                     .candidateGroups(override(spec, "candidateGroups", template.candidateGroups))
                     .candidateUsers(override(spec, "candidateUsers", template.candidateUsers))

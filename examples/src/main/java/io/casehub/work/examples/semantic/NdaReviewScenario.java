@@ -97,7 +97,7 @@ public class NdaReviewScenario {
         final WorkItemCreateRequest request = WorkItemCreateRequest.builder()
                 .title("Review NDA with Acme Corp")
                 .description("Non-disclosure agreement for IP protection and legal compliance with Acme Corp partnership")
-                .category("legal")
+                .types(List.of("legal"))
                 .priority(WorkItemPriority.HIGH)
                 .candidateUsers(ACTOR_LEGAL + "," + ACTOR_FINANCE)
                 .createdBy(ACTOR_AGENT)

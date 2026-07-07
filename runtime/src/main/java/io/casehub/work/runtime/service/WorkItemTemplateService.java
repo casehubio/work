@@ -15,6 +15,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jboss.logging.Logger;
+import io.casehub.platform.api.path.Path;
 import io.casehub.work.api.Outcome;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.runtime.model.OutcomeCodecs;
@@ -22,6 +23,7 @@ import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemLabel;
 import io.casehub.work.runtime.model.WorkItemTemplate;
+import io.casehub.work.runtime.model.WorkItemType;
 import io.casehub.work.runtime.multiinstance.MultiInstanceSpawnService;
 
 /**
@@ -122,7 +124,9 @@ public class WorkItemTemplateService {
         return WorkItemCreateRequest.builder()
                 .title(request.title != null ? request.title : template.name)
                 .description(request.description != null ? request.description : template.description)
-                .category(request.category != null ? request.category : template.category)
+                .types(request.types != null ? request.types
+                        : (template.typePaths != null && !template.typePaths.isBlank()
+                                ? parseTypes(template).stream().map(t -> t.path).toList() : null))
                 .formKey(request.formKey)
                 .priority(request.priority != null ? request.priority : template.priority)
                 .assigneeId(request.assigneeId)
@@ -242,6 +246,46 @@ public class WorkItemTemplateService {
                 }
             }
             return result;
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    /**
+     * Parse the template's {@link WorkItemTemplate#typePaths} JSON array into
+     * {@link WorkItemType} instances ready to be applied at instantiation.
+     *
+     * <p>
+     * Unlike {@link #parseLabels}, this method validates each path via
+     * {@link Path#parse(String)} and throws {@link IllegalArgumentException}
+     * if any path is malformed (e.g. leading slash, blank segments).
+     *
+     * <p>
+     * Returns an empty list if {@code typePaths} is null, blank, or invalid JSON.
+     *
+     * <p>
+     * Static for unit testability — no CDI or JPA dependency.
+     *
+     * @param template the template whose types are to be parsed
+     * @return list of {@link WorkItemType} ready for application; may be empty
+     * @throws IllegalArgumentException if any type path is malformed
+     */
+    public static List<WorkItemType> parseTypes(final WorkItemTemplate template) {
+        if (template.typePaths == null || template.typePaths.isBlank()) {
+            return List.of();
+        }
+        try {
+            final List<String> paths = MAPPER.readValue(template.typePaths, new TypeReference<>() {});
+            final List<WorkItemType> result = new ArrayList<>();
+            for (final String path : paths) {
+                if (path != null && !path.isBlank()) {
+                    Path.parse(path);
+                    result.add(new WorkItemType(path));
+                }
+            }
+            return result;
+        } catch (IllegalArgumentException e) {
+            throw e;
         } catch (Exception e) {
             return List.of();
         }

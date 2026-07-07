@@ -167,8 +167,13 @@ public class InMemoryWorkItemStore implements WorkItemStore {
         if (q.priority() != null && wi.priority != q.priority()) {
             return false;
         }
-        if (q.category() != null && !q.category().equals(wi.category)) {
-            return false;
+        if (q.type() != null) {
+            final io.casehub.platform.api.path.Path queryPath = io.casehub.platform.api.path.Path.parse(q.type());
+            boolean matched = wi.types.stream().anyMatch(t -> {
+                final io.casehub.platform.api.path.Path typePath = io.casehub.platform.api.path.Path.parse(t.path);
+                return typePath.equals(queryPath) || queryPath.isAncestorOf(typePath);
+            });
+            if (!matched) return false;
         }
         if (q.outcome() != null && !q.outcome().equals(wi.outcome)) {
             return false;

@@ -69,6 +69,6 @@ class LeastLoadedStrategyTest {
     }
 
     private SelectionContext ctx() {
-        return new SelectionContext("cat", "MEDIUM", null, null, "alice,bob", null, null, null);
+        return new SelectionContext(java.util.List.of("cat"), "MEDIUM", null, null, "alice,bob", null, null, null);
     }
 }

@@ -13,7 +13,7 @@ public record WorkItemResponse(
         UUID id,
         String title,
         String description,
-        String category,
+        List<String> types,
         String formKey,
         WorkItemStatus status,
         WorkItemPriority priority,

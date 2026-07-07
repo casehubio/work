@@ -98,7 +98,7 @@ public class ContentModerationScenario {
         final WorkItemCreateRequest request = WorkItemCreateRequest.builder()
                 .title("Content moderation: POST-9912")
                 .description("AI classifier flagged post POST-9912 for potential policy violation")
-                .category("content-moderation")
+                .types(List.of("content-moderation"))
                 .priority(WorkItemPriority.HIGH)
                 .candidateGroups("content-moderators")
                 .createdBy(ACTOR_CREATOR)

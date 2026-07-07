@@ -1,15 +1,18 @@
 package io.casehub.work.runtime.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.UUID;
 
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemTemplate;
+import io.casehub.work.runtime.model.WorkItemType;
 
 /**
  * Pure unit tests for template merge and payload logic.
@@ -39,12 +42,12 @@ class WorkItemTemplateServiceTest {
     }
 
     @Test
-    void merge_copiesCategory() {
+    void merge_copiesTypes_fromTemplate() {
         final WorkItemTemplate t = template("T");
-        t.category = "legal";
+        t.typePaths = "[\"approval\", \"compliance/audit\"]";
         final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("system").build();
         final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
-        assertThat(merged.category).isEqualTo("legal");
+        assertThat(merged.types).containsExactly("approval", "compliance/audit");
     }
 
     @Test
@@ -113,7 +116,7 @@ class WorkItemTemplateServiceTest {
         final WorkItemTemplate t = template("Minimal");
         final WorkItemCreateRequest req = WorkItemCreateRequest.builder().templateId(DUMMY_TEMPLATE_ID).createdBy("system").build();
         final WorkItemCreateRequest merged = WorkItemTemplateService.mergeRequestWithTemplate(t, req, null);
-        assertThat(merged.category).isNull();
+        assertThat(merged.types).isNull();
         assertThat(merged.priority).isNull();
         assertThat(merged.candidateGroups).isNull();
         assertThat(merged.payload).isNull();
@@ -172,6 +175,47 @@ class WorkItemTemplateServiceTest {
         t.labelPaths = "[\"security/incident\"]";
         final var labels = WorkItemTemplateService.parseLabels(t);
         assertThat(labels.get(0).appliedBy).isEqualTo("template");
+    }
+
+    // ── parseTypes ──────────────────────────────────────────────────────────
+
+    @Test
+    void parseTypes_validJson() {
+        WorkItemTemplate template = new WorkItemTemplate();
+        template.typePaths = "[\"approval\", \"compliance/audit\"]";
+        List<WorkItemType> types = WorkItemTemplateService.parseTypes(template);
+        assertThat(types).hasSize(2);
+        assertThat(types.get(0).path).isEqualTo("approval");
+        assertThat(types.get(1).path).isEqualTo("compliance/audit");
+    }
+
+    @Test
+    void parseTypes_nullTypePaths() {
+        WorkItemTemplate template = new WorkItemTemplate();
+        template.typePaths = null;
+        assertThat(WorkItemTemplateService.parseTypes(template)).isEmpty();
+    }
+
+    @Test
+    void parseTypes_blankTypePaths() {
+        WorkItemTemplate template = new WorkItemTemplate();
+        template.typePaths = "  ";
+        assertThat(WorkItemTemplateService.parseTypes(template)).isEmpty();
+    }
+
+    @Test
+    void parseTypes_invalidJson() {
+        WorkItemTemplate template = new WorkItemTemplate();
+        template.typePaths = "not json";
+        assertThat(WorkItemTemplateService.parseTypes(template)).isEmpty();
+    }
+
+    @Test
+    void parseTypes_invalidPath_rejects() {
+        WorkItemTemplate template = new WorkItemTemplate();
+        template.typePaths = "[\"/leading/slash\"]";
+        assertThrows(IllegalArgumentException.class,
+                () -> WorkItemTemplateService.parseTypes(template));
     }
 
     // ── mergePayload ────────────────────────────────────────────────────────

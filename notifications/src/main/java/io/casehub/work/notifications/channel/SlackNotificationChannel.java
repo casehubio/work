@@ -16,7 +16,7 @@ import java.util.logging.Logger;
  * from {@code casehub-connectors}.
  *
  * <p>
- * Message format: {@code "[{eventType}] {title} ({category}) — {status}"}.
+ * Message format: {@code "[{eventType}] {title} (types) — {status}"}.
  * No Slack SDK required; no credentials needed beyond the webhook URL in the rule.
  */
 @ApplicationScoped
@@ -39,7 +39,7 @@ public class SlackNotificationChannel implements NotificationChannel {
             final WorkItem wi = ((WorkItemLifecycleEvent) payload.event()).workItem();
             final String eventType = payload.event().eventType().name();
             final String title = "[" + eventType + "] " + wi.title;
-            final String body = "Category: " + wi.category
+            final String body = "Types: " + String.join(", ", wi.types.stream().map(t -> t.path).toList())
                     + " | Status: " + (wi.status != null ? wi.status.name() : "—")
                     + (wi.assigneeId != null ? " | Assignee: " + wi.assigneeId : "");
 

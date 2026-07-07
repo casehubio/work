@@ -88,7 +88,7 @@ public class EscalationScenario {
                 .title("Production incident: payment service 500 errors")
                 .description("Critical: payment service returning HTTP 500 for all transactions since 03:14 UTC. "
                         + "Revenue impact: ~£2,000/min. Immediate action required.")
-                .category("incident")
+                .types(List.of("incident"))
                 .priority(WorkItemPriority.URGENT)
                 .candidateUsers("oncall-engineer")
                 .createdBy(ACTOR_CREATOR)

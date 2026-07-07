@@ -70,7 +70,7 @@ class LowConfidenceFilterTest {
     @Test
     void e2e_aiAgentCreatesLowConfidenceItem_reviewerSeeItInInbox() {
         final String id = given().contentType(ContentType.JSON)
-                .body("{\"title\":\"Uncertain Decision\",\"category\":\"risk\"," +
+                .body("{\"title\":\"Uncertain Decision\",\"types\":[\"risk\"]," +
                         "\"candidateGroups\":\"analysts\",\"createdBy\":\"agent:risk-ai\"," +
                         "\"confidenceScore\":0.42}")
                 .post("/workitems").then().statusCode(201).extract().path("id");

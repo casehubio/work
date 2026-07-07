@@ -67,7 +67,7 @@ class MongoWorkItemStoreTest {
     void put_and_get_roundtrip() {
         final WorkItem wi = pending("alice", "Roundtrip test");
         wi.description = "Do something important";
-        wi.category = "review";
+        wi.types.add(new io.casehub.work.runtime.model.WorkItemType("review"));
         wi.priority = WorkItemPriority.HIGH;
         wi.formKey = "review-form";
         wi.payload = "{\"ref\":\"PROJ-42\"}";
@@ -79,7 +79,7 @@ class MongoWorkItemStoreTest {
         final WorkItem loaded = found.get();
         assertThat(loaded.title).isEqualTo("Roundtrip test");
         assertThat(loaded.description).isEqualTo("Do something important");
-        assertThat(loaded.category).isEqualTo("review");
+        assertThat(loaded.types).extracting(t -> t.path).containsExactly("review");
         assertThat(loaded.priority).isEqualTo(WorkItemPriority.HIGH);
         assertThat(loaded.formKey).isEqualTo("review-form");
         assertThat(loaded.payload).isEqualTo("{\"ref\":\"PROJ-42\"}");
@@ -175,7 +175,7 @@ class MongoWorkItemStoreTest {
         assertThat(store.scan(WorkItemQuery.inbox("carol", null, null))).hasSize(0);
     }
 
-    // ── Status / Priority / Category filters ──────────────────────────────────
+    // ── Status / Priority / Type filters ───────────────────────────────────────
 
     @Test
     void scan_byStatus_exactMatch() {
@@ -216,14 +216,14 @@ class MongoWorkItemStoreTest {
     }
 
     @Test
-    void scan_byCategory() {
+    void scan_byType() {
         final WorkItem wi = pending("alice", "Finance item");
-        wi.category = "finance";
+        wi.types.add(new io.casehub.work.runtime.model.WorkItemType("finance"));
         store.put(wi);
-        store.put(pending("alice", "No category"));
+        store.put(pending("alice", "No type"));
 
-        assertThat(store.scan(WorkItemQuery.builder().category("finance").build())).hasSize(1);
-        assertThat(store.scan(WorkItemQuery.builder().category("legal").build())).hasSize(0);
+        assertThat(store.scan(WorkItemQuery.builder().type("finance").build())).hasSize(1);
+        assertThat(store.scan(WorkItemQuery.builder().type("legal").build())).hasSize(0);
     }
 
     // ── Expired / ClaimExpired ────────────────────────────────────────────────
@@ -502,7 +502,7 @@ class MongoWorkItemStoreTest {
     void put_and_get_roundtrip_previouslyMissingFields() {
         final WorkItem wi = pending("alice", "Full roundtrip");
         wi.description = "Full field coverage";
-        wi.category = "review";
+        wi.types.add(new io.casehub.work.runtime.model.WorkItemType("review"));
         wi.priority = WorkItemPriority.HIGH;
         wi.formKey = "review-form";
         wi.payload = "{\"ref\":\"PROJ-42\"}";
@@ -540,7 +540,7 @@ class MongoWorkItemStoreTest {
 
         // Original fields
         assertThat(loaded.description).isEqualTo("Full field coverage");
-        assertThat(loaded.category).isEqualTo("review");
+        assertThat(loaded.types).extracting(t -> t.path).containsExactly("review");
         assertThat(loaded.priority).isEqualTo(WorkItemPriority.HIGH);
         assertThat(loaded.formKey).isEqualTo("review-form");
         assertThat(loaded.payload).isEqualTo("{\"ref\":\"PROJ-42\"}");

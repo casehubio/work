@@ -2,6 +2,7 @@ package io.casehub.work.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -49,7 +50,7 @@ class SkillProfileTest {
     @Test
     void skillMatcher_canImplementWithLambda() {
         SkillMatcher m   = (profile, ctx) -> profile.narrative().length();
-        final var    ctx = new SelectionContext("legal", null, null, null, null, null, null, null);
+        final var    ctx = new SelectionContext(List.of("legal"), null, null, null, null, null, null, null);
         assertThat(m.score(SkillProfile.ofNarrative("expert"), ctx)).isEqualTo(6.0);
     }
 }

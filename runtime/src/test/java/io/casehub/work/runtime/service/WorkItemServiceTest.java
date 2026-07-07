@@ -30,6 +30,7 @@ import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemType;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
@@ -101,8 +102,10 @@ class WorkItemServiceTest {
             if (q.priority() != null && wi.priority != q.priority()) {
                 return false;
             }
-            if (q.category() != null && !q.category().equals(wi.category)) {
-                return false;
+            if (q.type() != null) {
+                boolean matched = wi.types != null && wi.types.stream()
+                        .anyMatch(t -> t.path.equals(q.type()) || t.path.startsWith(q.type() + "/"));
+                if (!matched) return false;
             }
             if (q.followUpBefore() != null
                     && (wi.followUpDate == null || wi.followUpDate.isAfter(q.followUpBefore()))) {
@@ -1616,15 +1619,15 @@ class WorkItemServiceTest {
     }
 
     @Test
-    void scan_byStatusAndCategory_combinesFilters() {
+    void scan_byStatusAndType_combinesFilters() {
         WorkItem wi1 = service.create(WorkItemCreateRequest.builder()
-                .title("Legal review").category("legal").createdBy("system").build());
+                .title("Legal review").types(List.of("legal")).createdBy("system").build());
         WorkItem wi2 = service.create(WorkItemCreateRequest.builder()
-                .title("Finance review").category("finance").createdBy("system").build());
+                .title("Finance review").types(List.of("finance")).createdBy("system").build());
         service.claim(wi2.id, "alice");
 
         List<WorkItem> pendingLegal = service.scan(
-                WorkItemQuery.builder().status(WorkItemStatus.PENDING).category("legal").build());
+                WorkItemQuery.builder().status(WorkItemStatus.PENDING).type("legal").build());
         assertThat(pendingLegal).hasSize(1);
         assertThat(pendingLegal.get(0).id).isEqualTo(wi1.id);
     }

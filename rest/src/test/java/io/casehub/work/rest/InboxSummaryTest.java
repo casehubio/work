@@ -62,10 +62,10 @@ class InboxSummaryTest {
     void summary_withCategoryFilter_scopesToCategory() {
         final String cat = "summary-cat-" + java.util.UUID.randomUUID();
         given().contentType(ContentType.JSON)
-                .body("{\"title\":\"Cat summary test\",\"createdBy\":\"test\",\"category\":\"" + cat + "\"}")
+                .body("{\"title\":\"Cat summary test\",\"createdBy\":\"test\",\"types\":[\"" + cat + "\"]}")
                 .post("/workitems").then().statusCode(201);
 
-        given().queryParam("category", cat)
+        given().queryParam("type", cat)
                 .get("/workitems/inbox/summary")
                 .then()
                 .statusCode(200)

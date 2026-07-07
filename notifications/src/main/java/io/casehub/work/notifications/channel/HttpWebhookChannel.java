@@ -44,7 +44,8 @@ public class HttpWebhookChannel implements NotificationChannel {
             // NotificationPayload.event() is WorkItemEvent (api/); workItem() is on WorkItemLifecycleEvent (runtime/)
             final WorkItem wi = ((WorkItemLifecycleEvent) payload.event()).workItem();
             final String eventType = payload.event().eventType().name();
-            final String json = buildPayloadJson(eventType, wi.title, wi.category,
+            final java.util.List<String> types = wi.types.stream().map(t -> t.path).toList();
+            final String json = buildPayloadJson(eventType, wi.title, types,
                     wi.status != null ? wi.status.name() : null,
                     wi.assigneeId,
                     wi.priority != null ? wi.priority.name() : null,
@@ -68,12 +69,15 @@ public class HttpWebhookChannel implements NotificationChannel {
     // ── package-private statics for unit testing ──────────────────────────────
 
     static String buildPayloadJson(final String eventType, final String title,
-            final String category, final String status, final String assigneeId,
+            final java.util.List<String> types, final String status, final String assigneeId,
             final String priority, final String callerRef) {
+        final String typesArray = types.isEmpty() ? "[]" : "[" + types.stream()
+                .map(HttpHelper::jsonQuote)
+                .collect(java.util.stream.Collectors.joining(",")) + "]";
         return "{"
                 + "\"eventType\":" + HttpHelper.jsonQuote(eventType) + ","
                 + "\"title\":" + HttpHelper.jsonQuote(title) + ","
-                + "\"category\":" + HttpHelper.jsonQuote(category) + ","
+                + "\"types\":" + typesArray + ","
                 + "\"status\":" + HttpHelper.jsonQuote(status) + ","
                 + "\"assigneeId\":" + HttpHelper.jsonQuote(assigneeId) + ","
                 + "\"priority\":" + HttpHelper.jsonQuote(priority) + ","

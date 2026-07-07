@@ -36,7 +36,7 @@ class WorkItemTemplatePatchTest {
         return given().contentType(ContentType.JSON)
                 .body("""
                         {"name":"Template Alpha","description":"Original description",
-                         "category":"legal","priority":"HIGH",
+                         "typePaths":"[\\"legal\\"]","priority":"HIGH",
                          "candidateGroups":"lawyers","candidateUsers":"bob",
                          "requiredCapabilities":"legal-review",
                          "defaultExpiryHours":48,"defaultClaimHours":8,
@@ -54,11 +54,11 @@ class WorkItemTemplatePatchTest {
         final String id = createTemplate();
 
         given().contentType(MERGE_PATCH)
-                .body("{\"category\":\"compliance\"}")
+                .body("{\"typePaths\":\"[\\\"compliance\\\"]\"}")
                 .patch("/workitem-templates/" + id)
                 .then()
                 .statusCode(200)
-                .body("category", equalTo("compliance"))
+                .body("typePaths", equalTo("[\"compliance\"]"))
                 .body("description", equalTo("Original description"))  // unchanged
                 .body("candidateGroups", equalTo("lawyers"));           // unchanged
     }

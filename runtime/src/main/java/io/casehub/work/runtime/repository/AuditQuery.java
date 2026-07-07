@@ -28,7 +28,7 @@ public final class AuditQuery {
     private final Instant from;
     private final Instant to;
     private final String event;
-    private final String category;
+    private final String type;
     private final int page;
     private final int size;
 
@@ -37,7 +37,7 @@ public final class AuditQuery {
         this.from = b.from;
         this.to = b.to;
         this.event = b.event;
-        this.category = b.category;
+        this.type = b.type;
         this.page = Math.max(0, b.page);
         this.size = Math.min(MAX_SIZE, Math.max(1, b.size));
     }
@@ -68,8 +68,8 @@ public final class AuditQuery {
         return event;
     }
 
-    public String category() {
-        return category;
+    public String type() {
+        return type;
     }
 
     public int page() {
@@ -87,7 +87,7 @@ public final class AuditQuery {
         private Instant from;
         private Instant to;
         private String event;
-        private String category;
+        private String type;
         private int page = 0;
         private int size = DEFAULT_SIZE;
 
@@ -119,11 +119,11 @@ public final class AuditQuery {
         }
 
         /**
-         * Filter entries to WorkItems whose category matches this value.
+         * Filter entries to WorkItems whose type matches this value.
          * Implemented as a subquery on work_item — no JOIN in the main query.
          */
-        public Builder category(final String category) {
-            this.category = category;
+        public Builder type(final String type) {
+            this.type = type;
             return this;
         }
 
