@@ -70,7 +70,7 @@ class TrustScoreJobTest {
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(workItemId);
         for (final WorkItemLedgerEntry entry : entries) {
             if (actor.equals(entry.actorId)) {
-                final LedgerAttestation attestation = new LedgerAttestation();
+                final LedgerAttestation attestation = new io.casehub.ledger.runtime.model.LedgerAttestation();
                 attestation.ledgerEntryId = entry.id;
                 attestation.subjectId = workItemId;
                 attestation.attestorId = "audit-agent";
@@ -88,7 +88,7 @@ class TrustScoreJobTest {
                 .filter(e -> actor.equals(e.actorId))
                 .reduce((first, second) -> second)
                 .ifPresent(entry -> {
-                    final LedgerAttestation attestation = new LedgerAttestation();
+                    final LedgerAttestation attestation = new io.casehub.ledger.runtime.model.LedgerAttestation();
                     attestation.ledgerEntryId = entry.id;
                     attestation.subjectId = workItemId;
                     attestation.attestorId = "audit-agent";

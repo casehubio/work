@@ -47,7 +47,7 @@ class TrustScoreComputerTest {
     }
 
     private LedgerAttestation attestation(final UUID entryId, final AttestationVerdict verdict) {
-        final LedgerAttestation a = new LedgerAttestation();
+        final LedgerAttestation a = new io.casehub.ledger.runtime.model.LedgerAttestation();
         a.id = UUID.randomUUID();
         a.ledgerEntryId = entryId;
         a.attestorId = "peer";

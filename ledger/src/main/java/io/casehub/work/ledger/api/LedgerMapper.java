@@ -2,9 +2,9 @@ package io.casehub.work.ledger.api;
 
 import java.util.List;
 
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.supplement.ComplianceSupplement;
+import io.casehub.ledger.api.model.supplement.ProvenanceSupplement;
 import io.casehub.work.ledger.api.dto.LedgerAttestationResponse;
 import io.casehub.work.ledger.api.dto.LedgerEntryResponse;
 import io.casehub.work.ledger.model.WorkItemLedgerEntry;

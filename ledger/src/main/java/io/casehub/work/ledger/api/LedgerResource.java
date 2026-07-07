@@ -19,8 +19,8 @@ import jakarta.ws.rs.core.Response;
 
 import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.work.ledger.api.dto.LedgerAttestationRequest;
 import io.casehub.work.ledger.api.dto.LedgerEntryResponse;
 import io.casehub.work.ledger.api.dto.ProvenanceRequest;
@@ -113,7 +113,7 @@ public class LedgerResource {
                     .build();
         }
 
-        final var provenance = new ProvenanceSupplement();
+        final var provenance = new JpaProvenanceSupplement();
         provenance.sourceEntityId = request.sourceEntityId();
         provenance.sourceEntityType = request.sourceEntityType();
         provenance.sourceEntitySystem = request.sourceEntitySystem();
@@ -161,7 +161,7 @@ public class LedgerResource {
                     .build();
         }
 
-        final LedgerAttestation attestation = new LedgerAttestation();
+        final LedgerAttestation attestation = new io.casehub.ledger.runtime.model.LedgerAttestation();
         attestation.ledgerEntryId = entryId;
         attestation.subjectId = workItemId;
         attestation.attestorId = request.attestorId();

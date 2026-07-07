@@ -18,8 +18,8 @@ import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.ledger.runtime.service.LedgerMerkleTree;
 import io.casehub.work.ledger.model.WorkItemLedgerEntry;
 import io.casehub.work.ledger.repository.WorkItemLedgerEntryRepository;
@@ -108,7 +108,7 @@ public class LedgerEventCapture {
         entry.occurredAt = java.time.Instant.now().truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
 
         // Compliance supplement: rationale, planRef, detail, decisionContext
-        final var compliance = new ComplianceSupplement();
+        final var compliance = new JpaComplianceSupplement();
         compliance.rationale = event.rationale();
         compliance.planRef = event.planRef();
         compliance.detail = event.detail();
@@ -128,7 +128,7 @@ public class LedgerEventCapture {
         if ("created".equals(suffix)) {
             workItemOpt.ifPresent(wi -> {
                 if (wi.callerRef != null && !wi.callerRef.isBlank()) {
-                    final var prov = new ProvenanceSupplement();
+                    final var prov = new JpaProvenanceSupplement();
                     prov.sourceEntityId     = wi.callerRef;
                     prov.sourceEntityType   = "CaseHub:CaseInstance";
                     prov.sourceEntitySystem = "casehub-engine";

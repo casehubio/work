@@ -7,7 +7,7 @@ import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerEntry;
 
 /**
  * A ledger entry scoped to a single WorkItem lifecycle transition.

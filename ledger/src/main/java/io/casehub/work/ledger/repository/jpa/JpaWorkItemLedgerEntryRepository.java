@@ -9,8 +9,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.LedgerEntry;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerEntry;
 import io.casehub.work.ledger.model.WorkItemLedgerEntry;
 import io.casehub.work.ledger.repository.WorkItemLedgerEntryRepository;
 import io.casehub.work.runtime.repository.jpa.TenantAwareStore;

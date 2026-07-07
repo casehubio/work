@@ -6,8 +6,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.repository.LedgerEntryRepository;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.spi.LedgerEntryRepository;
 import io.casehub.work.ledger.model.WorkItemLedgerEntry;
 
 /**
