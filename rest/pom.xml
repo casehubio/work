@@ -82,7 +82,6 @@ who only need the Java SPI do not pay JAX-RS coupling cost.</description>
         <executions>
           <execution>
             <goals>
-              <goal>build</goal>
               <goal>generate-code</goal>
               <goal>generate-code-tests</goal>
             </goals>
