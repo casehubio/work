@@ -7,16 +7,16 @@ import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
-import io.casehub.ledger.api.model.LedgerEntry;
+import io.casehub.ledger.runtime.model.jpa.JpaLedgerEntry;
 
 /**
  * A ledger entry scoped to a single WorkItem lifecycle transition.
  *
  * <p>
- * Extends the domain-agnostic {@link LedgerEntry} base class using JPA JOINED
- * inheritance. The {@code work_item_ledger_entry} table holds WorkItem-specific
- * fields; all common fields live in {@code ledger_entry}. The {@code subjectId}
- * field on the base class carries the WorkItem UUID.
+ * Extends {@link JpaLedgerEntry} (the concrete JPA entity with JOINED inheritance
+ * on the {@code ledger_entry} table). The {@code work_item_ledger_entry} join table
+ * holds WorkItem-specific fields; all common fields live in {@code ledger_entry}.
+ * The {@code subjectId} field on the base class carries the WorkItem UUID.
  *
  * <p>
  * The {@code commandType} and {@code eventType} fields encode the CQRS
@@ -26,7 +26,7 @@ import io.casehub.ledger.api.model.LedgerEntry;
 @Entity
 @Table(name = "work_item_ledger_entry")
 @DiscriminatorValue("WORK_ITEM")
-public class WorkItemLedgerEntry extends LedgerEntry {
+public class WorkItemLedgerEntry extends JpaLedgerEntry {
 
     /** The actor's expressed intent — e.g. {@code "CompleteWorkItem"}. Nullable. */
     @Column(name = "command_type")
