@@ -25,7 +25,7 @@ class WorkBrokerTest {
     }
 
     private SelectionContext ctx(final Set<Capability> caps) {
-        return new SelectionContext("finance", "HIGH", caps, null, "alice,bob", null, null, null);
+        return new SelectionContext(java.util.List.of("finance"), "HIGH", caps, null, "alice,bob", null, null, null);
     }
 
     @Test
