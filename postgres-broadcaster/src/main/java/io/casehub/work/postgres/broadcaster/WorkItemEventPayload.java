@@ -1,6 +1,7 @@
 package io.casehub.work.postgres.broadcaster;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -38,7 +39,8 @@ public record WorkItemEventPayload(
         @JsonProperty("callerRef") String callerRef,
         @JsonProperty("assigneeId") String assigneeId,
         @JsonProperty("resolution") String resolution,
-        @JsonProperty("candidateGroups") String candidateGroups) {
+        @JsonProperty("candidateGroups") String candidateGroups,
+        @JsonProperty("types") List<String> types) {
 
     /** Convert from a live lifecycle event for publishing to the PostgreSQL channel. */
     static WorkItemEventPayload from(final WorkItemLifecycleEvent event) {
@@ -47,13 +49,14 @@ public record WorkItemEventPayload(
                 event.workItemId(), event.status(), event.occurredAt(),
                 event.actor(), event.detail(), event.rationale(), event.planRef(),
                 event.outcome(), event.tenancyId(),
-                event.callerRef(), event.assigneeId(), event.resolution(), event.candidateGroups());
+                event.callerRef(), event.assigneeId(), event.resolution(), event.candidateGroups(),
+                event.types());
     }
 
     /** Reconstruct a lifecycle event from a received wire payload. */
     WorkItemLifecycleEvent toEvent() {
         return WorkItemLifecycleEvent.fromWire(type, source, subject,
                 workItemId, status, occurredAt, actor, detail, rationale, planRef, outcome, tenancyId,
-                callerRef, assigneeId, resolution, candidateGroups);
+                callerRef, assigneeId, resolution, candidateGroups, types);
     }
 }

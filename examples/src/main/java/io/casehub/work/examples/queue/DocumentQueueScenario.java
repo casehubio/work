@@ -230,6 +230,7 @@ public class DocumentQueueScenario {
         final List<LedgerEntryResponse> allLedgerEntries = new ArrayList<>();
         for (final WorkItem wi : List.of(wi1, wi2, wi3)) {
             final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(wi.id);
+            entries.forEach(WorkItemLedgerEntry::syncSupplementsFromJpa);
             entries.stream()
                     .map(e -> LedgerMapper.toResponse(e, ledgerRepo.findAttestationsByEntryId(e.id)))
                     .forEach(allLedgerEntries::add);

@@ -111,6 +111,7 @@ public class ExpenseApprovalScenario {
 
         // Collect ledger entries
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(wi.id);
+        entries.forEach(WorkItemLedgerEntry::syncSupplementsFromJpa);
         final List<LedgerEntryResponse> ledgerEntries = entries.stream()
                 .map(e -> LedgerMapper.toResponse(e, ledgerRepo.findAttestationsByEntryId(e.id)))
                 .toList();
