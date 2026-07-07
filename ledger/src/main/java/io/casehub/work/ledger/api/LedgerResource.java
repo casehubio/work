@@ -63,11 +63,13 @@ public class LedgerResource {
      */
     @GET
     @Path("/ledger")
+    @Transactional
     public List<LedgerEntryResponse> getLedger(@PathParam("id") final UUID workItemId) {
         workItemStore.get(workItemId)
                 .orElseThrow(() -> new WorkItemNotFoundException(workItemId));
 
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(workItemId);
+        entries.forEach(WorkItemLedgerEntry::syncSupplementsFromJpa);
         return entries.stream()
                 .map(e -> LedgerMapper.toResponse(e, ledgerRepo.findAttestationsByEntryId(e.id, currentPrincipal.tenancyId())))
                 .toList();
