@@ -38,8 +38,8 @@ import io.casehub.work.runtime.service.WorkItemService;
  * JQ is used for one filter to show language variety.
  *
  * <ul>
- * <li>JEXL filter: {@code category == 'legal'} → {@code legal/review}</li>
- * <li>JQ filter: {@code .category == "legal" and .priority == "HIGH"} → {@code legal/urgent}</li>
+ * <li>JEXL filter: {@code types.contains('legal')} → {@code legal/review}</li>
+ * <li>JQ filter: {@code (.types | any(. == "legal")) and .priority == "HIGH"} → {@code legal/urgent}</li>
  * </ul>
  *
  * <p>
@@ -75,7 +75,7 @@ public class LegalRoutingScenario {
         filterA.name = "Legal-A: Route to Legal Review";
         filterA.scope = io.casehub.platform.api.path.Path.root();
         filterA.conditionLanguage = "jexl";
-        filterA.conditionExpression = "category == 'legal'";
+        filterA.conditionExpression = "types.contains('legal')";
         filterA.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("legal/review")));
         filterA.active = true;
@@ -86,7 +86,7 @@ public class LegalRoutingScenario {
         filterB.name = "Legal-B: High Priority to Urgent Queue (JQ)";
         filterB.scope = io.casehub.platform.api.path.Path.root();
         filterB.conditionLanguage = "jq";
-        filterB.conditionExpression = ".category == \"legal\" and .priority == \"HIGH\"";
+        filterB.conditionExpression = "(.types | any(. == \"legal\")) and .priority == \"HIGH\"";
         filterB.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("legal/urgent")));
         filterB.active = true;

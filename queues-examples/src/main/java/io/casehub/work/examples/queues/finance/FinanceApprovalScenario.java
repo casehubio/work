@@ -75,7 +75,7 @@ public class FinanceApprovalScenario {
         filterA.name = "Finance-A: Standard Approval Queue";
         filterA.scope = io.casehub.platform.api.path.Path.root();
         filterA.conditionLanguage = "jexl";
-        filterA.conditionExpression = "category == 'finance' && assigneeId == null";
+        filterA.conditionExpression = "types.contains('finance') && assigneeId == null";
         filterA.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("finance/approval")));
         filterA.active = true;
@@ -86,7 +86,7 @@ public class FinanceApprovalScenario {
         filterB.name = "Finance-B: Critical Spend to Executive Review";
         filterB.scope = io.casehub.platform.api.path.Path.root();
         filterB.conditionLanguage = "jexl";
-        filterB.conditionExpression = "category == 'finance' && priority == 'URGENT'";
+        filterB.conditionExpression = "types.contains('finance') && priority == 'URGENT'";
         filterB.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("finance/exec-review")));
         filterB.active = true;

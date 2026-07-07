@@ -15,7 +15,7 @@ import org.jboss.logging.Logger;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.work.examples.ScenarioResponse;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.ledger.api.LedgerMapper;
@@ -105,7 +105,7 @@ public class CreditDecisionScenario {
                 .filter(e -> e.sequenceNumber == 1)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No creation ledger entry found"));
-        final var creationProvenance = new ProvenanceSupplement();
+        final var creationProvenance = new JpaProvenanceSupplement();
         creationProvenance.sourceEntityId = "LOAN-8821";
         creationProvenance.sourceEntityType = "LoanApplication";
         creationProvenance.sourceEntitySystem = "credit-engine";

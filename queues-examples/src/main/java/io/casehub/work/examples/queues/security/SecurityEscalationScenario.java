@@ -35,7 +35,7 @@ import io.casehub.work.runtime.service.WorkItemService;
  * Demonstrates multi-label stacking and cascade escalation inspired by
  * Zendesk + PagerDuty dual-escalation patterns:
  * <ul>
- * <li>Filter A: {@code category == 'security'} → {@code security/incident}</li>
+ * <li>Filter A: {@code types.contains('security')} → {@code security/incident}</li>
  * <li>Filter B: {@code priority == 'URGENT'} → {@code priority/critical}</li>
  * <li>Filter C (cascade): {@code labels.contains('security/incident') && labels.contains('priority/critical')}
  * → {@code security/exec-escalate}</li>
@@ -75,7 +75,7 @@ public class SecurityEscalationScenario {
         filterA.name = "Security-A: Incident Detection";
         filterA.scope = io.casehub.platform.api.path.Path.root();
         filterA.conditionLanguage = "jexl";
-        filterA.conditionExpression = "category == 'security'";
+        filterA.conditionExpression = "types.contains('security')";
         filterA.actions = WorkItemFilter.serializeActions(List.of(
                 FilterAction.applyLabel("security/incident")));
         filterA.active = true;

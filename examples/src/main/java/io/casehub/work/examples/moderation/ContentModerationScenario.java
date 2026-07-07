@@ -15,8 +15,8 @@ import org.jboss.logging.Logger;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.supplement.ComplianceSupplement;
-import io.casehub.ledger.runtime.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaComplianceSupplement;
+import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
 import io.casehub.work.examples.ScenarioResponse;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.examples.moderation.MockAIClassifier.ContentFlag;
@@ -113,10 +113,10 @@ public class ContentModerationScenario {
                 .filter(e -> e.sequenceNumber == 1)
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No creation ledger entry found"));
-        final var creationCompliance = new ComplianceSupplement();
+        final var creationCompliance = new JpaComplianceSupplement();
         creationCompliance.evidence = flag.toEvidenceJson();
         creationEntry.attach(creationCompliance);
-        final var creationProvenance = new ProvenanceSupplement();
+        final var creationProvenance = new JpaProvenanceSupplement();
         creationProvenance.sourceEntityId = "POST-9912";
         creationProvenance.sourceEntityType = "ContentFlag";
         creationProvenance.sourceEntitySystem = "content-ai";
