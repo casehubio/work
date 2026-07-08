@@ -19,6 +19,7 @@ Use `ide_find_class` / `ide_find_symbol` to locate specific classes. This file d
 
 | Module | Purpose |
 |---|---|
+| `engine-adapter/` | CaseHub engine adapter; creates WorkItems from HumanTask/ActionGate bindings, translates lifecycle events back to PlanItem transitions. Relocated from `casehub-engine-work-adapter`. |
 | `flow/` | Quarkus-Flow CDI bridge (`HumanTaskFlowBridge`, `PendingWorkItemRegistry`, `WorkItemFlowEventListener`) |
 | `flow-examples/` | Example scenarios for the Quarkus-Flow integration |
 | `ledger/` | Optional accountability module (command/event ledger, hash chain, attestation, EigenTrust) |

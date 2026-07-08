@@ -163,9 +163,17 @@ JAVA_HOME=/Library/Java/JavaVirtualMachines/graalvm-25.jdk/Contents/Home
 REST API reference: [`docs/api-reference.md`](docs/api-reference.md)
 Configuration properties: [`README.md`](README.md#configuration)
 
-## casehub-work-api Utilities
+## engine-adapter Module
 
-- `WorkItemCallerRef.parseCaseId(String callerRef): UUID` — parses the `caseId:planItemId` callerRef format set by `casehub-engine-work-adapter` on engine-created WorkItems; returns `null` for non-engine callerRefs (e.g. plain UUIDs or other formats). Used by `casehub-engine-actor-state` to correlate open WorkItems with their originating case.
+CaseHub engine adapter (`casehub-work-engine-adapter`, package `io.casehub.work.engine`). Bridges casehub-work WorkItem lifecycle with CaseHub engine's blackboard PlanItem lifecycle. Relocated from `casehub-engine-work-adapter` in the engine repo (Refs #290).
+
+Activated by adding `casehub-work-engine-adapter` to the consumer's classpath (transitively brings `casehub-engine-blackboard`). Required for any runtime that uses `humanTask` YAML bindings — without it, `HumanTaskScheduleEvent` is published but never handled and WorkItems are never created.
+
+Two-way bridge:
+- **Outbound** (`HumanTaskScheduleHandler`, `ActionGateWorkItemHandler`) — consumes engine event bus messages, creates WorkItems
+- **Inbound** (`WorkItemLifecycleAdapter`) — observes `WorkItemEvent`, translates terminal events to PlanItem transitions via `PlanItemCompletionApplier`
+
+`callerRef` format: `case:{caseId}/pi:{planItemId}` (HumanTask) or `case:{caseId}/gate:{gateId}` (ActionGate). Use `CallerRef.parse()` / `PlanItemCallerRef.encode()` / `GateCallerRef.encode()`.
 
 ---
 

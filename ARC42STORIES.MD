@@ -92,7 +92,7 @@ C4Context
 What casehub-work explicitly does NOT do:
 
 - Orchestrate case flow or interpret case state
-- Interpret `callerRef` content — stored and echoed opaquely; convention: `casehub-engine` sets `"caseId:planItemId"`
+- Interpret `callerRef` content — stored and echoed opaquely; convention: `casehub-engine` sets `"case:{caseId}/pi:{planItemId}"` (HumanTask) or `"case:{caseId}/gate:{gateId}"` (ActionGate)
 - Provision AI agents — casehub-engine and Claudony own that
 - Decide when to spawn child WorkItems — callers drive spawn via `SpawnPort`
 - Implement trust scoring — casehub-ledger owns this; casehub-work fires events, ledger records and scores
@@ -194,6 +194,7 @@ C4Container
 | `notifications/` | `casehub-work-notifications` | Optional extension | HTTP webhook, Slack, Teams; NotificationChannel SPI; Flyway V3000–V3001 |
 | `issue-tracker/` | `casehub-work-issue-tracker` | Optional extension | IssueTrackerProvider SPI, IssueLinkStore SPI, GitHub/Jira webhook handlers, NormativeResolution; Flyway V5000–V5001 |
 | `persistence-mongodb/` | `casehub-work-persistence-mongodb` | Optional extension | MongoDB WorkItemStore @Alternative @Priority(1) |
+| `engine-adapter/` | `casehub-work-engine-adapter` | Optional extension | CaseHub engine bridge — HumanTask/ActionGate WorkItem lifecycle; CallerRef, PlanItemCompletionApplier, JpaPlanItemStore. Relocated from `casehub-engine-work-adapter` (#290) |
 | `flow/` | `casehub-work-flow` | Optional extension | HumanTaskFlowBridge, WorkItemFlowEventListener |
 | `integration-tests/` | — | Black-box test suite | @QuarkusIntegrationTest + native image validation (25 tests) |
 | `examples/` | — | Runnable demos | POST /examples/{name}/run scenario runner |
@@ -1891,7 +1892,7 @@ Full decision records: `docs/adr/`
 | SlaBreachPolicy | SPI deciding what happens when a completion SLA breaches: Fail (terminal EXPIRED), EscalateTo (new candidates, new deadline), Extend (new deadline), Chained (try multiple), or Exhausted (terminal ESCALATED) |
 | ClaimSlaPolicy | SPI deciding what happens when a claim SLA breaches: item unclaimed too long |
 | BreachDecision | Sealed type returned by `SlaBreachPolicy.onBreach()` — five variants: Fail, EscalateTo, Extend, Chained, Exhausted |
-| callerRef | Opaque routing key set on a WorkItem at creation; echoed in every lifecycle event; convention: `casehub-engine` sets `"caseId:planItemId"`; casehub-work never interprets it |
+| callerRef | Opaque routing key set on a WorkItem at creation; echoed in every lifecycle event; convention: `casehub-engine` sets `"case:{caseId}/pi:{planItemId}"` (HumanTask) or `"case:{caseId}/gate:{gateId}"` (ActionGate); casehub-work never interprets it |
 | DELEGATED | WorkItemStatus set when `delegate()` is called — pre-acceptance state; the named target must `accept-delegation` or `decline-delegation`; non-terminal, expires normally |
 | ESCALATED | WorkItemStatus set when a Chained SlaBreachPolicy exhausts all branches — terminal; requires operator intervention |
 | EXPIRED | WorkItemStatus set when the completion deadline passes and SlaBreachPolicy returns Fail or Chained exhausts — terminal |
