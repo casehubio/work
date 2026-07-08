@@ -281,6 +281,34 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
      * @param pattern the label pattern; must not be null
      * @return matching work items
      */
+    @Override
+    public long countByQuery(final WorkItemQuery query) {
+        if (query.labelPattern() != null) {
+            return countByLabelPattern(query.labelPattern());
+        }
+        return scan(query).size();
+    }
+
+    private long countByLabelPattern(final String pattern) {
+        final String tenancyId = currentPrincipal.tenancyId();
+        if (pattern.endsWith("/**")) {
+            final String prefix = pattern.substring(0, pattern.length() - 3) + "/";
+            return WorkItem.count(
+                    "SELECT COUNT(DISTINCT wi) FROM WorkItem wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path LIKE ?2",
+                    tenancyId, prefix + "%");
+        }
+        if (pattern.endsWith("/*")) {
+            final String prefix = pattern.substring(0, pattern.length() - 2) + "/";
+            return WorkItem.count(
+                    "SELECT COUNT(DISTINCT wi) FROM WorkItem wi JOIN wi.labels l " +
+                            "WHERE wi.tenancyId = ?1 AND l.path LIKE ?2 AND l.path NOT LIKE ?3",
+                    tenancyId, prefix + "%", prefix + "%/%");
+        }
+        return WorkItem.count(
+                "SELECT COUNT(DISTINCT wi) FROM WorkItem wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path = ?2",
+                tenancyId, pattern);
+    }
+
     private List<WorkItem> scanByLabelPattern(final String pattern) {
         final String tenancyId = currentPrincipal.tenancyId();
         if (pattern.endsWith("/**")) {

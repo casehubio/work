@@ -106,6 +106,15 @@ public interface WorkItemStore {
     }
 
     /**
+     * Counts WorkItems matching the query without hydrating entities.
+     * Default implementation delegates to {@link #scan} — JPA overrides
+     * with a native COUNT query for efficiency.
+     */
+    default long countByQuery(WorkItemQuery query) {
+        return scan(query).size();
+    }
+
+    /**
      * Find a WorkItem by its caller reference, returning the most recently created match.
      *
      * <p>

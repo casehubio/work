@@ -1,5 +1,7 @@
 package io.casehub.work.queues.api;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -21,14 +23,12 @@ import org.jboss.resteasy.reactive.RestStreamElementType;
 import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.queues.event.WorkItemQueueEvent;
 import io.casehub.work.queues.model.QueueView;
+import io.casehub.work.queues.repository.QueueSnapshotStore;
 import io.casehub.work.queues.repository.QueueViewStore;
-import io.casehub.work.queues.service.ExpressionDescriptor;
-import io.casehub.work.queues.service.FilterEvaluatorRegistry;
+import io.casehub.work.queues.service.QueueMembershipService;
 import io.casehub.work.queues.service.WorkItemQueueEventBroadcaster;
 import io.casehub.work.rest.WorkItemMapper;
 import io.casehub.work.rest.WorkItemResponse;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
 import io.smallrye.mutiny.Multi;
 
 /** REST resource for managing queue views and querying their live content. */
@@ -38,16 +38,16 @@ import io.smallrye.mutiny.Multi;
 public class QueueResource {
 
     @Inject
-    WorkItemStore workItemStore;
-
-    @Inject
     QueueViewStore queueViewStore;
 
     @Inject
     WorkItemQueueEventBroadcaster queueEventBroadcaster;
 
     @Inject
-    FilterEvaluatorRegistry evaluatorRegistry;
+    QueueMembershipService membershipService;
+
+    @Inject
+    QueueSnapshotStore snapshotStore;
 
     @Inject
     CurrentPrincipal currentPrincipal;
@@ -129,17 +129,7 @@ public class QueueResource {
         if (q == null) {
             return Response.status(404).entity(Map.of("error", "Queue view not found")).build();
         }
-        var candidates = workItemStore.scan(WorkItemQuery.byLabelPattern(q.labelPattern));
-
-        // Apply additionalConditions JEXL expression if set
-        if (q.additionalConditions != null && !q.additionalConditions.isBlank()) {
-            final var jexl = evaluatorRegistry.find("jexl");
-            if (jexl != null) {
-                candidates = candidates.stream()
-                        .filter(wi -> jexl.evaluate(wi, ExpressionDescriptor.of("jexl", q.additionalConditions)))
-                        .toList();
-            }
-        }
+        final var candidates = membershipService.evaluateMembers(q);
 
         final var items = candidates.stream()
                 .map(WorkItemMapper::toResponse)
@@ -177,6 +167,49 @@ public class QueueResource {
             return Response.status(404).entity(Map.of("error", "Not found")).build();
         }
         return Response.noContent().build();
+    }
+
+    @GET
+    @Path("/{id}/trend")
+    @Transactional
+    public Response trend(@PathParam("id") final UUID id,
+                          @jakarta.ws.rs.QueryParam("period") final String periodParam) {
+        final QueueView q = queueViewStore.get(id).orElse(null);
+        if (q == null) {
+            return Response.status(404)
+                    .entity(Map.of("error", "Queue view not found")).build();
+        }
+        final Duration period;
+        try {
+            period = parsePeriod(periodParam != null ? periodParam : "24h");
+        } catch (final Exception e) {
+            return Response.status(400)
+                    .entity(Map.of("error", "Invalid period: " + periodParam)).build();
+        }
+        final Instant now = Instant.now();
+        final Instant from = now.minus(period);
+        final var snapshots = snapshotStore.findByQueueAndPeriod(q.id, from, now);
+        final var dataPoints = snapshots.stream()
+                .map(s -> new QueueTrendResponse.DataPoint(s.snapshotAt, s.memberCount))
+                .toList();
+        return Response.ok(new QueueTrendResponse(
+                q.id, q.name, period.toString(), dataPoints)).build();
+    }
+
+    static Duration parsePeriod(final String input) {
+        if (input.startsWith("P") || input.startsWith("p")) {
+            return Duration.parse(input);
+        }
+        final String normalized = input.toLowerCase();
+        if (normalized.endsWith("h")) {
+            return Duration.ofHours(
+                    Long.parseLong(normalized.substring(0, normalized.length() - 1)));
+        }
+        if (normalized.endsWith("d")) {
+            return Duration.ofDays(
+                    Long.parseLong(normalized.substring(0, normalized.length() - 1)));
+        }
+        return Duration.parse("PT" + input);
     }
 
     /**

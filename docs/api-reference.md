@@ -1170,6 +1170,34 @@ SSE stream of queue membership events. Hot stream — only events after connect 
 
 ---
 
+### GET /queues/{id}/trend
+
+Historical queue membership trend data for sparkline visualisation.
+
+**Path parameter:** `id` — UUID
+
+**Query parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `period` | Duration string | `24h` | How far back (`1h`, `24h`, `7d`, `30d`). Accepts ISO-8601 (`PT24H`, `P7D`) and shorthand. |
+
+**Response:** `200 OK`
+**Body:** `QueueTrendResponse`
+
+| Field | Type | Description |
+|---|---|---|
+| `queueViewId` | UUID | |
+| `queueName` | string | |
+| `period` | string | ISO-8601 duration |
+| `dataPoints` | DataPoint[] | Ordered by `snapshotAt` ascending |
+
+DataPoint: `snapshotAt` (instant), `memberCount` (long)
+
+**Error:** `404` — queue not found
+
+---
+
 ### PUT /workitems/{id}/pickup
 
 Queue pickup — claim or soft-takeover. `PENDING` = standard claim. `ASSIGNED` with relinquishable flag = soft pickup with ownership transfer.
