@@ -57,45 +57,47 @@ public class ActionGateCompletionApplier {
 
   @Inject EventBus eventBus;
 
-  public void apply(
-      final GateCallerRef gateRef, final WorkItemStatus status, final WorkItemRef ref) {
-    switch (status) {
-      case COMPLETED -> handleApproved(gateRef, ref);
-      case REJECTED, CANCELLED, OBSOLETE -> handleRejected(gateRef, ref);
-      case EXPIRED, FAULTED -> handleExpired(gateRef);
-      default ->
-          LOG.debugf(
-              "Gate WorkItem status %s for caseId=%s gateId=%d — no gate event published",
-              status, gateRef.caseId(), gateRef.gateId());
+    public void apply(
+            final GateCallerRef gateRef, final WorkItemStatus status, final WorkItemRef ref,
+            final String tenancyId) {
+        switch (status) {
+            case COMPLETED -> handleApproved(gateRef, ref, tenancyId);
+            case REJECTED, CANCELLED, OBSOLETE -> handleRejected(gateRef, ref, tenancyId);
+            case EXPIRED, FAULTED -> handleExpired(gateRef, tenancyId);
+            default -> LOG.debugf(
+                    "Gate WorkItem status %s for caseId=%s gateId=%d — no gate event published",
+                    status, gateRef.caseId(), gateRef.gateId());
+        }
     }
-  }
 
-  private void handleApproved(final GateCallerRef gateRef, final WorkItemRef ref) {
+  private void handleApproved(final GateCallerRef gateRef, final WorkItemRef ref,
+                              final String tenancyId) {
     final String approvedBy = resolveActorId(ref);
     eventBus.publish(
-        EventBusAddresses.ACTION_GATE_APPROVED,
-        new ActionGateApprovedEvent(
-            gateRef.caseId(), gateRef.gateId(), ref != null ? ref.resolution() : null, approvedBy));
+            EventBusAddresses.ACTION_GATE_APPROVED,
+            new ActionGateApprovedEvent(
+                    gateRef.caseId(), tenancyId, gateRef.gateId(), ref != null ? ref.resolution() : null, approvedBy));
     LOG.infof(
-        "Gate approved: caseId=%s gateId=%d approvedBy=%s",
-        gateRef.caseId(), gateRef.gateId(), approvedBy);
+            "Gate approved: caseId=%s gateId=%d approvedBy=%s",
+            gateRef.caseId(), gateRef.gateId(), approvedBy);
   }
 
-  private void handleRejected(final GateCallerRef gateRef, final WorkItemRef ref) {
+  private void handleRejected(final GateCallerRef gateRef, final WorkItemRef ref,
+                              final String tenancyId) {
     final String rejectedBy = resolveActorId(ref);
     eventBus.publish(
-        EventBusAddresses.ACTION_GATE_REJECTED,
-        new ActionGateRejectedEvent(
-            gateRef.caseId(), gateRef.gateId(), ref != null ? ref.resolution() : null, rejectedBy));
+            EventBusAddresses.ACTION_GATE_REJECTED,
+            new ActionGateRejectedEvent(
+                    gateRef.caseId(), tenancyId, gateRef.gateId(), ref != null ? ref.resolution() : null, rejectedBy));
     LOG.infof(
-        "Gate rejected: caseId=%s gateId=%d rejectedBy=%s",
-        gateRef.caseId(), gateRef.gateId(), rejectedBy);
+            "Gate rejected: caseId=%s gateId=%d rejectedBy=%s",
+            gateRef.caseId(), gateRef.gateId(), rejectedBy);
   }
 
-  private void handleExpired(final GateCallerRef gateRef) {
+  private void handleExpired(final GateCallerRef gateRef, final String tenancyId) {
     eventBus.publish(
-        EventBusAddresses.ACTION_GATE_EXPIRED,
-        new ActionGateExpiredEvent(gateRef.caseId(), gateRef.gateId()));
+            EventBusAddresses.ACTION_GATE_EXPIRED,
+            new ActionGateExpiredEvent(gateRef.caseId(), tenancyId, gateRef.gateId()));
     LOG.infof("Gate expired: caseId=%s gateId=%d", gateRef.caseId(), gateRef.gateId());
   }
 

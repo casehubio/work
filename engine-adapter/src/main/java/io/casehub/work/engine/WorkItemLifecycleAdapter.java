@@ -33,10 +33,11 @@ import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
-import org.jboss.logging.Logger;
 
 /**
  * Translates terminal quarkus-work {@link WorkItemEvent}s and M-of-N {@link
@@ -95,7 +96,7 @@ public class WorkItemLifecycleAdapter {
     if (ref == null) return;
 
     if (ref instanceof GateCallerRef gateRef) {
-      routeGate(gateRef, status, wie.ref());
+      routeGate(gateRef, status, wie.ref(), wie.tenancyId());
       return;
     }
 
@@ -262,8 +263,9 @@ public class WorkItemLifecycleAdapter {
             });
   }
 
-  private void routeGate(
-      final GateCallerRef gateRef, final WorkItemStatus status, final WorkItemRef ref) {
-    gateApplier.apply(gateRef, status, ref);
-  }
+    private void routeGate(
+            final GateCallerRef gateRef, final WorkItemStatus status, final WorkItemRef ref,
+            final String tenancyId) {
+        gateApplier.apply(gateRef, status, ref, tenancyId);
+    }
 }

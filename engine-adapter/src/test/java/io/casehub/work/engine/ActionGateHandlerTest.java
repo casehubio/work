@@ -179,7 +179,7 @@ class ActionGateHandlerTest {
     workItem.resolution = "{\"note\": \"approved\"}";
 
     actionGateCompletionApplier.apply(
-        new GateCallerRef(caseId, gateId), WorkItemStatus.COMPLETED, toRef(workItem));
+        new GateCallerRef(caseId, gateId), WorkItemStatus.COMPLETED, toRef(workItem), "test-tenant");
 
     await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.approvedEvents.isEmpty());
 
@@ -202,7 +202,7 @@ class ActionGateHandlerTest {
     workItem.resolution = "{\"reason\": \"rejected\"}";
 
     actionGateCompletionApplier.apply(
-        new GateCallerRef(caseId, gateId), WorkItemStatus.REJECTED, toRef(workItem));
+        new GateCallerRef(caseId, gateId), WorkItemStatus.REJECTED, toRef(workItem), "test-tenant");
 
     await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.rejectedEvents.isEmpty());
 
@@ -219,7 +219,7 @@ class ActionGateHandlerTest {
     workItem.callerRef = GateCallerRef.encode(caseId, 30L);
 
     actionGateCompletionApplier.apply(
-        new GateCallerRef(caseId, 30L), WorkItemStatus.CANCELLED, toRef(workItem));
+        new GateCallerRef(caseId, 30L), WorkItemStatus.CANCELLED, toRef(workItem), "test-tenant");
 
     await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.rejectedEvents.isEmpty());
     assertThat(GateEventRecorder.rejectedEvents).hasSize(1);
@@ -235,7 +235,7 @@ class ActionGateHandlerTest {
     workItem.callerRef = GateCallerRef.encode(caseId, 40L);
 
     actionGateCompletionApplier.apply(
-        new GateCallerRef(caseId, 40L), WorkItemStatus.EXPIRED, toRef(workItem));
+        new GateCallerRef(caseId, 40L), WorkItemStatus.EXPIRED, toRef(workItem), "test-tenant");
 
     await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.expiredEvents.isEmpty());
     assertThat(GateEventRecorder.expiredEvents).hasSize(1);
