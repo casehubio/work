@@ -1,5 +1,6 @@
 package io.casehub.work.api.spi;
 
+import io.casehub.platform.api.routing.NamedStrategy;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.AssignmentTrigger;
 import io.casehub.work.api.SelectionContext;
@@ -11,21 +12,20 @@ import java.util.Set;
 /**
  * Pluggable worker selection SPI.
  *
- * <p>
- * Implement as {@code @ApplicationScoped @Alternative @Priority(1)} to override
- * the built-in strategy configured by {@code casehub.work.routing.strategy}.
+ * <p>Implementations are CDI beans annotated {@code @ApplicationScoped} that return
+ * a unique {@link #id()} string. The active strategy is selected by configuration:
+ * {@code casehub.work.routing.strategy=<id>} (default: {@code "least-loaded"}).
  *
- * <p>
- * Built-in implementations (in the runtime module):
+ * <p>Built-in implementations (in the core module):
  * <ul>
- * <li>{@code LeastLoadedStrategy} — pre-assigns to fewest-active-items candidate (default)
- * <li>{@code ClaimFirstStrategy} — no pre-assignment; whoever claims first wins
+ * <li>{@code LeastLoadedStrategy} (id: "least-loaded") — pre-assigns to fewest-active-items candidate (default)
+ * <li>{@code ClaimFirstStrategy} (id: "claim-first") — no pre-assignment; whoever claims first wins
+ * <li>{@code RoundRobinStrategy} (id: "round-robin") — sequential rotation across all candidates
  * </ul>
  *
- * <p>
- * CaseHub alignment: corresponds to {@code WorkerSelectionStrategy} in casehub-engine.
+ * <p>CaseHub alignment: corresponds to {@code WorkerSelectionStrategy} in casehub-engine.
  */
-public interface WorkerSelectionStrategy {
+public interface WorkerSelectionStrategy extends NamedStrategy {
 
     /**
      * Select an assignment outcome from the resolved candidate list.

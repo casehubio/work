@@ -8,16 +8,14 @@ import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
+import jakarta.inject.Provider;
 
+import io.casehub.platform.api.routing.StrategyResolver;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceContext;
 import io.casehub.work.api.SelectionContext;
 import io.casehub.work.api.spi.WorkerSelectionStrategy;
-import io.casehub.work.core.strategy.ClaimFirstStrategy;
-import io.casehub.work.core.strategy.LeastLoadedStrategy;
-import io.casehub.work.core.strategy.RoundRobinStrategy;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.service.CapabilityParser;
@@ -38,37 +36,35 @@ import io.casehub.work.runtime.service.CapabilityParser;
  * enforced here — enforced by the claim guard layer).
  */
 @ApplicationScoped
-@Named("roundRobin")
 public class RoundRobinAssignmentStrategy implements InstanceAssignmentStrategy {
 
-    private final WorkerSelectionStrategy workerSelectionStrategy;
+    @Override
+    public String id() { return "round-robin"; }
 
-    /**
-     * CDI constructor — injects concrete strategy types to avoid ambiguity,
-     * then selects the active one based on config. Mirrors the pattern in
-     * {@code WorkItemAssignmentService}.
-     *
-     * @param config the WorkItems configuration
-     * @param claimFirst the built-in claim-first strategy
-     * @param leastLoaded the built-in least-loaded strategy
-     * @param roundRobin the built-in round-robin strategy
-     */
+    private final Provider<StrategyResolver> strategyResolverProvider;
+    private final WorkItemsConfig config;
+    private WorkerSelectionStrategy workerSelectionStrategy;
+
     @Inject
     public RoundRobinAssignmentStrategy(
-            final WorkItemsConfig config,
-            final ClaimFirstStrategy claimFirst,
-            final LeastLoadedStrategy leastLoaded,
-            final RoundRobinStrategy roundRobin) {
-        this.workerSelectionStrategy = switch (config.routing().strategy()) {
-            case "claim-first" -> claimFirst;
-            case "round-robin" -> roundRobin;
-            default -> leastLoaded;
-        };
+            final Provider<StrategyResolver> strategyResolverProvider,
+            final WorkItemsConfig config) {
+        this.strategyResolverProvider = strategyResolverProvider;
+        this.config = config;
     }
 
-    /** Package-private constructor for unit tests. */
     RoundRobinAssignmentStrategy(final WorkerSelectionStrategy workerSelectionStrategy) {
+        this.strategyResolverProvider = null;
+        this.config = null;
         this.workerSelectionStrategy = workerSelectionStrategy;
+    }
+
+    private WorkerSelectionStrategy workerStrategy() {
+        if (workerSelectionStrategy == null) {
+            workerSelectionStrategy = strategyResolverProvider.get()
+                    .resolve(WorkerSelectionStrategy.class, config.routing().strategy());
+        }
+        return workerSelectionStrategy;
     }
 
     /**
@@ -104,7 +100,7 @@ public class RoundRobinAssignmentStrategy implements InstanceAssignmentStrategy 
                     child.description,
                     child.excludedUsers);
 
-            final AssignmentDecision decision = workerSelectionStrategy.select(selCtx, List.of());
+            final AssignmentDecision decision = workerStrategy().select(selCtx, List.of());
             if (decision != null && decision.assigneeId() != null) {
                 child.assigneeId = decision.assigneeId();
                 alreadyAssigned.add(decision.assigneeId());

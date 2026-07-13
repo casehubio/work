@@ -122,11 +122,14 @@ class SlaBreachPolicyTest {
     void devtownPolicyPattern_escalatesOnFirstBreachFailsOnSecond() {
         // Stateless two-tier policy: if escalation group already in candidateGroups → Fail
         final String escalationGroup = "senior-reviewers";
-        final SlaBreachPolicy policy = ctx -> {
-            if (ctx.task().candidateGroups().contains(escalationGroup)) {
-                return new BreachDecision.Fail("sla-exhausted");
+        final SlaBreachPolicy policy = new SlaBreachPolicy() {
+            @Override public String id() { return "test-devtown"; }
+            @Override public BreachDecision onBreach(final SlaBreachContext ctx) {
+                if (ctx.task().candidateGroups().contains(escalationGroup)) {
+                    return new BreachDecision.Fail("sla-exhausted");
+                }
+                return BreachDecision.EscalateTo.to(escalationGroup).withDeadline(Duration.ofHours(4));
             }
-            return BreachDecision.EscalateTo.to(escalationGroup).withDeadline(Duration.ofHours(4));
         };
 
         // First breach: escalate

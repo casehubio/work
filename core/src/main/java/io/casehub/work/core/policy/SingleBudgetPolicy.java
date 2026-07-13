@@ -3,7 +3,6 @@ package io.casehub.work.core.policy;
 import java.time.Instant;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Alternative;
 
 import io.casehub.work.api.ClaimSlaContext;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
@@ -21,8 +20,10 @@ import io.casehub.work.api.spi.ClaimSlaPolicy;
  * claimed within a fixed window from when it was first raised, with no extensions.
  */
 @ApplicationScoped
-@Alternative
 public class SingleBudgetPolicy implements ClaimSlaPolicy {
+
+    @Override
+    public String id() { return "single-budget"; }
 
     @Override
     public Instant computePoolDeadline(final ClaimSlaContext context) {

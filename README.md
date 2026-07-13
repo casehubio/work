@@ -148,8 +148,11 @@ Three systems in the Quarkus ecosystem define "task":
 | `casehub.work.default-expiry-hours` | `24` | Completion deadline when none supplied at creation |
 | `casehub.work.default-claim-hours` | `4` | Claim deadline for unclaimed WorkItems. `0` = no deadline |
 | `casehub.work.cleanup.expiry-check-seconds` | `60` | Polling interval for the expiry/claim-deadline job |
+| `casehub.work.routing.strategy` | `least-loaded` | Worker selection strategy id (`least-loaded`, `claim-first`, `round-robin`, or custom) |
+| `casehub.work.sla.claim-policy` | `continuation` | Claim SLA policy id (`continuation`, `fresh-clock`, `single-budget`, `phase-clock`, or custom) |
+| `casehub.work.sla.breach-policy` | `no-op` | SLA breach policy id (`no-op` or custom) |
 
-SLA breach behaviour (what happens when `expiresAt` or `claimDeadline` is exceeded) is controlled by implementing the `SlaBreachPolicy` SPI — see `casehub-work-api`.
+All strategy/policy SPIs extend `NamedStrategy` and are resolved by id via `StrategyResolver`. Custom implementations are `@ApplicationScoped` CDI beans that return a unique `id()` — selection is config-based, not CDI `@Alternative`.
 
 ---
 

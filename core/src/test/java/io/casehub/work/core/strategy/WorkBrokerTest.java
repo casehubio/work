@@ -32,6 +32,9 @@ class WorkBrokerTest {
     void skipsWhenTriggerNotInStrategyTriggers() {
         final WorkerSelectionStrategy onlyCreated = new WorkerSelectionStrategy() {
             @Override
+            public String id() { return "test"; }
+
+            @Override
             public AssignmentDecision select(final SelectionContext c, final List<WorkerCandidate> cands) {
                 return AssignmentDecision.assignTo("alice");
             }
@@ -48,7 +51,12 @@ class WorkBrokerTest {
 
     @Test
     void filtersOutCandidatesLackingRequiredCapabilities() {
-        final WorkerSelectionStrategy strategy = (c, cands) -> AssignmentDecision.assignTo(cands.get(0).id());
+        final WorkerSelectionStrategy strategy = new WorkerSelectionStrategy() {
+            @Override public String id() { return "test"; }
+            @Override public AssignmentDecision select(final SelectionContext c, final List<WorkerCandidate> cands) {
+                return AssignmentDecision.assignTo(cands.get(0).id());
+            }
+        };
         final var alice = new WorkerCandidate("alice",
                 Set.of(Capability.of("approval"), Capability.of("legal")), 0);
         final var bob = new WorkerCandidate("bob",
@@ -64,9 +72,12 @@ class WorkBrokerTest {
     @Test
     void noCapabilitiesFilter_passesAllCandidates() {
         final int[] callCount = { 0 };
-        final WorkerSelectionStrategy strategy = (c, cands) -> {
-            callCount[0] = cands.size();
-            return AssignmentDecision.noChange();
+        final WorkerSelectionStrategy strategy = new WorkerSelectionStrategy() {
+            @Override public String id() { return "test"; }
+            @Override public AssignmentDecision select(final SelectionContext c, final List<WorkerCandidate> cands) {
+                callCount[0] = cands.size();
+                return AssignmentDecision.noChange();
+            }
         };
         final var cands = List.of(WorkerCandidate.of("alice"), WorkerCandidate.of("bob"));
         broker.apply(ctx(Set.of()), AssignmentTrigger.CREATED, cands, strategy);
@@ -76,9 +87,12 @@ class WorkBrokerTest {
     @Test
     void emptyCandidatesAfterCapabilityFilter_strategyReceivesEmptyList() {
         final int[] callCount = { 0 };
-        final WorkerSelectionStrategy strategy = (c, cands) -> {
-            callCount[0] = cands.size();
-            return AssignmentDecision.noChange();
+        final WorkerSelectionStrategy strategy = new WorkerSelectionStrategy() {
+            @Override public String id() { return "test"; }
+            @Override public AssignmentDecision select(final SelectionContext c, final List<WorkerCandidate> cands) {
+                callCount[0] = cands.size();
+                return AssignmentDecision.noChange();
+            }
         };
         final var alice = new WorkerCandidate("alice",
                 Set.of(Capability.of("approval")), 0); // missing "legal"
@@ -91,9 +105,12 @@ class WorkBrokerTest {
     @Test
     void emptyRequiredCapabilities_treatedAsNoFilter() {
         final int[] callCount = { 0 };
-        final WorkerSelectionStrategy strategy = (c, cands) -> {
-            callCount[0] = cands.size();
-            return AssignmentDecision.noChange();
+        final WorkerSelectionStrategy strategy = new WorkerSelectionStrategy() {
+            @Override public String id() { return "test"; }
+            @Override public AssignmentDecision select(final SelectionContext c, final List<WorkerCandidate> cands) {
+                callCount[0] = cands.size();
+                return AssignmentDecision.noChange();
+            }
         };
         broker.apply(ctx(Set.of()), AssignmentTrigger.CREATED, List.of(WorkerCandidate.of("alice")), strategy);
         assertThat(callCount[0]).isEqualTo(1);

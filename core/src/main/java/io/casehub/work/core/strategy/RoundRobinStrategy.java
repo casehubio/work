@@ -28,6 +28,9 @@ import io.casehub.work.api.spi.WorkerSelectionStrategy;
 @ApplicationScoped
 public class RoundRobinStrategy implements WorkerSelectionStrategy {
 
+    @Override
+    public String id() { return "round-robin"; }
+
     private final RoutingCursorStore cursorStore;
 
     @Inject

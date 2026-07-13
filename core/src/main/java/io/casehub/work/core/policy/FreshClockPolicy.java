@@ -3,7 +3,6 @@ package io.casehub.work.core.policy;
 import java.time.Instant;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Alternative;
 
 import io.casehub.work.api.ClaimSlaContext;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
@@ -21,8 +20,10 @@ import io.casehub.work.api.spi.ClaimSlaPolicy;
  * opportunity, and accumulated history should not affect the next window.
  */
 @ApplicationScoped
-@Alternative
 public class FreshClockPolicy implements ClaimSlaPolicy {
+
+    @Override
+    public String id() { return "fresh-clock"; }
 
     @Override
     public Instant computePoolDeadline(final ClaimSlaContext context) {

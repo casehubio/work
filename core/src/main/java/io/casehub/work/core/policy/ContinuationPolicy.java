@@ -31,6 +31,9 @@ import io.casehub.work.api.spi.ClaimSlaPolicy;
 public class ContinuationPolicy implements ClaimSlaPolicy {
 
     @Override
+    public String id() { return "continuation"; }
+
+    @Override
     public Instant computePoolDeadline(final ClaimSlaContext context) {
         final Duration remaining = context.totalPoolSlaDuration()
                 .minus(context.accumulatedUnclaimedDuration());

@@ -108,6 +108,9 @@ class ExpiryLifecycleServiceTest {
     /** Always returns 4 hours from now as the next claim deadline. */
     static class FixedClaimSlaPolicy implements ClaimSlaPolicy {
         @Override
+        public String id() { return "test-fixed"; }
+
+        @Override
         public Instant computePoolDeadline(final ClaimSlaContext ctx) {
             return Instant.now().plus(4, ChronoUnit.HOURS);
         }
@@ -115,6 +118,9 @@ class ExpiryLifecycleServiceTest {
 
     static class CapturingStrategy implements WorkerSelectionStrategy {
         final List<SelectionContext> calls = new ArrayList<>();
+
+        @Override
+        public String id() { return "test-capturing"; }
 
         @Override
         public AssignmentDecision select(final SelectionContext ctx,
@@ -126,9 +132,11 @@ class ExpiryLifecycleServiceTest {
         }
     }
 
-    /** Returns a configurable fixed decision. */
     static class TestSlaBreachPolicy implements SlaBreachPolicy {
         private BreachDecision decision = new BreachDecision.Fail("no-sla-breach-policy-configured");
+
+        @Override
+        public String id() { return "test-breach"; }
 
         void willReturn(final BreachDecision d) { this.decision = d; }
 
@@ -166,17 +174,38 @@ class ExpiryLifecycleServiceTest {
         policy = new TestSlaBreachPolicy();
         breachEvents.clear();
 
+        final io.casehub.platform.api.routing.StrategyResolver slaResolver =
+                mock(io.casehub.platform.api.routing.StrategyResolver.class);
+        org.mockito.Mockito.when(slaResolver.resolve(
+                org.mockito.ArgumentMatchers.eq(io.casehub.work.api.spi.SlaBreachPolicy.class),
+                org.mockito.ArgumentMatchers.anyString())).thenReturn(policy);
+        org.mockito.Mockito.when(slaResolver.resolve(
+                org.mockito.ArgumentMatchers.eq(io.casehub.work.api.spi.ClaimSlaPolicy.class),
+                org.mockito.ArgumentMatchers.anyString())).thenReturn(new FixedClaimSlaPolicy());
+
         service = new ExpiryLifecycleService();
         service.workItemStore = store;
         service.auditStore = auditStore;
-        service.slaBreachPolicy = policy;
+        service.strategyResolver = slaResolver;
         service.preferenceProvider = EMPTY_PREFS;
         service.slaBreachEventBus = new CapturingBreachEventBus(breachEvents);
         service.lifecycleEmitter = mock(WorkItemLifecycleEmitter.class);
-        service.claimSlaPolicy = new FixedClaimSlaPolicy();
         service.config = WorkItemServiceTest.testConfig();
+        service.init();
+        final io.casehub.platform.api.routing.StrategyResolver assignmentResolver =
+                mock(io.casehub.platform.api.routing.StrategyResolver.class);
+        final WorkerSelectionStrategy noOpStrategy = new WorkerSelectionStrategy() {
+            @Override public String id() { return "test-noop"; }
+            @Override public AssignmentDecision select(final SelectionContext c,
+                    final java.util.List<WorkerCandidate> w) {
+                return AssignmentDecision.noChange();
+            }
+        };
+        org.mockito.Mockito.when(assignmentResolver.resolve(
+                org.mockito.ArgumentMatchers.eq(WorkerSelectionStrategy.class),
+                org.mockito.ArgumentMatchers.anyString())).thenReturn(noOpStrategy);
         service.assignmentService = new WorkItemAssignmentService(
-                (ctx, candidates) -> AssignmentDecision.noChange(),
+                assignmentResolver, WorkItemServiceTest.testConfig(),
                 group -> java.util.List.of(),
                 id -> 0,
                 new WorkBroker(),
@@ -325,8 +354,13 @@ class ExpiryLifecycleServiceTest {
     @Test
     void checkExpired_withEscalateToDecision_triggersAutoAssignmentWhenCandidatesAvailable() {
         final CapturingStrategy capturing = new CapturingStrategy();
+        final io.casehub.platform.api.routing.StrategyResolver capturingResolver =
+                mock(io.casehub.platform.api.routing.StrategyResolver.class);
+        org.mockito.Mockito.when(capturingResolver.resolve(
+                org.mockito.ArgumentMatchers.eq(WorkerSelectionStrategy.class),
+                org.mockito.ArgumentMatchers.anyString())).thenReturn(capturing);
         service.assignmentService = new WorkItemAssignmentService(
-                capturing,
+                capturingResolver, WorkItemServiceTest.testConfig(),
                 group -> java.util.List.of(WorkerCandidate.of("escalation-worker")),
                 id -> 0,
                 new WorkBroker(),
@@ -502,8 +536,13 @@ class ExpiryLifecycleServiceTest {
     @Test
     void checkClaimDeadlines_withEscalateToDecision_triggersAutoAssignmentWhenCandidatesAvailable() {
         final CapturingStrategy capturing = new CapturingStrategy();
+        final io.casehub.platform.api.routing.StrategyResolver capturingResolver =
+                mock(io.casehub.platform.api.routing.StrategyResolver.class);
+        org.mockito.Mockito.when(capturingResolver.resolve(
+                org.mockito.ArgumentMatchers.eq(WorkerSelectionStrategy.class),
+                org.mockito.ArgumentMatchers.anyString())).thenReturn(capturing);
         service.assignmentService = new WorkItemAssignmentService(
-                capturing,
+                capturingResolver, WorkItemServiceTest.testConfig(),
                 group -> java.util.List.of(WorkerCandidate.of("escalation-worker")),
                 id -> 0,
                 new WorkBroker(),

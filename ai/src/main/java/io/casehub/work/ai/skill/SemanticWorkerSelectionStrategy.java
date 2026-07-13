@@ -10,9 +10,7 @@ import io.casehub.work.api.WorkerCandidate;
 import io.casehub.work.api.spi.SkillMatcher;
 import io.casehub.work.api.spi.WorkerSelectionStrategy;
 import io.casehub.work.core.strategy.LeastLoadedStrategy;
-import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
@@ -36,9 +34,10 @@ import java.util.stream.Collectors;
  * so workload-aware routing still fires even when AI is unavailable.
  */
 @ApplicationScoped
-@Alternative
-@Priority(1)
 public class SemanticWorkerSelectionStrategy implements WorkerSelectionStrategy {
+
+    @Override
+    public String id() { return "semantic"; }
 
     private static final Logger LOG = Logger.getLogger(SemanticWorkerSelectionStrategy.class);
 

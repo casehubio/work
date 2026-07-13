@@ -16,6 +16,7 @@ import io.casehub.platform.api.path.Path;
 import io.casehub.platform.api.preferences.Preferences;
 import io.casehub.platform.api.preferences.PreferenceProvider;
 import io.casehub.platform.api.preferences.SettingsScope;
+import io.casehub.platform.api.routing.StrategyResolver;
 import io.casehub.work.api.AssignmentTrigger;
 import io.casehub.work.api.spi.BusinessCalendar;
 import io.casehub.work.api.ClaimSlaContext;
@@ -52,6 +53,7 @@ public class WorkItemService {
     private final BlockedAttemptAuditService blockedAuditService;
     private final CapabilityValidator capabilityValidator;
     private final WorkItemTimerService timerService;
+    // claimSlaPolicy is resolved at construction time via StrategyResolver
 
     @Inject
     WorkItemSpawnGroupStore spawnGroupStore;
@@ -79,7 +81,7 @@ public class WorkItemService {
             final AuditEntryStore auditStore,
             final WorkItemsConfig config,
             final WorkItemAssignmentService assignmentService,
-            final ClaimSlaPolicy claimSlaPolicy,
+            final StrategyResolver strategyResolver,
             final ExclusionPolicy exclusionPolicy,
             final BlockedAttemptAuditService blockedAuditService,
             final CapabilityValidator capabilityValidator,
@@ -88,7 +90,7 @@ public class WorkItemService {
         this.auditStore = auditStore;
         this.config = config;
         this.assignmentService = assignmentService;
-        this.claimSlaPolicy = claimSlaPolicy;
+        this.claimSlaPolicy = strategyResolver.resolve(ClaimSlaPolicy.class, config.sla().claimPolicy());
         this.exclusionPolicy = exclusionPolicy;
         this.blockedAuditService = blockedAuditService;
         this.capabilityValidator = capabilityValidator;

@@ -28,6 +28,9 @@ import io.casehub.work.api.spi.WorkerSelectionStrategy;
 public class LeastLoadedStrategy implements WorkerSelectionStrategy {
 
     @Override
+    public String id() { return "least-loaded"; }
+
+    @Override
     public AssignmentDecision select(final SelectionContext context,
             final List<WorkerCandidate> candidates) {
         if (candidates.isEmpty()) {

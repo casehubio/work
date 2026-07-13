@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import io.casehub.platform.api.routing.StrategyResolver;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.Capability;
 import io.casehub.work.api.PolicyDecision;
@@ -45,8 +46,14 @@ class WorkItemAssignmentServiceTest {
         workBroker = new WorkBroker();
         lenient().when(workerRegistry.resolveGroup(anyString())).thenReturn(List.of());
         lenient().when(workloadProvider.getActiveWorkCount(anyString())).thenReturn(0);
-        service = new WorkItemAssignmentService(
-                new LeastLoadedStrategy(), workerRegistry, workloadProvider, workBroker,
+        service = serviceWith(new LeastLoadedStrategy());
+    }
+
+    private WorkItemAssignmentService serviceWith(final WorkerSelectionStrategy strategy) {
+        final StrategyResolver resolver = mock(StrategyResolver.class);
+        lenient().when(resolver.resolve(eq(WorkerSelectionStrategy.class), anyString())).thenReturn(strategy);
+        return new WorkItemAssignmentService(resolver, WorkItemServiceTest.testConfig(),
+                workerRegistry, workloadProvider, workBroker,
                 (userId, excluded) -> PolicyDecision.ALLOW);
     }
 
@@ -55,6 +62,9 @@ class WorkItemAssignmentServiceTest {
     @Test
     void assign_skipsWork_whenTriggerNotInStrategyTriggers() {
         final WorkerSelectionStrategy createdOnly = new WorkerSelectionStrategy() {
+            @Override
+            public String id() { return "test-created-only"; }
+
             @Override
             public AssignmentDecision select(SelectionContext c, List<WorkerCandidate> w) {
                 return AssignmentDecision.assignTo("alice");
@@ -65,8 +75,7 @@ class WorkItemAssignmentServiceTest {
                 return Set.of(AssignmentTrigger.CREATED);
             }
         };
-        service = new WorkItemAssignmentService(createdOnly, workerRegistry, workloadProvider, workBroker,
-                (userId, excluded) -> PolicyDecision.ALLOW);
+        service = serviceWith(createdOnly);
 
         final WorkItem wi = workItem(null, null, "alice,bob");
         service.assign(wi, AssignmentTrigger.RELEASED);
@@ -177,9 +186,13 @@ class WorkItemAssignmentServiceTest {
 
     @Test
     void assign_setsCandidateGroups_fromNarrowDecision() {
-        final WorkerSelectionStrategy narrower = (ctx, c) -> AssignmentDecision.narrowCandidates("narrowed-group", null);
-        service = new WorkItemAssignmentService(narrower, workerRegistry, workloadProvider, workBroker,
-                (userId, excluded) -> PolicyDecision.ALLOW);
+        final WorkerSelectionStrategy narrower = new WorkerSelectionStrategy() {
+            @Override public String id() { return "test-narrower"; }
+            @Override public AssignmentDecision select(final SelectionContext ctx, final List<WorkerCandidate> c) {
+                return AssignmentDecision.narrowCandidates("narrowed-group", null);
+            }
+        };
+        service = serviceWith(narrower);
         final WorkItem wi = workItem(null, "original-group", null);
         service.assign(wi, AssignmentTrigger.CREATED);
         assertThat(wi.candidateGroups).isEqualTo("narrowed-group");
@@ -188,9 +201,13 @@ class WorkItemAssignmentServiceTest {
 
     @Test
     void assign_doesNotOverwrite_existingFields_onNoChange() {
-        final WorkerSelectionStrategy noOp = (ctx, c) -> AssignmentDecision.noChange();
-        service = new WorkItemAssignmentService(noOp, workerRegistry, workloadProvider, workBroker,
-                (userId, excluded) -> PolicyDecision.ALLOW);
+        final WorkerSelectionStrategy noOp = new WorkerSelectionStrategy() {
+            @Override public String id() { return "test-noop"; }
+            @Override public AssignmentDecision select(final SelectionContext ctx, final List<WorkerCandidate> c) {
+                return AssignmentDecision.noChange();
+            }
+        };
+        service = serviceWith(noOp);
         final WorkItem wi = workItem(null, null, "alice");
         wi.assigneeId = "pre-existing";
         service.assign(wi, AssignmentTrigger.CREATED);

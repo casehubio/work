@@ -185,6 +185,14 @@ class WorkItemServiceTest {
             }
 
             @Override
+            public SlaConfig sla() {
+                return new SlaConfig() {
+                    @Override public String claimPolicy() { return "continuation"; }
+                    @Override public String breachPolicy() { return "no-op"; }
+                };
+            }
+
+            @Override
             public RoutingConfig routing() {
                 return new RoutingConfig() {
                     @Override public String strategy() { return "least-loaded"; }
@@ -246,14 +254,33 @@ class WorkItemServiceTest {
     void setUp() {
         repo = new TestWorkItemRepo();
         auditStore = new TestAuditRepo();
+        final io.casehub.platform.api.routing.StrategyResolver assignmentResolver =
+                org.mockito.Mockito.mock(io.casehub.platform.api.routing.StrategyResolver.class);
+        final io.casehub.work.api.spi.WorkerSelectionStrategy noOpStrategy =
+                new io.casehub.work.api.spi.WorkerSelectionStrategy() {
+                    @Override public String id() { return "test-noop"; }
+                    @Override public AssignmentDecision select(
+                            final io.casehub.work.api.SelectionContext c,
+                            final java.util.List<io.casehub.work.api.WorkerCandidate> w) {
+                        return AssignmentDecision.noChange();
+                    }
+                };
+        org.mockito.Mockito.when(assignmentResolver.resolve(
+                org.mockito.ArgumentMatchers.eq(io.casehub.work.api.spi.WorkerSelectionStrategy.class),
+                org.mockito.ArgumentMatchers.anyString())).thenReturn(noOpStrategy);
+        final io.casehub.platform.api.routing.StrategyResolver claimResolver =
+                org.mockito.Mockito.mock(io.casehub.platform.api.routing.StrategyResolver.class);
+        org.mockito.Mockito.when(claimResolver.resolve(
+                org.mockito.ArgumentMatchers.eq(io.casehub.work.api.spi.ClaimSlaPolicy.class),
+                org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(new io.casehub.work.core.policy.ContinuationPolicy());
         service = new WorkItemService(repo, auditStore, testConfig(),
-                new WorkItemAssignmentService(
-                        (ctx, candidates) -> AssignmentDecision.noChange(),
+                new WorkItemAssignmentService(assignmentResolver, testConfig(),
                         group -> List.of(),
                         workerId -> 0,
                         new WorkBroker(),
                         (userId, excluded) -> PolicyDecision.ALLOW),
-                new io.casehub.work.core.policy.ContinuationPolicy(),
+                claimResolver,
                 (userId, excluded) -> PolicyDecision.ALLOW,
                 new BlockedAttemptAuditService(auditStore),
                 new CapabilityValidator(ValidationMode.PERMISSIVE, () -> java.util.Set.of()),
@@ -1243,6 +1270,14 @@ class WorkItemServiceTest {
             }
 
             @Override
+            public SlaConfig sla() {
+                return new SlaConfig() {
+                    @Override public String claimPolicy() { return "continuation"; }
+                    @Override public String breachPolicy() { return "no-op"; }
+                };
+            }
+
+            @Override
             public RoutingConfig routing() {
                 return new RoutingConfig() {
                     @Override public String strategy() { return "least-loaded"; }
@@ -1290,14 +1325,33 @@ class WorkItemServiceTest {
                 };
             }
         };
+        final io.casehub.platform.api.routing.StrategyResolver noClaimResolver =
+                org.mockito.Mockito.mock(io.casehub.platform.api.routing.StrategyResolver.class);
+        final io.casehub.work.api.spi.WorkerSelectionStrategy noClaimNoOp =
+                new io.casehub.work.api.spi.WorkerSelectionStrategy() {
+                    @Override public String id() { return "test-noop"; }
+                    @Override public AssignmentDecision select(
+                            final io.casehub.work.api.SelectionContext c,
+                            final java.util.List<io.casehub.work.api.WorkerCandidate> w) {
+                        return AssignmentDecision.noChange();
+                    }
+                };
+        org.mockito.Mockito.when(noClaimResolver.resolve(
+                org.mockito.ArgumentMatchers.eq(io.casehub.work.api.spi.WorkerSelectionStrategy.class),
+                org.mockito.ArgumentMatchers.anyString())).thenReturn(noClaimNoOp);
+        final io.casehub.platform.api.routing.StrategyResolver noClaimPolicyResolver =
+                org.mockito.Mockito.mock(io.casehub.platform.api.routing.StrategyResolver.class);
+        org.mockito.Mockito.when(noClaimPolicyResolver.resolve(
+                org.mockito.ArgumentMatchers.eq(io.casehub.work.api.spi.ClaimSlaPolicy.class),
+                org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(new io.casehub.work.core.policy.ContinuationPolicy());
         WorkItemService svc = new WorkItemService(repo, auditStore, noClaimConfig,
-                new WorkItemAssignmentService(
-                        (ctx, candidates) -> AssignmentDecision.noChange(),
+                new WorkItemAssignmentService(noClaimResolver, noClaimConfig,
                         group -> List.of(),
                         workerId -> 0,
                         new WorkBroker(),
                         (userId, excluded) -> PolicyDecision.ALLOW),
-                new io.casehub.work.core.policy.ContinuationPolicy(),
+                noClaimPolicyResolver,
                 (userId, excluded) -> PolicyDecision.ALLOW,
                 new BlockedAttemptAuditService(auditStore),
                 new CapabilityValidator(ValidationMode.PERMISSIVE, () -> java.util.Set.of()),

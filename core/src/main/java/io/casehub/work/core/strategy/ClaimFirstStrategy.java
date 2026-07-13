@@ -2,9 +2,7 @@ package io.casehub.work.core.strategy;
 
 import java.util.List;
 
-import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Alternative;
 
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.SelectionContext;
@@ -21,10 +19,11 @@ import io.casehub.work.api.spi.WorkerSelectionStrategy;
  * without CDI ambiguity when multiple {@link WorkerSelectionStrategy} implementations
  * are on the classpath.
  */
-@Alternative
-@Priority(0)
 @ApplicationScoped
 public class ClaimFirstStrategy implements WorkerSelectionStrategy {
+
+    @Override
+    public String id() { return "claim-first"; }
 
     @Override
     public AssignmentDecision select(final SelectionContext context,

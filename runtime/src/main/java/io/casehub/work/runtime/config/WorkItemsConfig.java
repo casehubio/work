@@ -140,6 +140,36 @@ public interface WorkItemsConfig {
     io.casehub.work.api.ValidationMode capabilityValidation();
 
     /**
+     * SLA policy configuration.
+     *
+     * @return the SLA configuration group
+     */
+    @io.smallrye.config.WithName("sla")
+    SlaConfig sla();
+
+    /**
+     * SLA policy configuration — claim deadline and breach policy selection.
+     */
+    interface SlaConfig {
+
+        /**
+         * The claim SLA policy to use, selected by {@link io.casehub.work.api.spi.ClaimSlaPolicy#id()}.
+         *
+         * @return policy id; defaults to {@code "continuation"}
+         */
+        @WithDefault("continuation")
+        String claimPolicy();
+
+        /**
+         * The SLA breach policy to use, selected by {@link io.casehub.work.api.spi.SlaBreachPolicy#id()}.
+         *
+         * @return policy id; defaults to {@code "no-op"}
+         */
+        @WithDefault("no-op")
+        String breachPolicy();
+    }
+
+    /**
      * Worker selection strategy configuration.
      *
      * @return the routing configuration group

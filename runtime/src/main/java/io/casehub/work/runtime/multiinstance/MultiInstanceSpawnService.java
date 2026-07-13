@@ -4,12 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Any;
-import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
-import jakarta.inject.Named;
 import jakarta.transaction.Transactional;
 
+import io.casehub.platform.api.routing.StrategyResolver;
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.GroupStatus;
 import io.casehub.work.api.MultiInstanceConfig;
@@ -32,8 +30,8 @@ import io.casehub.work.runtime.service.WorkItemService;
  * <p>
  * All three artefacts are created inside a single transaction (the caller's or
  * one started here via {@code @Transactional}). The assignment strategy named
- * on the template is resolved from CDI by {@link Named} qualifier; when absent
- * or {@code "pool"}, the default {@link PoolAssignmentStrategy} is used.
+ * on the template is resolved via {@link StrategyResolver} by id; when absent
+ * or blank, the default {@code "pool"} strategy is used.
  */
 @ApplicationScoped
 public class MultiInstanceSpawnService {
@@ -42,12 +40,7 @@ public class MultiInstanceSpawnService {
     WorkItemService workItemService;
 
     @Inject
-    @Named("pool")
-    InstanceAssignmentStrategy defaultStrategy;
-
-    @Inject
-    @Any
-    Instance<InstanceAssignmentStrategy> strategies;
+    StrategyResolver strategyResolver;
 
     /**
      * Create a multi-instance group: parent WorkItem + N child instances + spawn group.
@@ -154,23 +147,10 @@ public class MultiInstanceSpawnService {
                 .build();
     }
 
-    /**
-     * Resolve the assignment strategy by name from CDI.
-     * Falls back to the default {@link PoolAssignmentStrategy} when the name is null, blank, or {@code "pool"}.
-     *
-     * @param name the CDI {@link Named} qualifier value; may be null
-     * @return the resolved strategy; never null
-     */
     private InstanceAssignmentStrategy resolveStrategy(final String name) {
-        if (name == null || name.isBlank() || "pool".equals(name)) {
-            return defaultStrategy;
+        if (name == null || name.isBlank()) {
+            return strategyResolver.resolve(InstanceAssignmentStrategy.class, "pool");
         }
-        for (final InstanceAssignmentStrategy s : strategies) {
-            final Named named = s.getClass().getAnnotation(Named.class);
-            if (named != null && name.equals(named.value())) {
-                return s;
-            }
-        }
-        return defaultStrategy;
+        return strategyResolver.resolve(InstanceAssignmentStrategy.class, name);
     }
 }

@@ -74,6 +74,14 @@ class ConfigHolidayCalendarTest {
             }
 
             @Override
+            public SlaConfig sla() {
+                return new SlaConfig() {
+                    @Override public String claimPolicy() { return "continuation"; }
+                    @Override public String breachPolicy() { return "no-op"; }
+                };
+            }
+
+            @Override
             public RoutingConfig routing() {
                 return new RoutingConfig() {
                     @Override public String strategy() { return "least-loaded"; }

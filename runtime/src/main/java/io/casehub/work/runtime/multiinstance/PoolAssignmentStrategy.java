@@ -3,7 +3,6 @@ package io.casehub.work.runtime.multiinstance;
 import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Named;
 
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceContext;
@@ -18,8 +17,10 @@ import io.casehub.work.runtime.model.WorkItem;
  * can handle any instance.
  */
 @ApplicationScoped
-@Named("pool")
 public class PoolAssignmentStrategy implements InstanceAssignmentStrategy {
+
+    @Override
+    public String id() { return "pool"; }
 
     /**
      * Copies candidateGroups and candidateUsers from the parent WorkItem to all instances.

@@ -3,7 +3,6 @@ package io.casehub.work.runtime.multiinstance;
 import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Named;
 
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceContext;
@@ -22,8 +21,10 @@ import io.casehub.work.runtime.model.WorkItem;
  * or does not match the number of instances.
  */
 @ApplicationScoped
-@Named("explicit")
 public class ExplicitListAssignmentStrategy implements InstanceAssignmentStrategy {
+
+    @Override
+    public String id() { return "explicit"; }
 
     /**
      * Assigns each instance to the corresponding user in {@code explicitAssignees}.

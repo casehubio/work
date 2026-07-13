@@ -3,7 +3,6 @@ package io.casehub.work.core.policy;
 import java.time.Instant;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Alternative;
 
 import io.casehub.work.api.ClaimSlaContext;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
@@ -25,8 +24,10 @@ import io.casehub.work.api.spi.ClaimSlaPolicy;
  * (each gets the full window) but still enforce an absolute outer bound.
  */
 @ApplicationScoped
-@Alternative
 public class PhaseClockPolicy implements ClaimSlaPolicy {
+
+    @Override
+    public String id() { return "phase-clock"; }
 
     private final int capMultiplier;
 

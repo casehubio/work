@@ -3,7 +3,6 @@ package io.casehub.work.runtime.multiinstance;
 import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Named;
 
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceContext;
@@ -21,8 +20,10 @@ import io.casehub.work.api.MultiInstanceContext;
  * instances), leaving the group candidates intact for any unassigned ones.
  */
 @ApplicationScoped
-@Named("composite")
 public class CompositeInstanceAssignmentStrategy implements InstanceAssignmentStrategy {
+
+    @Override
+    public String id() { return "composite"; }
 
     private final List<InstanceAssignmentStrategy> delegates;
 

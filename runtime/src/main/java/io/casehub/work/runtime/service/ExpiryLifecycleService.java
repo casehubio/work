@@ -21,6 +21,7 @@ import io.casehub.work.api.AssignmentTrigger;
 import io.casehub.work.api.BreachDecision;
 import io.casehub.work.api.BreachType;
 import io.casehub.work.api.BreachedTask;
+import io.casehub.platform.api.routing.StrategyResolver;
 import io.casehub.work.api.ClaimSlaContext;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
 import io.casehub.work.api.SlaBreachContext;
@@ -55,6 +56,8 @@ public class ExpiryLifecycleService {
     AuditEntryStore auditStore;
 
     @Inject
+    StrategyResolver strategyResolver;
+
     SlaBreachPolicy slaBreachPolicy;
 
     @Inject
@@ -66,11 +69,16 @@ public class ExpiryLifecycleService {
     @Inject
     Event<SlaBreachEvent> slaBreachEventBus;
 
-    @Inject
     ClaimSlaPolicy claimSlaPolicy;
 
     @Inject
     WorkItemsConfig config;
+
+    @jakarta.annotation.PostConstruct
+    void init() {
+        this.slaBreachPolicy = strategyResolver.resolve(SlaBreachPolicy.class, config.sla().breachPolicy());
+        this.claimSlaPolicy = strategyResolver.resolve(ClaimSlaPolicy.class, config.sla().claimPolicy());
+    }
 
     @Inject
     WorkItemAssignmentService assignmentService;

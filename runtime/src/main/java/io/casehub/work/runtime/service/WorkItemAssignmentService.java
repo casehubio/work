@@ -6,9 +6,9 @@ import java.util.Arrays;
 import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 
+import io.casehub.platform.api.routing.StrategyResolver;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.AssignmentTrigger;
 import io.casehub.work.api.spi.ExclusionPolicy;
@@ -17,9 +17,6 @@ import io.casehub.work.api.WorkerCandidate;
 import io.casehub.work.api.spi.WorkerRegistry;
 import io.casehub.work.api.spi.WorkerSelectionStrategy;
 import io.casehub.work.api.spi.WorkloadProvider;
-import io.casehub.work.core.strategy.ClaimFirstStrategy;
-import io.casehub.work.core.strategy.LeastLoadedStrategy;
-import io.casehub.work.core.strategy.RoundRobinStrategy;
 import io.casehub.work.core.strategy.WorkBroker;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.model.WorkItem;
@@ -31,7 +28,7 @@ import io.casehub.work.api.WorkItemStatus;
  * <p>
  * Flow:
  * <ol>
- * <li>Resolve active strategy (CDI {@code @Alternative} overrides config-selected built-in)</li>
+ * <li>Resolve active strategy via {@link StrategyResolver} using the configured id</li>
  * <li>Build resolved candidate list from {@code candidateUsers} + {@code WorkerRegistry}</li>
  * <li>Populate {@code activeWorkItemCount} for each candidate via {@link WorkloadProvider}</li>
  * <li>Delegate trigger gating, capability filtering, and strategy dispatch to {@link WorkBroker}</li>
@@ -45,86 +42,29 @@ import io.casehub.work.api.WorkItemStatus;
 @ApplicationScoped
 public class WorkItemAssignmentService {
 
+    private final StrategyResolver strategyResolver;
+    private final WorkItemsConfig config;
     private final WorkerRegistry workerRegistry;
     private final WorkloadProvider workloadProvider;
     private final WorkBroker workBroker;
     private final ExclusionPolicy exclusionPolicy;
 
-    // CDI-wired fields — null in unit-test constructor
-    private WorkItemsConfig config;
-    private Instance<WorkerSelectionStrategy> alternatives;
-    private ClaimFirstStrategy claimFirst;
-    private LeastLoadedStrategy leastLoaded;
-    private RoundRobinStrategy roundRobin;
-
-    // Resolved at construction time for the package-private test constructor
-    private final WorkerSelectionStrategy fixedStrategy;
-
-    /**
-     * CDI constructor — full wiring with config and @Alternative discovery.
-     *
-     * @param config the WorkItems configuration
-     * @param alternatives CDI instances of alternative strategies
-     * @param workerRegistry the worker registry for group resolution
-     * @param workloadProvider the workload provider for active count queries
-     * @param workBroker the generic work assignment broker
-     * @param claimFirst the built-in claim-first strategy
-     * @param leastLoaded the built-in least-loaded strategy
-     * @param roundRobin the built-in round-robin strategy
-     * @param exclusionPolicy the exclusion policy for filtering excluded users
-     */
     @Inject
     public WorkItemAssignmentService(
+            final StrategyResolver strategyResolver,
             final WorkItemsConfig config,
-            final Instance<WorkerSelectionStrategy> alternatives,
             final WorkerRegistry workerRegistry,
             final WorkloadProvider workloadProvider,
             final WorkBroker workBroker,
-            final ClaimFirstStrategy claimFirst,
-            final LeastLoadedStrategy leastLoaded,
-            final RoundRobinStrategy roundRobin,
             final ExclusionPolicy exclusionPolicy) {
+        this.strategyResolver = strategyResolver;
         this.config = config;
-        this.alternatives = alternatives;
-        this.workerRegistry = workerRegistry;
-        this.workloadProvider = workloadProvider;
-        this.workBroker = workBroker;
-        this.claimFirst = claimFirst;
-        this.leastLoaded = leastLoaded;
-        this.roundRobin = roundRobin;
-        this.fixedStrategy = null;
-        this.exclusionPolicy = exclusionPolicy;
-    }
-
-    /**
-     * Package-private constructor for unit tests — bypasses CDI and config.
-     * The provided strategy is used directly with no @Alternative lookup.
-     *
-     * @param strategy the strategy to use directly
-     * @param workerRegistry the worker registry for group resolution
-     * @param workloadProvider the workload provider for active count queries
-     * @param workBroker the generic work assignment broker
-     * @param exclusionPolicy the exclusion policy for filtering excluded users
-     */
-    WorkItemAssignmentService(final WorkerSelectionStrategy strategy,
-            final WorkerRegistry workerRegistry,
-            final WorkloadProvider workloadProvider,
-            final WorkBroker workBroker,
-            final ExclusionPolicy exclusionPolicy) {
-        this.fixedStrategy = strategy;
         this.workerRegistry = workerRegistry;
         this.workloadProvider = workloadProvider;
         this.workBroker = workBroker;
         this.exclusionPolicy = exclusionPolicy;
     }
 
-    /**
-     * Apply the active strategy to the WorkItem for the given trigger event.
-     * Mutates the WorkItem fields in memory; caller persists.
-     *
-     * @param workItem the WorkItem to assign
-     * @param trigger the lifecycle event that triggered this assignment attempt
-     */
     public void assign(final WorkItem workItem, final AssignmentTrigger trigger) {
         final WorkerSelectionStrategy strategy = activeStrategy();
         final List<WorkerCandidate> candidates = resolveCandidates(workItem);
@@ -143,25 +83,7 @@ public class WorkItemAssignmentService {
     }
 
     private WorkerSelectionStrategy activeStrategy() {
-        if (fixedStrategy != null) {
-            return fixedStrategy; // unit-test path
-        }
-        // CDI @Alternative overrides config (excluding the built-in beans themselves)
-        if (alternatives != null) {
-            final var alt = alternatives.stream()
-                    .filter(s -> !(s instanceof ClaimFirstStrategy)
-                            && !(s instanceof LeastLoadedStrategy)
-                            && !(s instanceof RoundRobinStrategy))
-                    .findFirst();
-            if (alt.isPresent()) {
-                return alt.get();
-            }
-        }
-        return switch (config.routing().strategy()) {
-            case "claim-first" -> claimFirst;
-            case "round-robin" -> roundRobin;
-            default -> leastLoaded;
-        };
+        return strategyResolver.resolve(WorkerSelectionStrategy.class, config.routing().strategy());
     }
 
     private List<WorkerCandidate> resolveCandidates(final WorkItem workItem) {
