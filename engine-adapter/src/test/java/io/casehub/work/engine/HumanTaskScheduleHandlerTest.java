@@ -23,7 +23,7 @@ import io.casehub.blackboard.plan.PlanItem;
 import io.casehub.blackboard.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.HumanTaskScheduleEvent;
-import io.casehub.engine.common.internal.model.PlanItemStatus;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.persistence.memory.InMemoryPlanItemStore;
 import io.casehub.platform.api.identity.TenancyConstants;
@@ -81,7 +81,7 @@ class HumanTaskScheduleHandlerTest {
       mem.clear();
     }
     caseId = UUID.randomUUID();
-    planItem = PlanItem.create("irb-binding", "unused-worker", 5);
+    planItem = PlanItem.create("irb-binding", io.casehub.api.model.ExecutorRef.of("unused-worker"), 5);
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(planItem);
   }
 
@@ -98,10 +98,10 @@ class HumanTaskScheduleHandlerTest {
     eventBus.publish(
         EventBusAddresses.HUMAN_TASK_SCHEDULE,
         new HumanTaskScheduleEvent(
-            caseId, "irb-binding", target, Map.of(), null, null, null, null, TENANCY_ID));
+            caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, null, null));
     await()
         .atMost(5, TimeUnit.SECONDS)
-        .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.DELEGATED));
+        .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DELEGATED));
   }
 
   // ── Inline mode ───────────────────────────────────────────────────────────
@@ -118,14 +118,14 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             target,
             Map.of("caseRef", "T-42"),
             null,
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
 
@@ -137,12 +137,12 @@ class HumanTaskScheduleHandlerTest {
     assertThat(created).isNotNull();
     assertThat(created.status).isEqualTo(WorkItemStatus.PENDING);
     assertThat(created.title).isEqualTo("IRB Ethics Review");
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.DELEGATED);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DELEGATED);
     assertThat(planItemStore.findByCaseId(caseId, "test-tenant"))
         .anyMatch(
             r ->
                 r.planItemId().equals(planItem.getPlanItemId())
-                    && r.status() == PlanItemStatus.DELEGATED);
+                    && r.status() == TaskStatus.DELEGATED);
   }
 
   // ── Template mode ─────────────────────────────────────────────────────────
@@ -154,14 +154,14 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             HumanTaskTarget.template(tmpl.id.toString()).build(),
             Map.of(),
             null,
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
@@ -173,12 +173,12 @@ class HumanTaskScheduleHandlerTest {
     assertThat(created.status).isEqualTo(WorkItemStatus.PENDING);
     assertThat(created.title).isEqualTo("IRB Ethics Review Template");
     assertThat(created.assigneeId).isNull(); // callerRef must not be passed as assigneeIdOverride
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.DELEGATED);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DELEGATED);
     assertThat(planItemStore.findByCaseId(caseId, "test-tenant"))
         .anyMatch(
             r ->
                 r.planItemId().equals(planItem.getPlanItemId())
-                    && r.status() == PlanItemStatus.DELEGATED);
+                    && r.status() == TaskStatus.DELEGATED);
   }
 
   @Test
@@ -188,25 +188,25 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             HumanTaskTarget.template(tmpl.id.toString()).build(),
             Map.of("trialId", "T-99", "phase", "III"),
             null,
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
     WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
     assertThat(created.payload).contains("trialId").contains("T-99");
     assertThat(created.payload).contains("\"type\":\"default\"");
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.DELEGATED);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DELEGATED);
     assertThat(planItemStore.findByCaseId(caseId, "test-tenant"))
         .anyMatch(
             r ->
                 r.planItemId().equals(planItem.getPlanItemId())
-                    && r.status() == PlanItemStatus.DELEGATED);
+                    && r.status() == TaskStatus.DELEGATED);
   }
 
   @Test
@@ -216,24 +216,24 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             HumanTaskTarget.template(tmpl.id.toString()).build(),
             Map.of(),
             null,
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
     WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
     assertThat(created.payload).isEqualTo("{\"type\":\"loan\"}");
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.DELEGATED);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DELEGATED);
     assertThat(planItemStore.findByCaseId(caseId, "test-tenant"))
         .anyMatch(
             r ->
                 r.planItemId().equals(planItem.getPlanItemId())
-                    && r.status() == PlanItemStatus.DELEGATED);
+                    && r.status() == TaskStatus.DELEGATED);
   }
 
   @Test
@@ -241,16 +241,16 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             HumanTaskTarget.template(UUID.randomUUID().toString()).build(),
             Map.of(),
             null,
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.PENDING);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.PENDING);
     assertThat(workItemStore.scanAll()).isEmpty();
   }
 
@@ -259,16 +259,16 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             HumanTaskTarget.template("not-a-uuid").build(),
             Map.of(),
             null,
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.PENDING);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.PENDING);
     assertThat(workItemStore.scanAll()).isEmpty();
   }
 
@@ -285,7 +285,7 @@ class HumanTaskScheduleHandlerTest {
 
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
-            caseId, "irb-binding", target, Map.of(), null, null, budgetDeadline, null, TENANCY_ID));
+            caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, budgetDeadline, null));
 
     WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
@@ -304,7 +304,7 @@ class HumanTaskScheduleHandlerTest {
 
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
-            caseId, "irb-binding", target, Map.of(), null, null, budgetDeadline, null, TENANCY_ID));
+            caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, budgetDeadline, null));
 
     WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
@@ -319,9 +319,9 @@ class HumanTaskScheduleHandlerTest {
 
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
-            caseId, "irb-binding", target, Map.of(), null, null, null, null, TENANCY_ID));
+            caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, null, null));
 
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.DELEGATED);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DELEGATED);
   }
 
   // ── expiresAtDeadline — inline mode ───────────────────────────────────────
@@ -333,7 +333,7 @@ class HumanTaskScheduleHandlerTest {
 
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
-            caseId, "irb-binding", target, Map.of(), null, null, null, deadline, TENANCY_ID));
+            caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, null, deadline));
 
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
@@ -356,14 +356,14 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             target,
             Map.of(),
             null,
             null,
             null,
-            absoluteDeadline,
-            TENANCY_ID));
+            absoluteDeadline));
 
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
@@ -383,14 +383,14 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             target,
             Map.of(),
             null,
             null,
             budgetDeadline,
-            absoluteDeadline,
-            TENANCY_ID));
+            absoluteDeadline));
 
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
@@ -409,7 +409,7 @@ class HumanTaskScheduleHandlerTest {
     Instant before = Instant.now().plusSeconds(23 * 3600);
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
-            caseId, "irb-binding", target, Map.of(), null, null, null, null, TENANCY_ID));
+            caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, null, null));
     Instant after = Instant.now().plusSeconds(25 * 3600);
 
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
@@ -430,16 +430,16 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             unknownCaseId,
+            TENANCY_ID,
             "irb-binding",
             HumanTaskTarget.inline().title("Review").build(),
             Map.of(),
             null,
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.PENDING);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.PENDING);
     assertThat(workItemStore.scanAll()).isEmpty();
   }
 
@@ -448,16 +448,16 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "unknown-binding",
             HumanTaskTarget.inline().title("Review").build(),
             Map.of(),
             null,
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.PENDING);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.PENDING);
     assertThat(workItemStore.scanAll()).isEmpty();
   }
 
@@ -473,7 +473,7 @@ class HumanTaskScheduleHandlerTest {
 
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
-            caseId, "irb-binding", target, Map.of(), null, null, null, null, TENANCY_ID));
+            caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, null, null));
 
     io.casehub.work.runtime.model.WorkItem created =
         workItemStore.scanAll().stream().findFirst().orElse(null);
@@ -487,7 +487,7 @@ class HumanTaskScheduleHandlerTest {
 
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
-            caseId, "irb-binding", target, Map.of(), null, null, null, null, TENANCY_ID));
+            caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, null, null));
 
     io.casehub.work.runtime.model.WorkItem created =
         workItemStore.scanAll().stream().findFirst().orElse(null);
@@ -506,7 +506,7 @@ class HumanTaskScheduleHandlerTest {
 
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
-            caseId, "irb-binding", target, Map.of(), null, null, null, null, TENANCY_ID));
+            caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, null, null));
 
     io.casehub.work.runtime.model.WorkItem created =
         workItemStore.scanAll().stream().findFirst().orElse(null);
@@ -522,7 +522,7 @@ class HumanTaskScheduleHandlerTest {
 
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
-            caseId, "irb-binding", target, Map.of(), null, null, null, null, TENANCY_ID));
+            caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, null, null));
 
     io.casehub.work.runtime.model.WorkItem created =
         workItemStore.scanAll().stream().findFirst().orElse(null);
@@ -539,14 +539,14 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             target,
             Map.of(),
             Set.of("irb-committee"),
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
@@ -564,7 +564,7 @@ class HumanTaskScheduleHandlerTest {
 
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
-            caseId, "irb-binding", target, Map.of(), null, null, null, null, TENANCY_ID));
+            caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, null, null));
 
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
@@ -585,14 +585,14 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             HumanTaskTarget.template(tmpl.id.toString()).build(),
             Map.of(),
             Set.of("committee-a", "committee-b"),
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
     WorkItem created =
         workItemStore.scanAll().stream()
@@ -611,14 +611,14 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             HumanTaskTarget.template(tmpl.id.toString()).build(),
             Map.of(),
             null, // spec absent — do not override template defaults
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
     WorkItem created =
         workItemStore.scanAll().stream()
@@ -639,14 +639,14 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             target,
             Map.of(),
             null,
             Set.of("user-a"),
             null,
-            null,
-            TENANCY_ID));
+            null));
 
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
@@ -667,14 +667,14 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             HumanTaskTarget.template(tmpl.id.toString()).build(),
             Map.of(),
             null,
             Set.of("user-x", "user-y"),
             null,
-            null,
-            TENANCY_ID));
+            null));
 
     WorkItem created =
         workItemStore.scanAll().stream()
@@ -698,14 +698,14 @@ class HumanTaskScheduleHandlerTest {
     handler.onHumanTaskSchedule(
         new HumanTaskScheduleEvent(
             caseId,
+            TENANCY_ID,
             "irb-binding",
             HumanTaskTarget.inline().title("Review").build(),
             Map.of(),
             null,
             null,
             null,
-            null,
-            TENANCY_ID));
+            null));
 
     assertThat(workItemStore.scanAll())
         .as("handler must not create a WorkItem when PlanItem is already RUNNING")

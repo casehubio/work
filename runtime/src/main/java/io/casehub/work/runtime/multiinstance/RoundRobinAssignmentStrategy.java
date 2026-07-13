@@ -7,6 +7,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import jakarta.enterprise.context.ApplicationScoped;
+
+import io.quarkus.arc.Unremovable;
 import jakarta.inject.Inject;
 import jakarta.inject.Provider;
 
@@ -35,6 +37,7 @@ import io.casehub.work.runtime.service.CapabilityParser;
  * one instance unless {@code allowSameAssignee} is configured in the parent (not
  * enforced here — enforced by the claim guard layer).
  */
+@Unremovable
 @ApplicationScoped
 public class RoundRobinAssignmentStrategy implements InstanceAssignmentStrategy {
 

@@ -4,6 +4,8 @@ import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import io.quarkus.arc.Unremovable;
+
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceContext;
 import io.casehub.work.runtime.model.WorkItem;
@@ -20,6 +22,7 @@ import io.casehub.work.runtime.model.WorkItem;
  * Throws {@link IllegalArgumentException} if the {@code explicitAssignees} list is null
  * or does not match the number of instances.
  */
+@Unremovable
 @ApplicationScoped
 public class ExplicitListAssignmentStrategy implements InstanceAssignmentStrategy {
 

@@ -25,7 +25,7 @@ import io.casehub.blackboard.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.HumanTaskScheduleEvent;
 import io.casehub.engine.common.internal.model.PlanItemSaveRequest;
-import io.casehub.engine.common.internal.model.PlanItemStatus;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.engine.common.internal.model.TargetType;
 import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.work.api.Outcome;
@@ -88,7 +88,7 @@ public class HumanTaskScheduleHandler {
       return;
     }
 
-    if (item.getStatus() != PlanItemStatus.PENDING) {
+    if (item.getStatus() != TaskStatus.PENDING) {
       LOG.warnf(
           "PlanItem for binding '%s' case %s is not PENDING (status=%s) — skipping",
           event.bindingName(), event.caseId(), item.getStatus());
@@ -150,11 +150,12 @@ public class HumanTaskScheduleHandler {
             event.caseId(),
             item.getPlanItemId(),
             item.getBindingName(),
-            PlanItemStatus.DELEGATED,
+            TaskStatus.DELEGATED,
             item.getCreatedAt(),
             TargetType.HUMAN_TASK,
             extractOutputMappingExpression(event.target()),
-            event.tenancyId()),
+            event.tenancyId(),
+            null, null, null),
         event.tenancyId());
     item.markDelegated();
     LOG.infof("WorkItem created (template) for binding callerRef=%s", callerRef);
@@ -175,11 +176,12 @@ public class HumanTaskScheduleHandler {
             event.caseId(),
             item.getPlanItemId(),
             item.getBindingName(),
-            PlanItemStatus.DELEGATED,
+            TaskStatus.DELEGATED,
             item.getCreatedAt(),
             TargetType.HUMAN_TASK,
             extractOutputMappingExpression(event.target()),
-            event.tenancyId()),
+            event.tenancyId(),
+            null, null, null),
         event.tenancyId());
     item.markDelegated();
   }

@@ -15,7 +15,7 @@
  */
 package io.casehub.work.engine;
 
-import io.casehub.engine.common.internal.model.PlanItemStatus;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.engine.common.internal.model.TargetType;
 import io.casehub.engine.common.spi.PlanItemStore;
 import jakarta.persistence.Column;
@@ -64,7 +64,7 @@ public class WorkAdapterPlanItemEntity {
 
   @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false, length = 50)
-  public PlanItemStatus status;
+  public TaskStatus status;
 
   @Column(name = "created_at", nullable = false)
   public Instant createdAt;

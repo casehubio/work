@@ -22,7 +22,7 @@ import io.casehub.api.model.HumanTaskTarget;
 import io.casehub.blackboard.plan.PlanItem;
 import io.casehub.blackboard.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.model.CaseInstance;
-import io.casehub.engine.common.internal.model.PlanItemStatus;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.engine.common.spi.ReactiveCaseInstanceRepository;
 import io.casehub.engine.internal.context.CaseContextImpl;
 import io.casehub.work.api.GroupStatus;
@@ -75,7 +75,7 @@ class WorkItemLifecycleAdapterTest {
   @BeforeEach
   void setUp() {
     caseId = UUID.randomUUID();
-    planItem = PlanItem.create("review-binding", "review-worker", 10);
+    planItem = PlanItem.create("review-binding", io.casehub.api.model.ExecutorRef.of("review-worker"), 10);
     planItemId = planItem.getPlanItemId();
     planItem.markRunning();
 
@@ -102,13 +102,13 @@ class WorkItemLifecycleAdapterTest {
 
     await()
         .atMost(5, TimeUnit.SECONDS)
-        .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.COMPLETED));
+        .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(TaskStatus.COMPLETED));
   }
 
   @Test
   void workItemRejected_marksPlanItemRejected() {
     // Human task refusal — PlanItem must be DELEGATED (human task lifecycle)
-    PlanItem delegatedItem = PlanItem.create("review-ht", "ht-worker", 10);
+    PlanItem delegatedItem = PlanItem.create("review-ht", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
@@ -123,13 +123,13 @@ class WorkItemLifecycleAdapterTest {
     await()
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(
-            () -> assertThat(delegatedItem.getStatus()).isEqualTo(PlanItemStatus.REJECTED));
+            () -> assertThat(delegatedItem.getStatus()).isEqualTo(TaskStatus.REJECTED));
   }
 
   @Test
   void workItemExpired_marksPlanItemFaulted() {
     // Deadline expiry — a time-based failure, maps to FAULTED
-    PlanItem delegatedItem = PlanItem.create("review-ht-expired", "ht-worker", 10);
+    PlanItem delegatedItem = PlanItem.create("review-ht-expired", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
@@ -144,12 +144,12 @@ class WorkItemLifecycleAdapterTest {
     await()
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(
-            () -> assertThat(delegatedItem.getStatus()).isEqualTo(PlanItemStatus.FAULTED));
+            () -> assertThat(delegatedItem.getStatus()).isEqualTo(TaskStatus.FAULTED));
   }
 
   @Test
   void workItemFaulted_marksPlanItemFaulted() {
-    PlanItem delegatedItem = PlanItem.create("review-ht-faulted", "ht-worker", 10);
+    PlanItem delegatedItem = PlanItem.create("review-ht-faulted", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
@@ -164,12 +164,12 @@ class WorkItemLifecycleAdapterTest {
     await()
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(
-            () -> assertThat(delegatedItem.getStatus()).isEqualTo(PlanItemStatus.FAULTED));
+            () -> assertThat(delegatedItem.getStatus()).isEqualTo(TaskStatus.FAULTED));
   }
 
   @Test
   void workItemObsolete_marksPlanItemObsolete() {
-    PlanItem delegatedItem = PlanItem.create("review-ht-obsolete", "ht-worker", 10);
+    PlanItem delegatedItem = PlanItem.create("review-ht-obsolete", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
@@ -184,7 +184,7 @@ class WorkItemLifecycleAdapterTest {
     await()
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(
-            () -> assertThat(delegatedItem.getStatus()).isEqualTo(PlanItemStatus.OBSOLETE));
+            () -> assertThat(delegatedItem.getStatus()).isEqualTo(TaskStatus.OBSOLETE));
   }
 
   @Test
@@ -224,12 +224,12 @@ class WorkItemLifecycleAdapterTest {
     // PlanItem status must remain unchanged — ESCALATED is not terminal
     assertThat(planItem.getStatus())
         .as("ESCALATED must not change PlanItem status")
-        .isEqualTo(PlanItemStatus.RUNNING);
+        .isEqualTo(TaskStatus.RUNNING);
   }
 
   @Test
   void workItemSuspended_marksPlanItemSuspended() {
-    PlanItem delegatedItem = PlanItem.create("review-ht-suspend", "ht-worker", 10);
+    PlanItem delegatedItem = PlanItem.create("review-ht-suspend", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
@@ -244,12 +244,12 @@ class WorkItemLifecycleAdapterTest {
     await()
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(
-            () -> assertThat(delegatedItem.getStatus()).isEqualTo(PlanItemStatus.SUSPENDED));
+            () -> assertThat(delegatedItem.getStatus()).isEqualTo(TaskStatus.SUSPENDED));
   }
 
   @Test
   void workItemResumed_marksPlanItemDelegated() {
-    PlanItem delegatedItem = PlanItem.create("review-ht-resume", "ht-worker", 10);
+    PlanItem delegatedItem = PlanItem.create("review-ht-resume", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
     delegatedItem.markDelegated();
     delegatedItem.markSuspended();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
@@ -265,7 +265,7 @@ class WorkItemLifecycleAdapterTest {
     await()
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(
-            () -> assertThat(delegatedItem.getStatus()).isEqualTo(PlanItemStatus.DELEGATED));
+            () -> assertThat(delegatedItem.getStatus()).isEqualTo(TaskStatus.DELEGATED));
   }
 
   @Test
@@ -274,7 +274,7 @@ class WorkItemLifecycleAdapterTest {
 
     await()
         .atMost(5, TimeUnit.SECONDS)
-        .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.CANCELLED));
+        .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(TaskStatus.CANCELLED));
   }
 
   @Test
@@ -286,7 +286,7 @@ class WorkItemLifecycleAdapterTest {
       Thread.sleep(500);
     } catch (InterruptedException ignored) {
     }
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.RUNNING);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.RUNNING);
   }
 
   @Test
@@ -303,7 +303,7 @@ class WorkItemLifecycleAdapterTest {
       Thread.sleep(500);
     } catch (InterruptedException ignored) {
     }
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.RUNNING);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.RUNNING);
   }
 
   @Test
@@ -320,14 +320,14 @@ class WorkItemLifecycleAdapterTest {
       Thread.sleep(500);
     } catch (InterruptedException ignored) {
     }
-    assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.RUNNING);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.RUNNING);
   }
 
   @Test
   void workItemCompleted_withOutputMapping_updatesCaseContext() {
     HumanTaskTarget target =
         HumanTaskTarget.inline().title("Review").outputMapping("{ irbOutcome: .decision }").build();
-    PlanItem htPlanItem = PlanItem.create("review-binding-ht", "ht-worker", 10, target);
+    PlanItem htPlanItem = PlanItem.create("review-binding-ht", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10, target);
     htPlanItem.markRunning();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(htPlanItem);
 
@@ -343,7 +343,7 @@ class WorkItemLifecycleAdapterTest {
     await()
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(
-            () -> assertThat(htPlanItem.getStatus()).isEqualTo(PlanItemStatus.COMPLETED));
+            () -> assertThat(htPlanItem.getStatus()).isEqualTo(TaskStatus.COMPLETED));
 
     // CaseContext should be updated with outputMapping result
     await()
@@ -364,7 +364,7 @@ class WorkItemLifecycleAdapterTest {
     // outputMapping evaluator with invalid expression — should warn, not fail the transition
     HumanTaskTarget target =
         HumanTaskTarget.inline().title("Review").outputMapping("not-a-valid-template").build();
-    PlanItem htPlanItem = PlanItem.create("review-binding-fail", "ht-worker", 10, target);
+    PlanItem htPlanItem = PlanItem.create("review-binding-fail", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10, target);
     htPlanItem.markRunning();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(htPlanItem);
 
@@ -380,7 +380,7 @@ class WorkItemLifecycleAdapterTest {
     await()
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(
-            () -> assertThat(htPlanItem.getStatus()).isEqualTo(PlanItemStatus.COMPLETED));
+            () -> assertThat(htPlanItem.getStatus()).isEqualTo(TaskStatus.COMPLETED));
   }
 
   @Test
@@ -391,7 +391,7 @@ class WorkItemLifecycleAdapterTest {
             .title("Approval")
             .outputMapping("{ humanApproval: { status: .decision } }")
             .build();
-    PlanItem htPlanItem = PlanItem.create("nested-mapping-binding", "ht-worker", 10, target);
+    PlanItem htPlanItem = PlanItem.create("nested-mapping-binding", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10, target);
     htPlanItem.markRunning();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(htPlanItem);
 
@@ -407,7 +407,7 @@ class WorkItemLifecycleAdapterTest {
     await()
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(
-            () -> assertThat(htPlanItem.getStatus()).isEqualTo(PlanItemStatus.COMPLETED));
+            () -> assertThat(htPlanItem.getStatus()).isEqualTo(TaskStatus.COMPLETED));
 
     await()
         .atMost(3, TimeUnit.SECONDS)
@@ -441,7 +441,7 @@ class WorkItemLifecycleAdapterTest {
 
     await()
         .atMost(5, TimeUnit.SECONDS)
-        .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.COMPLETED));
+        .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(TaskStatus.COMPLETED));
 
     CaseInstance after =
         reactiveCaseInstanceRepository
@@ -457,13 +457,13 @@ class WorkItemLifecycleAdapterTest {
 
     await()
         .atMost(5, TimeUnit.SECONDS)
-        .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.COMPLETED));
+        .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(TaskStatus.COMPLETED));
   }
 
   @Test
   void workItemGroupRejected_marksPlanItemRejected() {
     // Group threshold unreachable — group PlanItems are always DELEGATED (HumanTask SpawnGroup)
-    PlanItem delegatedItem = PlanItem.create("group-binding", "group-worker", 10);
+    PlanItem delegatedItem = PlanItem.create("group-binding", io.casehub.api.model.ExecutorRef.of("group-worker"), 10);
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
@@ -483,7 +483,7 @@ class WorkItemLifecycleAdapterTest {
     await()
         .atMost(5, TimeUnit.SECONDS)
         .untilAsserted(
-            () -> assertThat(delegatedItem.getStatus()).isEqualTo(PlanItemStatus.REJECTED));
+            () -> assertThat(delegatedItem.getStatus()).isEqualTo(TaskStatus.REJECTED));
   }
 
   @Test
@@ -496,7 +496,7 @@ class WorkItemLifecycleAdapterTest {
     }
     assertThat(planItem.getStatus())
         .as("IN_PROGRESS group event must not change PlanItem status")
-        .isEqualTo(PlanItemStatus.RUNNING);
+        .isEqualTo(TaskStatus.RUNNING);
   }
 
   @Test
@@ -521,7 +521,7 @@ class WorkItemLifecycleAdapterTest {
     }
     assertThat(planItem.getStatus())
         .as("Unknown callerRef must be ignored for group events")
-        .isEqualTo(PlanItemStatus.RUNNING);
+        .isEqualTo(TaskStatus.RUNNING);
   }
 
   private WorkItemLifecycleEvent buildEvent(WorkItemStatus status, String resolution) {

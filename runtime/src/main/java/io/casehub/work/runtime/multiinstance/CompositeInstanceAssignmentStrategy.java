@@ -4,6 +4,8 @@ import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import io.quarkus.arc.Unremovable;
+
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceContext;
 
@@ -19,6 +21,7 @@ import io.casehub.work.api.MultiInstanceContext;
  * then run {@code ExplicitListAssignmentStrategy} (overrides assigneeId for specific
  * instances), leaving the group candidates intact for any unassigned ones.
  */
+@Unremovable
 @ApplicationScoped
 public class CompositeInstanceAssignmentStrategy implements InstanceAssignmentStrategy {
 

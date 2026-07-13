@@ -23,7 +23,7 @@ import io.casehub.blackboard.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.internal.model.PlanItemSaveRequest;
-import io.casehub.engine.common.internal.model.PlanItemStatus;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.engine.common.internal.model.TargetType;
 import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.engine.common.spi.ReactiveCaseInstanceRepository;
@@ -78,11 +78,12 @@ class HumanTaskRecoveryServiceTest {
             caseId,
             planItemId,
             "review-task",
-            PlanItemStatus.DELEGATED,
+            TaskStatus.DELEGATED,
             Instant.now(),
             TargetType.HUMAN_TASK,
             null,
-            "test-tenant"),
+            "test-tenant",
+            null, null, null),
         "test-tenant");
 
     // Set up CaseInstance so PlanItemCompletionApplier can fire CONTEXT_CHANGED
@@ -118,7 +119,7 @@ class HumanTaskRecoveryServiceTest {
 
     PlanItem item = registry.get(caseId).flatMap(plan -> plan.getPlanItem(planItemId)).orElse(null);
     assertThat(item).isNotNull();
-    assertThat(item.getStatus()).isEqualTo(PlanItemStatus.COMPLETED);
+    assertThat(item.getStatus()).isEqualTo(TaskStatus.COMPLETED);
 
     await().atMost(Duration.ofSeconds(2)).untilTrue(contextChangedFired);
   }
@@ -130,7 +131,7 @@ class HumanTaskRecoveryServiceTest {
 
     PlanItem item = registry.get(caseId).flatMap(plan -> plan.getPlanItem(planItemId)).orElse(null);
     assertThat(item).isNotNull();
-    assertThat(item.getStatus()).isEqualTo(PlanItemStatus.REJECTED);
+    assertThat(item.getStatus()).isEqualTo(TaskStatus.REJECTED);
   }
 
   @Test
@@ -140,7 +141,7 @@ class HumanTaskRecoveryServiceTest {
 
     PlanItem item = registry.get(caseId).flatMap(plan -> plan.getPlanItem(planItemId)).orElse(null);
     assertThat(item).isNotNull();
-    assertThat(item.getStatus()).isEqualTo(PlanItemStatus.FAULTED);
+    assertThat(item.getStatus()).isEqualTo(TaskStatus.FAULTED);
   }
 
   @Test
@@ -150,7 +151,7 @@ class HumanTaskRecoveryServiceTest {
 
     PlanItem item = registry.get(caseId).flatMap(plan -> plan.getPlanItem(planItemId)).orElse(null);
     assertThat(item).isNotNull();
-    assertThat(item.getStatus()).isEqualTo(PlanItemStatus.DELEGATED);
+    assertThat(item.getStatus()).isEqualTo(TaskStatus.DELEGATED);
   }
 
   @Test
@@ -159,7 +160,7 @@ class HumanTaskRecoveryServiceTest {
 
     PlanItem item = registry.get(caseId).flatMap(plan -> plan.getPlanItem(planItemId)).orElse(null);
     assertThat(item).isNotNull();
-    assertThat(item.getStatus()).isEqualTo(PlanItemStatus.DELEGATED);
+    assertThat(item.getStatus()).isEqualTo(TaskStatus.DELEGATED);
   }
 
   @Test
@@ -171,7 +172,7 @@ class HumanTaskRecoveryServiceTest {
 
     PlanItem item = registry.get(caseId).flatMap(plan -> plan.getPlanItem(planItemId)).orElse(null);
     assertThat(item).isNotNull();
-    assertThat(item.getStatus()).isEqualTo(PlanItemStatus.COMPLETED);
+    assertThat(item.getStatus()).isEqualTo(TaskStatus.COMPLETED);
   }
 
   private WorkItem createWorkItem(String ref, WorkItemStatus status) {

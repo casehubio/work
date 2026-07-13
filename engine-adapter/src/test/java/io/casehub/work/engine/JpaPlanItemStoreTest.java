@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.casehub.engine.common.internal.model.PlanItemRecord;
 import io.casehub.engine.common.internal.model.PlanItemSaveRequest;
-import io.casehub.engine.common.internal.model.PlanItemStatus;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.engine.common.internal.model.TargetType;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
@@ -44,15 +44,16 @@ class JpaPlanItemStoreTest {
             caseId,
             planItemId,
             "test-binding",
-            PlanItemStatus.PENDING,
+            TaskStatus.PENDING,
             Instant.now(),
             TargetType.HUMAN_TASK,
             null,
-            "test-tenant"),
+            "test-tenant",
+            null, null, null),
         "test-tenant");
     List<PlanItemRecord> found = store.findByCaseId(caseId, "test-tenant");
     assertThat(found).hasSize(1);
-    assertThat(found.get(0).status()).isEqualTo(PlanItemStatus.PENDING);
+    assertThat(found.get(0).status()).isEqualTo(TaskStatus.PENDING);
   }
 
   @Test
@@ -65,14 +66,15 @@ class JpaPlanItemStoreTest {
             caseId,
             planItemId,
             "test-binding",
-            PlanItemStatus.PENDING,
+            TaskStatus.PENDING,
             Instant.now(),
             TargetType.HUMAN_TASK,
             null,
-            "test-tenant"),
+            "test-tenant",
+            null, null, null),
         "test-tenant");
-    store.updateStatus(planItemId, PlanItemStatus.RUNNING);
+    store.updateStatus(planItemId, TaskStatus.RUNNING);
     List<PlanItemRecord> found = store.findByCaseId(caseId, "test-tenant");
-    assertThat(found.get(0).status()).isEqualTo(PlanItemStatus.RUNNING);
+    assertThat(found.get(0).status()).isEqualTo(TaskStatus.RUNNING);
   }
 }

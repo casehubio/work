@@ -17,7 +17,7 @@ package io.casehub.work.engine;
 
 import io.casehub.engine.common.internal.model.PlanItemRecord;
 import io.casehub.engine.common.internal.model.PlanItemSaveRequest;
-import io.casehub.engine.common.internal.model.PlanItemStatus;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.engine.common.spi.PlanItemStore;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -53,7 +53,7 @@ public class JpaPlanItemStore implements PlanItemStore {
   }
 
   @Override
-  public void updateStatus(String planItemId, PlanItemStatus status) {
+  public void updateStatus(String planItemId, TaskStatus status) {
     em.flush();
     em.createQuery(
             "UPDATE WorkAdapterPlanItemEntity e SET e.status = :status WHERE e.planItemId = :planItemId")
@@ -78,13 +78,13 @@ public class JpaPlanItemStore implements PlanItemStore {
   }
 
   @Override
-  public List<PlanItemRecord> findDelegated(UUID caseId) {
+  public List<PlanItemRecord> findDelegatedCrossTenant(UUID caseId) {
     return em
         .createQuery(
             "SELECT e FROM WorkAdapterPlanItemEntity e WHERE e.caseId = :caseId AND e.status = :status",
             WorkAdapterPlanItemEntity.class)
         .setParameter("caseId", caseId)
-        .setParameter("status", PlanItemStatus.DELEGATED)
+        .setParameter("status", TaskStatus.DELEGATED)
         .getResultList()
         .stream()
         .map(this::toRecord)
@@ -97,7 +97,7 @@ public class JpaPlanItemStore implements PlanItemStore {
         .createQuery(
             "SELECT e FROM WorkAdapterPlanItemEntity e WHERE e.status = :status",
             WorkAdapterPlanItemEntity.class)
-        .setParameter("status", PlanItemStatus.DELEGATED)
+        .setParameter("status", TaskStatus.DELEGATED)
         .getResultList()
         .stream()
         .map(this::toRecord)
@@ -113,6 +113,9 @@ public class JpaPlanItemStore implements PlanItemStore {
         e.createdAt,
         e.targetType,
         e.outputMappingExpression,
-        e.tenancyId);
+        e.tenancyId,
+        null,
+        null,
+        null);
   }
 }

@@ -23,7 +23,7 @@ import io.casehub.blackboard.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.HumanTaskScheduleEvent;
 import io.casehub.engine.common.internal.model.PlanItemRecord;
-import io.casehub.engine.common.internal.model.PlanItemStatus;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.ledger.testing.NoOpLedgerEntryRepository;
 import io.casehub.ledger.testing.NoOpReactiveLedgerEntryRepository;
@@ -155,7 +155,7 @@ class HumanTaskScheduleHandlerAtomicityTest {
       mem.clear();
     }
     caseId = UUID.randomUUID();
-    planItem = PlanItem.create("irb-binding", "unused-worker", 5);
+    planItem = PlanItem.create("irb-binding", io.casehub.api.model.ExecutorRef.of("unused-worker"), 5);
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(planItem);
   }
 
@@ -173,7 +173,7 @@ class HumanTaskScheduleHandlerAtomicityTest {
       eventBus.publish(
           EventBusAddresses.HUMAN_TASK_SCHEDULE,
           new HumanTaskScheduleEvent(
-              caseId, "irb-binding", target, Map.of(), null, null, null, null, TENANCY_ID));
+              caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, null, null));
 
       try {
         assertThat(FailingWorkItemStore.putAttemptLatch.await(5, TimeUnit.SECONDS))
@@ -184,14 +184,14 @@ class HumanTaskScheduleHandlerAtomicityTest {
         throw new RuntimeException("Interrupted waiting for put() attempt", e);
       }
 
-      assertThat(planItem.getStatus()).isEqualTo(PlanItemStatus.PENDING);
+      assertThat(planItem.getStatus()).isEqualTo(TaskStatus.PENDING);
       assertThat(workItemStore.scanAll()).isEmpty();
       List<PlanItemRecord> records = planItemStore.findByCaseId(caseId, "test-tenant");
       assertThat(records)
           .noneMatch(
               r ->
                   r.planItemId().equals(planItem.getPlanItemId())
-                      && r.status() == PlanItemStatus.RUNNING);
+                      && r.status() == TaskStatus.RUNNING);
     } finally {
       FailingWorkItemStore.shouldFail.set(false);
     }

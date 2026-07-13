@@ -4,6 +4,8 @@ import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import io.quarkus.arc.Unremovable;
+
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.SelectionContext;
 import io.casehub.work.api.WorkerCandidate;
@@ -19,6 +21,7 @@ import io.casehub.work.api.spi.WorkerSelectionStrategy;
  * without CDI ambiguity when multiple {@link WorkerSelectionStrategy} implementations
  * are on the classpath.
  */
+@Unremovable
 @ApplicationScoped
 public class ClaimFirstStrategy implements WorkerSelectionStrategy {
 

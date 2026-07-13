@@ -22,7 +22,7 @@ import io.casehub.blackboard.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.event.CaseContextChangedEvent;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.model.CaseInstance;
-import io.casehub.engine.common.internal.model.PlanItemStatus;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.engine.common.spi.ReactiveCrossTenantCaseInstanceRepository;
 import io.casehub.work.api.GroupStatus;
 import io.casehub.work.api.WorkItemEvent;
@@ -256,7 +256,7 @@ public class WorkItemLifecycleAdapter {
     plan.getPlanItem(piRef.planItemId())
         .ifPresent(
             item -> {
-              if (item.getStatus() == PlanItemStatus.SUSPENDED) {
+              if (item.getStatus() == TaskStatus.SUSPENDED) {
                 item.markResumed();
                 LOG.infof("PlanItem %s resumed: caseId=%s", piRef.planItemId(), piRef.caseId());
               }

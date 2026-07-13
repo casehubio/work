@@ -4,6 +4,8 @@ import java.time.Instant;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import io.quarkus.arc.Unremovable;
+
 import io.casehub.work.api.ClaimSlaContext;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
 
@@ -19,6 +21,7 @@ import io.casehub.work.api.spi.ClaimSlaPolicy;
  * This is Approach B. Use when the SLA is an absolute contract: the item must be
  * claimed within a fixed window from when it was first raised, with no extensions.
  */
+@Unremovable
 @ApplicationScoped
 public class SingleBudgetPolicy implements ClaimSlaPolicy {
 

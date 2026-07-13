@@ -5,6 +5,8 @@ import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import io.quarkus.arc.Unremovable;
+
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.SelectionContext;
 import io.casehub.work.api.WorkerCandidate;
@@ -24,6 +26,7 @@ import io.casehub.work.api.spi.WorkerSelectionStrategy;
  * <p>
  * Activated by: {@code casehub.work.routing.strategy=least-loaded} (default).
  */
+@Unremovable
 @ApplicationScoped
 public class LeastLoadedStrategy implements WorkerSelectionStrategy {
 

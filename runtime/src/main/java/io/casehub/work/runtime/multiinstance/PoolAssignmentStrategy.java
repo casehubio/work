@@ -4,6 +4,8 @@ import java.util.List;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import io.quarkus.arc.Unremovable;
+
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceContext;
 import io.casehub.work.runtime.model.WorkItem;
@@ -16,6 +18,7 @@ import io.casehub.work.runtime.model.WorkItem;
  * and whoever claims first gets the assignment. Suitable when any member of a team
  * can handle any instance.
  */
+@Unremovable
 @ApplicationScoped
 public class PoolAssignmentStrategy implements InstanceAssignmentStrategy {
 

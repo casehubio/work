@@ -4,6 +4,8 @@ import java.time.Instant;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import io.quarkus.arc.Unremovable;
+
 import io.casehub.work.api.ClaimSlaContext;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
 
@@ -23,6 +25,7 @@ import io.casehub.work.api.spi.ClaimSlaPolicy;
  * This is Approach C. Suitable when you want to be generous to individual claimants
  * (each gets the full window) but still enforce an absolute outer bound.
  */
+@Unremovable
 @ApplicationScoped
 public class PhaseClockPolicy implements ClaimSlaPolicy {
 
