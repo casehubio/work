@@ -169,7 +169,7 @@ Aggregate inbox counts for dashboard widgets.
 | `type` | string | no | Hierarchical type filter (ancestor matching) |
 
 **Response:** `200 OK`
-**Body:** `InboxSummary`
+**Body:** `WorkItemSummaryBuilder.Summary`
 
 | Field | Type | Description |
 |---|---|---|
@@ -178,6 +178,7 @@ Aggregate inbox counts for dashboard widgets.
 | `byPriority` | map\<string, long\> | |
 | `overdue` | long | |
 | `claimDeadlineBreached` | long | |
+| `oldestCreatedAt` | instant (nullable) | `min(createdAt)` across non-terminal items; null when none exist |
 
 ---
 
@@ -1155,6 +1156,28 @@ Query the live content of a queue view.
 **Response:** `204 No Content`
 
 **Error:** `404`
+
+---
+
+### GET /queues/{id}/summary
+
+Pre-computed aggregates for a queue view's current membership. Same response shape as `GET /workitems/inbox/summary`.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK`
+**Body:** `WorkItemSummaryBuilder.Summary`
+
+| Field | Type | Description |
+|---|---|---|
+| `total` | long | |
+| `byStatus` | map\<string, long\> | |
+| `byPriority` | map\<string, long\> | |
+| `overdue` | long | |
+| `claimDeadlineBreached` | long | |
+| `oldestCreatedAt` | instant (nullable) | `min(createdAt)` across non-terminal items; null when none exist |
+
+**Error:** `404` — queue not found
 
 ---
 

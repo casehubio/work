@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import io.casehub.work.runtime.service.WorkItemSummaryBuilder.Summary;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -42,7 +43,7 @@ import io.casehub.work.runtime.repository.WorkItemNoteStore;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemRelationStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
-import io.casehub.work.runtime.service.InboxSummaryBuilder;
+import io.casehub.work.runtime.service.WorkItemSummaryBuilder;
 import io.casehub.work.runtime.service.LabelNotFoundException;
 import io.casehub.work.runtime.service.WorkItemNotFoundException;
 import io.casehub.work.runtime.service.WorkItemService;
@@ -127,7 +128,7 @@ public class WorkItemResource {
      */
     @GET
     @Path("/inbox/summary")
-    public InboxSummaryBuilder.InboxSummary inboxSummary(
+    public Summary inboxSummary(
             @QueryParam("assignee") final String assignee,
             @QueryParam("candidateGroup") final List<String> candidateGroups,
             @QueryParam("candidateUser") final String candidateUser,
@@ -143,7 +144,7 @@ public class WorkItemResource {
         if (type != null)
             qb.type(type);
 
-        return InboxSummaryBuilder.build(workItemStore.scan(qb.build()), Instant.now());
+        return WorkItemSummaryBuilder.build(workItemStore.scan(qb.build()), Instant.now());
     }
 
     /**

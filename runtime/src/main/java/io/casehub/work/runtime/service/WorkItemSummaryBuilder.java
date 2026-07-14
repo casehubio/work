@@ -16,26 +16,26 @@ import io.casehub.work.api.WorkItemStatus;
  * The caller is responsible for loading the WorkItems (with appropriate filtering);
  * this class only aggregates them.
  */
-public final class InboxSummaryBuilder {
+public final class WorkItemSummaryBuilder {
 
-    private InboxSummaryBuilder() {
+    private WorkItemSummaryBuilder() {
     }
 
     /**
-     * Summary of WorkItem counts by status, priority, and deadline state.
-     *
      * @param total total WorkItems in scope
      * @param byStatus count per {@link WorkItemStatus} name
      * @param byPriority count per priority name; excludes items with null priority
      * @param overdue non-terminal items whose {@code expiresAt} is before {@code now}
      * @param claimDeadlineBreached PENDING items whose {@code claimDeadline} is before {@code now}
+     * @param oldestCreatedAt {@code min(createdAt)} across non-terminal items; null when none exist
      */
-    public record InboxSummary(
+    public record Summary(
             long total,
             Map<String, Long> byStatus,
             Map<String, Long> byPriority,
             long overdue,
-            long claimDeadlineBreached) {
+            long claimDeadlineBreached,
+            Instant oldestCreatedAt) {
     }
 
     /**
@@ -45,7 +45,7 @@ public final class InboxSummaryBuilder {
      * @param now the reference instant for overdue and claim-deadline checks
      * @return the aggregate summary
      */
-    public static InboxSummary build(final List<WorkItem> items, final Instant now) {
+    public static Summary build(final List<WorkItem> items, final Instant now) {
         final long total = items.size();
 
         final Map<String, Long> byStatus = items.stream()
@@ -66,6 +66,13 @@ public final class InboxSummaryBuilder {
                 .filter(wi -> wi.claimDeadline != null && wi.claimDeadline.isBefore(now))
                 .count();
 
-        return new InboxSummary(total, byStatus, byPriority, overdue, claimDeadlineBreached);
+        final Instant oldestCreatedAt = items.stream()
+                .filter(wi -> wi.status != null && !wi.status.isTerminal())
+                .filter(wi -> wi.createdAt != null)
+                .map(wi -> wi.createdAt)
+                .min(Instant::compareTo)
+                .orElse(null);
+
+        return new Summary(total, byStatus, byPriority, overdue, claimDeadlineBreached, oldestCreatedAt);
     }
 }

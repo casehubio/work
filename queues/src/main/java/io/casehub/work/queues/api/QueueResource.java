@@ -29,6 +29,7 @@ import io.casehub.work.queues.service.QueueMembershipService;
 import io.casehub.work.queues.service.WorkItemQueueEventBroadcaster;
 import io.casehub.work.rest.WorkItemMapper;
 import io.casehub.work.rest.WorkItemResponse;
+import io.casehub.work.runtime.service.WorkItemSummaryBuilder;
 import io.smallrye.mutiny.Multi;
 
 /** REST resource for managing queue views and querying their live content. */
@@ -167,6 +168,18 @@ public class QueueResource {
             return Response.status(404).entity(Map.of("error", "Not found")).build();
         }
         return Response.noContent().build();
+    }
+
+    @GET
+    @Path("/{id}/summary")
+    @Transactional
+    public Response summary(@PathParam("id") final UUID id) {
+        final QueueView q = queueViewStore.get(id).orElse(null);
+        if (q == null) {
+            return Response.status(404).entity(Map.of("error", "Queue view not found")).build();
+        }
+        final var members = membershipService.evaluateMembers(q);
+        return Response.ok(WorkItemSummaryBuilder.build(members, Instant.now())).build();
     }
 
     @GET

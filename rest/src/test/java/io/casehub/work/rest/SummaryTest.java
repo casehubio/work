@@ -14,7 +14,7 @@ import io.restassured.http.ContentType;
  * Integration tests for GET /workitems/inbox/summary.
  */
 @QuarkusTest
-class InboxSummaryTest {
+class SummaryTest {
 
     @Test
     void summary_returns200_withExpectedShape() {
@@ -39,7 +39,8 @@ class InboxSummaryTest {
                 .statusCode(200)
                 .body("total", greaterThanOrEqualTo(1))
                 .body("byStatus.PENDING", greaterThanOrEqualTo(1))
-                .body("byPriority.HIGH", greaterThanOrEqualTo(1));
+                .body("byPriority.HIGH", greaterThanOrEqualTo(1))
+                .body("oldestCreatedAt", notNullValue());
     }
 
     @Test
