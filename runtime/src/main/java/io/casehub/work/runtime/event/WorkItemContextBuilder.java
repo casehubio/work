@@ -1,12 +1,12 @@
 package io.casehub.work.runtime.event;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import io.casehub.work.api.Outcome;
 import io.casehub.work.runtime.model.OutcomeCodecs;
 import io.casehub.work.runtime.model.WorkItem;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Builds a flat {@code Map<String, Object>} context from a WorkItem entity.
@@ -82,6 +82,8 @@ public final class WorkItemContextBuilder {
         map.put("tenancyId", workItem.tenancyId);
         map.put("percentComplete", workItem.percentComplete);
         map.put("statusNote", workItem.statusNote);
+        map.put("payloadTypeName", workItem.payloadTypeName);
+        map.put("resolutionTypeName", workItem.resolutionTypeName);
         return map;
     }
 }
