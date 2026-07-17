@@ -45,6 +45,9 @@ public final class WorkItemCreateRequest {
     /** Tenant identifier for multi-tenant SPI callers. */
     public final String tenancyId;
 
+    public final String payloadTypeName;
+    public final String resolutionTypeName;
+
     private WorkItemCreateRequest(final Builder b) {
         this.title                      = b.title;
         this.description                = b.description;
@@ -74,6 +77,8 @@ public final class WorkItemCreateRequest {
         this.auditDetail                = b.auditDetail;
         this.templateVersion            = b.templateVersion;
         this.tenancyId                  = b.tenancyId;
+        this.payloadTypeName            = b.payloadTypeName;
+        this.resolutionTypeName         = b.resolutionTypeName;
     }
 
     public static Builder builder() {
@@ -115,7 +120,9 @@ public final class WorkItemCreateRequest {
                 && Objects.equals(scope, r.scope)
                 && Objects.equals(auditDetail, r.auditDetail)
                 && Objects.equals(templateVersion, r.templateVersion)
-                && Objects.equals(tenancyId, r.tenancyId);
+                && Objects.equals(tenancyId, r.tenancyId)
+                && Objects.equals(payloadTypeName, r.payloadTypeName)
+                && Objects.equals(resolutionTypeName, r.resolutionTypeName);
     }
 
     @Override
@@ -125,7 +132,8 @@ public final class WorkItemCreateRequest {
                 createdBy, payload, claimDeadline, expiresAt, followUpDate, labels,
                 confidenceScore, callerRef, claimDeadlineBusinessHours, expiresAtBusinessHours,
                 templateId, permittedOutcomes, inputDataSchema, outputDataSchema, excludedUsers, scope,
-                auditDetail, templateVersion, tenancyId);
+                auditDetail, templateVersion, tenancyId,
+                payloadTypeName, resolutionTypeName);
     }
 
     /** Intentionally omits payload, schemas, callerRef, and credentials — log-safety. */
@@ -166,6 +174,8 @@ public final class WorkItemCreateRequest {
         private String auditDetail;
         private Long templateVersion;
         private String tenancyId;
+        private String payloadTypeName;
+        private String resolutionTypeName;
 
         private Builder() {}
 
@@ -198,6 +208,8 @@ public final class WorkItemCreateRequest {
             this.auditDetail                = src.auditDetail;
             this.templateVersion            = src.templateVersion;
             this.tenancyId                  = src.tenancyId;
+            this.payloadTypeName            = src.payloadTypeName;
+            this.resolutionTypeName         = src.resolutionTypeName;
         }
 
         public Builder title(final String v)                          { this.title = v; return this; }
@@ -228,6 +240,8 @@ public final class WorkItemCreateRequest {
         public Builder auditDetail(final String v)                    { this.auditDetail = v; return this; }
         public Builder templateVersion(final Long v)                 { this.templateVersion = v; return this; }
         public Builder tenancyId(final String v)                      { this.tenancyId = v; return this; }
+        public Builder payloadTypeName(final String v)               { this.payloadTypeName = v; return this; }
+        public Builder resolutionTypeName(final String v)            { this.resolutionTypeName = v; return this; }
 
         public WorkItemCreateRequest build() {
             if (templateId == null && (title == null || title.isBlank()))

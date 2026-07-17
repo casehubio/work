@@ -131,7 +131,9 @@ public class HumanTaskScheduleHandler {
             .payload(payload)
             .candidateGroups(toCsv(event.resolvedCandidateGroups()))
             .candidateUsers(toCsv(event.resolvedCandidateUsers()))
-            .expiresAt(earliestOf(event.expiresAtDeadline(), event.caseBudgetDeadline()));
+            .expiresAt(earliestOf(event.expiresAtDeadline(), event.caseBudgetDeadline()))
+            .payloadTypeName(event.payloadTypeName())
+            .resolutionTypeName(event.resolutionTypeName());
     if (target.outcomes() != null && !target.outcomes().isEmpty()) {
       requestBuilder.permittedOutcomes(toOutcomeList(target.outcomes()));
     }
@@ -170,7 +172,9 @@ public class HumanTaskScheduleHandler {
         event.resolvedCandidateUsers(),
         callerRef,
         event.expiresAtDeadline(),
-        event.caseBudgetDeadline());
+        event.caseBudgetDeadline(),
+        event.payloadTypeName(),
+        event.resolutionTypeName());
     planItemStore.save(
         new PlanItemSaveRequest(
             event.caseId(),
@@ -193,7 +197,9 @@ public class HumanTaskScheduleHandler {
       Set<String> resolvedUsers,
       String callerRef,
       Instant expiresAtDeadline,
-      Instant caseBudgetDeadline) {
+      Instant caseBudgetDeadline,
+      String payloadTypeName,
+      String resolutionTypeName) {
     String payload = serializePayload(inputData);
     Instant taskDeadline =
         target.expiresIn() != null ? Instant.now().plus(target.expiresIn()) : null;
@@ -210,7 +216,9 @@ public class HumanTaskScheduleHandler {
             .expiresAt(effectiveDeadline)
             .claimDeadlineBusinessHours(target.claimDeadlineHours())
             .callerRef(callerRef)
-            .scope(target.scope());
+            .scope(target.scope())
+            .payloadTypeName(payloadTypeName)
+            .resolutionTypeName(resolutionTypeName);
     if (target.outcomes() != null && !target.outcomes().isEmpty()) {
       requestBuilder.permittedOutcomes(toOutcomeList(target.outcomes()));
     }

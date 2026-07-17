@@ -129,6 +129,8 @@ public class WorkItemService {
         item.excludedUsers = request.excludedUsers;
         item.scope = request.scope;
         item.tenancyId = request.tenancyId;
+        item.payloadTypeName = request.payloadTypeName;
+        item.resolutionTypeName = request.resolutionTypeName;
 
         final Instant now = Instant.now();
         item.createdAt = now;

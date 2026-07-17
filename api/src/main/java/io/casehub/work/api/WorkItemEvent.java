@@ -23,4 +23,5 @@ public interface WorkItemEvent {
     default String candidateGroups() { return ref().candidateGroups(); }
     default String outcome() { return ref().outcome(); }
     default String tenancyId() { return ref().tenancyId(); }
+    default String resolutionTypeName() { return ref().resolutionTypeName(); }
 }

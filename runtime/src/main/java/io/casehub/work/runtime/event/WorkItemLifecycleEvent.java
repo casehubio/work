@@ -312,10 +312,10 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
         if (workItem != null) {
             return new WorkItemRef(workItemId, status, workItem.callerRef, workItem.assigneeId,
                     workItem.resolution, workItem.candidateGroups, outcome, tenancyId,
-                    workItem.payload);
+                    workItem.payload, workItem.payloadTypeName, workItem.resolutionTypeName);
         }
         return new WorkItemRef(workItemId, status, callerRef, assigneeId,
-                resolution, candidateGroups, outcome, tenancyId, null);
+                resolution, candidateGroups, outcome, tenancyId, null, null, null);
     }
 
     @JsonIgnore

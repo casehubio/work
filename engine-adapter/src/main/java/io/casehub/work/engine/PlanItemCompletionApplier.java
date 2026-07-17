@@ -72,6 +72,7 @@ public class PlanItemCompletionApplier {
   @Inject ReactiveCrossTenantCaseInstanceRepository caseInstanceRepository;
   @Inject EventBus eventBus;
   @Inject JQEvaluator jqEvaluator;
+  @Inject io.casehub.engine.common.internal.context.BridgeResolver bridgeResolver;
   @Inject Event<PlanItemRejectedEvent> planItemRejectedEvents;
   @Inject Event<PlanItemFaultedEvent> planItemFaultedEvents;
   @Inject Event<PlanItemObsoleteEvent> planItemObsoleteEvents;
@@ -96,14 +97,28 @@ public class PlanItemCompletionApplier {
       return;
     }
 
-    if (!applyStatus(item, status)) {
-      return; // already terminal or invalid transition — idempotent skip
-    }
-
     CaseInstance instance = caseInstanceRepository.findByUuid(caseId).await().atMost(TIMEOUT);
     if (instance == null) {
       LOG.warnf("CaseInstance not found for caseId=%s — CONTEXT_CHANGED not fired", caseId);
       return;
+    }
+
+    if (ref != null && ref.resolutionTypeName() != null && ref.resolution() != null) {
+      try {
+        var bridge = bridgeResolver.resolveByTypeNameStrict(ref.resolutionTypeName());
+        bridge.deserialise(MAPPER.readTree(ref.resolution()));
+      } catch (Exception e) {
+        LOG.warnf(e,
+            "Resolution validation failed for PlanItem %s caseId=%s — "
+                + "resolution does not match resolutionType %s",
+            planItemId, caseId, ref.resolutionTypeName());
+        writeValidationFailedSignal(instance, item, ref, e);
+        return;
+      }
+    }
+
+    if (!applyStatus(item, status)) {
+      return; // already terminal or invalid transition — idempotent skip
     }
 
     applyOutputMapping(item, ref, instance);
@@ -209,5 +224,25 @@ public class PlanItemCompletionApplier {
         .map(Binding::getConflictResolverStrategy)
         .findFirst()
         .orElse(null);
+  }
+
+  private void writeValidationFailedSignal(
+      CaseInstance instance, PlanItem item, WorkItemRef ref, Exception cause) {
+    instance
+        .getCaseContext()
+        .set(
+            "workItemValidationFailed",
+            Map.of(
+                "workItemId", ref.id().toString(),
+                "bindingName", item.getBindingName(),
+                "resolutionTypeName", ref.resolutionTypeName(),
+                "error",
+                    cause.getMessage() != null
+                        ? cause.getMessage()
+                        : cause.getClass().getName()));
+    eventBus.publish(
+        EventBusAddresses.CONTEXT_CHANGED,
+        new CaseContextChangedEvent(
+            instance, instance.getCaseContext().snapshot(), ContextLayer.WORKING));
   }
 }

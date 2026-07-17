@@ -12,7 +12,8 @@ class WorkItemRefTest {
     void record_carriesAllFields() {
         final UUID id = UUID.randomUUID();
         final WorkItemRef ref = new WorkItemRef(id, WorkItemStatus.PENDING, "caller-1",
-                "alice", "{}", "team-a", "approved", "tenant-1", "{\"key\":\"val\"}");
+                "alice", "{}", "team-a", "approved", "tenant-1", "{\"key\":\"val\"}",
+                "com.example.Payload", "com.example.Resolution");
 
         assertThat(ref.id()).isEqualTo(id);
         assertThat(ref.status()).isEqualTo(WorkItemStatus.PENDING);
@@ -28,9 +29,9 @@ class WorkItemRefTest {
     @Test
     void statusHelpers_delegateCorrectly() {
         final WorkItemRef active = new WorkItemRef(UUID.randomUUID(), WorkItemStatus.PENDING,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null);
         final WorkItemRef terminal = new WorkItemRef(UUID.randomUUID(), WorkItemStatus.COMPLETED,
-                null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null);
 
         assertThat(active.status().isActive()).isTrue();
         assertThat(active.status().isTerminal()).isFalse();

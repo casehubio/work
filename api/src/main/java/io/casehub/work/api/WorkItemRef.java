@@ -11,5 +11,7 @@ public record WorkItemRef(
     String candidateGroups,
     String outcome,
     String tenancyId,
-    String payload
+    String payload,
+    String payloadTypeName,
+    String resolutionTypeName
 ) {}

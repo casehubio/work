@@ -76,7 +76,9 @@ class ActionGateHandlerTest {
         wi.candidateGroups,
         wi.outcome,
         wi.tenancyId,
-        wi.payload);
+        wi.payload,
+        wi.payloadTypeName,
+        wi.resolutionTypeName);
   }
 
   @BeforeEach
