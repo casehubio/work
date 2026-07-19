@@ -1,9 +1,13 @@
 package io.casehub.work.examples.queues.lifecycle;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
+import io.casehub.platform.api.identity.TenancyConstants;
+import io.casehub.platform.api.view.SubjectViewSpec;
+import io.casehub.platform.api.view.SubjectViewStore;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.queues.event.QueueEventType;
+import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.POST;
@@ -11,13 +15,10 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
-import io.casehub.platform.api.identity.TenancyConstants;
-import io.casehub.work.queues.event.QueueEventType;
-import io.casehub.work.queues.model.QueueView;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.runtime.service.WorkItemService;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Runnable example demonstrating the full queue lifecycle event sequence:
@@ -100,6 +101,9 @@ import io.casehub.work.runtime.service.WorkItemService;
 @Path("/queue-examples/lifecycle")
 @Produces(MediaType.APPLICATION_JSON)
 public class QueueLifecycleScenario {
+    @Inject
+    SubjectViewStore viewStore;
+
 
     @Inject
     WorkItemService workItemService;
@@ -127,8 +131,8 @@ public class QueueLifecycleScenario {
         // ── Setup ─────────────────────────────────────────────────────────────
         // Create the queue view that the scenario exercises.
         // In a real application this would be configured once at startup.
-        final QueueView queue = createQueueView("Lifecycle Demo Queue", queuePattern);
-        final UUID queueId = queue.id;
+        final SubjectViewSpec queue = createQueueView("Lifecycle Demo Queue", queuePattern);
+        final UUID queueId = queue.id();
 
         // ── Step 1: ADDED ─────────────────────────────────────────────────────
         // Creating the WorkItem with a MANUAL label matching the queue triggers
@@ -192,14 +196,11 @@ public class QueueLifecycleScenario {
     }
 
     @Transactional
-    QueueView createQueueView(final String name, final String pattern) {
-        final QueueView queue = new QueueView();
-        queue.name = name;
-        queue.labelPattern = pattern;
-        queue.scope = io.casehub.platform.api.path.Path.root();
-        queue.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        queue.persist();
-        return queue;
+    SubjectViewSpec createQueueView(final String name, final String pattern) {
+        var spec = new SubjectViewSpec(UUID.randomUUID(), name, TenancyConstants.DEFAULT_TENANT_ID,
+                                       pattern, io.casehub.platform.api.path.Path.root(),
+                                       "createdAt", "ASC", null, Instant.now());
+        return viewStore.save(spec);
     }
 
     private List<QueueEventType> captureEvents(final UUID queueId, final UUID itemId) {

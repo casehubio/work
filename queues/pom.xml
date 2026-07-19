@@ -35,6 +35,16 @@ FilterChain derivation graph, and QueueView named queries. The core extension is
       <artifactId>casehub-platform-expression</artifactId>
     </dependency>
 
+    <!-- Platform subject view toolkit -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-view</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-view-jpa</artifactId>
+    </dependency>
+
     <!-- CDI, REST, ORM, Flyway -->
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -70,6 +80,12 @@ FilterChain derivation graph, and QueueView named queries. The core extension is
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform</artifactId>
       <version>0.2-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- In-memory view backends for @QuarkusTest isolation -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-view-inmem</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

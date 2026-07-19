@@ -5,47 +5,44 @@ import java.util.List;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import io.casehub.work.queues.model.QueueView;
+import io.casehub.platform.api.view.SubjectViewQuery;
+import io.casehub.platform.api.view.SubjectViewSpec;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
 
 @ApplicationScoped
 public class QueueMembershipService {
 
-    private final WorkItemStore workItemStore;
-    private final FilterEvaluatorRegistry evaluatorRegistry;
+    private final SubjectViewQuery<WorkItem> viewQuery;
+    private final FilterEvaluatorRegistry    evaluatorRegistry;
 
     @Inject
     public QueueMembershipService(
-            final WorkItemStore workItemStore,
+            final SubjectViewQuery<WorkItem> viewQuery,
             final FilterEvaluatorRegistry evaluatorRegistry) {
-        this.workItemStore = workItemStore;
+        this.viewQuery         = viewQuery;
         this.evaluatorRegistry = evaluatorRegistry;
     }
 
-    public List<WorkItem> evaluateMembers(final QueueView queue) {
-        var candidates = workItemStore.scan(
-                WorkItemQuery.byLabelPattern(queue.labelPattern));
-        if (queue.additionalConditions != null
-                && !queue.additionalConditions.isBlank()) {
+    public List<WorkItem> evaluateMembers(final SubjectViewSpec queue) {
+        var candidates = viewQuery.findByView(queue);
+        if (queue.additionalConditions() != null
+            && !queue.additionalConditions().isBlank()) {
             final var jexl = evaluatorRegistry.find("jexl");
             if (jexl != null) {
                 candidates = candidates.stream()
-                        .filter(wi -> jexl.evaluate(wi,
-                                ExpressionDescriptor.of("jexl",
-                                        queue.additionalConditions)))
-                        .toList();
+                                       .filter(wi -> jexl.evaluate(wi,
+                                                                   ExpressionDescriptor.of("jexl",
+                                                                                           queue.additionalConditions())))
+                                       .toList();
             }
         }
         return candidates;
     }
 
-    public int countMembers(final QueueView queue) {
-        if (queue.additionalConditions == null
-                || queue.additionalConditions.isBlank()) {
-            return (int) workItemStore.countByQuery(
-                    WorkItemQuery.byLabelPattern(queue.labelPattern));
+    public int countMembers(final SubjectViewSpec queue) {
+        if (queue.additionalConditions() == null
+            || queue.additionalConditions().isBlank()) {
+            return (int) viewQuery.countByView(queue);
         }
         return evaluateMembers(queue).size();
     }

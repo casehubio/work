@@ -1,9 +1,22 @@
 package io.casehub.work.examples.queues.review;
 
-import java.util.ArrayList;
-import java.util.List;
+import io.casehub.platform.api.identity.TenancyConstants;
+import io.casehub.platform.api.view.SubjectViewSpec;
+import io.casehub.platform.api.view.SubjectViewStore;
+import java.time.Instant;
 import java.util.UUID;
-
+import io.casehub.work.api.LabelPersistence;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.examples.queues.QueueScenarioResponse;
+import io.casehub.work.examples.queues.QueueScenarioStep;
+import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
+import io.casehub.work.queues.model.FilterAction;
+import io.casehub.work.queues.model.WorkItemFilter;
+import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.DefaultValue;
@@ -12,23 +25,11 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
-
 import org.jboss.logging.Logger;
 
-import io.casehub.work.examples.queues.QueueScenarioResponse;
-import io.casehub.work.examples.queues.QueueScenarioStep;
-import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
-import io.casehub.platform.api.identity.TenancyConstants;
-import io.casehub.work.queues.model.FilterAction;
-import io.casehub.work.queues.model.QueueView;
-import io.casehub.work.queues.model.WorkItemFilter;
-import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
-import io.casehub.work.runtime.service.WorkItemService;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Scenario: Document Review Pipeline — state-tracking queues.
@@ -80,6 +81,9 @@ import io.casehub.work.runtime.service.WorkItemService;
 @Path("/queue-examples/review")
 @Produces(MediaType.APPLICATION_JSON)
 public class DocumentReviewScenario {
+    @Inject
+    SubjectViewStore viewStore;
+
 
     private static final Logger LOG = Logger.getLogger(DocumentReviewScenario.class);
 
@@ -152,30 +156,18 @@ public class DocumentReviewScenario {
 
     @Transactional
     void setupQueueViews() {
-        if (QueueView.count("name", "Urgent Reviews") > 0)
-            return;
+        var tid = TenancyConstants.DEFAULT_TENANT_ID;
+        if (viewStore.findByTenancy(tid).stream().anyMatch(s -> s.name().equals("Urgent Reviews"))) {return;}
 
-        final QueueView urgent = new QueueView();
-        urgent.name = "Urgent Reviews";
-        urgent.labelPattern = "review/urgent";
-        urgent.scope = io.casehub.platform.api.path.Path.root();
-        urgent.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        urgent.persist();
-
-        final QueueView standard = new QueueView();
-        standard.name = "Standard Reviews";
-        standard.labelPattern = "review/standard";
-        standard.scope = io.casehub.platform.api.path.Path.root();
-        standard.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        standard.persist();
-
-        final QueueView routine = new QueueView();
-        routine.name = "Routine Reviews";
-        routine.labelPattern = "review/routine";
-        routine.scope = io.casehub.platform.api.path.Path.root();
-        routine.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        routine.persist();
-    }
+        viewStore.save(new SubjectViewSpec(UUID.randomUUID(), "Urgent Reviews", tid,
+                                           "review/urgent", io.casehub.platform.api.path.Path.root(),
+                                           "createdAt", "ASC", null, Instant.now()));
+        viewStore.save(new SubjectViewSpec(UUID.randomUUID(), "Standard Reviews", tid,
+                                           "review/standard", io.casehub.platform.api.path.Path.root(),
+                                           "createdAt", "ASC", null, Instant.now()));
+        viewStore.save(new SubjectViewSpec(UUID.randomUUID(), "Routine Reviews", tid,
+                                           "review/routine", io.casehub.platform.api.path.Path.root(),
+                                           "createdAt", "ASC", null, Instant.now()));}
 
     /**
      * Run the document review pipeline scenario end to end.

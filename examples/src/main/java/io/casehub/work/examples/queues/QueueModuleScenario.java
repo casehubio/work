@@ -1,10 +1,22 @@
 package io.casehub.work.examples.queues;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
+import io.casehub.platform.api.identity.TenancyConstants;
+import io.casehub.platform.api.view.SubjectViewSpec;
+import io.casehub.platform.api.view.SubjectViewStore;
+import io.casehub.work.api.AuditEntryResponse;
+import io.casehub.work.api.LabelPersistence;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemLabelRequest;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.examples.StepLog;
+import io.casehub.work.queues.model.WorkItemQueueState;
+import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.runtime.model.AuditEntry;
+import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.repository.AuditEntryStore;
+import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -12,25 +24,12 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-
 import org.jboss.logging.Logger;
 
-import io.casehub.work.examples.StepLog;
-import io.casehub.platform.api.identity.TenancyConstants;
-import io.casehub.work.queues.model.QueueView;
-import io.casehub.work.queues.model.WorkItemQueueState;
-import io.casehub.work.api.AuditEntryResponse;
-import io.casehub.work.api.WorkItemLabelRequest;
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
-import io.casehub.work.runtime.service.WorkItemService;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Scenario 8 — Queue Module: Label-Based Specialist Queues with Soft-Claim Handoff.
@@ -67,6 +66,9 @@ import io.casehub.work.runtime.service.WorkItemService;
 @Path("/examples/queues")
 @Produces(MediaType.APPLICATION_JSON)
 public class QueueModuleScenario {
+    @Inject
+    SubjectViewStore viewStore;
+
 
     private static final Logger LOG = Logger.getLogger(QueueModuleScenario.class);
 
@@ -155,15 +157,11 @@ public class QueueModuleScenario {
         final String description4 = "Create queue view for contract-review/* pattern";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 4, total, description4);
 
-        final QueueView queueView = new QueueView();
-        queueView.name = "Contract Review Queue";
-        queueView.labelPattern = QUEUE_PATTERN;
-        queueView.scope = io.casehub.platform.api.path.Path.of("team");
-        queueView.sortField = "createdAt";
-        queueView.sortDirection = "ASC";
-        queueView.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        queueView.persist();
-        final UUID queueId = queueView.id;
+        final SubjectViewSpec queueView = viewStore.save(new SubjectViewSpec(
+                UUID.randomUUID(), "Contract Review Queue", TenancyConstants.DEFAULT_TENANT_ID,
+                QUEUE_PATTERN, io.casehub.platform.api.path.Path.of("team"),
+                "createdAt", "ASC", null, java.time.Instant.now()));
+        final UUID queueId = queueView.id();
         steps.add(new StepLog(4, description4, null));
 
         // Step 5: query the queue — expect WorkItems A and C

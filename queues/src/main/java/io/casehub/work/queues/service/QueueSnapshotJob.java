@@ -1,31 +1,28 @@
 package io.casehub.work.queues.service;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-
-import org.jboss.logging.Logger;
-
 import io.casehub.platform.api.path.Path;
 import io.casehub.platform.api.preferences.DurationPreference;
 import io.casehub.platform.api.preferences.PreferenceProvider;
 import io.casehub.platform.api.preferences.SettingsScope;
 import io.casehub.work.queues.config.QueueSnapshotInterval;
 import io.casehub.work.queues.config.QueueTrendRetention;
+import io.casehub.platform.api.view.CrossTenantSubjectViewStore;
+import io.casehub.platform.api.view.SubjectViewSpec;
+import io.casehub.platform.api.view.SubjectViewStore;
 import io.casehub.work.queues.model.QueueSnapshot;
-import io.casehub.work.queues.model.QueueView;
-import io.casehub.work.queues.repository.CrossTenantQueueViewStore;
-import io.casehub.work.runtime.repository.CrossTenant;
 import io.casehub.work.queues.repository.QueueSnapshotStore;
-import io.casehub.work.queues.repository.QueueViewStore;
 import io.casehub.work.runtime.service.TenantContextRunner;
 import io.quarkus.scheduler.Scheduled;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @ApplicationScoped
 public class QueueSnapshotJob {
@@ -33,11 +30,10 @@ public class QueueSnapshotJob {
     private static final Logger LOG = Logger.getLogger(QueueSnapshotJob.class);
 
     @Inject
-    @CrossTenant
-    CrossTenantQueueViewStore crossTenantStore;
+    CrossTenantSubjectViewStore crossTenantStore;
 
     @Inject
-    QueueViewStore queueViewStore;
+    SubjectViewStore viewStore;
 
     @Inject
     QueueSnapshotStore snapshotStore;
@@ -63,7 +59,7 @@ public class QueueSnapshotJob {
         }
         for (final String tenancyId : tenantIds) {
             tenantContextRunner.runInTenantContext(tenancyId, () ->
-                    processForTenant(tenancyId));
+                                                                      processForTenant(tenancyId));
         }
     }
 
@@ -75,22 +71,22 @@ public class QueueSnapshotJob {
                     prefs.getOrDefault(QueueSnapshotInterval.KEY, "");
             final DurationPreference retentionPref =
                     prefs.getOrDefault(QueueTrendRetention.KEY, "");
-            final Duration interval = intervalPref.duration();
+            final Duration interval  = intervalPref.duration();
             final Duration retention = retentionPref.duration();
 
-            final List<QueueView> queues = queueViewStore.scanAll();
-            if (queues.isEmpty()) return;
+            final List<SubjectViewSpec> queues = viewStore.findByTenancy(tenancyId);
+            if (queues.isEmpty()) {return;}
 
             final List<UUID> queueIds = queues.stream()
-                    .map(q -> q.id).toList();
+                                              .map(SubjectViewSpec::id).toList();
             final Map<UUID, Instant> latestTimes =
                     snapshotStore.findLatestSnapshotTimes(queueIds);
             final Instant now = Instant.now();
 
-            for (final QueueView queue : queues) {
-                final Instant lastSnapshot = latestTimes.get(queue.id);
+            for (final SubjectViewSpec queue : queues) {
+                final Instant lastSnapshot = latestTimes.get(queue.id());
                 if (lastSnapshot != null
-                        && Duration.between(lastSnapshot, now).compareTo(interval) < 0) {
+                    && Duration.between(lastSnapshot, now).compareTo(interval) < 0) {
                     continue;
                 }
                 snapshotQueue(queue, now);
@@ -99,21 +95,21 @@ public class QueueSnapshotJob {
             snapshotStore.deleteOlderThan(now.minus(retention));
         } catch (final Exception e) {
             LOG.warnf("Queue snapshot tick failed for tenant %s: %s",
-                    tenancyId, e.getMessage());
+                      tenancyId, e.getMessage());
         }
     }
 
-    private void snapshotQueue(final QueueView queue, final Instant now) {
+    private void snapshotQueue(final SubjectViewSpec queue, final Instant now) {
         try {
-            final int count = membershipService.countMembers(queue);
+            final int           count    = membershipService.countMembers(queue);
             final QueueSnapshot snapshot = new QueueSnapshot();
-            snapshot.queueViewId = queue.id;
+            snapshot.queueViewId = queue.id();
             snapshot.memberCount = count;
-            snapshot.snapshotAt = now;
+            snapshot.snapshotAt  = now;
             snapshotStore.put(snapshot);
         } catch (final Exception e) {
             LOG.warnf("Snapshot failed for queue %s (%s): %s",
-                    queue.id, queue.name, e.getMessage());
+                      queue.id(), queue.name(), e.getMessage());
         }
     }
 }

@@ -28,6 +28,10 @@ using casehub-work-queues. Each scenario runs via POST /queue-examples/{name}/ru
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-view-jpa</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-jdbc-h2</artifactId>
     </dependency>

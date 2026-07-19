@@ -1,37 +1,15 @@
 package io.casehub.work.queues.service;
 
+import io.casehub.platform.api.view.SubjectViewQuery;
+import io.casehub.platform.api.view.SubjectViewStore;
+import io.casehub.work.queues.event.WorkItemQueueEvent;
+import io.casehub.work.runtime.model.WorkItem;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.casehub.work.queues.event.WorkItemQueueEvent;
-import io.casehub.work.queues.model.QueueView;
-import io.casehub.work.queues.repository.QueueViewStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
-
-/**
- * Registers per-queue depth gauges when queue membership changes.
- *
- * <p>
- * Rather than polling all queues at startup, this bean registers a new
- * {@code workitems.queue.depth} gauge the first time a {@link WorkItemQueueEvent}
- * is observed for each queue — lazy registration means only queues that have
- * actually received WorkItems appear in the metrics.
- *
- * <h2>Metric</h2>
- *
- * <pre>
- *   workitems.queue.depth{queue="Legal Review Queue"} 5.0
- *   workitems.queue.depth{queue="Finance Approval Queue"} 2.0
- * </pre>
- *
- * <p>
- * The gauge queries {@link WorkItemStore} at scrape time using
- * {@link WorkItemQuery#byLabelPattern} matching the queue's label pattern.
- */
 @ApplicationScoped
 public class WorkItemQueueMetrics {
 
@@ -39,25 +17,19 @@ public class WorkItemQueueMetrics {
     MeterRegistry registry;
 
     @Inject
-    WorkItemStore workItemStore;
+    SubjectViewQuery<WorkItem> viewQuery;
 
     @Inject
-    QueueViewStore queueViewStore;
+    SubjectViewStore viewStore;
 
-    /**
-     * Observes queue events and lazily registers a depth gauge for each new queue.
-     * Micrometer deduplicates registrations — calling this multiple times for the
-     * same queue name is safe.
-     */
     public void onQueueEvent(@Observes final WorkItemQueueEvent event) {
-        final QueueView queue = queueViewStore.get(event.queueViewId()).orElse(null);
-        if (queue == null)
-            return;
+        final var spec = viewStore.findById(event.queueViewId()).orElse(null);
+        if (spec == null) {return;}
 
-        Gauge.builder("workitems.queue.depth", workItemStore,
-                store -> store.scan(WorkItemQuery.byLabelPattern(queue.labelPattern)).size())
-                .description("Number of WorkItems currently in this queue")
-                .tag("queue", queue.name)
-                .register(registry);
+        Gauge.builder("workitems.queue.depth", viewQuery,
+                      q -> q.countByView(spec))
+             .description("Number of WorkItems currently in this queue")
+             .tag("queue", spec.name())
+             .register(registry);
     }
 }

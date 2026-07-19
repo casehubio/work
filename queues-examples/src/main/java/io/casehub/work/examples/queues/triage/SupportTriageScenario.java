@@ -1,32 +1,33 @@
 package io.casehub.work.examples.queues.triage;
 
-import java.util.ArrayList;
-import java.util.List;
+import io.casehub.platform.api.identity.TenancyConstants;
+import io.casehub.platform.api.view.SubjectViewSpec;
+import io.casehub.platform.api.view.SubjectViewStore;
+import java.time.Instant;
 import java.util.UUID;
-
+import io.casehub.work.api.LabelPersistence;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.examples.queues.QueueScenarioResponse;
+import io.casehub.work.examples.queues.QueueScenarioStep;
+import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
+import io.casehub.work.queues.model.FilterAction;
+import io.casehub.work.queues.model.WorkItemFilter;
+import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-
 import org.jboss.logging.Logger;
 
-import io.casehub.work.examples.queues.QueueScenarioResponse;
-import io.casehub.work.examples.queues.QueueScenarioStep;
-import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
-import io.casehub.platform.api.identity.TenancyConstants;
-import io.casehub.work.queues.model.FilterAction;
-import io.casehub.work.queues.model.QueueView;
-import io.casehub.work.queues.model.WorkItemFilter;
-import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
-import io.casehub.work.runtime.service.WorkItemService;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Scenario: Support Triage Cascade.
@@ -54,6 +55,9 @@ import io.casehub.work.runtime.service.WorkItemService;
 @Path("/queue-examples/triage")
 @Produces(MediaType.APPLICATION_JSON)
 public class SupportTriageScenario {
+    @Inject
+    SubjectViewStore viewStore;
+
 
     private static final Logger LOG = Logger.getLogger(SupportTriageScenario.class);
 
@@ -106,37 +110,21 @@ public class SupportTriageScenario {
     }
 
     private void setupQueueViews() {
-        if (QueueView.count("name", "SLA Critical Queue") > 0)
-            return;
+        var tid = TenancyConstants.DEFAULT_TENANT_ID;
+        if (viewStore.findByTenancy(tid).stream().anyMatch(s -> s.name().equals("SLA Critical Queue"))) {return;}
 
-        final QueueView slaCritical = new QueueView();
-        slaCritical.name = "SLA Critical Queue";
-        slaCritical.labelPattern = "sla/critical";
-        slaCritical.scope = io.casehub.platform.api.path.Path.root();
-        slaCritical.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        slaCritical.persist();
-
-        final QueueView fastTrack = new QueueView();
-        fastTrack.name = "Fast Track Queue";
-        fastTrack.labelPattern = "queue/fast-track";
-        fastTrack.scope = io.casehub.platform.api.path.Path.root();
-        fastTrack.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        fastTrack.persist();
-
-        final QueueView intake = new QueueView();
-        intake.name = "Intake Triage Queue";
-        intake.labelPattern = "intake/triage";
-        intake.scope = io.casehub.platform.api.path.Path.root();
-        intake.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        intake.persist();
-
-        final QueueView supportLead = new QueueView();
-        supportLead.name = "Support Lead Queue";
-        supportLead.labelPattern = "team/support-lead";
-        supportLead.scope = io.casehub.platform.api.path.Path.root();
-        supportLead.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        supportLead.persist();
-    }
+        viewStore.save(new SubjectViewSpec(UUID.randomUUID(), "SLA Critical Queue", tid,
+                                           "sla/critical", io.casehub.platform.api.path.Path.root(),
+                                           "createdAt", "ASC", null, Instant.now()));
+        viewStore.save(new SubjectViewSpec(UUID.randomUUID(), "Fast Track Queue", tid,
+                                           "queue/fast-track", io.casehub.platform.api.path.Path.root(),
+                                           "createdAt", "ASC", null, Instant.now()));
+        viewStore.save(new SubjectViewSpec(UUID.randomUUID(), "Intake Triage Queue", tid,
+                                           "intake/triage", io.casehub.platform.api.path.Path.root(),
+                                           "createdAt", "ASC", null, Instant.now()));
+        viewStore.save(new SubjectViewSpec(UUID.randomUUID(), "Support Lead Queue", tid,
+                                           "team/support-lead", io.casehub.platform.api.path.Path.root(),
+                                           "createdAt", "ASC", null, Instant.now()));}
 
     /**
      * Run the support triage cascade scenario end to end.

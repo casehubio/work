@@ -20,10 +20,8 @@ public class QueuesRlsPolicyApplicator {
 
     static final List<String> TABLES = List.of(
             "work_item_queue_state",
-            "queue_view",
             "work_item_filter",
-            "filter_chain",
-            "work_item_queue_membership");
+            "filter_chain");
 
     @Inject
     AgroalDataSource dataSource;
