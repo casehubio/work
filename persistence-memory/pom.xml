@@ -40,7 +40,7 @@ Use for tests, demos, and local evaluation without a datasource.</description>
     <!-- Testing of the persistence-memory module itself -->
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-junit5</artifactId>
+      <artifactId>quarkus-junit</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

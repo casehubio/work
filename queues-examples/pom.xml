@@ -49,7 +49,7 @@ using casehub-work-queues. Each scenario runs via POST /queue-examples/{name}/ru
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-junit5</artifactId>
+      <artifactId>quarkus-junit</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
