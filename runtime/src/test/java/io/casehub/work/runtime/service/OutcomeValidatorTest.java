@@ -154,7 +154,7 @@ class OutcomeValidatorTest {
     @Test
     void validate_conditionReferencesWorkItemStatus_accepted() {
         item.status = io.casehub.work.api.WorkItemStatus.IN_PROGRESS;
-        setOutcomes(new Outcome("approve", null, "workItem.status.name() == 'IN_PROGRESS'"));
+        setOutcomes(new Outcome("approve", null, "status.name() == 'IN_PROGRESS'"));
         assertThatCode(() -> validator.validate(item, "approve", null, null, "actor"))
                 .doesNotThrowAnyException();
     }
@@ -163,7 +163,7 @@ class OutcomeValidatorTest {
     void validate_conditionReferencesWorkItemField_nullField_silentFalse() {
         // workItem.priority is null — JEXL silent mode returns false, not NPE
         item.status = null;
-        setOutcomes(new Outcome("approve", null, "workItem.status.name() == 'IN_PROGRESS'"));
+        setOutcomes(new Outcome("approve", null, "status.name() == 'IN_PROGRESS'"));
         assertThatThrownBy(() -> validator.validate(item, "approve", null, null, "actor"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("condition not satisfied");
