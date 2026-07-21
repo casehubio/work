@@ -17,8 +17,8 @@ class QueueSummaryResourceTest {
                 .body("""
                         {"name":"Summary filter","scope":"ORG","conditionLanguage":"jexl",
                          "conditionExpression":"priority == 'HIGH' || priority == 'MEDIUM'",
-                         "actions":[{"type":"APPLY_LABEL","labelPath":"summary-test/items"}]}""")
-                .post("/filters").then().statusCode(201);
+                         "actions":[{"type":"Add","label":"summary-test/items"}]}""")
+                .post("/label-rules").then().statusCode(201);
 
         var queueId = given().contentType(ContentType.JSON)
                 .body("""

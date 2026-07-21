@@ -1,15 +1,13 @@
 package io.casehub.work.queues.event;
 
-import static io.restassured.RestAssured.given;
-import static org.assertj.core.api.Assertions.assertThat;
-
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.quarkus.test.junit.QuarkusTest;
-import io.restassured.http.ContentType;
+import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
 class WorkItemQueueEventTest {
@@ -48,8 +46,8 @@ class WorkItemQueueEventTest {
                 .body("""
                         {"name":"QEvt type filter","scope":"ORG","conditionLanguage":"jexl",
                          "conditionExpression":"types.contains('qevt-cat-unique')",
-                         "actions":[{"type":"APPLY_LABEL","labelPath":"qevt-inferred/cat"}]}""")
-                .post("/filters").then().statusCode(201);
+                         "actions":[{"type":"Add","label":"qevt-inferred/cat"}]}""")
+                .post("/label-rules").then().statusCode(201);
 
         final String queueId = createQueue("QEvt Inferred Queue", "qevt-inferred/**");
 
@@ -95,29 +93,31 @@ class WorkItemQueueEventTest {
     void removed_notFiredDuringIntermediateLabelStrip() {
         // Filter: types contains 'qevt-stable' → apply 'qevt-stable/marker'
         given().contentType(ContentType.JSON)
-                .body("""
-                        {"name":"QEvt stable filter","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"types.contains('qevt-stable')",
-                         "actions":[{"type":"APPLY_LABEL","labelPath":"qevt-stable/marker"}]}""")
-                .post("/filters").then().statusCode(201);
+               .body("""
+                     {"name":"QEvt stable filter","scope":"ORG","conditionLanguage":"jexl",
+                      "conditionExpression":"types.contains('qevt-stable')",
+                      "actions":[{"type":"Add","label":"qevt-stable/marker"}]}""")
+               .post("/label-rules").then().statusCode(201);
 
-        createQueue("QEvt Stable Queue", "qevt-stable/**");
+        final String queueId = createQueue("QEvt Stable Queue", "qevt-stable/**");
 
         final String itemId = given().contentType(ContentType.JSON)
-                .body("""
-                        {"title":"Stable membership test","createdBy":"alice",
-                         "types":["qevt-stable"]}""")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                                     .body("""
+                                           {"title":"Stable membership test","createdBy":"alice",
+                                            "types":["qevt-stable"]}""")
+                                     .post("/workitems").then().statusCode(201).extract().path("id");
 
         capture.clear();
 
         // Claim the item: triggers lifecycle event → filter strips INFERRED label then re-applies it
         given().queryParam("claimant", "alice")
-                .put("/workitems/" + itemId + "/claim")
-                .then().statusCode(200);
+               .put("/workitems/" + itemId + "/claim")
+               .then().statusCode(200);
 
-        // REMOVED must NOT fire — the item is still in the queue after re-evaluation
-        assertThat(capture.eventsOfType(QueueEventType.REMOVED)).isEmpty();
+        // REMOVED must NOT fire for THIS queue — the item is still in the queue after re-evaluation
+        assertThat(capture.eventsOfType(QueueEventType.REMOVED).stream()
+                          .filter(e -> e.queueViewId().toString().equals(queueId))
+                          .toList()).isEmpty();
     }
 
     // ── CHANGED ───────────────────────────────────────────────────────────────
@@ -126,31 +126,33 @@ class WorkItemQueueEventTest {
     void changed_whenItemStaysInQueueAfterReEvaluation() {
         // Filter: types contains 'qevt-changed' → apply 'qevt-changed/marker'
         given().contentType(ContentType.JSON)
-                .body("""
-                        {"name":"QEvt changed filter","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"types.contains('qevt-changed')",
-                         "actions":[{"type":"APPLY_LABEL","labelPath":"qevt-changed/marker"}]}""")
-                .post("/filters").then().statusCode(201);
+               .body("""
+                     {"name":"QEvt changed filter","scope":"ORG","conditionLanguage":"jexl",
+                      "conditionExpression":"types.contains('qevt-changed')",
+                      "actions":[{"type":"Add","label":"qevt-changed/marker"}]}""")
+               .post("/label-rules").then().statusCode(201);
 
         final String queueId = createQueue("QEvt Changed Queue", "qevt-changed/**");
 
         final String itemId = given().contentType(ContentType.JSON)
-                .body("""
-                        {"title":"Changed test","createdBy":"alice","types":["qevt-changed"]}""")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                                     .body("""
+                                           {"title":"Changed test","createdBy":"alice","types":["qevt-changed"]}""")
+                                     .post("/workitems").then().statusCode(201).extract().path("id");
 
         capture.clear(); // ignore ADDED from creation
 
         // Any lifecycle event triggers re-evaluation: INFERRED label stripped → re-applied → CHANGED
         given().queryParam("claimant", "alice")
-                .put("/workitems/" + itemId + "/claim")
-                .then().statusCode(200);
+               .put("/workitems/" + itemId + "/claim")
+               .then().statusCode(200);
 
         final var changed = capture.eventsOfType(QueueEventType.CHANGED);
         assertThat(changed).anyMatch(e -> e.workItemId().toString().equals(itemId) &&
-                e.queueViewId().toString().equals(queueId));
-        // Must not fire REMOVED — item stayed in queue
-        assertThat(capture.eventsOfType(QueueEventType.REMOVED)).isEmpty();
+                                          e.queueViewId().toString().equals(queueId));
+        // Must not fire REMOVED for THIS queue — item stayed in queue
+        assertThat(capture.eventsOfType(QueueEventType.REMOVED).stream()
+                          .filter(e -> e.queueViewId().toString().equals(queueId))
+                          .toList()).isEmpty();
     }
 
     @Test
@@ -159,8 +161,8 @@ class WorkItemQueueEventTest {
                 .body("""
                         {"name":"QEvt no-dup filter","scope":"ORG","conditionLanguage":"jexl",
                          "conditionExpression":"types.contains('qevt-nodup')",
-                         "actions":[{"type":"APPLY_LABEL","labelPath":"qevt-nodup/marker"}]}""")
-                .post("/filters").then().statusCode(201);
+                         "actions":[{"type":"Add","label":"qevt-nodup/marker"}]}""")
+                .post("/label-rules").then().statusCode(201);
 
         createQueue("QEvt NoDup Queue", "qevt-nodup/**");
 

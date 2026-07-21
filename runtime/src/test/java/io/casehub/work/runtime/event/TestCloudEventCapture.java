@@ -22,6 +22,12 @@ public class TestCloudEventCapture {
         return captured.stream().filter(ce -> type.equals(ce.getType())).toList();
     }
 
+    public List<CloudEvent> ofTypeAndSubject(final String type, final String subject) {
+        return captured.stream()
+                       .filter(ce -> type.equals(ce.getType()) && subject.equals(ce.getSubject()))
+                       .toList();
+    }
+
     public void clear() {
         captured.clear();
     }

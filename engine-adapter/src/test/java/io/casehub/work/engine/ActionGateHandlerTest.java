@@ -109,14 +109,13 @@ class ActionGateHandlerTest {
             "SAR filing requires MLRO sign-off",
             false,
             StaticSetStrategy.of("mlro", "analyst"),
-            null,
-            null);
+            null, null, null);
     final PlannedAction action =
         PlannedAction.of("File SAR", "sar.file", Map.of("accountId", "ACC-123"));
 
     actionGateWorkItemHandler.onActionGateSchedule(
         new ActionGateScheduleEvent(
-            caseId, TENANCY_ID, gateId, action, gate, Set.of("mlro", "analyst")));
+            caseId, TENANCY_ID, gateId, action, gate, Set.of("mlro", "analyst"), null));
 
     final String expectedCallerRef = GateCallerRef.encode(caseId, gateId);
     final WorkItem workItem = workItemStore.findByCallerRef(expectedCallerRef).orElse(null);
@@ -134,11 +133,11 @@ class ActionGateHandlerTest {
   @Transactional
   void onActionGateSchedule_noExpiresAt_whenExpiresInIsNull() {
     final UUID caseId = UUID.randomUUID();
-    final GateRequired gate = new GateRequired("Confirm action", true, null, null, null);
+    final GateRequired gate = new GateRequired("Confirm action", true, null, null, null, null);
     final PlannedAction action = PlannedAction.of("Do something", "action.type", Map.of());
 
     actionGateWorkItemHandler.onActionGateSchedule(
-        new ActionGateScheduleEvent(caseId, TENANCY_ID, 99L, action, gate, Set.of()));
+        new ActionGateScheduleEvent(caseId, TENANCY_ID, 99L, action, gate, Set.of(), null));
 
     final String callerRef = GateCallerRef.encode(caseId, 99L);
     final WorkItem workItem = workItemStore.findByCallerRef(callerRef).orElse(null);
@@ -157,11 +156,11 @@ class ActionGateHandlerTest {
     final Instant before = Instant.now();
     final GateRequired gate =
         new GateRequired(
-            "Urgent review", false, StaticSetStrategy.of("mlro"), Duration.ofHours(24), null);
+            "Urgent review", false, StaticSetStrategy.of("mlro"), Duration.ofHours(24), null, null);
 
     actionGateWorkItemHandler.onActionGateSchedule(
         new ActionGateScheduleEvent(
-            caseId, TENANCY_ID, 77L, PlannedAction.of("d", "t", Map.of()), gate, Set.of("mlro")));
+            caseId, TENANCY_ID, 77L, PlannedAction.of("d", "t", Map.of()), gate, Set.of("mlro"), null));
 
     final WorkItem workItem =
         workItemStore.findByCallerRef(GateCallerRef.encode(caseId, 77L)).orElse(null);

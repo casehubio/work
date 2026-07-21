@@ -26,8 +26,8 @@ class ReviewStepServiceTest {
     void lambdaFilterCount_showsSecurityWritersFilter() {
         // This test tells us immediately if SecurityWritersFilter is discovered.
         // If count == 0, the Lambda CDI bean is not in the CDI graph.
-        final var names = stepService.lambdaFilterNames();
-        assertThat(stepService.lambdaFilterCount())
+        final var names = stepService.cdiRuleNames();
+        assertThat(stepService.cdiRuleCount())
                 .as("Lambda filter count — if 0, SecurityWritersFilter is not discovered. Found: " + names)
                 .isGreaterThan(0);
     }
@@ -45,7 +45,7 @@ class ReviewStepServiceTest {
     @Transactional
     void step1_advisoryHasUrgentLabel_ifLambdaDiscovered() {
         stepService.advance(); // setup
-        if (stepService.lambdaFilterCount() > 0) {
+        if (stepService.cdiRuleCount() > 0) {
             // Lambda filter is discovered — advisory should be in review/urgent.
             // After claim, advisory should be in review/urgent/claimed.
             final var result = stepService.advance(); // step 2 (claim)

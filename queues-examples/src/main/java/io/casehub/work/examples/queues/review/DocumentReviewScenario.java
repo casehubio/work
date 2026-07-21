@@ -349,7 +349,7 @@ public class DocumentReviewScenario {
     }
 
     private void persist(final String name, final String lang, final String expr,
-            final List<FilterAction> actions) {
+            final List<LabelAction> actions) {
         final LabelRuleEntity f = new LabelRuleEntity();
         f.name = name;
         f.scope = io.casehub.platform.api.path.Path.root();
