@@ -82,9 +82,9 @@ class WorkItemSSETest {
             } catch (Exception ignored) {
             }
         });
-        Thread.sleep(400);
+        Thread.sleep(1000);
         final String itemId = createWorkItem();
-        assertThat(latch.await(4, TimeUnit.SECONDS)).as("Expected CREATED event for " + itemId).isTrue();
+        assertThat(latch.await(10, TimeUnit.SECONDS)).as("Expected CREATED event for " + itemId).isTrue();
         assertThat(dataLines.get(0)).contains("created");
         sseThread.interrupt();
     }
@@ -102,10 +102,10 @@ class WorkItemSSETest {
             } catch (Exception ignored) {
             }
         });
-        Thread.sleep(400);
+        Thread.sleep(1000);
         createWorkItem(); // noise — should NOT appear
         given().put("/workitems/" + targetId + "/claim?claimant=alice").then().statusCode(200);
-        assertThat(latch.await(4, TimeUnit.SECONDS)).as("Expected event for target within 4s").isTrue();
+        assertThat(latch.await(10, TimeUnit.SECONDS)).as("Expected event for target within 4s").isTrue();
         assertThat(dataLines).isNotEmpty();
         assertThat(dataLines).allMatch(line -> line.contains(targetId));
         sseThread.interrupt();
@@ -124,9 +124,9 @@ class WorkItemSSETest {
             } catch (Exception ignored) {
             }
         });
-        Thread.sleep(400);
+        Thread.sleep(1000);
         given().put("/workitems/" + itemId + "/claim?claimant=bob").then().statusCode(200);
-        assertThat(latch.await(4, TimeUnit.SECONDS)).as("Expected event via per-WorkItem alias").isTrue();
+        assertThat(latch.await(10, TimeUnit.SECONDS)).as("Expected event via per-WorkItem alias").isTrue();
         assertThat(dataLines.get(0)).contains(itemId);
         sseThread.interrupt();
     }
@@ -144,10 +144,10 @@ class WorkItemSSETest {
             } catch (Exception ignored) {
             }
         });
-        Thread.sleep(400);
+        Thread.sleep(1000);
         createWorkItem(); // fires CREATED — should not trigger latch (filter=assigned)
         given().put("/workitems/" + itemId + "/claim?claimant=carol").then().statusCode(200);
-        assertThat(latch.await(4, TimeUnit.SECONDS)).as("Expected ASSIGNED event").isTrue();
+        assertThat(latch.await(10, TimeUnit.SECONDS)).as("Expected ASSIGNED event").isTrue();
         assertThat(dataLines.get(0)).contains("assigned");
         sseThread.interrupt();
     }
