@@ -1,7 +1,9 @@
 package io.casehub.work.queues.api;
 
-import static io.restassured.RestAssured.given;
-import static org.assertj.core.api.Assertions.assertThat;
+import io.quarkus.test.common.http.TestHTTPResource;
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.http.ContentType;
+import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
 import java.net.URI;
@@ -13,11 +15,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.Test;
-
-import io.quarkus.test.common.http.TestHTTPResource;
-import io.quarkus.test.junit.QuarkusTest;
-import io.restassured.http.ContentType;
+import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration and E2E tests for GET /queues/{id}/events SSE stream.
@@ -41,32 +40,23 @@ class QueueSSETest {
 
     @Test
     void queueSse_happyPath_addedEventAppearsWhenWorkItemEntersQueue() throws Exception {
-        // Filter that routes items with type 'sse-queue-cat' to label 'sse-queue-ev/item'
-        given().contentType(ContentType.JSON)
-                .body("""
-                        {"name":"SSE queue filter","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"types.contains('sse-queue-cat')",
-                         "actions":[{"type":"APPLY_LABEL","labelPath":"sse-queue-ev/item"}]}
-                        """)
-                .post("/filters").then().statusCode(201);
+        final String queueId = createQueue("SSE Event Queue", "priority/**");
 
-        final String queueId = createQueue("SSE Event Queue", "sse-queue-ev/**");
-
-        final List<String> dataLines = new CopyOnWriteArrayList<>();
-        final CountDownLatch latch = new CountDownLatch(1);
+        final List<String>   dataLines = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch     = new CountDownLatch(1);
 
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
                 final HttpClient client = HttpClient.newHttpClient();
                 final HttpRequest req = HttpRequest.newBuilder()
-                        .uri(baseUri.resolve("queues/" + queueId + "/events"))
-                        .header("Accept", "text/event-stream").build();
+                                                   .uri(baseUri.resolve("queues/" + queueId + "/events"))
+                                                   .header("Accept", "text/event-stream").build();
                 client.send(req, HttpResponse.BodyHandlers.ofLines())
-                        .body()
-                        .filter(l -> l.startsWith("data:"))
-                        .peek(dataLines::add)
-                        .findFirst()
-                        .ifPresent(l -> latch.countDown());
+                      .body()
+                      .filter(l -> l.startsWith("data:"))
+                      .peek(dataLines::add)
+                      .findFirst()
+                      .ifPresent(l -> latch.countDown());
             } catch (Exception ignored) {
             }
         });
@@ -74,8 +64,8 @@ class QueueSSETest {
         Thread.sleep(400);
 
         given().contentType(ContentType.JSON)
-                .body("{\"title\":\"SSE test item\",\"createdBy\":\"test\",\"types\":[\"sse-queue-cat\"]}")
-                .post("/workitems").then().statusCode(201);
+               .body("{\"title\":\"SSE test item\",\"createdBy\":\"test\",\"priority\":\"HIGH\"}")
+               .post("/workitems").then().statusCode(201);
 
         assertThat(latch.await(4, TimeUnit.SECONDS))
                 .as("Expected ADDED event in queue SSE stream").isTrue();

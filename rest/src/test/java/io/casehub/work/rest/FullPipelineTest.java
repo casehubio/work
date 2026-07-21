@@ -1,4 +1,4 @@
-package io.casehub.work.queues.api;
+package io.casehub.work.rest;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;

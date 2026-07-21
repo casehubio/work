@@ -131,7 +131,7 @@ public class QueueResource {
     @Transactional
     public Response delete(@PathParam("id") final UUID id) {
         var events = orchestrator.deleteView(id);
-        if (events == null || events.isEmpty()) {
+        if (events == null) {
             return Response.status(404).entity(Map.of("error", "Not found")).build();
         }
         return Response.noContent().build();

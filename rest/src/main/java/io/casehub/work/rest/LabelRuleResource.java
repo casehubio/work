@@ -39,6 +39,12 @@ public class LabelRuleResource {
     @Inject
     Instance<LabelRule> permanentRules;
 
+    @Inject
+    io.casehub.work.runtime.repository.WorkItemStore workItemStore;
+
+    @Inject
+    io.casehub.work.runtime.filter.LabelRuleEngine labelRuleEngine;
+
     public record CreateLabelRuleRequest(String name, String description,
             String conditionLanguage, String conditionExpression,
             List<LabelActionDto> actions, String triggerEvents, String scope) {}
@@ -124,9 +130,14 @@ public class LabelRuleResource {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") final UUID id) {
-        return labelRuleStore.delete(id)
-                ? Response.noContent().build()
-                : Response.status(404).entity(Map.of("error", "Not found")).build();
+        if (!labelRuleStore.delete(id)) {
+            return Response.status(404).entity(Map.of("error", "Not found")).build();
+        }
+        for (var wi : workItemStore.scanAll()) {
+            labelRuleEngine.evaluate(wi, io.casehub.work.runtime.event.WorkItemContextBuilder.toMap(wi), "UPDATE");
+            workItemStore.put(wi);
+        }
+        return Response.noContent().build();
     }
 
     @POST
