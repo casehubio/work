@@ -11,8 +11,8 @@ import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.examples.queues.QueueScenarioResponse;
 import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
-import io.casehub.work.queues.model.FilterAction;
-import io.casehub.work.queues.model.WorkItemFilter;
+import io.casehub.platform.api.label.LabelAction;
+import io.casehub.work.runtime.filter.LabelRuleEntity;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
@@ -72,28 +72,28 @@ public class LegalRoutingScenario {
     QueueEventLog eventLog;
 
     private void setupFilters() {
-        if (WorkItemFilter.count("name", "Legal-A: Route to Legal Review") > 0)
+        if (LabelRuleEntity.count("name", "Legal-A: Route to Legal Review") > 0)
             return;
 
-        final WorkItemFilter filterA = new WorkItemFilter();
+        final LabelRuleEntity filterA = new LabelRuleEntity();
         filterA.name = "Legal-A: Route to Legal Review";
         filterA.scope = io.casehub.platform.api.path.Path.root();
         filterA.conditionLanguage = "jexl";
         filterA.conditionExpression = "types.contains('legal')";
-        filterA.actions = WorkItemFilter.serializeActions(List.of(
-                FilterAction.applyLabel("legal/review")));
-        filterA.active = true;
+        filterA.actionsJson = LabelRuleEntity.serializeActions(List.of(
+                new LabelAction.Add("legal/review")));
+        filterA.enabled = true;
         filterA.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterA.persist();
 
-        final WorkItemFilter filterB = new WorkItemFilter();
+        final LabelRuleEntity filterB = new LabelRuleEntity();
         filterB.name = "Legal-B: High Priority to Urgent Queue (JQ)";
         filterB.scope = io.casehub.platform.api.path.Path.root();
         filterB.conditionLanguage = "jq";
         filterB.conditionExpression = "(.types | any(. == \"legal\")) and .priority == \"HIGH\"";
-        filterB.actions = WorkItemFilter.serializeActions(List.of(
-                FilterAction.applyLabel("legal/urgent")));
-        filterB.active = true;
+        filterB.actionsJson = LabelRuleEntity.serializeActions(List.of(
+                new LabelAction.Add("legal/urgent")));
+        filterB.enabled = true;
         filterB.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterB.persist();
     }

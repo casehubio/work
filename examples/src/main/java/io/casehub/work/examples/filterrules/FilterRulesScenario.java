@@ -15,7 +15,7 @@ import org.jboss.logging.Logger;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.platform.api.identity.TenancyConstants;
-import io.casehub.work.runtime.filter.FilterRule;
+import io.casehub.work.runtime.filter.LabelRuleEntity;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
@@ -51,9 +51,9 @@ import io.casehub.work.runtime.service.WorkItemService;
  */
 @Path("/examples/filterrules")
 @Produces(MediaType.APPLICATION_JSON)
-public class FilterRulesScenario {
+public class LabelRuleEntitysScenario {
 
-    private static final Logger LOG = Logger.getLogger(FilterRulesScenario.class);
+    private static final Logger LOG = Logger.getLogger(LabelRuleEntitysScenario.class);
 
     private static final String SCENARIO_ID = "dynamic-filter-rules";
     private static final String ACTOR_CREATOR = "procurement-system";
@@ -73,7 +73,7 @@ public class FilterRulesScenario {
     @POST
     @Path("/run")
     @Transactional
-    public FilterRulesResponse run() {
+    public LabelRuleEntitysResponse run() {
         final List<StepLog> steps = new ArrayList<>();
         final int total = 5;
 
@@ -81,13 +81,14 @@ public class FilterRulesScenario {
         final String description1 = "procurement-system creates dynamic filter rule: auto-label urgent for HIGH/URGENT priority";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 1, total, description1);
 
-        final FilterRule rule = new FilterRule();
+        final LabelRuleEntity rule = new LabelRuleEntity();
         rule.name = "auto-label-urgent";
         rule.description = "Applies 'urgent' label to any HIGH or URGENT priority WorkItem at creation";
         rule.enabled = true;
-        rule.condition = "workItem.priority.name() == 'HIGH' || workItem.priority.name() == 'URGENT'";
-        rule.events = "ADD";
-        rule.actionsJson = "[{\"type\":\"APPLY_LABEL\",\"params\":{\"path\":\"urgent\",\"appliedBy\":\"auto-label-urgent\"}}]";
+        rule.conditionLanguage = "jexl";
+        rule.conditionExpression = "workItem.priority.name() == 'HIGH' || workItem.priority.name() == 'URGENT'";
+        rule.triggerEvents = "ADD";
+        rule.actionsJson = "[{\"type\":\"Add\",\"label\":\"urgent\"}]";
         rule.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         rule.persist();
         steps.add(new StepLog(1, description1, null));
@@ -140,7 +141,7 @@ public class FilterRulesScenario {
         // Step 5: delete the filter rule (clean up — demonstrates no-redeployment disable)
         final String description5 = "procurement-system deletes the auto-label-urgent filter rule";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 5, total, description5);
-        FilterRule.deleteById(rule.id);
+        LabelRuleEntity.deleteById(rule.id);
         steps.add(new StepLog(5, description5, null));
 
         // Collect audit trail across both WorkItems
@@ -152,7 +153,7 @@ public class FilterRulesScenario {
                     .forEach(auditTrail::add);
         }
 
-        return new FilterRulesResponse(
+        return new LabelRuleEntitysResponse(
                 SCENARIO_ID,
                 steps,
                 highPriorityWi.id,

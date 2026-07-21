@@ -11,8 +11,8 @@ import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.examples.queues.QueueScenarioResponse;
 import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
-import io.casehub.work.queues.model.FilterAction;
-import io.casehub.work.queues.model.WorkItemFilter;
+import io.casehub.platform.api.label.LabelAction;
+import io.casehub.work.runtime.filter.LabelRuleEntity;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
@@ -72,39 +72,39 @@ public class SecurityEscalationScenario {
     QueueEventLog eventLog;
 
     private void setupFilters() {
-        if (WorkItemFilter.count("name", "Security-A: Incident Detection") > 0)
+        if (LabelRuleEntity.count("name", "Security-A: Incident Detection") > 0)
             return;
 
-        final WorkItemFilter filterA = new WorkItemFilter();
+        final LabelRuleEntity filterA = new LabelRuleEntity();
         filterA.name = "Security-A: Incident Detection";
         filterA.scope = io.casehub.platform.api.path.Path.root();
         filterA.conditionLanguage = "jexl";
         filterA.conditionExpression = "types.contains('security')";
-        filterA.actions = WorkItemFilter.serializeActions(List.of(
-                FilterAction.applyLabel("security/incident")));
-        filterA.active = true;
+        filterA.actionsJson = LabelRuleEntity.serializeActions(List.of(
+                new LabelAction.Add("security/incident")));
+        filterA.enabled = true;
         filterA.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterA.persist();
 
-        final WorkItemFilter filterB = new WorkItemFilter();
+        final LabelRuleEntity filterB = new LabelRuleEntity();
         filterB.name = "Security-B: Critical Priority Flag";
         filterB.scope = io.casehub.platform.api.path.Path.root();
         filterB.conditionLanguage = "jexl";
         filterB.conditionExpression = "priority == 'URGENT'";
-        filterB.actions = WorkItemFilter.serializeActions(List.of(
-                FilterAction.applyLabel("priority/critical")));
-        filterB.active = true;
+        filterB.actionsJson = LabelRuleEntity.serializeActions(List.of(
+                new LabelAction.Add("priority/critical")));
+        filterB.enabled = true;
         filterB.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterB.persist();
 
-        final WorkItemFilter filterC = new WorkItemFilter();
+        final LabelRuleEntity filterC = new LabelRuleEntity();
         filterC.name = "Security-C: Critical Incident → Executive Escalation";
         filterC.scope = io.casehub.platform.api.path.Path.root();
         filterC.conditionLanguage = "jexl";
         filterC.conditionExpression = "labels.contains('security/incident') && labels.contains('priority/critical')";
-        filterC.actions = WorkItemFilter.serializeActions(List.of(
-                FilterAction.applyLabel("security/exec-escalate")));
-        filterC.active = true;
+        filterC.actionsJson = LabelRuleEntity.serializeActions(List.of(
+                new LabelAction.Add("security/exec-escalate")));
+        filterC.enabled = true;
         filterC.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterC.persist();
     }

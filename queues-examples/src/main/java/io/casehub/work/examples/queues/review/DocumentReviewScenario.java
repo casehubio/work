@@ -11,8 +11,8 @@ import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.examples.queues.QueueScenarioResponse;
 import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
-import io.casehub.work.queues.model.FilterAction;
-import io.casehub.work.queues.model.WorkItemFilter;
+import io.casehub.platform.api.label.LabelAction;
+import io.casehub.work.runtime.filter.LabelRuleEntity;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
@@ -98,7 +98,7 @@ public class DocumentReviewScenario {
 
     @Transactional
     void setupFilters() {
-        if (WorkItemFilter.count("name", "Review: Critical → Urgent Tier") > 0) {
+        if (LabelRuleEntity.count("name", "Review: Critical → Urgent Tier") > 0) {
             return;
         }
 
@@ -106,52 +106,52 @@ public class DocumentReviewScenario {
 
         persist("Review: Critical → Urgent Tier", "jexl",
                 "priority == 'URGENT' && " + notTerminal,
-                List.of(FilterAction.applyLabel("review/urgent")));
+                List.of(new LabelAction.Add("review/urgent")));
 
         persist("Review: High → Standard Tier", "jexl",
                 "priority == 'HIGH' && " + notTerminal,
-                List.of(FilterAction.applyLabel("review/standard")));
+                List.of(new LabelAction.Add("review/standard")));
 
         persist("Review: Normal/Low → Routine Tier", "jexl",
                 "(priority == 'MEDIUM' || priority == 'LOW') && (candidateGroups == null || !candidateGroups.contains('security-writers')) && "
                         + notTerminal,
-                List.of(FilterAction.applyLabel("review/routine")));
+                List.of(new LabelAction.Add("review/routine")));
 
         persist("Review: Urgent + Pending → Unassigned", "jexl",
                 "labels.contains('review/urgent') && status == 'PENDING'",
-                List.of(FilterAction.applyLabel("review/urgent/unassigned")));
+                List.of(new LabelAction.Add("review/urgent/unassigned")));
 
         persist("Review: Urgent + Assigned → Claimed", "jexl",
                 "labels.contains('review/urgent') && status == 'ASSIGNED'",
-                List.of(FilterAction.applyLabel("review/urgent/claimed")));
+                List.of(new LabelAction.Add("review/urgent/claimed")));
 
         persist("Review: Urgent + In-Progress → Active", "jexl",
                 "labels.contains('review/urgent') && status == 'IN_PROGRESS'",
-                List.of(FilterAction.applyLabel("review/urgent/active")));
+                List.of(new LabelAction.Add("review/urgent/active")));
 
         persist("Review: Standard + Pending → Unassigned", "jexl",
                 "labels.contains('review/standard') && status == 'PENDING'",
-                List.of(FilterAction.applyLabel("review/standard/unassigned")));
+                List.of(new LabelAction.Add("review/standard/unassigned")));
 
         persist("Review: Standard + Assigned → Claimed", "jexl",
                 "labels.contains('review/standard') && status == 'ASSIGNED'",
-                List.of(FilterAction.applyLabel("review/standard/claimed")));
+                List.of(new LabelAction.Add("review/standard/claimed")));
 
         persist("Review: Standard + In-Progress → Active", "jexl",
                 "labels.contains('review/standard') && status == 'IN_PROGRESS'",
-                List.of(FilterAction.applyLabel("review/standard/active")));
+                List.of(new LabelAction.Add("review/standard/active")));
 
         persist("Review: Routine + Pending → Unassigned", "jexl",
                 "labels.contains('review/routine') && status == 'PENDING'",
-                List.of(FilterAction.applyLabel("review/routine/unassigned")));
+                List.of(new LabelAction.Add("review/routine/unassigned")));
 
         persist("Review: Routine + Assigned → Claimed", "jexl",
                 "labels.contains('review/routine') && status == 'ASSIGNED'",
-                List.of(FilterAction.applyLabel("review/routine/claimed")));
+                List.of(new LabelAction.Add("review/routine/claimed")));
 
         persist("Review: Routine + In-Progress → Active", "jexl",
                 "labels.contains('review/routine') && status == 'IN_PROGRESS'",
-                List.of(FilterAction.applyLabel("review/routine/active")));
+                List.of(new LabelAction.Add("review/routine/active")));
     }
 
     @Transactional
@@ -350,13 +350,13 @@ public class DocumentReviewScenario {
 
     private void persist(final String name, final String lang, final String expr,
             final List<FilterAction> actions) {
-        final WorkItemFilter f = new WorkItemFilter();
+        final LabelRuleEntity f = new LabelRuleEntity();
         f.name = name;
         f.scope = io.casehub.platform.api.path.Path.root();
         f.conditionLanguage = lang;
         f.conditionExpression = expr;
-        f.actions = WorkItemFilter.serializeActions(actions);
-        f.active = true;
+        f.actionsJson = LabelRuleEntity.serializeActions(actions);
+        f.enabled = true;
         f.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         f.persist();
     }

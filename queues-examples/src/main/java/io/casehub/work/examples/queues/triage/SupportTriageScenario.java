@@ -11,8 +11,8 @@ import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.examples.queues.QueueScenarioResponse;
 import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
-import io.casehub.work.queues.model.FilterAction;
-import io.casehub.work.queues.model.WorkItemFilter;
+import io.casehub.platform.api.label.LabelAction;
+import io.casehub.work.runtime.filter.LabelRuleEntity;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
@@ -71,40 +71,40 @@ public class SupportTriageScenario {
     QueueEventLog eventLog;
 
     private void setupFilters() {
-        if (WorkItemFilter.count("name", "Triage-A: Critical SLA") > 0)
+        if (LabelRuleEntity.count("name", "Triage-A: Critical SLA") > 0)
             return;
 
-        final WorkItemFilter filterA = new WorkItemFilter();
+        final LabelRuleEntity filterA = new LabelRuleEntity();
         filterA.name = "Triage-A: Critical SLA";
         filterA.scope = io.casehub.platform.api.path.Path.root();
         filterA.conditionLanguage = "jexl";
         filterA.conditionExpression = "priority == 'URGENT'";
-        filterA.actions = WorkItemFilter.serializeActions(List.of(
-                FilterAction.applyLabel("sla/critical"),
-                FilterAction.applyLabel("queue/fast-track")));
-        filterA.active = true;
+        filterA.actionsJson = LabelRuleEntity.serializeActions(List.of(
+                new LabelAction.Add("sla/critical"),
+                new LabelAction.Add("queue/fast-track")));
+        filterA.enabled = true;
         filterA.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterA.persist();
 
-        final WorkItemFilter filterB = new WorkItemFilter();
+        final LabelRuleEntity filterB = new LabelRuleEntity();
         filterB.name = "Triage-B: High Unassigned to Intake";
         filterB.scope = io.casehub.platform.api.path.Path.root();
         filterB.conditionLanguage = "jexl";
         filterB.conditionExpression = "priority == 'HIGH' && assigneeId == null";
-        filterB.actions = WorkItemFilter.serializeActions(List.of(
-                FilterAction.applyLabel("intake/triage")));
-        filterB.active = true;
+        filterB.actionsJson = LabelRuleEntity.serializeActions(List.of(
+                new LabelAction.Add("intake/triage")));
+        filterB.enabled = true;
         filterB.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterB.persist();
 
-        final WorkItemFilter filterC = new WorkItemFilter();
+        final LabelRuleEntity filterC = new LabelRuleEntity();
         filterC.name = "Triage-C: Intake Triage → Support Lead";
         filterC.scope = io.casehub.platform.api.path.Path.root();
         filterC.conditionLanguage = "jexl";
         filterC.conditionExpression = "labels.contains('intake/triage')";
-        filterC.actions = WorkItemFilter.serializeActions(List.of(
-                FilterAction.applyLabel("team/support-lead")));
-        filterC.active = true;
+        filterC.actionsJson = LabelRuleEntity.serializeActions(List.of(
+                new LabelAction.Add("team/support-lead")));
+        filterC.enabled = true;
         filterC.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
         filterC.persist();
     }

@@ -1,96 +1,93 @@
 package io.casehub.work.queues.api;
 
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.http.ContentType;
+import org.junit.jupiter.api.Test;
+
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
-
-import org.junit.jupiter.api.Test;
-
-import io.quarkus.test.junit.QuarkusTest;
-import io.restassured.http.ContentType;
 
 @QuarkusTest
 class FilterResourceTest {
 
     @Test
-    void createFilter_jexl_returnsId() {
+    void createRule_jexl_returnsId() {
         given().contentType(ContentType.JSON)
-                .body("""
-                        {"name":"HP intake","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"priority == 'HIGH'",
-                         "actions":[{"type":"APPLY_LABEL","labelPath":"intake/triage"}]}""")
-                .post("/filters").then().statusCode(201)
-                .body("id", notNullValue()).body("active", equalTo(true));
+               .body("""
+                     {"name":"HP intake","conditionLanguage":"jexl",
+                      "conditionExpression":"priority.name() == 'HIGH'",
+                      "actions":[{"type":"Add","label":"intake/triage"}]}""")
+               .post("/label-rules").then().statusCode(201)
+               .body("id", notNullValue()).body("enabled", equalTo(true));
     }
 
     @Test
-    void listFilters_returnsCreated() {
+    void listRules_returnsCreated() {
         given().contentType(ContentType.JSON)
-                .body("""
-                        {"name":"List test","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"status == 'PENDING'",
-                         "actions":[{"type":"APPLY_LABEL","labelPath":"intake"}]}""")
-                .post("/filters").then().statusCode(201);
-        given().get("/filters").then().statusCode(200).body("name", hasItem("List test"));
+               .body("""
+                     {"name":"List test","conditionLanguage":"jexl",
+                      "conditionExpression":"status.name() == 'PENDING'",
+                      "actions":[{"type":"Add","label":"intake"}]}""")
+               .post("/label-rules").then().statusCode(201);
+        given().get("/label-rules").then().statusCode(200).body("name", hasItem("List test"));
     }
 
     @Test
-    void createFilter_lambdaLanguage_returns400() {
+    void createRule_missingLanguage_returns400() {
         given().contentType(ContentType.JSON)
-                .body("""
-                        {"name":"Lambda","scope":"ORG","conditionLanguage":"lambda",
-                         "conditionExpression":null,"actions":[]}""")
-                .post("/filters").then().statusCode(400);
+               .body("""
+                     {"name":"No lang","conditionExpression":"true","actions":[]}""")
+               .post("/label-rules").then().statusCode(400);
     }
 
     @Test
-    void deleteFilter_removesIt() {
+    void deleteRule_removesIt() {
         var id = given().contentType(ContentType.JSON)
-                .body("""
-                        {"name":"Delete me","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"true","actions":[]}""")
-                .post("/filters").then().statusCode(201).extract().path("id");
-        given().delete("/filters/" + id).then().statusCode(204);
+                        .body("""
+                              {"name":"Delete me","conditionLanguage":"jexl",
+                               "conditionExpression":"true","actions":[]}""")
+                        .post("/label-rules").then().statusCode(201).extract().path("id");
+        given().delete("/label-rules/" + id).then().statusCode(204);
     }
 
     @Test
     void adHocEval_matching_returnsTrue() {
         given().contentType(ContentType.JSON)
-                .body("""
-                        {"conditionLanguage":"jexl","conditionExpression":"priority == 'HIGH'",
-                         "workItem":{"title":"t","status":"PENDING","priority":"HIGH"}}""")
-                .post("/filters/evaluate").then().statusCode(200).body("matches", equalTo(true));
+               .body("""
+                     {"conditionLanguage":"jexl","conditionExpression":"priority == 'HIGH'",
+                      "context":{"priority":"HIGH"}}""")
+               .post("/label-rules/evaluate").then().statusCode(200).body("matches", equalTo(true));
     }
 
     @Test
     void adHocEval_nonMatching_returnsFalse() {
         given().contentType(ContentType.JSON)
-                .body("""
-                        {"conditionLanguage":"jexl","conditionExpression":"priority == 'HIGH'",
-                         "workItem":{"title":"t","status":"PENDING","priority":"MEDIUM"}}""")
-                .post("/filters/evaluate").then().statusCode(200).body("matches", equalTo(false));
+               .body("""
+                     {"conditionLanguage":"jexl","conditionExpression":"priority == 'HIGH'",
+                      "context":{"priority":"MEDIUM"}}""")
+               .post("/label-rules/evaluate").then().statusCode(200).body("matches", equalTo(false));
     }
 
     @Test
-    void lambdaFilters_notInRestList() {
-        given().get("/filters").then().statusCode(200)
-                .body("conditionLanguage", not(hasItem("lambda")));
+    void permanentRules_inListWithSource() {
+        given().get("/label-rules").then().statusCode(200)
+               .body("findAll { it.source == 'permanent' }.name", hasItem("test/apply-label"));
     }
 
     @Test
-    void updateFilter_changesExpression() {
+    void updateRule_changesExpression() {
         var id = given().contentType(ContentType.JSON)
-                .body("""
-                        {"name":"Update test","scope":"ORG","conditionLanguage":"jexl",
-                         "conditionExpression":"priority == 'HIGH'","actions":[]}""")
-                .post("/filters").then().statusCode(201).extract().path("id");
+                        .body("""
+                              {"name":"Update test","conditionLanguage":"jexl",
+                               "conditionExpression":"priority.name() == 'HIGH'","actions":[]}""")
+                        .post("/label-rules").then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
-                .body("""
-                        {"name":"Update test","conditionExpression":"priority == 'MEDIUM'"}""")
-                .put("/filters/" + id)
-                .then().statusCode(200).body("name", equalTo("Update test"));
+               .body("""
+                     {"name":"Update test","conditionExpression":"priority.name() == 'MEDIUM'"}""")
+               .put("/label-rules/" + id)
+               .then().statusCode(200).body("name", equalTo("Update test"));
     }
 }

@@ -11,27 +11,21 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.filter.FilterRule;
-import io.casehub.work.runtime.repository.FilterRuleStore;
+import io.casehub.work.runtime.filter.LabelRuleEntity;
+import io.casehub.work.runtime.repository.LabelRuleStore;
 import io.casehub.work.runtime.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 
-/**
- * Tenant isolation tests for {@link JpaFilterRuleStore}.
- *
- * <p>Each test switches between two tenants via {@link MutableCurrentPrincipal} and
- * verifies that queries never leak data across tenant boundaries.
- */
 @QuarkusTest
 @TestTransaction
-class JpaFilterRuleStoreTenancyTest {
+class JpaLabelRuleStoreTenancyTest {
 
     private static final String TENANT_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
     private static final String TENANT_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 
     @Inject
-    FilterRuleStore store;
+    LabelRuleStore store;
 
     @Inject
     MutableCurrentPrincipal principal;
@@ -41,11 +35,12 @@ class JpaFilterRuleStoreTenancyTest {
         principal.reset();
     }
 
-    private FilterRule newRule(String name, boolean enabled) {
-        FilterRule rule = new FilterRule();
+    private LabelRuleEntity newRule(String name, boolean enabled) {
+        LabelRuleEntity rule = new LabelRuleEntity();
         rule.name = name;
         rule.enabled = enabled;
-        rule.condition = "true";
+        rule.conditionLanguage = "jexl";
+        rule.conditionExpression = "true";
         rule.createdAt = Instant.now();
         return rule;
     }
@@ -54,7 +49,7 @@ class JpaFilterRuleStoreTenancyTest {
     void put_stampsTenancyId_whenNull() {
         principal.setTenancyId(TENANT_A);
 
-        FilterRule rule = newRule("rule-a", true);
+        LabelRuleEntity rule = newRule("rule-a", true);
         assertThat(rule.tenancyId).isNull();
 
         store.put(rule);
@@ -65,7 +60,7 @@ class JpaFilterRuleStoreTenancyTest {
     @Test
     void get_returnsEmpty_forAnotherTenantRule() {
         principal.setTenancyId(TENANT_A);
-        FilterRule rule = newRule("rule-a", true);
+        LabelRuleEntity rule = newRule("rule-a", true);
         store.put(rule);
         UUID id = rule.id;
 
@@ -77,25 +72,21 @@ class JpaFilterRuleStoreTenancyTest {
     }
 
     @Test
-    void allEnabled_returnOnlyCurrentTenantRules() {
-        // Tenant A: create enabled rule
+    void findEnabled_returnOnlyCurrentTenantRules() {
         principal.setTenancyId(TENANT_A);
         store.put(newRule("rule-a-enabled", true));
         store.put(newRule("rule-a-disabled", false));
 
-        // Tenant B: create enabled rule
         principal.setTenancyId(TENANT_B);
         store.put(newRule("rule-b-enabled", true));
 
-        // As tenant B, only see B's enabled rule
-        List<FilterRule> resultB = store.allEnabled();
+        List<LabelRuleEntity> resultB = store.findEnabled();
         assertThat(resultB).hasSize(1);
         assertThat(resultB.get(0).tenancyId).isEqualTo(TENANT_B);
         assertThat(resultB.get(0).name).isEqualTo("rule-b-enabled");
 
-        // As tenant A, only see A's enabled rule (not the disabled one)
         principal.setTenancyId(TENANT_A);
-        List<FilterRule> resultA = store.allEnabled();
+        List<LabelRuleEntity> resultA = store.findEnabled();
         assertThat(resultA).hasSize(1);
         assertThat(resultA.get(0).tenancyId).isEqualTo(TENANT_A);
         assertThat(resultA.get(0).name).isEqualTo("rule-a-enabled");
@@ -104,7 +95,7 @@ class JpaFilterRuleStoreTenancyTest {
     @Test
     void delete_cannotDeleteAnotherTenantRule() {
         principal.setTenancyId(TENANT_A);
-        FilterRule rule = newRule("rule-a", true);
+        LabelRuleEntity rule = newRule("rule-a", true);
         store.put(rule);
         UUID id = rule.id;
 

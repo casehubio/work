@@ -19,7 +19,8 @@ import org.junit.jupiter.api.Test;
 import io.casehub.platform.api.preferences.MapPreferences;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
-import io.casehub.work.runtime.filter.JexlConditionEvaluator;
+import io.casehub.platform.expression.DefaultExpressionEngineRegistry;
+import io.casehub.platform.expression.JexlExpressionEngine;
 import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.PolicyDecision;
 import io.casehub.work.api.ValidationMode;
@@ -289,7 +290,9 @@ class WorkItemServiceTest {
         service.preferenceProvider = scope -> new MapPreferences(Map.of());
         // Wire OutcomeValidator — @Inject field, not in constructor
         final OutcomeValidator outcomeValidator = new OutcomeValidator();
-        outcomeValidator.conditionEvaluator = new JexlConditionEvaluator();
+        final var registry = new DefaultExpressionEngineRegistry();
+        registry.register(new JexlExpressionEngine());
+        outcomeValidator.expressionRegistry = registry;
         service.outcomeValidator = outcomeValidator;
         // Wire WorkItemLifecycleEmitter — @Inject field, not in constructor
         service.lifecycleEmitter = mock(WorkItemLifecycleEmitter.class);

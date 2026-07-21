@@ -8,44 +8,21 @@ import java.util.Optional;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import io.casehub.platform.api.expression.ExpressionEngineRegistry;
 import io.casehub.work.api.Outcome;
 import io.casehub.work.runtime.event.WorkItemContextBuilder;
-import io.casehub.work.runtime.filter.JexlConditionEvaluator;
 import io.casehub.work.runtime.model.OutcomeCodecs;
 import io.casehub.work.runtime.model.WorkItem;
 
-/**
- * Validates a submitted outcome name against a WorkItem's permitted outcomes list,
- * and evaluates any JEXL condition declared on the matching outcome.
- *
- * <p>
- * Extracted from {@code WorkItemService.validateOutcome()} to keep lifecycle transition
- * logic focused and to enable independent testing of condition evaluation.
- */
 @ApplicationScoped
 public class OutcomeValidator {
 
     @Inject
-    JexlConditionEvaluator conditionEvaluator;
+    ExpressionEngineRegistry expressionRegistry;
 
-    /**
-     * Validates the submitted outcome name and evaluates its condition if present.
-     *
-     * <p>
-     * No-op when {@code item.permittedOutcomes} is null (unconstrained WorkItem).
-     *
-     * @param item       the WorkItem being completed or rejected
-     * @param outcome    the submitted outcome name
-     * @param resolution the completion payload; null on reject paths
-     * @param reason     the rejection reason; null on complete paths
-     * @param actorId    who is completing or rejecting
-     * @throws IllegalArgumentException if outcome is absent, too long, not in the permitted list,
-     *                                  or its condition is not satisfied
-     * @throws IllegalStateException    if {@code permittedOutcomes} is non-null but fails to decode
-     *                                  (data integrity error)
-     */
+    @SuppressWarnings("unchecked")
     public void validate(final WorkItem item, final String outcome,
-            final String resolution, final String reason, final String actorId) {
+                         final String resolution, final String reason, final String actorId) {
         if (item.permittedOutcomes == null) {
             return;
         }
@@ -64,8 +41,8 @@ public class OutcomeValidator {
         }
 
         final Optional<Outcome> match = definitions.stream()
-                .filter(o -> outcome.equals(o.name()))
-                .findFirst();
+                                                   .filter(o -> outcome.equals(o.name()))
+                                                   .findFirst();
 
         if (match.isEmpty()) {
             final List<String> names = definitions.stream().map(Outcome::name).toList();
@@ -75,12 +52,13 @@ public class OutcomeValidator {
 
         final String condition = match.get().condition();
         if (condition != null && !condition.isBlank()) {
-            final Map<String, Object> workItemContext = WorkItemContextBuilder.toMap(item);
-            final Map<String, Object> extra = new HashMap<>();
-            extra.put("resolution", resolution);
-            extra.put("reason", reason);
-            extra.put("actorId", actorId);
-            if (!conditionEvaluator.evaluate(condition, extra, workItemContext)) {
+            final Map<String, Object> context = new HashMap<>(WorkItemContextBuilder.toMap(item));
+            context.put("resolution", resolution);
+            context.put("reason", reason);
+            context.put("actorId", actorId);
+            var compiled = expressionRegistry.compile("jexl", condition,
+                                                      (Class<Map<String, Object>>) (Class<?>) Map.class, Boolean.class);
+            if (!Boolean.TRUE.equals(compiled.eval(context))) {
                 throw new IllegalArgumentException(
                         "outcome '" + outcome + "' condition not satisfied (check template definition)");
             }

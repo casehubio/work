@@ -67,13 +67,6 @@ FilterChain derivation graph, and QueueView named queries. The core extension is
       <artifactId>quarkus-flyway</artifactId>
     </dependency>
 
-    <!-- JEXL expression evaluator -->
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-jexl3</artifactId>
-      <version>3.4.0</version>
-    </dependency>
-
     <!-- Testing -->
     <!-- Provides MockPreferenceProvider @DefaultBean (required since casehub-work-api now depends on casehub-platform-api) -->
     <dependency>

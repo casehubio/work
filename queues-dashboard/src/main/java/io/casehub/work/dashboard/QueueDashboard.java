@@ -100,7 +100,7 @@ public class QueueDashboard {
     public void start() throws Exception {
         refreshItems();
         addLog("CaseHub Work Queue Dashboard started");
-        addLog("Lambda filters: " + stepService.lambdaFilterNames());
+        addLog("Lambda filters: " + stepService.cdiRuleNames());
         addLog(stepService.nextAction());
 
         try (final var tui = TuiRunner.create()) {
