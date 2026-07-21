@@ -54,17 +54,17 @@ Observes WorkItemLifecycleEvent directly — zero polling delay.</description>
     <dependency>
       <groupId>dev.tamboui</groupId>
       <artifactId>tamboui-tui</artifactId>
-      <version>0.2.0-SNAPSHOT</version>
+      <version>0.4.0</version>
     </dependency>
     <dependency>
       <groupId>dev.tamboui</groupId>
       <artifactId>tamboui-toolkit</artifactId>
-      <version>0.2.0-SNAPSHOT</version>
+      <version>0.4.0</version>
     </dependency>
     <dependency>
       <groupId>dev.tamboui</groupId>
       <artifactId>tamboui-jline3-backend</artifactId>
-      <version>0.2.0-SNAPSHOT</version>
+      <version>0.4.0</version>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -85,7 +85,7 @@ Observes WorkItemLifecycleEvent directly — zero polling delay.</description>
     <dependency>
       <groupId>dev.tamboui</groupId>
       <artifactId>tamboui-tui</artifactId>
-      <version>0.2.0-SNAPSHOT</version>
+      <version>0.4.0</version>
       <classifier>test-fixtures</classifier>
       <scope>test</scope>
     </dependency>
@@ -93,7 +93,7 @@ Observes WorkItemLifecycleEvent directly — zero polling delay.</description>
     <dependency>
       <groupId>dev.tamboui</groupId>
       <artifactId>tamboui-core</artifactId>
-      <version>0.2.0-SNAPSHOT</version>
+      <version>0.4.0</version>
       <classifier>test-fixtures</classifier>
       <scope>test</scope>
     </dependency>

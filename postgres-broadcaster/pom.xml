@@ -58,7 +58,7 @@ core extension.</description>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-junit5-component</artifactId>
+      <artifactId>quarkus-junit-component</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
