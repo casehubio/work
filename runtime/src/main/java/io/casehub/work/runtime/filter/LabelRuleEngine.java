@@ -1,16 +1,5 @@
 package io.casehub.work.runtime.filter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
-import jakarta.inject.Inject;
-
-import org.jboss.logging.Logger;
-
 import io.casehub.platform.api.expression.ExpressionEngineRegistry;
 import io.casehub.platform.api.label.LabelAction;
 import io.casehub.platform.api.label.LabelRule;
@@ -18,6 +7,15 @@ import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemLabel;
 import io.casehub.work.runtime.repository.LabelRuleStore;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
+import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @ApplicationScoped
 public class LabelRuleEngine {
@@ -43,7 +41,7 @@ public class LabelRuleEngine {
     }
 
     public void evaluate(final WorkItem workItem, final Map<String, Object> context,
-            final String event) {
+                         final String event) {
         if (Boolean.TRUE.equals(RUNNING.get())) {
             return;
         }
@@ -51,9 +49,18 @@ public class LabelRuleEngine {
         try {
             workItem.labels.removeIf(l -> l.persistence == LabelPersistence.INFERRED);
 
-            List<LabelRule> allRules = collectRules();
-            List<RuleAction> matched = evaluateRules(allRules, context, event);
-            applyActions(workItem, matched);
+            List<LabelRule>     allRules       = collectRules();
+            Map<String, Object> currentContext = io.casehub.work.runtime.event.WorkItemContextBuilder.toMap(workItem);
+            int                 maxPasses      = 5;
+            for (int pass = 0; pass < maxPasses; pass++) {
+                List<RuleAction> matched = evaluateRules(allRules, currentContext, event);
+                int              before  = workItem.labels.size();
+                applyActions(workItem, matched);
+                if (workItem.labels.size() == before) {
+                    break;
+                }
+                currentContext = io.casehub.work.runtime.event.WorkItemContextBuilder.toMap(workItem);
+            }
         } finally {
             RUNNING.remove();
         }

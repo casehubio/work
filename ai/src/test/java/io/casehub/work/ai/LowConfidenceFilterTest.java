@@ -56,8 +56,8 @@ class LowConfidenceFilterTest {
 
     @Test
     void lowConfidenceFilter_appearsInPermanentFilterList() {
-        given().get("/filter-rules/permanent").then().statusCode(200)
-                .body("name", hasItem("ai/low-confidence"));
+        given().get("/label-rules").then().statusCode(200)
+                .body("findAll { it.source == 'permanent' }.name", hasItem("ai/low-confidence"));
     }
 
     @Test

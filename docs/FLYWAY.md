@@ -40,8 +40,12 @@ Each module owns its own version range. Flyway enforces uniqueness across all mo
 | V2000–V2999 | `casehub-work-queues` and `casehub-work-ledger` (shared 2000s block) |
 | V3000–V3999 | `casehub-work-notifications` |
 | V4000–V4999 | `casehub-work-ai` |
-| V5000–V5999 | `casehub-work-issue-tracker` |
-| V6000+ | next new optional module |
+| V5000–V5001 | **reserved** — platform-view (`db/view/migration`); collides with `db/work/migration` when both locations are in Flyway config |
+| V5002 | **free** |
+| V5003 | `casehub-work-queues` — migrate_to_subject_view |
+| V5004 | `casehub-work` runtime — label_rule_schema |
+| V6000–V6999 | `casehub-work-issue-tracker` |
+| V7000+ | next new optional module |
 
 **Rule for a new module:** take the next free thousand above the highest used — currently V6000.
 

@@ -64,7 +64,7 @@ public final class WorkItemContextBuilder {
         map.put("suspendedAt", workItem.suspendedAt);
         map.put("accumulatedUnclaimedSeconds", workItem.accumulatedUnclaimedSeconds);
         map.put("lastReturnedToPoolAt", workItem.lastReturnedToPoolAt);
-        map.put("labels", workItem.labels);
+        map.put("labels", workItem.labels != null ? workItem.labels.stream().map(l -> l.path).toList() : List.of());
         map.put("confidenceScore", workItem.confidenceScore);
         map.put("callerRef", workItem.callerRef);
         map.put("parentId", workItem.parentId != null ? workItem.parentId.toString() : null);

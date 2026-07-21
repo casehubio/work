@@ -86,7 +86,7 @@ public class FilterRulesScenario {
         rule.description = "Applies 'urgent' label to any HIGH or URGENT priority WorkItem at creation";
         rule.enabled = true;
         rule.conditionLanguage = "jexl";
-        rule.conditionExpression = "workItem.priority.name() == 'HIGH' || workItem.priority.name() == 'URGENT'";
+        rule.conditionExpression = "priority == 'HIGH' || priority == 'URGENT'";
         rule.triggerEvents = "ADD";
         rule.actionsJson = "[{\"type\":\"Add\",\"label\":\"urgent\"}]";
         rule.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;

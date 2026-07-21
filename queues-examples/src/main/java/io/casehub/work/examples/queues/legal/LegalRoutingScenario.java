@@ -89,8 +89,8 @@ public class LegalRoutingScenario {
         final LabelRuleEntity filterB = new LabelRuleEntity();
         filterB.name = "Legal-B: High Priority to Urgent Queue (JQ)";
         filterB.scope = io.casehub.platform.api.path.Path.root();
-        filterB.conditionLanguage = "jq";
-        filterB.conditionExpression = "(.types | any(. == \"legal\")) and .priority == \"HIGH\"";
+        filterB.conditionLanguage = "jexl";
+        filterB.conditionExpression = "types.contains('legal') && priority == 'HIGH'";
         filterB.actionsJson = LabelRuleEntity.serializeActions(List.of(
                 new LabelAction.Add("legal/urgent")));
         filterB.enabled = true;
