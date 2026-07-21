@@ -51,9 +51,9 @@ import io.casehub.work.runtime.service.WorkItemService;
  */
 @Path("/examples/filterrules")
 @Produces(MediaType.APPLICATION_JSON)
-public class LabelRuleEntitysScenario {
+public class FilterRulesScenario {
 
-    private static final Logger LOG = Logger.getLogger(LabelRuleEntitysScenario.class);
+    private static final Logger LOG = Logger.getLogger(FilterRulesScenario.class);
 
     private static final String SCENARIO_ID = "dynamic-filter-rules";
     private static final String ACTOR_CREATOR = "procurement-system";
@@ -73,7 +73,7 @@ public class LabelRuleEntitysScenario {
     @POST
     @Path("/run")
     @Transactional
-    public LabelRuleEntitysResponse run() {
+    public FilterRulesResponse run() {
         final List<StepLog> steps = new ArrayList<>();
         final int total = 5;
 
@@ -153,7 +153,7 @@ public class LabelRuleEntitysScenario {
                     .forEach(auditTrail::add);
         }
 
-        return new LabelRuleEntitysResponse(
+        return new FilterRulesResponse(
                 SCENARIO_ID,
                 steps,
                 highPriorityWi.id,

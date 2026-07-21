@@ -76,7 +76,9 @@ public class ActionGateCompletionApplier {
     eventBus.publish(
             EventBusAddresses.ACTION_GATE_APPROVED,
             new ActionGateApprovedEvent(
-                    gateRef.caseId(), tenancyId, gateRef.gateId(), ref != null ? ref.resolution() : null, approvedBy));
+                    gateRef.caseId(), tenancyId, gateRef.gateId(),
+                    ref != null ? ref.resolution() : null, approvedBy,
+                    ref != null ? ref.resolutionTypeName() : null));
     LOG.infof(
             "Gate approved: caseId=%s gateId=%d approvedBy=%s",
             gateRef.caseId(), gateRef.gateId(), approvedBy);
