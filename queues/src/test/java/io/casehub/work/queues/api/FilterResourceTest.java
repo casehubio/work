@@ -73,7 +73,7 @@ class FilterResourceTest {
     @Test
     void permanentRules_inListWithSource() {
         given().get("/label-rules").then().statusCode(200)
-               .body("findAll { it.source == 'permanent' }.name", hasItem("test/apply-label"));
+               .body("findAll { it.source == 'permanent' }.name", hasItem("test/high-priority"));
     }
 
     @Test

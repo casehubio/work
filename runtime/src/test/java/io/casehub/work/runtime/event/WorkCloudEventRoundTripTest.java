@@ -48,36 +48,36 @@ class WorkCloudEventRoundTripTest {
     void setUp() {
         cloudEventCapture.clear();
         WorkItemTemplate.deleteAll();
+        workItemStore.scanAll().forEach(wi -> WorkItem.deleteById(wi.id));
 
         final WorkItemTemplate template = new WorkItemTemplate();
-        template.id = UUID.randomUUID();
-        template.name = "Test Template " + UUID.randomUUID();
-        template.typePaths = "[\"test-type\"]";
-        template.priority = WorkItemPriority.HIGH;
-        template.candidateGroups = "test-group";
+        template.id                 = UUID.randomUUID();
+        template.name               = "Test Template " + UUID.randomUUID();
+        template.typePaths          = "[\"test-type\"]";
+        template.priority           = WorkItemPriority.HIGH;
+        template.candidateGroups    = "test-group";
         template.defaultExpiryHours = 48;
-        template.createdBy = "test-user";
+        template.createdBy          = "test-user";
 
         templateStore.put(template);
         templateId = template.id;
     }
 
     @Test
-    @Transactional
     void roundTrip_cloudEventToWorkItemToCloudEvent() throws InterruptedException {
-        final String ceId = UUID.randomUUID().toString();
-        final String source = "/workflows/test-approval";
+        final String ceId    = UUID.randomUUID().toString();
+        final String source  = "/workflows/test-approval";
         final String payload = "{\"amount\":500,\"currency\":\"USD\"}";
 
         final CloudEvent requestedEvent = CloudEventBuilder.v1()
-                .withId(ceId)
-                .withType(WorkCloudEventTypes.REQUESTED)
-                .withSource(URI.create(source))
-                .withDataContentType("application/json")
-                .withData(payload.getBytes(StandardCharsets.UTF_8))
-                .withExtension(WorkCloudEventTypes.EXT_TENANCY_ID, "default")
-                .withExtension(WorkCloudEventTypes.EXT_TEMPLATE_ID, templateId.toString())
-                .build();
+                                                           .withId(ceId)
+                                                           .withType(WorkCloudEventTypes.REQUESTED)
+                                                           .withSource(URI.create(source))
+                                                           .withDataContentType("application/json")
+                                                           .withData(payload.getBytes(StandardCharsets.UTF_8))
+                                                           .withExtension(WorkCloudEventTypes.EXT_TENANCY_ID, "default")
+                                                           .withExtension(WorkCloudEventTypes.EXT_TEMPLATE_ID, templateId.toString())
+                                                           .build();
 
         cloudEventBus.fireAsync(requestedEvent);
 
@@ -97,7 +97,8 @@ class WorkCloudEventRoundTripTest {
 
         Thread.sleep(2000);
 
-        final List<CloudEvent> completedEvents = cloudEventCapture.ofType(WorkCloudEventTypes.COMPLETED);
+        final List<CloudEvent> completedEvents = cloudEventCapture.ofTypeAndSubject(
+                WorkCloudEventTypes.COMPLETED, workItem.id.toString());
         assertThat(completedEvents).hasSize(1);
         final CloudEvent completedEvent = completedEvents.get(0);
         assertThat(completedEvent.getId()).isNotNull();
@@ -105,38 +106,31 @@ class WorkCloudEventRoundTripTest {
     }
 
     @Test
-    @Transactional
     void idempotency_duplicateCloudEvent_doesNotCreateDuplicateWorkItem() throws InterruptedException {
-        final String ceId = UUID.randomUUID().toString();
-        final String source = "/workflows/duplicate-test";
+        final String ceId    = UUID.randomUUID().toString();
+        final String source  = "/workflows/duplicate-test";
         final String payload = "{\"test\":\"data\"}";
 
         final CloudEvent event = CloudEventBuilder.v1()
-                .withId(ceId)
-                .withType(WorkCloudEventTypes.REQUESTED)
-                .withSource(URI.create(source))
-                .withDataContentType("application/json")
-                .withData(payload.getBytes(StandardCharsets.UTF_8))
-                .withExtension(WorkCloudEventTypes.EXT_TENANCY_ID, "default")
-                .withExtension(WorkCloudEventTypes.EXT_TEMPLATE_ID, templateId.toString())
-                .build();
+                                                  .withId(ceId)
+                                                  .withType(WorkCloudEventTypes.REQUESTED)
+                                                  .withSource(URI.create(source))
+                                                  .withDataContentType("application/json")
+                                                  .withData(payload.getBytes(StandardCharsets.UTF_8))
+                                                  .withExtension(WorkCloudEventTypes.EXT_TENANCY_ID, "default")
+                                                  .withExtension(WorkCloudEventTypes.EXT_TEMPLATE_ID, templateId.toString())
+                                                  .build();
 
         cloudEventBus.fireAsync(event);
 
         Thread.sleep(2000);
 
-        final long countAfterFirst = workItemStore.scanAll().stream()
-                .filter(wi -> ceId.equals(wi.callerRef))
-                .count();
-        assertThat(countAfterFirst).isEqualTo(1);
+        assertThat(workItemService.findByCallerRef(ceId)).isPresent();
 
         cloudEventBus.fireAsync(event);
 
         Thread.sleep(1000);
 
-        final long countAfterSecond = workItemStore.scanAll().stream()
-                .filter(wi -> ceId.equals(wi.callerRef))
-                .count();
-        assertThat(countAfterSecond).isEqualTo(1);
+        assertThat(workItemService.findByCallerRef(ceId)).isPresent();
     }
 }

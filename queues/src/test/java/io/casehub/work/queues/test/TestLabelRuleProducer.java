@@ -30,6 +30,6 @@ public class TestLabelRuleProducer {
                     Object s = ctx.get("status");
                     return s != null && s.toString().contains("PENDING");
                 }),
-                List.of(new LabelAction.Add("intake")));
+                List.of(new LabelAction.Add("intake/pending")));
     }
 }
