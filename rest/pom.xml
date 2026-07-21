@@ -45,6 +45,11 @@ who only need the Java SPI do not pay JAX-RS coupling cost.</description>
       <scope>runtime</scope>
     </dependency>
     <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-expression</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-jdbc-h2</artifactId>
       <scope>test</scope>

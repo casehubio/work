@@ -130,10 +130,10 @@ public class QueueResource {
     @Path("/{id}")
     @Transactional
     public Response delete(@PathParam("id") final UUID id) {
-        var events = orchestrator.deleteView(id);
-        if (events == null) {
+        if (viewStore.findById(id).isEmpty()) {
             return Response.status(404).entity(Map.of("error", "Not found")).build();
         }
+        orchestrator.deleteView(id);
         return Response.noContent().build();
     }
 

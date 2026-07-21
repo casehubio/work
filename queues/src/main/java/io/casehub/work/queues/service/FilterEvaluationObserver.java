@@ -41,6 +41,7 @@ public class FilterEvaluationObserver {
             final Map<String, Object> context   = WorkItemContextBuilder.toMap(wi);
 
             labelRuleEngine.evaluate(wi, context, eventType);
+            workItemStore.put(wi);
 
             final Set<String> labelPaths = wi.labels == null ? Set.of()
                                                              : wi.labels.stream().map(l -> l.path).collect(Collectors.toSet());
