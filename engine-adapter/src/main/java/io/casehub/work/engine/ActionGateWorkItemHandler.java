@@ -26,9 +26,10 @@ import io.quarkus.vertx.ConsumeEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
+
 import java.time.Instant;
 import java.util.Set;
-import org.jboss.logging.Logger;
 
 /**
  * Creates a WorkItem when an action gate fires.
@@ -56,7 +57,8 @@ public class ActionGateWorkItemHandler {
 
   @Inject WorkItemCreator workItemCreator;
 
-  @ConsumeEvent(value = EventBusAddresses.ACTION_GATE_SCHEDULE, blocking = true)
+  @ConsumeEvent(value = EventBusAddresses.ACTION_GATE_SCHEDULE)
+  @RunOnVirtualThread
   @Transactional
   public void onActionGateSchedule(final ActionGateScheduleEvent event) {
     final String callerRef = GateCallerRef.encode(event.caseId(), event.gateId());

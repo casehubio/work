@@ -16,14 +16,14 @@
 package io.casehub.work.engine;
 
 import io.casehub.api.context.ContextLayer;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.blackboard.plan.CasePlanModel;
 import io.casehub.blackboard.plan.PlanItem;
 import io.casehub.blackboard.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.event.CaseContextChangedEvent;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.model.CaseInstance;
-import io.casehub.api.model.TaskStatus;
-import io.casehub.engine.common.spi.ReactiveCrossTenantCaseInstanceRepository;
+import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
 import io.casehub.work.api.GroupStatus;
 import io.casehub.work.api.WorkItemEvent;
 import io.casehub.work.api.WorkItemGroupLifecycleEvent;
@@ -35,7 +35,6 @@ import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -61,11 +60,9 @@ import java.util.Map;
 public class WorkItemLifecycleAdapter {
 
   private static final Logger LOG = Logger.getLogger(WorkItemLifecycleAdapter.class);
-  private static final Duration TIMEOUT = Duration.ofSeconds(5);
-
   @Inject BlackboardRegistry registry;
 
-  @Inject ReactiveCrossTenantCaseInstanceRepository caseInstanceRepository;
+  @Inject CrossTenantCaseInstanceRepository caseInstanceRepository;
 
   @Inject EventBus eventBus;
 
@@ -135,7 +132,7 @@ public class WorkItemLifecycleAdapter {
     if (!applyGroupStatus(item, status)) return;
 
     CaseInstance instance =
-        caseInstanceRepository.findByUuid(piRef.caseId()).await().atMost(TIMEOUT);
+        caseInstanceRepository.findByUuid(piRef.caseId());
     if (instance == null) {
       LOG.warnf(
           "CaseInstance not found for caseId=%s — cannot fire CONTEXT_CHANGED", piRef.caseId());
@@ -195,7 +192,7 @@ public class WorkItemLifecycleAdapter {
     }
 
     final CaseInstance instance =
-        caseInstanceRepository.findByUuid(piRef.caseId()).await().atMost(TIMEOUT);
+        caseInstanceRepository.findByUuid(piRef.caseId());
     if (instance == null) {
       LOG.warnf("CaseInstance not found for caseId=%s — escalation signal skipped", piRef.caseId());
       return;

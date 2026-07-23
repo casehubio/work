@@ -18,6 +18,7 @@ package io.casehub.work.engine;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.api.model.HumanTaskTarget;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.api.model.evaluator.JQExpressionEvaluator;
 import io.casehub.blackboard.plan.CasePlanModel;
 import io.casehub.blackboard.plan.PlanItem;
@@ -25,7 +26,6 @@ import io.casehub.blackboard.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.HumanTaskScheduleEvent;
 import io.casehub.engine.common.internal.model.PlanItemSaveRequest;
-import io.casehub.api.model.TaskStatus;
 import io.casehub.engine.common.internal.model.TargetType;
 import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.work.api.Outcome;
@@ -35,12 +35,13 @@ import io.quarkus.vertx.ConsumeEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.jboss.logging.Logger;
 
 /**
  * Handles outbound human task creation when a {@link HumanTaskTarget} binding is selected.
@@ -70,7 +71,8 @@ public class HumanTaskScheduleHandler {
   @Inject WorkItemCreator workItemCreator;
   @Inject PlanItemStore planItemStore;
 
-  @ConsumeEvent(value = EventBusAddresses.HUMAN_TASK_SCHEDULE, blocking = true)
+  @ConsumeEvent(value = EventBusAddresses.HUMAN_TASK_SCHEDULE)
+  @RunOnVirtualThread
   @Transactional
   public void onHumanTaskSchedule(HumanTaskScheduleEvent event) {
     CasePlanModel plan = registry.get(event.caseId()).orElse(null);

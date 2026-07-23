@@ -24,8 +24,9 @@ import io.quarkus.vertx.ConsumeEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import java.util.Optional;
 import org.jboss.logging.Logger;
+
+import java.util.Optional;
 
 /**
  * Cancels an orphaned gate WorkItem when the owning case terminates.
@@ -46,7 +47,8 @@ public class ActionGateCancelledHandler {
   @Inject WorkItemCreator workItemCreator;
   @Inject WorkItemLifecycle workItemLifecycle;
 
-  @ConsumeEvent(value = EventBusAddresses.ACTION_GATE_CANCELLED, blocking = true)
+  @ConsumeEvent(value = EventBusAddresses.ACTION_GATE_CANCELLED)
+  @RunOnVirtualThread
   @Transactional
   public void onActionGateCancelled(final ActionGateCancelledEvent event) {
     final String callerRef = GateCallerRef.encode(event.caseId(), event.gateId());
