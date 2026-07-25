@@ -218,6 +218,7 @@ class ExpiryLifecycleServiceTest {
     private WorkItem expiredItem() {
         final WorkItem wi = new WorkItem();
         wi.id = UUID.randomUUID();
+        wi.tenancyId = "test-tenant";
         wi.title = "test item";
         wi.status = WorkItemStatus.PENDING;
         wi.expiresAt = Instant.now().minus(1, ChronoUnit.HOURS);
@@ -230,6 +231,7 @@ class ExpiryLifecycleServiceTest {
     private WorkItem claimExpiredItem() {
         final WorkItem wi = new WorkItem();
         wi.id = UUID.randomUUID();
+        wi.tenancyId = "test-tenant";
         wi.title = "test item";
         wi.status = WorkItemStatus.PENDING;
         wi.claimDeadline = Instant.now().minus(1, ChronoUnit.HOURS);

@@ -304,6 +304,7 @@ class WorkItemServiceTest {
                 .description("Do something")
                 .priority(WorkItemPriority.MEDIUM)
                 .createdBy("system")
+                .tenancyId("test-tenant")
                 .build();
     }
 
