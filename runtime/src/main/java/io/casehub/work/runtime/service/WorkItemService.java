@@ -520,7 +520,7 @@ public class WorkItemService {
             return item.delegationDeclineTarget;
         }
         final Path scopePath = item.scope != null ? Path.parse(item.scope) : Path.root();
-        final Preferences prefs = preferenceProvider.resolve(new SettingsScope(scopePath, Instant.now()));
+        final Preferences prefs = preferenceProvider.resolve(new SettingsScope(item.tenancyId, scopePath, Instant.now()));
         return prefs.getOrDefault(DeclineTarget.KEY);
     }
 

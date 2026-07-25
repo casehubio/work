@@ -326,7 +326,7 @@ public class ExpiryLifecycleService {
 
     private SlaBreachContext buildBreachContext(final WorkItem item, final BreachType type, final Instant now) {
         final Path scope = item.scope != null ? Path.parse(item.scope) : Path.root();
-        final var prefs = preferenceProvider.resolve(new SettingsScope(scope, now));
+        final var prefs = preferenceProvider.resolve(new SettingsScope(item.tenancyId, scope, now));
         final Set<String> groups = parseCandidateGroups(item.candidateGroups);
         final BreachedTask task = new BreachedTask(item.id, item.callerRef, item.title, groups);
         return new SlaBreachContext(type, task, scope, prefs);

@@ -35,7 +35,7 @@ import io.casehub.engine.common.internal.jq.JQEvaluator;
 import io.casehub.engine.common.internal.jq.ValidationResult;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CaseDefinitionRegistry;
-import io.casehub.engine.common.spi.ReactiveCrossTenantCaseInstanceRepository;
+import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
 import io.casehub.engine.common.spi.event.PlanItemFaultedEvent;
 import io.casehub.engine.common.spi.event.PlanItemObsoleteEvent;
 import io.casehub.engine.common.spi.event.PlanItemRejectedEvent;
@@ -46,11 +46,11 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import java.time.Duration;
+import org.jboss.logging.Logger;
+
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.jboss.logging.Logger;
 
 /**
  * Applies a terminal WorkItemStatus to a PlanItem and fires CONTEXT_CHANGED.
@@ -63,13 +63,12 @@ import org.jboss.logging.Logger;
 public class PlanItemCompletionApplier {
 
   private static final Logger LOG = Logger.getLogger(PlanItemCompletionApplier.class);
-  private static final Duration TIMEOUT = Duration.ofSeconds(5);
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
   @Inject BlackboardRegistry registry;
   @Inject CaseDefinitionRegistry caseDefinitionRegistry;
-  @Inject ReactiveCrossTenantCaseInstanceRepository caseInstanceRepository;
+  @Inject CrossTenantCaseInstanceRepository caseInstanceRepository;
   @Inject EventBus eventBus;
   @Inject JQEvaluator jqEvaluator;
   @Inject io.casehub.engine.common.internal.context.BridgeResolver bridgeResolver;
@@ -97,7 +96,7 @@ public class PlanItemCompletionApplier {
       return;
     }
 
-    CaseInstance instance = caseInstanceRepository.findByUuid(caseId).await().atMost(TIMEOUT);
+    CaseInstance instance = caseInstanceRepository.findByUuid(caseId);
     if (instance == null) {
       LOG.warnf("CaseInstance not found for caseId=%s — CONTEXT_CHANGED not fired", caseId);
       return;

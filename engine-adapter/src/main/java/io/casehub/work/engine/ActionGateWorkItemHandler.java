@@ -23,6 +23,7 @@ import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.spi.WorkItemCreator;
 import io.quarkus.vertx.ConsumeEvent;
+import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;

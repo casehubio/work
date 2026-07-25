@@ -66,7 +66,7 @@ public class QueueSnapshotJob {
     private void processForTenant(final String tenancyId) {
         try {
             final var prefs = preferenceProvider.resolve(
-                    new SettingsScope(Path.root(), Instant.now()));
+                    new SettingsScope(tenancyId, Path.root(), Instant.now()));
             final DurationPreference intervalPref =
                     prefs.getOrDefault(QueueSnapshotInterval.KEY, "");
             final DurationPreference retentionPref =

@@ -1,9 +1,9 @@
 package io.casehub.work.api;
 
-import java.util.Locale;
-
 import io.casehub.platform.api.preferences.PreferenceKey;
 import io.casehub.platform.api.preferences.SingleValuePreference;
+
+import java.util.Locale;
 
 /**
  * Determines where a delegated {@link io.casehub.work.runtime.model.WorkItem} returns
@@ -30,4 +30,10 @@ public enum DeclineTarget implements SingleValuePreference {
     public static final PreferenceKey<DeclineTarget> KEY =
             new PreferenceKey<>("casehub.work.delegation", "decline-target", POOL,
                     s -> DeclineTarget.valueOf(s.toUpperCase(Locale.ROOT)));
+
+    @Override
+    public String toSerializedValue() {
+        return name().toLowerCase(Locale.ROOT);
+    }
+
 }
