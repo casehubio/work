@@ -1,17 +1,16 @@
 package io.casehub.work.dashboard;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.time.Duration;
-
-import jakarta.inject.Inject;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import dev.tamboui.tui.pilot.Pilot;
 import dev.tamboui.tui.pilot.TuiTestRunner;
 import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 /**
  * End-to-end Pilot tests for the Tamboui queue board dashboard.
@@ -35,6 +34,9 @@ import io.quarkus.test.junit.QuarkusTest;
 @QuarkusTest
 class QueueDashboardTest {
 
+    private static final Duration STEP_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration POLL_INTERVAL = Duration.ofMillis(50);
+
     @Inject
     QueueDashboard dashboard;
 
@@ -53,11 +55,7 @@ class QueueDashboardTest {
             final Pilot pilot = test.pilot();
 
             pilot.press('s');
-            pilot.pause(Duration.ofMillis(200)); // allow advanceStep + @ObservesAsync to settle
-
-            assertThat(stepService.currentStep())
-                    .as("After one 's' press, step should be 1 (setup: 3 documents created)")
-                    .isEqualTo(1);
+            awaitStep(1, "After one 's' press, step should be 1 (setup: 3 documents created)");
         }
     }
 
@@ -68,13 +66,9 @@ class QueueDashboardTest {
             final Pilot pilot = test.pilot();
 
             pilot.press('s');
-            pilot.pause(Duration.ofMillis(200));
+            awaitStep(1, "step 1");
             pilot.press('s');
-            pilot.pause(Duration.ofMillis(200));
-
-            assertThat(stepService.currentStep())
-                    .as("After two 's' presses, step should be 2 (claim: advisory ASSIGNED)")
-                    .isEqualTo(2);
+            awaitStep(2, "After two 's' presses, step should be 2 (claim: advisory ASSIGNED)");
         }
     }
 
@@ -85,19 +79,14 @@ class QueueDashboardTest {
             final Pilot pilot = test.pilot();
 
             pilot.press('s');
-            pilot.pause(Duration.ofMillis(200)); // setup
+            awaitStep(1, "setup");
             pilot.press('s');
-            pilot.pause(Duration.ofMillis(200)); // claim
+            awaitStep(2, "claim");
             pilot.press('s');
-            pilot.pause(Duration.ofMillis(200)); // start
+            awaitStep(3, "start");
             pilot.press('s');
-            pilot.pause(Duration.ofMillis(200)); // complete
+            awaitStep(4, "After four 's' presses, step should be 4 (complete: advisory COMPLETED)");
 
-            assertThat(stepService.currentStep())
-                    .as("After four 's' presses, step should be 4 (complete: advisory COMPLETED)")
-                    .isEqualTo(4);
-
-            // Advisory should now be in terminal state with no INFERRED labels
             final var advisoryId = stepService.getAdvisoryId();
             assertThat(advisoryId).isNotNull();
         }
@@ -109,21 +98,13 @@ class QueueDashboardTest {
                 dashboard::handleEvent, dashboard::renderBoard)) {
             final Pilot pilot = test.pilot();
 
-            // Advance to step 2 first — step 1 (setup) creates filters + 3 WorkItems,
-            // which can take longer under full-build JVM pressure; use a generous pause
             pilot.press('s');
-            pilot.pause(Duration.ofMillis(1000));
+            awaitStep(1, "setup");
             pilot.press('s');
-            pilot.pause(Duration.ofMillis(1000));
-            assertThat(stepService.currentStep()).isEqualTo(2);
+            awaitStep(2, "claim");
 
-            // Reset
             pilot.press('r');
-            pilot.pause(Duration.ofMillis(200));
-
-            assertThat(stepService.currentStep())
-                    .as("After 'r', step should reset to 0")
-                    .isEqualTo(0);
+            awaitStep(0, "After 'r', step should reset to 0");
         }
     }
 
@@ -153,5 +134,12 @@ class QueueDashboardTest {
             // Still alive and step is still 0
             assertThat(stepService.currentStep()).isEqualTo(0);
         }
+    }
+
+    private void awaitStep(int expected, String description) {
+        await(description).atMost(STEP_TIMEOUT)
+                .pollInterval(POLL_INTERVAL)
+                .untilAsserted(() ->
+                        assertThat(stepService.currentStep()).isEqualTo(expected));
     }
 }

@@ -81,6 +81,11 @@ Observes WorkItemLifecycleEvent directly — zero polling delay.</description>
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <scope>test</scope>
+    </dependency>
     <!-- Tamboui Pilot test harness: TuiTestRunner + TuiPilot in tamboui-tui test-fixtures -->
     <dependency>
       <groupId>dev.tamboui</groupId>
