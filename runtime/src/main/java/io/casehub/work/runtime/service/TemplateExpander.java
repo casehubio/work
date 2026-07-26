@@ -30,9 +30,9 @@ public class TemplateExpander {
      * {@link WorkItemTemplate#excludedGroups} and merges with {@link WorkItemTemplate#excludedUsers}.
      * Logs a warning when groups are configured but no new actor IDs are resolved.
      */
-    public String expandExcludedUsers(final WorkItemTemplate template) {
+    public String expandExcludedUsers(final WorkItemTemplate template, final String tenancyId) {
         final String merged = mergeGroupsIntoExcludedUsers(
-                template.excludedGroups, template.excludedUsers, groupMembershipProvider);
+                template.excludedGroups, template.excludedUsers, groupMembershipProvider, tenancyId);
         if (template.excludedGroups != null && !template.excludedGroups.isBlank()) {
             final int before = countIds(template.excludedUsers);
             final int after = countIds(merged);
@@ -51,7 +51,8 @@ public class TemplateExpander {
      */
     static String mergeGroupsIntoExcludedUsers(final String excludedGroups,
                                                 final String excludedUsers,
-                                                final GroupMembershipProvider provider) {
+                                                final GroupMembershipProvider provider,
+                                                final String tenancyId) {
         if (excludedGroups == null || excludedGroups.isBlank()) {
             return excludedUsers;
         }
@@ -65,7 +66,7 @@ public class TemplateExpander {
         for (final String group : excludedGroups.split(",")) {
             final String g = group.trim();
             if (!g.isEmpty()) {
-                provider.membersOf(g).forEach(m -> ids.add(m.actorId()));
+                provider.membersOf(g, tenancyId).forEach(m -> ids.add(m.actorId()));
             }
         }
         return ids.isEmpty() ? null : String.join(",", ids);

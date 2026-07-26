@@ -24,7 +24,7 @@ import io.quarkus.arc.DefaultBean;
 public class NoOpGroupMembershipProvider implements GroupMembershipProvider {
 
     @Override
-    public Set<GroupMember> membersOf(final String groupName) {
+    public Set<GroupMember> membersOf(final String groupName, final String tenancyId) {
         return Set.of();
     }
 }

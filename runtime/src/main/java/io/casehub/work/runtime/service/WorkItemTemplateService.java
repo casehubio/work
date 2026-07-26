@@ -77,7 +77,7 @@ public class WorkItemTemplateService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Template not found: " + request.templateId));
 
-        final String expandedExcludedUsers = templateExpander.expandExcludedUsers(template);
+        final String expandedExcludedUsers = templateExpander.expandExcludedUsers(template, request.tenancyId);
 
         WorkItemCreateRequest merged = mergeRequestWithTemplate(template, request, expandedExcludedUsers);
 

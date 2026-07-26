@@ -9,6 +9,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+import io.casehub.platform.api.security.CurrentPrincipal;
 import io.casehub.work.api.ChildSpec;
 import io.casehub.work.api.spi.SpawnPort;
 import io.casehub.work.api.SpawnRequest;
@@ -53,6 +54,7 @@ public class WorkItemSpawnService implements SpawnPort {
     private final WorkItemRelationStore relationStore;
     private final WorkItemSpawnGroupStore spawnGroupStore;
     private final WorkItemTemplateStore templateStore;
+    private final CurrentPrincipal currentPrincipal;
 
     @Inject
     WorkItemLifecycleEmitter lifecycleEmitter;
@@ -61,7 +63,7 @@ public class WorkItemSpawnService implements SpawnPort {
     public WorkItemSpawnService(final WorkItemStore workItemStore, final WorkItemService workItemService,
             final AuditEntryStore auditStore, final TemplateExpander templateExpander,
             final WorkItemRelationStore relationStore, final WorkItemSpawnGroupStore spawnGroupStore,
-            final WorkItemTemplateStore templateStore) {
+            final WorkItemTemplateStore templateStore, final CurrentPrincipal currentPrincipal) {
         this.workItemStore = workItemStore;
         this.workItemService = workItemService;
         this.auditStore = auditStore;
@@ -69,6 +71,7 @@ public class WorkItemSpawnService implements SpawnPort {
         this.relationStore = relationStore;
         this.spawnGroupStore = spawnGroupStore;
         this.templateStore = templateStore;
+        this.currentPrincipal = currentPrincipal;
     }
 
     /**
@@ -145,7 +148,7 @@ public class WorkItemSpawnService implements SpawnPort {
                     .permittedOutcomes(OutcomeCodecs.decodeOutcomes(template.outcomes))
                     .inputDataSchema(template.inputDataSchema)
                     .outputDataSchema(template.outputDataSchema)
-                    .excludedUsers(templateExpander.expandExcludedUsers(template))
+                    .excludedUsers(templateExpander.expandExcludedUsers(template, currentPrincipal.tenancyId()))
                     .build();
 
             final WorkItem child = workItemService.create(createRequest);
