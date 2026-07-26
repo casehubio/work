@@ -9,7 +9,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
-import io.casehub.platform.api.security.CurrentPrincipal;
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.api.ChildSpec;
 import io.casehub.work.api.spi.SpawnPort;
 import io.casehub.work.api.SpawnRequest;
