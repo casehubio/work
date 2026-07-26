@@ -10,8 +10,8 @@ class NoOpGroupMembershipProviderTest {
 
     @Test
     void membersOf_anyGroup_returnsEmptySet() {
-        assertThat(provider.membersOf("legal-team")).isEmpty();
-        assertThat(provider.membersOf("anything")).isEmpty();
-        assertThat(provider.membersOf("")).isEmpty();
+        assertThat(provider.membersOf("legal-team", "test-tenant")).isEmpty();
+        assertThat(provider.membersOf("anything", "test-tenant")).isEmpty();
+        assertThat(provider.membersOf("", "test-tenant")).isEmpty();
     }
 }

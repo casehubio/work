@@ -59,7 +59,7 @@ class WorkItemTemplateServiceResolutionTest {
         }
 
         @Override
-        public Set<GroupMember> membersOf(String groupName) {
+        public Set<GroupMember> membersOf(String groupName, String tenancyId) {
             return GROUPS.getOrDefault(groupName, Set.of());
         }
     }
