@@ -14,3 +14,4 @@ target/
 .worktrees/
 wksp
 docs/superpowers/specs/
+package-lock.json
