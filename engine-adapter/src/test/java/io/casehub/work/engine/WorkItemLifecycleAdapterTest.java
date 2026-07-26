@@ -15,15 +15,12 @@
  */
 package io.casehub.work.engine;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
-
 import io.casehub.api.model.HumanTaskTarget;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.blackboard.plan.PlanItem;
 import io.casehub.blackboard.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.model.CaseInstance;
-import io.casehub.api.model.TaskStatus;
-import io.casehub.engine.common.spi.ReactiveCaseInstanceRepository;
+import io.casehub.engine.common.spi.CaseInstanceRepository;
 import io.casehub.engine.internal.context.CaseContextImpl;
 import io.casehub.work.api.GroupStatus;
 import io.casehub.work.api.WorkItemGroupLifecycleEvent;
@@ -37,14 +34,18 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 @QuarkusTest
 class WorkItemLifecycleAdapterTest {
@@ -62,7 +63,7 @@ class WorkItemLifecycleAdapterTest {
 
   @Inject BlackboardRegistry registry;
 
-  @Inject ReactiveCaseInstanceRepository reactiveCaseInstanceRepository;
+  @Inject CaseInstanceRepository caseInstanceRepository;
 
   @Inject Event<WorkItemLifecycleEvent> lifecycleEvents;
 
@@ -85,10 +86,7 @@ class WorkItemLifecycleAdapterTest {
     instance.setUuid(caseId);
     instance.setState(io.casehub.api.model.CaseStatus.RUNNING);
     instance.setCaseContext(new CaseContextImpl(Map.of("stage", "review")));
-    reactiveCaseInstanceRepository
-        .save(instance, "test-tenant")
-        .await()
-        .atMost(Duration.ofSeconds(5));
+    caseInstanceRepository.save(instance, "test-tenant");
   }
 
   @AfterEach
@@ -205,7 +203,7 @@ class WorkItemLifecycleAdapterTest {
         .untilAsserted(
             () -> {
               CaseInstance updated =
-                  reactiveCaseInstanceRepository
+                  caseInstanceRepository
                       .findByUuid(caseId, "test-tenant")
                       .await()
                       .atMost(Duration.ofSeconds(2));
@@ -351,7 +349,7 @@ class WorkItemLifecycleAdapterTest {
         .untilAsserted(
             () -> {
               CaseInstance updated =
-                  reactiveCaseInstanceRepository
+                  caseInstanceRepository
                       .findByUuid(caseId, "test-tenant")
                       .await()
                       .atMost(Duration.ofSeconds(2));
@@ -414,7 +412,7 @@ class WorkItemLifecycleAdapterTest {
         .untilAsserted(
             () -> {
               CaseInstance updated =
-                  reactiveCaseInstanceRepository
+                  caseInstanceRepository
                       .findByUuid(caseId, "test-tenant")
                       .await()
                       .atMost(Duration.ofSeconds(2));
@@ -430,7 +428,7 @@ class WorkItemLifecycleAdapterTest {
   void workItemCompleted_noTarget_noContextUpdate() {
     // PlanItem with no target (no outputMapping) — baseline: existing context unchanged
     CaseInstance before =
-        reactiveCaseInstanceRepository
+        caseInstanceRepository
             .findByUuid(caseId, "test-tenant")
             .await()
             .atMost(Duration.ofSeconds(2));
@@ -444,7 +442,7 @@ class WorkItemLifecycleAdapterTest {
         .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(TaskStatus.COMPLETED));
 
     CaseInstance after =
-        reactiveCaseInstanceRepository
+        caseInstanceRepository
             .findByUuid(caseId, "test-tenant")
             .await()
             .atMost(Duration.ofSeconds(2));

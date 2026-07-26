@@ -15,26 +15,19 @@
  */
 package io.casehub.work.engine;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import io.casehub.api.model.HumanTaskTarget;
+import io.casehub.api.model.TaskStatus;
 import io.casehub.blackboard.plan.PlanItem;
 import io.casehub.blackboard.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.HumanTaskScheduleEvent;
 import io.casehub.engine.common.internal.model.PlanItemRecord;
-import io.casehub.api.model.TaskStatus;
 import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.ledger.testing.NoOpLedgerEntryRepository;
-import io.casehub.ledger.testing.NoOpReactiveLedgerEntryRepository;
 import io.casehub.persistence.memory.InMemoryCaseInstanceRepository;
 import io.casehub.persistence.memory.InMemoryCaseMetaModelRepository;
 import io.casehub.persistence.memory.InMemoryEventLogRepository;
 import io.casehub.persistence.memory.InMemoryPlanItemStore;
-import io.casehub.persistence.memory.InMemoryReactiveCaseInstanceRepository;
-import io.casehub.persistence.memory.InMemoryReactiveCaseMetaModelRepository;
-import io.casehub.persistence.memory.InMemoryReactiveEventLogRepository;
-import io.casehub.persistence.memory.InMemoryReactiveSubCaseGroupRepository;
 import io.casehub.persistence.memory.InMemorySubCaseGroupRepository;
 import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemStore;
@@ -47,6 +40,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -57,9 +54,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Verifies that a WorkItem creation failure leaves PlanItem PENDING and does not write a RUNNING
@@ -82,16 +78,11 @@ class HumanTaskScheduleHandlerAtomicityTest {
       return Set.of(
           FailingWorkItemStore.class,
           InMemoryCaseInstanceRepository.class,
-          InMemoryReactiveCaseInstanceRepository.class,
           InMemoryCaseMetaModelRepository.class,
-          InMemoryReactiveCaseMetaModelRepository.class,
           InMemoryEventLogRepository.class,
-          InMemoryReactiveEventLogRepository.class,
           InMemorySubCaseGroupRepository.class,
-          InMemoryReactiveSubCaseGroupRepository.class,
           InMemoryPlanItemStore.class,
           NoOpLedgerEntryRepository.class,
-          NoOpReactiveLedgerEntryRepository.class,
           NoOpPreferenceProvider.class);
     }
   }

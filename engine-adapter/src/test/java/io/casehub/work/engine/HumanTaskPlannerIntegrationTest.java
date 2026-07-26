@@ -15,9 +15,6 @@
  */
 package io.casehub.work.engine;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
-
 import io.casehub.api.engine.CaseHub;
 import io.casehub.api.model.Binding;
 import io.casehub.api.model.CaseDefinition;
@@ -27,10 +24,14 @@ import io.casehub.work.memory.InMemoryWorkItemStore;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 /**
  * End-to-end test verifying the full planner → handler → WorkItem creation flow for humanTask
@@ -53,7 +54,7 @@ class HumanTaskPlannerIntegrationTest {
     // Planner selects the humanTask binding → publishes HumanTaskScheduleEvent →
     // handler must receive a PENDING PlanItem and create a WorkItem.
     // Before engine#312 fix: planner marked RUNNING → handler skipped → no WorkItem.
-    approvalCase.startCase(Map.of("status", "pending")).toCompletableFuture().join();
+    approvalCase.startCase(Map.of("status", "pending"));
 
     await()
         .atMost(10, TimeUnit.SECONDS)
