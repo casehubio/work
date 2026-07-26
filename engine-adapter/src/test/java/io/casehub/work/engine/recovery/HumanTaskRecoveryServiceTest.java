@@ -92,10 +92,7 @@ class HumanTaskRecoveryServiceTest {
     instance.setUuid(caseId);
     instance.setState(io.casehub.api.model.CaseStatus.RUNNING);
     instance.setCaseContext(new CaseContextImpl(Map.of("stage", "review")));
-    caseInstanceRepository
-        .save(instance, "test-tenant")
-        .await()
-        .atMost(Duration.ofSeconds(5));
+    caseInstanceRepository.save(instance, "test-tenant");
   }
 
   @AfterEach

@@ -203,10 +203,7 @@ class WorkItemLifecycleAdapterTest {
         .untilAsserted(
             () -> {
               CaseInstance updated =
-                  caseInstanceRepository
-                      .findByUuid(caseId, "test-tenant")
-                      .await()
-                      .atMost(Duration.ofSeconds(2));
+                  caseInstanceRepository.findByUuid(caseId, "test-tenant");
               Object signal = updated.getCaseContext().get("workItemEscalated");
               assertThat(signal).isNotNull().isInstanceOf(Map.class);
               @SuppressWarnings("unchecked")
@@ -349,10 +346,7 @@ class WorkItemLifecycleAdapterTest {
         .untilAsserted(
             () -> {
               CaseInstance updated =
-                  caseInstanceRepository
-                      .findByUuid(caseId, "test-tenant")
-                      .await()
-                      .atMost(Duration.ofSeconds(2));
+                  caseInstanceRepository.findByUuid(caseId, "test-tenant");
               assertThat(updated.getCaseContext().get("irbOutcome")).isEqualTo("Approved");
             });
   }
@@ -412,10 +406,7 @@ class WorkItemLifecycleAdapterTest {
         .untilAsserted(
             () -> {
               CaseInstance updated =
-                  caseInstanceRepository
-                      .findByUuid(caseId, "test-tenant")
-                      .await()
-                      .atMost(Duration.ofSeconds(2));
+                  caseInstanceRepository.findByUuid(caseId, "test-tenant");
               Object humanApproval = updated.getCaseContext().get("humanApproval");
               assertThat(humanApproval).isInstanceOf(Map.class);
               @SuppressWarnings("unchecked")
@@ -428,10 +419,7 @@ class WorkItemLifecycleAdapterTest {
   void workItemCompleted_noTarget_noContextUpdate() {
     // PlanItem with no target (no outputMapping) — baseline: existing context unchanged
     CaseInstance before =
-        caseInstanceRepository
-            .findByUuid(caseId, "test-tenant")
-            .await()
-            .atMost(Duration.ofSeconds(2));
+        caseInstanceRepository.findByUuid(caseId, "test-tenant");
     Map<String, Object> originalData = new HashMap<>(before.getCaseContext().getData());
 
     // Use the pre-existing planItem from setUp (no target)
@@ -442,10 +430,7 @@ class WorkItemLifecycleAdapterTest {
         .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(TaskStatus.COMPLETED));
 
     CaseInstance after =
-        caseInstanceRepository
-            .findByUuid(caseId, "test-tenant")
-            .await()
-            .atMost(Duration.ofSeconds(2));
+        caseInstanceRepository.findByUuid(caseId, "test-tenant");
     assertThat(after.getCaseContext().getData()).isEqualTo(originalData);
   }
 
