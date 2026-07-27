@@ -1,29 +1,33 @@
-*Updated: #236, #254, #253, #240, #255, parent#170, parent#195 closed — removed from backlog.*
-
-# HANDOFF — 2026-06-07
+# HANDOFF — 2026-07-27
 
 ## Last Session
 
-Implemented #191 (persistence-memory module extraction) end-to-end: spec (two review rounds), implementation plan, subagent-driven execution. `testing/` → `persistence-memory/` via git mv. Five stores re-annotated `@Alternative @Priority(100)` (new Tier 3 in CDI ladder — priority inversion: least-capable backend, highest priority). All stores made thread-safe with ConcurrentHashMap; AuditEntryStore restructured to per-workItemId keyed concurrent map. Also fixed pre-existing #252 (ledger compile failure from upstream SPI change — `findScore` → `findByActorId` in 3 files). CI green.
+Wacky Manor POC — built Phase 1 (game engine) and Phase 2 (UI) end-to-end. 18 commits on `feat/wacky-manor-poc` in casehubio/examples. Repo: `examples/wacky-manor/`. Phase 1: WorldState, ActionResolver, TriggerEvaluator, SceneDirector, CharacterAgentLoop (virtual threads), ScenarioOrchestrator, 4-channel Qhorus normative layout. 113 tests. Live LLM scenario passed — tea poisoning scene with cartoon comedy. Phase 2: Lit 3 frontend with SVG character illustrations, room chat panels, narrator panel, WebSocket real-time events.
+
+Key design insight: the original spec over-scripted the plot (triggers and scenes drive events TO characters). Restructured roadmap with Phase 2.5 to validate autonomous characters before scaling.
 
 ## Immediate Next Step
 
-Pick next issue — #237 (structured progress, L/High) or #238 (saga compensation, XL/High) are the remaining open items. Or check for new issues filed in the last 7 weeks.
+Phase 2.5 — autonomous character validation. Same 3 rooms, 5 characters. Add goals to observation template, disable scripted triggers. Verdict gate: does the Hooded Claw discover poison and scheme on his own?
 
 ## What's Left
 
-- casehubio/garden#2 — extend persistence-backend-cdi-priority.md with Tier 3 (@Priority(100)) · S · Low
+- casehubio/garden#2 — extend persistence-backend-cdi-priority.md with Tier 3 · S · Low
 
 ## What's Next
 
-| # | Description | Scale | Complexity | Notes |
-|---|-------------|-------|------------|-------|
-| #237 | Structured progress — schema-validated, hierarchical | L | High | Ideas only |
-| #238 | Saga compensation across casehub platform | XL | High | Ideas only |
+| Phase | Description | Scale | Complexity | Notes |
+|---|---|---|---|---|
+| 2.5 | Autonomous character validation — goals in observation, no scripts | M | Med | Critical — validates core premise |
+| 2.6 | ObservationAccumulator — casehub-blocks tiered batching | S | Med | Needed before more rooms/characters |
+| 2.7 | Live LLM narrator — wire NarratorAgent | S | Low | NarratorAgent class exists, not wired |
+| 2.8 | NPC system — Tier 2/3 scripted fixtures, player/NPC split | M | Med | RPG framing |
+| 2.9 | Scale to 6 rooms — Library, Laboratory, Tower | L | Med | After 2.5 validates |
+| 3.0 | Platform integration — memory, trust, HiL, replay | XL | High | Full casehub exercise |
 
 ## References
 
-- Garden: `GE-20260607-3ded98` (jvm/) — ConcurrentHashMap.getOrDefault + List.of() type inference failure
-- Blog: `2026-06-07-mdp07-the-module-that-was-never-just-for-testing.md`
-- Spec: `docs/superpowers/specs/2026-06-06-persistence-memory-module-design.md`
-- casehubio/garden#2 — protocol Tier 3 update
+- POC-SPEC: `examples/wacky-manor/docs/POC-SPEC.md`
+- VISION: `examples/wacky-manor/docs/VISION.md`
+- Plan: `examples/wacky-manor/docs/plans/2026-07-26-phase1-game-engine.md`
+- Memory: `project_wacky-manor.md` — has full phase breakdown and run instructions
