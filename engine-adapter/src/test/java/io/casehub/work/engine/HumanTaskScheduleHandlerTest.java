@@ -19,8 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import io.casehub.api.model.HumanTaskTarget;
-import io.casehub.blackboard.plan.PlanItem;
-import io.casehub.blackboard.registry.BlackboardRegistry;
+import io.casehub.engine.planning.plan.PlanItem;
+import io.casehub.engine.planning.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.HumanTaskScheduleEvent;
 import io.casehub.api.model.TaskStatus;
