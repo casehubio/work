@@ -1,45 +1,46 @@
 package io.casehub.work.runtime.service;
 
+import io.casehub.platform.api.path.Path;
+import io.casehub.platform.api.preferences.PreferenceProvider;
+import io.casehub.platform.api.preferences.Preferences;
+import io.casehub.platform.api.preferences.SettingsScope;
+import io.casehub.platform.api.routing.StrategyResolver;
+import io.casehub.work.api.AssignmentTrigger;
+import io.casehub.work.api.ClaimSlaContext;
+import io.casehub.work.api.DeclineTarget;
+import io.casehub.work.api.LabelPersistence;
+import io.casehub.work.api.PolicyDecision;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.api.spi.BusinessCalendar;
+import io.casehub.work.api.spi.ClaimSlaPolicy;
+import io.casehub.work.api.spi.ExclusionPolicy;
+import io.casehub.work.core.strategy.CapabilityValidator;
+import io.casehub.work.runtime.config.WorkItemsConfig;
+import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
+import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.runtime.model.AuditEntry;
+import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemLabel;
+import io.casehub.work.runtime.model.WorkItemRelationType;
+import io.casehub.work.runtime.model.WorkItemSpawnGroup;
+import io.casehub.work.runtime.repository.WorkItemRelationStore;
+import io.casehub.work.runtime.repository.AuditEntryStore;
+import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
+import io.casehub.work.runtime.repository.WorkItemStore;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.transaction.Transactional;
-
-import io.casehub.platform.api.path.Path;
-import io.casehub.platform.api.preferences.Preferences;
-import io.casehub.platform.api.preferences.PreferenceProvider;
-import io.casehub.platform.api.preferences.SettingsScope;
-import io.casehub.platform.api.routing.StrategyResolver;
-import io.casehub.work.api.AssignmentTrigger;
-import io.casehub.work.api.spi.BusinessCalendar;
-import io.casehub.work.api.ClaimSlaContext;
-import io.casehub.work.api.spi.ClaimSlaPolicy;
-import io.casehub.work.api.DeclineTarget;
-import io.casehub.work.api.spi.ExclusionPolicy;
-import io.casehub.work.api.PolicyDecision;
-import io.casehub.work.core.strategy.CapabilityValidator;
-import io.casehub.work.runtime.config.WorkItemsConfig;
-import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.runtime.model.WorkItemLabel;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.runtime.model.WorkItemSpawnGroup;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
 
 @ApplicationScoped
 public class WorkItemService {
@@ -57,6 +58,9 @@ public class WorkItemService {
 
     @Inject
     WorkItemSpawnGroupStore spawnGroupStore;
+    @Inject
+    WorkItemRelationStore   relationStore;
+
 
     @Inject
     EntityManager em;
@@ -656,16 +660,44 @@ public class WorkItemService {
         if (item.status.isTerminal()) {
             throw new IllegalStateException("Cannot obsolete WorkItem in status: " + item.status);
         }
-        item.status = WorkItemStatus.OBSOLETE;
+        item.status      = WorkItemStatus.OBSOLETE;
         item.completedAt = Instant.now();
-        item.resolution = reason;
+        item.resolution  = reason;
         final WorkItem saved = workItemStore.put(item);
         timerService.cancelExpiry(saved.id);
         timerService.cancelClaimDeadline(saved.id);
         audit(saved.id, "OBSOLETE", triggeredBy, reason);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("OBSOLETE", saved, triggeredBy, reason));
+        cascadeObsoleteToSpawnGroup(saved.id, triggeredBy);
         return saved;
     }
+
+    private void cascadeObsoleteToSpawnGroup(final UUID parentId, final String triggeredBy) {
+        if (spawnGroupStore == null || relationStore == null) return;
+        spawnGroupStore.findMultiInstanceByParentId(parentId).ifPresent(group -> {
+            if (group.policyTriggered) {return;}
+            group.policyTriggered = true;
+            spawnGroupStore.put(group);
+
+            relationStore.findByTargetAndType(parentId, WorkItemRelationType.PART_OF)
+                         .forEach(rel -> workItemStore.get(rel.sourceId).ifPresent(child -> {
+                             if (!child.status.isTerminal()) {
+                                 child.status      = WorkItemStatus.CANCELLED;
+                                 child.completedAt = Instant.now();
+                                 child.resolution  = "Parent gate obsoleted";
+                                 workItemStore.put(child);
+                                 timerService.cancelExpiry(child.id);
+                                 timerService.cancelClaimDeadline(child.id);
+                                 audit(child.id, "CANCELLED", triggeredBy,
+                                       "Cascade from parent gate obsolete");
+                                 lifecycleEmitter.emit(WorkItemLifecycleEvent.of(
+                                         "CANCELLED", child, triggeredBy,
+                                         "Cascade from parent gate obsolete"));
+                             }
+                         }));
+        });
+    }
+
 
     @Transactional
     public WorkItem obsoleteFromSystem(final UUID id, final String triggeredBy, final String reason) {
