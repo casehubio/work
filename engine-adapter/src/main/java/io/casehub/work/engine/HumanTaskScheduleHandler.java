@@ -151,7 +151,7 @@ public class HumanTaskScheduleHandler {
     }
 
     planItemStore.save(
-        new PlanItemSaveRequest(
+        PlanItemSaveRequest.primitive(
             event.caseId(),
             item.getPlanItemId(),
             item.getBindingName(),
@@ -179,7 +179,7 @@ public class HumanTaskScheduleHandler {
         event.payloadTypeName(),
         event.resolutionTypeName());
     planItemStore.save(
-        new PlanItemSaveRequest(
+        PlanItemSaveRequest.primitive(
             event.caseId(),
             item.getPlanItemId(),
             item.getBindingName(),

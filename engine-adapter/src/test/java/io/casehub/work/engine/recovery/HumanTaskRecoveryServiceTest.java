@@ -75,7 +75,7 @@ class HumanTaskRecoveryServiceTest {
     callerRef = PlanItemCallerRef.encode(caseId, planItemId);
 
     planItemStore.save(
-        new PlanItemSaveRequest(
+        PlanItemSaveRequest.primitive(
             caseId,
             planItemId,
             "review-task",
