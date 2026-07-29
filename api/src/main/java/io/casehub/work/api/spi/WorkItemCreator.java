@@ -1,9 +1,10 @@
 package io.casehub.work.api.spi;
 
-import java.util.Optional;
-
+import io.casehub.work.api.MultiInstanceConfig;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemRef;
+
+import java.util.Optional;
 
 public interface WorkItemCreator {
 
@@ -41,4 +42,10 @@ public interface WorkItemCreator {
      * @param callerRef the caller reference identifying the WorkItem to obsolete
      */
     void obsoleteByCallerRef(String callerRef);
+
+    default WorkItemRef createMultiInstance(WorkItemCreateRequest parentRequest,
+                                            MultiInstanceConfig config) {
+        throw new UnsupportedOperationException("Multi-instance creation not supported");
+    }
+
 }

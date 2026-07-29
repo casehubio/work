@@ -1,27 +1,26 @@
 package io.casehub.work.runtime.multiinstance;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-
 import io.casehub.platform.api.routing.StrategyResolver;
-import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.GroupStatus;
 import io.casehub.work.api.MultiInstanceConfig;
 import io.casehub.work.api.MultiInstanceContext;
 import io.casehub.work.api.ParentRole;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.runtime.model.OutcomeCodecs;
 import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.model.WorkItemTemplate;
-import io.casehub.work.runtime.service.WorkItemTemplateService;
 import io.casehub.work.runtime.service.WorkItemService;
+import io.casehub.work.runtime.service.WorkItemTemplateService;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Creates a multi-instance group: a parent WorkItem + N child instances + a
@@ -117,6 +116,63 @@ public class MultiInstanceSpawnService {
 
         return parent;
     }
+
+    @Transactional
+    public WorkItem createGroupFromRequest(final WorkItemCreateRequest parentRequest,
+                                           final MultiInstanceConfig config) {
+        // Idempotency: check for existing active parent with same callerRef
+        if (parentRequest.callerRef != null) {
+            workItemService.findActiveByCallerRef(parentRequest.callerRef)
+                           .ifPresent(existing -> {
+                               throw new IllegalStateException(
+                                       "Active WorkItem already exists for callerRef: " + parentRequest.callerRef);
+                           });
+        }
+
+        final WorkItem parent = workItemService.create(parentRequest);
+
+        final WorkItemSpawnGroup group = new WorkItemSpawnGroup();
+        group.parentId           = parent.id;
+        group.idempotencyKey     = parentRequest.callerRef != null
+                                   ? parentRequest.callerRef : "multi-instance:" + parent.id;
+        group.instanceCount      = config.instanceCount();
+        group.requiredCount      = config.requiredCount();
+        group.onThresholdReached = config.effectiveOnThresholdReached().name();
+        group.allowSameAssignee  = config.allowSameAssignee();
+        group.parentRole         = config.effectiveParentRole().name();
+        group.groupStatus        = GroupStatus.IN_PROGRESS;
+        group.tenancyId          = parent.tenancyId;
+        group.persist();
+
+        final List<WorkItem> children = new ArrayList<>();
+        for (int i = 0; i < config.instanceCount(); i++) {
+            final WorkItemCreateRequest childReq = parentRequest.toBuilder()
+                                                                .callerRef(null)
+                                                                .createdBy("system:multi-instance:" + group.id)
+                                                                .title(parentRequest.title + " [" + (i + 1) + "/" + config.instanceCount() + "]")
+                                                                .auditDetail("Multi-instance child " + (i + 1) + " of " + config.instanceCount())
+                                                                .build();
+            final WorkItem child = workItemService.create(childReq);
+            child.parentId = parent.id;
+
+            final WorkItemRelation rel = new WorkItemRelation();
+            rel.sourceId     = child.id;
+            rel.targetId     = parent.id;
+            rel.relationType = WorkItemRelationType.PART_OF;
+            rel.createdBy    = "system:multi-instance:" + group.id;
+            rel.tenancyId    = parent.tenancyId;
+            rel.persist();
+
+            children.add(child);
+        }
+
+        final InstanceAssignmentStrategy strategy = resolveStrategy(
+                config.effectiveAssignmentStrategyName());
+        strategy.assign((List) children, new MultiInstanceContext(parent, config));
+
+        return parent;
+    }
+
 
     private WorkItemCreateRequest buildChildRequest(final WorkItemTemplate template,
             final String expandedExcludedUsers, final String createdBy,

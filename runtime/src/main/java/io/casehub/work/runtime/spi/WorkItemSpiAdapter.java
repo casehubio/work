@@ -1,8 +1,6 @@
 package io.casehub.work.runtime.spi;
 
-import java.util.Optional;
-import java.util.UUID;
-
+import io.casehub.work.api.MultiInstanceConfig;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.api.spi.WorkItemCreator;
@@ -12,6 +10,9 @@ import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Hexagonal adapter implementing the SPI interfaces from {@code casehub-work-api}.
@@ -88,6 +89,23 @@ public class WorkItemSpiAdapter implements WorkItemCreator, WorkItemLifecycle {
             }
         });
     }
+
+    @Inject
+    io.casehub.work.runtime.multiinstance.MultiInstanceSpawnService multiInstanceSpawnService;
+
+    @Override
+    public WorkItemRef createMultiInstance(final WorkItemCreateRequest parentRequest,
+                                           final MultiInstanceConfig config) {
+        if (parentRequest.callerRef != null) {
+            final Optional<WorkItemRef> existing = findActiveByCallerRef(parentRequest.callerRef);
+            if (existing.isPresent()) {
+                return existing.get();
+            }
+        }
+        final WorkItem parent = multiInstanceSpawnService.createGroupFromRequest(parentRequest, config);
+        return toRef(parent);
+    }
+
 
     private boolean isTerminal(final UUID id) {
         return workItemService.findById(id)
