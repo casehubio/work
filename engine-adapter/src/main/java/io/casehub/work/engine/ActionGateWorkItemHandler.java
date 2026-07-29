@@ -20,6 +20,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.casehub.engine.common.internal.event.ActionGateScheduleEvent;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
+import io.casehub.work.api.MultiInstanceConfig;
+import io.casehub.work.api.ParentRole;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.spi.WorkItemCreator;
 import io.quarkus.vertx.ConsumeEvent;
@@ -58,38 +60,57 @@ public class ActionGateWorkItemHandler {
 
   @Inject WorkItemCreator workItemCreator;
 
-  @ConsumeEvent(value = EventBusAddresses.ACTION_GATE_SCHEDULE)
-  @RunOnVirtualThread
-  @Transactional
-  public void onActionGateSchedule(final ActionGateScheduleEvent event) {
-    final String callerRef = GateCallerRef.encode(event.caseId(), event.gateId());
-    final Instant expiresAt =
-        event.gateRequired().expiresIn() != null
-            ? Instant.now().plus(event.gateRequired().expiresIn())
-            : null;
+    @ConsumeEvent(value = EventBusAddresses.ACTION_GATE_SCHEDULE)
+    @RunOnVirtualThread
+    @Transactional
+    public void onActionGateSchedule(final ActionGateScheduleEvent event) {
+        final String callerRef = GateCallerRef.encode(event.caseId(), event.gateId());
+        final Instant expiresAt =
+                event.gateRequired().expiresIn() != null
+                ? Instant.now().plus(event.gateRequired().expiresIn())
+                : null;
 
-    final Set<String> groups = event.resolvedCandidateGroups();
-    final String candidateGroupsCsv =
-        (groups == null || groups.isEmpty())
-            ? null
-            : groups.stream().sorted().collect(java.util.stream.Collectors.joining(","));
+        final Set<String> groups = event.resolvedCandidateGroups();
+        final String candidateGroupsCsv =
+                (groups == null || groups.isEmpty())
+                ? null
+                : groups.stream().sorted().collect(java.util.stream.Collectors.joining(","));
 
-    final WorkItemCreateRequest request =
-        WorkItemCreateRequest.builder()
-            .title(event.gateRequired().reason())
-            .candidateGroups(candidateGroupsCsv)
-            .createdBy("casehub-engine")
-            .payload(buildPayload(event))
-            .expiresAt(expiresAt)
-            .callerRef(callerRef)
-            .scope(event.gateRequired().scope())
-            .build();
+        final WorkItemCreateRequest request =
+                WorkItemCreateRequest.builder()
+                                     .title(event.gateRequired().reason())
+                                     .candidateGroups(candidateGroupsCsv)
+                                     .createdBy("casehub-engine")
+                                     .payload(buildPayload(event))
+                                     .expiresAt(expiresAt)
+                                     .callerRef(callerRef)
+                                     .scope(event.gateRequired().scope())
+                                     .tenancyId(event.tenancyId())
+                                     .build();
 
-    workItemCreator.create(request);
-    LOG.infof(
-        "Gate WorkItem created: caseId=%s gateId=%d callerRef=%s expiresAt=%s",
-        event.caseId(), event.gateId(), callerRef, expiresAt);
-  }
+        if (event.gateRequired().quorum() != null) {
+            final var q = event.gateRequired().quorum();
+            final var config = new MultiInstanceConfig(
+                    q.instances(),
+                    q.required(),
+                    ParentRole.COORDINATOR,
+                    "pool",
+                    q.onThresholdReached() != null
+                    ? io.casehub.work.api.OnThresholdReached.valueOf(q.onThresholdReached().name())
+                    : null,
+                    q.allowSameAssignee(),
+                    null);
+            workItemCreator.createMultiInstance(request, config);
+            LOG.infof(
+                    "Gate multi-instance group created: caseId=%s gateId=%d instances=%d required=%d",
+                    event.caseId(), event.gateId(), q.instances(), q.required());
+        } else {
+            workItemCreator.create(request);
+            LOG.infof(
+                    "Gate WorkItem created: caseId=%s gateId=%d callerRef=%s expiresAt=%s",
+                    event.caseId(), event.gateId(), callerRef, expiresAt);
+        }
+    }
 
   private static String buildPayload(final ActionGateScheduleEvent event) {
     final ObjectNode root = MAPPER.createObjectNode();

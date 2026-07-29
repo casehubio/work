@@ -70,7 +70,35 @@ public class ActionGateCompletionApplier {
         }
     }
 
-  private void handleApproved(final GateCallerRef gateRef, final WorkItemRef ref,
+    public void applyGroupCompletion(final GateCallerRef gateRef,
+                                     final io.casehub.work.api.GroupStatus status,
+                                     final String tenancyId) {
+        switch (status) {
+            case COMPLETED -> {
+                eventBus.publish(
+                        EventBusAddresses.ACTION_GATE_APPROVED,
+                        new ActionGateApprovedEvent(
+                                gateRef.caseId(), tenancyId, gateRef.gateId(),
+                                null, null, null));
+                LOG.infof("Gate approved (group quorum): caseId=%s gateId=%d",
+                          gateRef.caseId(), gateRef.gateId());
+            }
+            case REJECTED -> {
+                eventBus.publish(
+                        EventBusAddresses.ACTION_GATE_REJECTED,
+                        new ActionGateRejectedEvent(
+                                gateRef.caseId(), tenancyId, gateRef.gateId(),
+                                null, null));
+                LOG.infof("Gate rejected (group quorum failed): caseId=%s gateId=%d",
+                          gateRef.caseId(), gateRef.gateId());
+            }
+            default -> LOG.debugf("Gate group status %s for caseId=%s gateId=%d — no event",
+                                  status, gateRef.caseId(), gateRef.gateId());
+        }
+    }
+
+
+    private void handleApproved(final GateCallerRef gateRef, final WorkItemRef ref,
                               final String tenancyId) {
     final String approvedBy = resolveActorId(ref);
     eventBus.publish(

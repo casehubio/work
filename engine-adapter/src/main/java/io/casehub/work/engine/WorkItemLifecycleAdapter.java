@@ -114,6 +114,12 @@ public class WorkItemLifecycleAdapter {
     if (!status.isTerminal()) return;
 
     CallerRef ref = CallerRef.parse(event.callerRef());
+
+    if (ref instanceof GateCallerRef gateRef) {
+      gateApplier.applyGroupCompletion(gateRef, status, event.tenancyId());
+      return;
+    }
+
     if (!(ref instanceof PlanItemCallerRef piRef)) return;
 
     CasePlanModel plan = registry.get(piRef.caseId()).orElse(null);
