@@ -73,6 +73,7 @@ public class ActionGateCompletionApplier {
     public void applyGroupCompletion(final GateCallerRef gateRef,
                                      final io.casehub.work.api.GroupStatus status,
                                      final String approvedBy,
+                                     final String resolutionTypeName,
                                      final String tenancyId) {
         switch (status) {
             case COMPLETED -> {
@@ -80,7 +81,7 @@ public class ActionGateCompletionApplier {
                         EventBusAddresses.ACTION_GATE_APPROVED,
                         new ActionGateApprovedEvent(
                                 gateRef.caseId(), tenancyId, gateRef.gateId(),
-                                null, approvedBy, null));
+                                null, approvedBy, resolutionTypeName));
                 LOG.infof("Gate approved (group quorum): caseId=%s gateId=%d approvedBy=%s",
                           gateRef.caseId(), gateRef.gateId(), approvedBy);
             }

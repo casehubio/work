@@ -34,11 +34,11 @@ import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
-import java.util.UUID;
 import org.jboss.logging.Logger;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Translates terminal quarkus-work {@link WorkItemEvent}s and M-of-N {@link
@@ -121,7 +121,8 @@ public class WorkItemLifecycleAdapter {
 
     if (ref instanceof GateCallerRef gateRef) {
       final String approvedBy = resolveGroupApprovers(event.parentId());
-      gateApplier.applyGroupCompletion(gateRef, status, approvedBy, event.tenancyId());
+      final String resolutionTypeName = resolveParentResolutionType(event.callerRef());
+      gateApplier.applyGroupCompletion(gateRef, status, approvedBy, resolutionTypeName, event.tenancyId());
       return;
     }
 
@@ -286,5 +287,17 @@ public class WorkItemLifecycleAdapter {
             return null;
         }
     }
+
+    private String resolveParentResolutionType(final String callerRef) {
+        try {
+            return workItemCreator.findByCallerRef(callerRef)
+                                  .map(WorkItemRef::resolutionTypeName)
+                                  .orElse(null);
+        } catch (final Exception e) {
+            LOG.warnf(e, "Failed to resolve parent resolution type for callerRef=%s", callerRef);
+            return null;
+        }
+    }
+
 
 }

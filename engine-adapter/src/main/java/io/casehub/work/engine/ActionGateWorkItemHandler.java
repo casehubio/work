@@ -86,6 +86,7 @@ public class ActionGateWorkItemHandler {
                                      .callerRef(callerRef)
                                      .scope(event.gateRequired().scope())
                                      .tenancyId(event.tenancyId())
+                                     .resolutionTypeName(event.resolutionTypeName())
                                      .build();
 
         if (event.gateRequired().quorum() != null) {
