@@ -245,7 +245,7 @@ Both scheduler modules become thin adapters (~20 lines each):
 
 | Class | Implements | Role |
 |-------|-----------|------|
-| `DbSchedulerJobScheduler` | `JobScheduler` | Maps `ScheduledJobRequest` → db-scheduler tasks. Maps `JobType` → task name. Implements `schedule`, `cancel`, `cancelGroup`, `exists`. |
+| `DbSchedulerJobScheduler` | `JobScheduler` | Maps `ScheduledJobRequest` → db-scheduler tasks. Uses single `"scheduled-job"` task name with `JobType` dispatched via task data. Implements `schedule`, `cancel`, `cancelGroup`, `exists`. |
 | `DbSchedulerWorkerExecutionManager` | `WorkerExecutionManager` (`@WorkerBackend`) | Submits worker execution as one-time tasks. Tracks active work via db-scheduler query API. |
 | `DbSchedulerLifecycle` | CDI producer | Builds `Scheduler` from injected `DataSource` on `StartupEvent`, registers task definitions, starts polling. Stops on `ShutdownEvent`. Produces `SchedulerClient` as `@ApplicationScoped`. |
 | `WorkerExecutionTaskHandler` | db-scheduler `ExecutionHandler` | Thin adapter: deserializes `WorkerTaskData` from task data, calls `WorkerExecutionOrchestrator.execute()`. |
@@ -254,34 +254,73 @@ Both scheduler modules become thin adapters (~20 lines each):
 | `MilestoneSLATimeoutTaskHandler` | `ExecutionHandler` | Checks milestone is still ACTIVE, publishes `MilestoneSLAViolatedEvent`. |
 | `DbSchedulerRetryService` | `RetryHandler` | Thin adapter: delegates to `RetryOrchestrator` with db-scheduler reschedule callback. |
 
+### Instance ID and Group Mapping
+
+db-scheduler identifies tasks by `(taskName, instanceId)` — a flat two-dimensional key. The engine's `JobIdentifier` has `(name, group)` — e.g., `JobIdentifier.of("binding-" + bindingName, "case-" + caseId)`. Quartz maps this directly to `JobKey(name, group)` with first-class group queries. db-scheduler has no group concept.
+
+**Convention:** Encode both `JobIdentifier` dimensions into the instance ID as `"{group}:{name}"`.
+
+| SPI method | db-scheduler mapping |
+|------------|---------------------|
+| `schedule(request)` | `schedulerClient.schedule(TaskInstanceId.of("scheduled-job", jobId.getGroup() + ":" + jobId.getName()), taskData, executionTime)` |
+| `cancel(jobId)` | `schedulerClient.cancel(TaskInstanceId.of("scheduled-job", jobId.getGroup() + ":" + jobId.getName()))` — O(1) lookup |
+| `exists(jobId)` | `schedulerClient.getScheduledExecution(TaskInstanceId.of("scheduled-job", jobId.getGroup() + ":" + jobId.getName())).isPresent()` |
+| `cancelGroup(groupName)` | See below |
+
+**`cancelGroup` strategy:** db-scheduler has no prefix-based query, but `SchedulerClient.getScheduledExecutionsForTask("scheduled-job")` returns all instances for the task. Filter by instance ID prefix `groupName + ":"`, cancel each match:
+
+```java
+public Uni<Integer> cancelGroup(String groupName) {
+    String prefix = groupName + ":";
+    List<ScheduledExecution<Object>> toCancel = new ArrayList<>();
+    schedulerClient.getScheduledExecutionsForTask(
+        "scheduled-job", Object.class, toCancel::add);
+    int count = 0;
+    for (var exec : toCancel) {
+        if (exec.getTaskInstance().getId().startsWith(prefix)) {
+            schedulerClient.cancel(exec.getTaskInstance());
+            count++;
+        }
+    }
+    return Uni.createFrom().item(count);
+}
+```
+
+This is O(n) where n is the total number of scheduled jobs — acceptable since a case has at most a few dozen scheduled triggers. No direct SQL is needed.
+
+**Single task name rationale:** All `JobScheduler`-path tasks (`SCHEDULED_TRIGGER_UNCONDITIONAL`, `SCHEDULED_TRIGGER_CONDITIONAL`, `MILESTONE_SLA_TIMEOUT`) use a single `"scheduled-job"` task name. The `JobType` is stored in task data and the handler dispatches accordingly. This preserves `JobIdentifier`'s single-namespace semantics — `cancel(jobId)` and `exists(jobId)` are O(1) lookups without needing to know the `JobType`. Multiple task names would require trying all 3 names per cancel/exists call.
+
+**Worker execution path** uses a separate task name `"worker-execution"` with a different key convention — the compound key from `WorkerExecutionKeys` (see below).
+
 ### Worker Execution Submission Path
 
 `DbSchedulerWorkerExecutionManager.submit()` creates a one-time db-scheduler task:
 
 1. **Task name:** `"worker-execution"` — constant, same for all worker executions.
-2. **Instance ID:** Uses `inputDataHash` for idempotency (same key role as Quartz `JobKey`).
+2. **Instance ID:** Uses `WorkerExecutionKeys.inputDataHash(caseId, workerName, capabilityName, inputData)` — the existing compound key utility in common. Produces `"{caseId}:{workerName}:{capabilityName}:{sha256(inputData)}"`, same key that Quartz uses as `JobKey` name.
 3. **Task data:** Serializes `eventLogId`, `workerId`, `caseHubInstanceUuid`, `tenancyId`, `bindingName`, `signalId` as a JSON map in the task's `data` field.
 4. **Execution time:** `Instant.now()` for immediate execution.
 
 ```java
 public void submit(Long eventLogId, CaseInstance instance, Worker worker,
                    Capability capability, Map<String, Object> inputData) {
-    String inputDataHash = computeHash(inputData);
+    String idempotencyKey = WorkerExecutionKeys.inputDataHash(
+        instance.getUuid(), worker.name(), capability.name(), inputData);
     Map<String, Object> taskData = Map.of(
         "eventLogId", eventLogId.toString(),
         "workerId", worker.name(),
         "caseHubInstanceUuid", instance.getUuid().toString(),
         "tenancyId", instance.getTenancyId(),
-        "inputDataHash", inputDataHash
+        "inputDataHash", idempotencyKey
         // bindingName, signalId added when present
     );
     schedulerClient.schedule(
-        workerExecutionTask.instance(inputDataHash, taskData),
+        workerExecutionTask.instance(idempotencyKey, taskData),
         Instant.now());
 }
 ```
 
-Idempotency: db-scheduler uses the instance ID (`inputDataHash`) as a unique key per task name. Scheduling with a duplicate instance ID is a no-op — same guarantee as Quartz's `JobKey`.
+Idempotency: the compound key includes `caseId`, `workerName`, `capabilityName`, and a hash of the input data — preventing cross-case/cross-worker collisions. db-scheduler uses the instance ID as a unique key per task name. Scheduling with a duplicate instance ID is a no-op — same guarantee as Quartz's `JobKey`.
 
 ### Lifecycle Wiring
 
