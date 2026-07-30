@@ -2,37 +2,34 @@
 
 ## Last Session
 
-Phase 2.5b — structured personality composition. Designed, reviewed ($33.73 adversarial review, 21 issues), and implemented the incremental composition experiment across eidos (2 commits on main: `defaultProfile()` on VocabularyTerm, YAML registrar mbtiType/dispositionProfile support) and examples (profile switching with 4 descriptor variants). Ran the autonomous scenario with composite profile (Jungian + Belbin) — POISONED in 91 events. Cognitive style visibly drove character behavior: Te-dominant Hooded Claw schemed systematically, Fe-dominant Penelope trusted everyone, Fi-dominant Ant Hill Mob followed gut instinct.
+Fix CI chain across qhorus → engine → work. Root cause: `MessageReceivedEvent` in casehub-qhorus-api gained 2 new fields (`target`, `actorType`) in commit 79a1627f but tests in downstream modules weren't updated. This broke qhorus CI, which prevented SNAPSHOT publish, which cascaded to engine and work.
 
-Key design insight from eidos#107 mapping: Jungian + DISC = redundant (both project onto same Conscientiousness axes). Jungian + Belbin = additive (cognitive style + team role are orthogonal). Thomas-Kilmann is implicit in every Jungian step.
+## Changes Made to Peer Repos
+
+### casehubio/qhorus (main)
+
+- **f5bd0270** `fix(#386): update KafkaMessageObserverTest for MessageReceivedEvent target/actorType fields` — Added `null, null` for `target` and `actorType` in 3 constructor calls in `KafkaMessageObserverTest.java`.
+- **8dc2fc1b** `fix(#386): update websocket and webhook observer tests for MessageReceivedEvent arity` — Same fix in `WebSocketMessageObserverTest.java` (6 calls) and `WebhookMessageObserverTest.java` (1 call). These were masked by kafka-observer failing first.
+- Issue created: casehubio/qhorus#386
+
+### casehubio/engine (main)
+
+- **55b8397e** `fix(#828): update inbound module tests for MessageReceivedEvent target/actorType fields` — Closes #828, Refs #237. Added `null, null` for `target` and `actorType` in 4 constructor calls across `InboundWorkItemBridgeGuardTest.java` and `InboundWorkItemBridgeTest.java`. These were masked by the runtime module failing first in CI.
+- Issue created: casehubio/engine#828
+
+## CI Status (at session end)
+
+- **Qhorus CI** — run 30535472524 (8dc2fc1) re-running after flaky WatchdogAlertE2ETest failure. Compilation clean. Must go green to publish qhorus-api SNAPSHOT.
+- **Engine CI** — run 30534722286 failed (expected — stale qhorus-api SNAPSHOT). Needs re-trigger after qhorus publishes.
+- **Work CI** — needs re-trigger after engine SNAPSHOT publishes. No code changes needed in work repo.
 
 ## Immediate Next Step
 
-File the AffordanceRenderer issue in casehub-blocks (`wacky-manor/docs/issues/blocks-affordance-renderer.md` — draft ready, gh auth working). Lower priority than eidos#122 (vocab stress testing).
-
-## Cross-Module
-
-**Enabled** (we delivered, downstream work now unblocked):
-- `eidos` — defaultProfile() + YAML mbtiType support landed on main (enables any consumer to use Jungian profiles via descriptors.yaml) · XS · Low
+1. Wait for qhorus CI to go green (publishes qhorus-api SNAPSHOT)
+2. Re-trigger engine CI: `gh workflow run --repo casehubio/engine "Build and Publish"`
+3. Wait for engine CI to go green (publishes engine-api/engine-common SNAPSHOT)
+4. Re-trigger work CI: `gh workflow run --repo casehubio/work "Build and Test"`
 
 ## What's Left
 
-- casehubio/garden#2 — extend persistence-backend-cdi-priority.md with Tier 3 · S · Low
-- eidos#123 — close issue (YAML registrar work is done, commits on main) · XS · Low
-
-## What's Next
-
-| # | Description | Scale | Complexity | Notes |
-|---|---|---|---|---|
-| eidos#122 | Vocab imbue-and-verify test suite in eidos-eval | M | Med | Per-vocabulary isolation tests — proves each framework works independently |
-| examples#2 | Staged layer comparison (baseline/jungian/belbin/composite) | M | Med | Depends on eidos#122; 12 scenario runs with eval judges |
-| — | Phase 2.6: ObservationAccumulator + AffordanceRenderer | S | Med | AffordanceRenderer issue draft ready to file |
-| — | Phase 2.7: Live LLM narrator — wire NarratorAgent | S | Low | NarratorAgent class exists, not wired |
-
-## References
-
-- Spec: `work/specs/2026-07-29-phase-2.5b-structured-personality-composition-design.md`
-- Plan: `work/plans/2026-07-29-phase-2.5b-structured-personality-composition.md`
-- Design review: `~/adr/casehub-examples/phase-2.5b-structured-personality-composition-20260729-215532/`
-- Memory: `project_wacky-manor.md`
-- Character catalog: spec §Wacky Races Character Catalog (12 characters with Jungian/Belbin profiles)
+- Nothing in work repo itself — the `ActionGateWorkItemHandler` code is correct, just waiting for upstream SNAPSHOT resolution.
