@@ -11,7 +11,7 @@
 
     <artifactId>casehub-work-engine-adapter</artifactId>
     <name>CaseHub Work :: Engine Adapter</name>
-    <description>Bridge between casehub-work WorkItemLifecycleEvent and CaseHub engine blackboard PlanItem lifecycle</description>
+    <description>Bridge between casehub-work WorkItemLifecycleEvent and CaseHub engine planning PlanItem lifecycle</description>
 
     <dependencies>
         <dependency>

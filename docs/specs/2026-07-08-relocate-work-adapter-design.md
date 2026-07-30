@@ -104,7 +104,7 @@ work/engine-adapter/
 ```
 
 **POM:** Re-parent under `casehub-work-parent`. Dependencies:
-- Compile: `casehub-engine-blackboard`, `casehub-engine` (runtime), `casehub-work-api`, `casehub-platform`, `quarkus-hibernate-orm`, `quarkus-arc`
+- Compile: `casehub-engine-planning`, `casehub-engine` (runtime), `casehub-work-api`, `casehub-platform`, `quarkus-hibernate-orm`, `quarkus-arc`
 - Test: `casehub-work` (runtime), `casehub-engine-persistence-memory`, `casehub-engine-scheduler-quartz`, `casehub-work-persistence-memory`, `quarkus-jdbc-h2`, `casehub-ledger`, `casehub-ledger-testing`, `casehub-engine-ledger`, `quarkus-junit5`, `assertj-core`, `awaitility`
 
 Engine dependency versions are managed by `casehub-parent` BOM (already imported by work's parent pom). Engine deps that use `${project.version}` in the old pom need explicit `${version.io.casehub}` or version from the BOM.
