@@ -248,10 +248,11 @@ Both scheduler modules become thin adapters (~20 lines each):
 | `DbSchedulerJobScheduler` | `JobScheduler` | Maps `ScheduledJobRequest` → db-scheduler tasks. Uses single `"scheduled-job"` task name with `JobType` dispatched via task data. Implements `schedule`, `cancel`, `cancelGroup`, `exists`. |
 | `DbSchedulerWorkerExecutionManager` | `WorkerExecutionManager` (`@WorkerBackend`) | Submits worker execution as one-time tasks. Tracks active work via db-scheduler query API. |
 | `DbSchedulerLifecycle` | CDI producer | Builds `Scheduler` from injected `DataSource` on `StartupEvent`, registers task definitions, starts polling. Stops on `ShutdownEvent`. Produces `SchedulerClient` as `@ApplicationScoped`. |
-| `WorkerExecutionTaskHandler` | db-scheduler `ExecutionHandler` | Thin adapter: deserializes `WorkerTaskData` from task data, calls `WorkerExecutionOrchestrator.execute()`. |
-| `ScheduledTriggerTaskHandler` | `ExecutionHandler` | Loads case, verifies RUNNING state, publishes `WorkerScheduleEvent`. |
-| `ConditionalScheduledTriggerTaskHandler` | `ExecutionHandler` | Same as above but evaluates binding `when` condition first. |
-| `MilestoneSLATimeoutTaskHandler` | `ExecutionHandler` | Checks milestone is still ACTIVE, publishes `MilestoneSLAViolatedEvent`. |
+| `WorkerExecutionTaskHandler` | db-scheduler `ExecutionHandler` | Thin adapter: deserializes `WorkerTaskData` from task data, calls `WorkerExecutionOrchestrator.execute()`. Registered as handler for `"worker-execution"` task. |
+| `ScheduledJobDispatchHandler` | db-scheduler `ExecutionHandler` | Registered as the single handler for `"scheduled-job"` task. Reads `JobType` from task data, delegates to the appropriate `ScheduledJobHandler` bean. |
+| `ScheduledTriggerTaskHandler` | `ScheduledJobHandler` | Loads case, verifies RUNNING state, publishes `WorkerScheduleEvent`. |
+| `ConditionalScheduledTriggerTaskHandler` | `ScheduledJobHandler` | Same as above but evaluates binding `when` condition first. |
+| `MilestoneSLATimeoutTaskHandler` | `ScheduledJobHandler` | Checks milestone is still ACTIVE, publishes `MilestoneSLAViolatedEvent`. |
 | `DbSchedulerRetryService` | `RetryHandler` | Thin adapter: delegates to `RetryOrchestrator` with db-scheduler reschedule callback. |
 
 ### Instance ID and Group Mapping
@@ -288,7 +289,28 @@ public Uni<Integer> cancelGroup(String groupName) {
 
 This is O(n) where n is the total number of scheduled jobs — acceptable since a case has at most a few dozen scheduled triggers. No direct SQL is needed.
 
-**Single task name rationale:** All `JobScheduler`-path tasks (`SCHEDULED_TRIGGER_UNCONDITIONAL`, `SCHEDULED_TRIGGER_CONDITIONAL`, `MILESTONE_SLA_TIMEOUT`) use a single `"scheduled-job"` task name. The `JobType` is stored in task data and the handler dispatches accordingly. This preserves `JobIdentifier`'s single-namespace semantics — `cancel(jobId)` and `exists(jobId)` are O(1) lookups without needing to know the `JobType`. Multiple task names would require trying all 3 names per cancel/exists call.
+**Single task name rationale:** All `JobScheduler`-path tasks (`SCHEDULED_TRIGGER_UNCONDITIONAL`, `SCHEDULED_TRIGGER_CONDITIONAL`, `MILESTONE_SLA_TIMEOUT`) use a single `"scheduled-job"` task name. db-scheduler allows exactly one `ExecutionHandler` per task name, so a `ScheduledJobDispatchHandler` is registered as the handler for `"scheduled-job"`. It reads `JobType` from the task data and delegates to the appropriate `ScheduledJobHandler` bean:
+
+```java
+@ApplicationScoped
+class ScheduledJobDispatchHandler implements ExecutionHandler<ScheduledJobData> {
+    @Inject ScheduledTriggerTaskHandler unconditional;
+    @Inject ConditionalScheduledTriggerTaskHandler conditional;
+    @Inject MilestoneSLATimeoutTaskHandler slaTimeout;
+
+    void execute(TaskInstance<ScheduledJobData> task, ExecutionContext ctx) {
+        switch (task.getData().jobType()) {
+            case SCHEDULED_TRIGGER_UNCONDITIONAL -> unconditional.handle(task);
+            case SCHEDULED_TRIGGER_CONDITIONAL -> conditional.handle(task);
+            case MILESTONE_SLA_TIMEOUT -> slaTimeout.handle(task);
+        }
+    }
+}
+```
+
+The three handler classes implement `ScheduledJobHandler` (an engine-internal interface, not db-scheduler's `ExecutionHandler`) and are CDI beans injected into the dispatcher.
+
+This preserves `JobIdentifier`'s single-namespace semantics — `cancel(jobId)` and `exists(jobId)` are O(1) lookups without needing to know the `JobType`. Multiple task names would require trying all 3 names per cancel/exists call.
 
 **Worker execution path** uses a separate task name `"worker-execution"` with a different key convention — the compound key from `WorkerExecutionKeys` (see below).
 
@@ -417,7 +439,7 @@ Tasks are marked complete from db-scheduler's perspective on every execution. Re
 - SPI javadoc cleanup (`WorkerExecutionManager`, `SchedulerService`, `ScheduleTrigger`, `CronSchedule`)
 - `WorkerExecutionOrchestrator` and `RetryOrchestrator` extraction to `common/internal/executor/`
 - `WorkerTaskData` record and `RetryHandler`/`RescheduleCallback` interfaces in `common/internal/executor/`
-- `scheduler-dbscheduler` module with all 8 production classes
+- `scheduler-dbscheduler` module with all 9 production classes
 - `JobSchedulerContractTest` in common
 - Flyway migration for db-scheduler table
 - Configuration properties
