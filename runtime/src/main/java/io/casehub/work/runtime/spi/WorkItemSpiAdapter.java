@@ -106,6 +106,17 @@ public class WorkItemSpiAdapter implements WorkItemCreator, WorkItemLifecycle {
         return toRef(parent);
     }
 
+    @Override
+    public java.util.List<String> findChildApprovers(final java.util.UUID parentId) {
+        return workItemService.findChildrenByParentId(parentId).stream()
+                              .filter(child -> child.status == io.casehub.work.api.WorkItemStatus.COMPLETED)
+                              .map(child -> child.assigneeId)
+                              .filter(java.util.Objects::nonNull)
+                              .distinct()
+                              .sorted()
+                              .toList();
+    }
+
 
     private boolean isTerminal(final UUID id) {
         return workItemService.findById(id)

@@ -48,4 +48,9 @@ public interface WorkItemCreator {
         throw new UnsupportedOperationException("Multi-instance creation not supported");
     }
 
+    default java.util.List<String> findChildApprovers(java.util.UUID parentId) {
+        return java.util.List.of();
+    }
+
+
 }

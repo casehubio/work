@@ -17,22 +17,24 @@ package io.casehub.work.engine;
 
 import io.casehub.api.context.ContextLayer;
 import io.casehub.api.model.TaskStatus;
-import io.casehub.blackboard.plan.CasePlanModel;
-import io.casehub.blackboard.plan.PlanItem;
-import io.casehub.blackboard.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.event.CaseContextChangedEvent;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.model.CaseInstance;
 import io.casehub.engine.common.spi.CrossTenantCaseInstanceRepository;
+import io.casehub.engine.planning.plan.CasePlanModel;
+import io.casehub.engine.planning.plan.PlanItem;
+import io.casehub.engine.planning.registry.BlackboardRegistry;
 import io.casehub.work.api.GroupStatus;
 import io.casehub.work.api.WorkItemEvent;
 import io.casehub.work.api.WorkItemGroupLifecycleEvent;
 import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.api.spi.WorkItemCreator;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
+import java.util.UUID;
 import org.jboss.logging.Logger;
 
 import java.util.List;
@@ -69,8 +71,10 @@ public class WorkItemLifecycleAdapter {
   @Inject PlanItemCompletionApplier applier;
 
   @Inject ActionGateCompletionApplier gateApplier;
+  @Inject WorkItemCreator workItemCreator;
 
-  public void onWorkItemLifecycle(@ObservesAsync WorkItemEvent wie) {
+
+    public void onWorkItemLifecycle(@ObservesAsync WorkItemEvent wie) {
 
     final WorkItemStatus status = wie.status();
 
@@ -116,7 +120,8 @@ public class WorkItemLifecycleAdapter {
     CallerRef ref = CallerRef.parse(event.callerRef());
 
     if (ref instanceof GateCallerRef gateRef) {
-      gateApplier.applyGroupCompletion(gateRef, status, event.tenancyId());
+      final String approvedBy = resolveGroupApprovers(event.parentId());
+      gateApplier.applyGroupCompletion(gateRef, status, approvedBy, event.tenancyId());
       return;
     }
 
@@ -271,4 +276,15 @@ public class WorkItemLifecycleAdapter {
             final String tenancyId) {
         gateApplier.apply(gateRef, status, ref, tenancyId);
     }
+
+    private String resolveGroupApprovers(final UUID parentId) {
+        try {
+            var approvers = workItemCreator.findChildApprovers(parentId);
+            return approvers.isEmpty() ? null : String.join(",", approvers);
+        } catch (final Exception e) {
+            LOG.warnf(e, "Failed to resolve group approvers for parentId=%s", parentId);
+            return null;
+        }
+    }
+
 }

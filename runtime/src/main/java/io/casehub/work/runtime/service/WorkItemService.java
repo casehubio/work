@@ -25,9 +25,9 @@ import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemLabel;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
-import io.casehub.work.runtime.repository.WorkItemRelationStore;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.runtime.repository.WorkItemRelationStore;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -696,6 +696,10 @@ public class WorkItemService {
                              }
                          }));
         });
+    }
+
+    public List<WorkItem> findChildrenByParentId(final UUID parentId) {
+        return workItemStore.findByParentId(parentId);
     }
 
 
