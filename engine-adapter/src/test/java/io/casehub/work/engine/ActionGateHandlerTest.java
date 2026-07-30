@@ -60,7 +60,7 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 class ActionGateHandlerTest {
 
-  private static final String TENANCY_ID = "test-tenant";
+  private static final String TENANCY_ID = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
 
   @Inject ActionGateWorkItemHandler actionGateWorkItemHandler;
   @Inject ActionGateCompletionApplier actionGateCompletionApplier;

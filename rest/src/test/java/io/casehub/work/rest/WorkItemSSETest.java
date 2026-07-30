@@ -1,7 +1,9 @@
 package io.casehub.work.rest;
 
-import static io.restassured.RestAssured.given;
-import static org.assertj.core.api.Assertions.assertThat;
+import io.quarkus.test.common.http.TestHTTPResource;
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.http.ContentType;
+import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
 import java.net.URI;
@@ -14,11 +16,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.Test;
-
-import io.quarkus.test.common.http.TestHTTPResource;
-import io.quarkus.test.junit.QuarkusTest;
-import io.restassured.http.ContentType;
+import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration and end-to-end tests for the WorkItem SSE event stream.
@@ -74,15 +73,16 @@ class WorkItemSSETest {
 
     @Test
     void happyPath_createWorkItem_createdEventAppearsInStream() throws Exception {
-        final List<String> dataLines = new CopyOnWriteArrayList<>();
-        final CountDownLatch latch = new CountDownLatch(1);
+        final List<String>   dataLines = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch     = new CountDownLatch(1);
+        final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/events?type=created", dataLines, latch);
+                connectSseLinesAsync("workitems/events?type=created", dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });
-        Thread.sleep(1000);
+        assertThat(connected.await(5, TimeUnit.SECONDS)).as("SSE connection established").isTrue();
         final String itemId = createWorkItem();
         assertThat(latch.await(10, TimeUnit.SECONDS)).as("Expected CREATED event for " + itemId).isTrue();
         assertThat(dataLines.get(0)).contains("created");
@@ -93,16 +93,17 @@ class WorkItemSSETest {
 
     @Test
     void e2e_workItemIdFilter_receivesOnlyTargetWorkItemEvents() throws Exception {
-        final String targetId = createWorkItem();
-        final List<String> dataLines = new CopyOnWriteArrayList<>();
-        final CountDownLatch latch = new CountDownLatch(1);
+        final String         targetId  = createWorkItem();
+        final List<String>   dataLines = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch     = new CountDownLatch(1);
+        final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/events?workItemId=" + targetId, dataLines, latch);
+                connectSseLinesAsync("workitems/events?workItemId=" + targetId, dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });
-        Thread.sleep(1000);
+        assertThat(connected.await(5, TimeUnit.SECONDS)).as("SSE connection established").isTrue();
         createWorkItem(); // noise — should NOT appear
         given().put("/workitems/" + targetId + "/claim?claimant=alice").then().statusCode(200);
         assertThat(latch.await(10, TimeUnit.SECONDS)).as("Expected event for target within 4s").isTrue();
@@ -115,16 +116,17 @@ class WorkItemSSETest {
 
     @Test
     void e2e_perWorkItemAlias_deliversEvents() throws Exception {
-        final String itemId = createWorkItem();
-        final List<String> dataLines = new CopyOnWriteArrayList<>();
-        final CountDownLatch latch = new CountDownLatch(1);
+        final String         itemId    = createWorkItem();
+        final List<String>   dataLines = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch     = new CountDownLatch(1);
+        final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/" + itemId + "/events", dataLines, latch);
+                connectSseLinesAsync("workitems/" + itemId + "/events", dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });
-        Thread.sleep(1000);
+        assertThat(connected.await(5, TimeUnit.SECONDS)).as("SSE connection established").isTrue();
         given().put("/workitems/" + itemId + "/claim?claimant=bob").then().statusCode(200);
         assertThat(latch.await(10, TimeUnit.SECONDS)).as("Expected event via per-WorkItem alias").isTrue();
         assertThat(dataLines.get(0)).contains(itemId);
@@ -135,16 +137,17 @@ class WorkItemSSETest {
 
     @Test
     void e2e_typeFilter_onlyDeliversMatchingEventType() throws Exception {
-        final String itemId = createWorkItem();
-        final List<String> dataLines = new CopyOnWriteArrayList<>();
-        final CountDownLatch latch = new CountDownLatch(1);
+        final String         itemId    = createWorkItem();
+        final List<String>   dataLines = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch     = new CountDownLatch(1);
+        final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/events?type=assigned", dataLines, latch);
+                connectSseLinesAsync("workitems/events?type=assigned", dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });
-        Thread.sleep(1000);
+        assertThat(connected.await(5, TimeUnit.SECONDS)).as("SSE connection established").isTrue();
         createWorkItem(); // fires CREATED — should not trigger latch (filter=assigned)
         given().put("/workitems/" + itemId + "/claim?claimant=carol").then().statusCode(200);
         assertThat(latch.await(10, TimeUnit.SECONDS)).as("Expected ASSIGNED event").isTrue();
@@ -163,13 +166,17 @@ class WorkItemSSETest {
     }
 
     private void connectSseLinesAsync(final String path, final List<String> collector,
-            final CountDownLatch latch) throws Exception {
+                                      final CountDownLatch latch, final CountDownLatch connectedLatch) throws Exception {
         final HttpClient client = HttpClient.newHttpClient();
-        final String p = path.startsWith("/") ? path.substring(1) : path;
-        client.send(HttpRequest.newBuilder().uri(baseUri.resolve(p))
-                .header("Accept", "text/event-stream").build(),
-                HttpResponse.BodyHandlers.ofLines())
-                .body()
+        final String     p      = path.startsWith("/") ? path.substring(1) : path;
+        final HttpResponse<java.util.stream.Stream<String>> response =
+                client.send(HttpRequest.newBuilder().uri(baseUri.resolve(p))
+                                       .header("Accept", "text/event-stream").build(),
+                            HttpResponse.BodyHandlers.ofLines());
+        if (connectedLatch != null) {
+            connectedLatch.countDown();
+        }
+        response.body()
                 .filter(line -> line.startsWith("data:"))
                 .peek(collector::add)
                 .findFirst()
