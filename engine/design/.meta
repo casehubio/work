@@ -1,10 +1,9 @@
-branch: issue-510-case-level-sla-timer
-state: scaffolded
-project-sha: 0c77c14e63d6f91259ffc5b7a89747593751b621
-date: 2026-08-14
-issue: 510
+branch: issue-813-alternative-scheduler-spi
+project-sha: slot-creation
+date: 2026-07-29
+issue: 813
 issue-repo: casehubio/engine
-covers: 510
-flyway-next-v: none
+covers: 813
+flyway-next-v: unknown
 design-repo: project
 design-section-hashes: 

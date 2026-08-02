@@ -1,1 +1,1 @@
-# Design Journal — issue-510-case-level-sla-timer
+# Design Journal — issue-813-alternative-scheduler-spi
