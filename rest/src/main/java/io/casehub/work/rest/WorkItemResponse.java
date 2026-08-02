@@ -86,10 +86,6 @@ public record WorkItemResponse(
         String excludedUsers,
         /** Hierarchical scope path e.g. {@code "casehubio/devtown/pr-review"}; null = root scope. */
         String scope,
-        /** Progress percentage (0–100); null when not set. */
-        Integer percentComplete,
-        /** Free-text progress note; null when not set. */
-        String statusNote,
         String candidateScores,
         String routingExperiences) {
 }

@@ -36,3 +36,14 @@ Use `ide_find_class` / `ide_find_symbol` to locate specific classes. This file d
 | `persistence-mongodb/` | Optional MongoDB-backed stores for all runtime/core/issue-tracker SPIs; Tier 2 `@Alternative @Priority(1)`. Drop-in replacement for JPA — add to classpath, no consumer changes needed. |
 | `integration-tests/` | `@QuarkusIntegrationTest` suite and native image validation |
 | `integration-tests-memory/` | Ephemeral deployment ITs — `persistence-memory` stores with dummy H2 datasource (no Flyway, no schema); verifies full CRUD without a real database |
+
+## Progress Modules (#237)
+
+| Module | Purpose |
+|---|---|
+| `progress-api/` | Pure Java: `ProgressInstance`, `ProgressStatus`, `StepStatus`, `StepDefinition`, `ProgressUpdatedEvent`, `ProgressChangeType`, `ProgressCreateRequest`, `RollupStrategy` SPI, `ConditionEvaluator` SPI, store SPIs. Package: `io.casehub.work.progress` |
+| `progress-core/` | Pure Java + Jandex: shape validators (percentage, count, step), DAG cycle detection, step dependency/condition validation, rollback detection, built-in rollup strategies (`count-completed`, `average-percentage`, `weighted-percentage`), `RollupEngine` |
+| `progress-runtime/` | Quarkus extension (`casehub-work-progress`): `ProgressService`, JPA entities (`ProgressInstanceEntity`, `ProgressEventEntity`), JPA stores, `RollupObserver` (`@ObservesAsync` + OCC retry), `ProgressEventBroadcaster` SPI + `LocalProgressEventBroadcaster`, `JqConditionEvaluator`. Flyway V7000. |
+| `progress-rest/` | JAX-RS: CRUD + query + step convenience + SSE streaming endpoints. `ProgressResource`, DTOs. Opt-in via dependency. |
+| `progress-deployment/` | `ProgressProcessor` @BuildStep — registers rollup strategy beans |
+| `progress-memory/` | In-memory stores (`@Alternative @Priority(100)`) for tests |

@@ -62,8 +62,6 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
     public Instant startedAt;
     public Instant completedAt;
     public Instant suspendedAt;
-    public Integer percentComplete;
-    public String statusNote;
     public List<MongoLabel> labels = new ArrayList<>();
     public Long version;
     public long accumulatedUnclaimedSeconds;
@@ -118,8 +116,6 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
         doc.startedAt = wi.startedAt;
         doc.completedAt = wi.completedAt;
         doc.suspendedAt = wi.suspendedAt;
-        doc.percentComplete = wi.percentComplete;
-        doc.statusNote = wi.statusNote;
         doc.version = wi.version;
         doc.accumulatedUnclaimedSeconds = wi.accumulatedUnclaimedSeconds;
         doc.lastReturnedToPoolAt = wi.lastReturnedToPoolAt;
@@ -179,8 +175,6 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
         wi.startedAt = startedAt;
         wi.completedAt = completedAt;
         wi.suspendedAt = suspendedAt;
-        wi.percentComplete = percentComplete;
-        wi.statusNote = statusNote;
         wi.version = version;
         wi.accumulatedUnclaimedSeconds = accumulatedUnclaimedSeconds;
         wi.lastReturnedToPoolAt = lastReturnedToPoolAt;

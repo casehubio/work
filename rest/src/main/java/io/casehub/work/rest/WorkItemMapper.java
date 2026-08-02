@@ -33,8 +33,6 @@ public final class WorkItemMapper {
                 wi.outputDataSchema,
                 wi.excludedUsers,
                 wi.scope,
-                wi.percentComplete,
-                wi.statusNote,
                 wi.candidateScores,
                 wi.routingExperiences);
     }
@@ -67,8 +65,6 @@ public final class WorkItemMapper {
                 wi.outputDataSchema,
                 wi.excludedUsers,
                 wi.scope,
-                wi.percentComplete,
-                wi.statusNote,
                 wi.candidateScores,
                 wi.routingExperiences);
     }

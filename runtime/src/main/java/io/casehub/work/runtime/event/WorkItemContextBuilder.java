@@ -80,10 +80,10 @@ public final class WorkItemContextBuilder {
         map.put("excludedUsers", workItem.excludedUsers);
         map.put("scope", workItem.scope);
         map.put("tenancyId", workItem.tenancyId);
-        map.put("percentComplete", workItem.percentComplete);
-        map.put("statusNote", workItem.statusNote);
         map.put("payloadTypeName", workItem.payloadTypeName);
         map.put("resolutionTypeName", workItem.resolutionTypeName);
+        map.put("candidateScores", workItem.candidateScores);
+        map.put("routingExperiences", workItem.routingExperiences);
         return map;
     }
 }

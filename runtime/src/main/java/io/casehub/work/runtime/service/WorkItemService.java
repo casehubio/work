@@ -764,22 +764,6 @@ public class WorkItemService {
     }
 
     @Transactional
-    public WorkItem progress(final UUID id, final String actorId, final Integer percentComplete,
-            final String statusNote) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Cannot report progress for WorkItem in status: " + item.status);
-        }
-        item.percentComplete = percentComplete;
-        item.statusNote = statusNote;
-        item.updatedAt = Instant.now();
-        final WorkItem saved = workItemStore.put(item);
-        audit(saved.id, "PROGRESS_UPDATE", actorId, statusNote);
-        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("PROGRESS_UPDATE", saved, actorId, statusNote));
-        return saved;
-    }
-
-    @Transactional
     public WorkItem extend(final UUID id, final Instant newExpiresAt, final String actorId) {
         if (newExpiresAt == null) {
             throw new IllegalArgumentException("newExpiresAt is required");

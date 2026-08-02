@@ -63,8 +63,6 @@ Returned by most lifecycle endpoints.
 | `outputDataSchema` | string (nullable) | JSON Schema for resolution validation |
 | `excludedUsers` | string (nullable) | Comma-separated excluded user IDs |
 | `scope` | string (nullable) | Hierarchical scope path |
-| `percentComplete` | integer (nullable) | Progress percentage (0–100), updated via `PUT /workitems/{id}/progress` |
-| `statusNote` | string (nullable) | Free-text status note from actor |
 | `candidateScores` | string (nullable) | JSON map of actor ID → routing score (e.g. `{"alice":0.85,"bob":0.72}`) |
 | `routingExperiences` | string (nullable) | JSON array of past similar cases from CBR routing |
 
@@ -463,27 +461,6 @@ Marks a WorkItem as OBSOLETE — superseded by context change. Callable from any
 **Body:** `WorkItemResponse`
 
 **Error:** `400` — WorkItem is already terminal
-
----
-
-### PUT /workitems/{id}/progress
-
-Reports progress on an IN_PROGRESS WorkItem. Updates percentComplete and statusNote without changing status.
-
-**Path parameter:** `id` — UUID
-**Header:** `X-Actor-Id` — string (actor reporting progress)
-
-**Request body:** `ProgressRequest`
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `percentComplete` | integer (0–100) | no | Progress percentage |
-| `statusNote` | string | no | Free-text status note |
-
-**Response:** `200 OK`
-**Body:** `WorkItemResponse`
-
-**Error:** `400` — WorkItem is not IN_PROGRESS
 
 ---
 

@@ -45,9 +45,10 @@ Each module owns its own version range. Flyway enforces uniqueness across all mo
 | V5003 | `casehub-work-queues` — migrate_to_subject_view |
 | V5004 | `casehub-work` runtime — label_rule_schema |
 | V6000–V6999 | `casehub-work-issue-tracker` |
-| V7000+ | next new optional module |
+| V7000–V7999 | `casehub-work-progress` (progress model — ProgressInstance, events) |
+| V8000+ | next new optional module |
 
-**Rule for a new module:** take the next free thousand above the highest used — currently V6000.
+**Rule for a new module:** take the next free thousand above the highest used — currently V7000.
 
 ---
 

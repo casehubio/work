@@ -378,16 +378,6 @@ public class WorkItemResource {
     }
 
     @PUT
-    @Path("/{id}/progress")
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response progress(@PathParam("id") final UUID id,
-            @QueryParam("actor") final String actor,
-            final ProgressRequest body) {
-        final WorkItem saved = workItemService.progress(id, actor, body.percentComplete(), body.statusNote());
-        return Response.ok(WorkItemMapper.toResponse(saved)).build();
-    }
-
-    @PUT
     @Path("/{id}/extend")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response extend(@PathParam("id") final UUID id,
