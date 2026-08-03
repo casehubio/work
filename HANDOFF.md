@@ -1,3 +1,5 @@
+*Updated: #648 closed — removed from backlog.*
+
 # HANDOFF — 2026-08-03
 
 ## Last Session
@@ -11,7 +13,6 @@ S/XS batch — closed #807 (goal abandonment), #648 (OutcomeRecorder.addAttestat
 
 ## What's Left
 
-- Ledger `issue-648-add-attestation` branch needs merge to main and push · XS · Low
 - Pre-existing `scheduler-quartz` build error (`ScheduledTriggerJob`/`ConditionalScheduledTriggerJob` — `WorkerScheduleEvent` constructor args) · S · Low
 - Pre-existing `engine-api` checkstyle errors · XS · Low
 
@@ -20,4 +21,3 @@ S/XS batch — closed #807 (goal abandonment), #648 (OutcomeRecorder.addAttestat
 | # | Description | Scale | Complexity | Notes |
 |---|-------------|-------|------------|-------|
 | #860 | Goal-capability mapping on AgentGoal for per-goal abandonment discrimination | S | Med | Follow-on from #807 — needs eidos change |
-| #648 | Close — ledger branch needs landing | XS | Low | Merge + push `issue-648-add-attestation` to ledger main |
