@@ -6,6 +6,7 @@ target/
 *.iml
 .DS_Store
 .claude/
+.mvn/maven.config
 # Stray Maven artifacts produced when mvn runs from project root
 /META-INF/
 /io/
