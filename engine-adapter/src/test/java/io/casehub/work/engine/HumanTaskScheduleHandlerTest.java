@@ -116,6 +116,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
     await()
@@ -141,6 +142,7 @@ class HumanTaskScheduleHandlerTest {
                 "irb-binding",
                 target,
                 Map.of("caseRef", "T-42"),
+                null,
                 null,
                 null,
                 null,
@@ -195,6 +197,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -227,6 +230,7 @@ class HumanTaskScheduleHandlerTest {
                 "irb-binding",
                 HumanTaskTarget.template(tmpl.id.toString()).build(),
                 Map.of("trialId", "T-99", "phase", "III"),
+                null,
                 null,
                 null,
                 null,
@@ -273,6 +277,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -306,6 +311,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -322,6 +328,7 @@ class HumanTaskScheduleHandlerTest {
                 "irb-binding",
                 HumanTaskTarget.template("not-a-uuid").build(),
                 Map.of(),
+                null,
                 null,
                 null,
                 null,
@@ -367,6 +374,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -397,6 +405,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 budgetDeadline,
+                null,
                 null,
                 null,
                 null,
@@ -433,6 +442,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -459,6 +469,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 deadline,
+                null,
                 null,
                 null,
                 null,
@@ -501,6 +512,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -536,6 +548,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -561,6 +574,7 @@ class HumanTaskScheduleHandlerTest {
                 "irb-binding",
                 target,
                 Map.of(),
+                null,
                 null,
                 null,
                 null,
@@ -607,6 +621,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -623,6 +638,7 @@ class HumanTaskScheduleHandlerTest {
                 "unknown-binding",
                 HumanTaskTarget.inline().title("Review").build(),
                 Map.of(),
+                null,
                 null,
                 null,
                 null,
@@ -667,6 +683,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -687,6 +704,7 @@ class HumanTaskScheduleHandlerTest {
                 "irb-binding",
                 target,
                 Map.of(),
+                null,
                 null,
                 null,
                 null,
@@ -732,6 +750,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -754,6 +773,7 @@ class HumanTaskScheduleHandlerTest {
                 "irb-binding",
                 target,
                 Map.of(),
+                null,
                 null,
                 null,
                 null,
@@ -796,6 +816,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -820,6 +841,7 @@ class HumanTaskScheduleHandlerTest {
                 "irb-binding",
                 target,
                 Map.of(),
+                null,
                 null,
                 null,
                 null,
@@ -866,6 +888,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -895,6 +918,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 // spec absent — do not override template defaults
             null,
+                null,
                 null,
                 null,
                 null,
@@ -937,6 +961,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -967,6 +992,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 Set.of("user-x", "user-y"),
+                null,
                 null,
                 null,
                 null,
@@ -1012,6 +1038,7 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 null,
+                null,
                 null
             ));
 
@@ -1036,7 +1063,7 @@ class HumanTaskScheduleHandlerTest {
                 new HumanTaskScheduleEvent(
                         caseId, TENANCY_ID, "irb-binding", target, Map.of(),
                         null, null, null, null, null, null, null, null, null,
-                        experiences, scores));
+                        experiences, scores, null));
 
         String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
         WorkItem created = workItemStore.scanAll().stream()
@@ -1057,7 +1084,7 @@ class HumanTaskScheduleHandlerTest {
                 new HumanTaskScheduleEvent(
                         caseId, TENANCY_ID, "irb-binding", target, Map.of(),
                         null, null, null, null, null, null, null, null, null,
-                        null, null));
+                        null, null, null));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElseThrow();
         assertThat(created.candidateScores).isNull();
@@ -1078,7 +1105,7 @@ class HumanTaskScheduleHandlerTest {
                         caseId, TENANCY_ID, "irb-binding",
                         HumanTaskTarget.template(tmpl.id.toString()).build(),
                         Map.of(), null, null, null, null, null, null, null, null, null,
-                        experiences, scores));
+                        experiences, scores, null));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElseThrow();
         assertThat(created.candidateScores).contains("charlie").contains("0.95");
