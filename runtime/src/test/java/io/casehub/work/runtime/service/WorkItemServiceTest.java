@@ -1,8 +1,28 @@
 package io.casehub.work.runtime.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.mock;
+import io.casehub.platform.api.preferences.MapPreferences;
+import io.casehub.platform.expression.DefaultExpressionEngineRegistry;
+import io.casehub.platform.expression.JexlExpressionEngine;
+import io.casehub.work.api.AssignmentDecision;
+import io.casehub.work.api.DeclineTarget;
+import io.casehub.work.api.LabelPersistence;
+import io.casehub.work.api.PolicyDecision;
+import io.casehub.work.api.ValidationMode;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemLabelRequest;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.core.strategy.CapabilityValidator;
+import io.casehub.work.core.strategy.WorkBroker;
+import io.casehub.work.runtime.config.WorkItemsConfig;
+import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
+import io.casehub.work.runtime.model.AuditEntry;
+import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.repository.AuditEntryStore;
+import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.runtime.repository.WorkItemStore;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -13,31 +33,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import io.casehub.platform.api.preferences.MapPreferences;
-import io.casehub.work.api.AssignmentDecision;
-import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
-import io.casehub.platform.expression.DefaultExpressionEngineRegistry;
-import io.casehub.platform.expression.JexlExpressionEngine;
-import io.casehub.work.api.DeclineTarget;
-import io.casehub.work.api.PolicyDecision;
-import io.casehub.work.api.ValidationMode;
-import io.casehub.work.core.strategy.CapabilityValidator;
-import io.casehub.work.core.strategy.WorkBroker;
-import io.casehub.work.api.WorkItemLabelRequest;
-import io.casehub.work.runtime.config.WorkItemsConfig;
-import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemType;
-import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 class WorkItemServiceTest {
 
@@ -1631,4 +1629,54 @@ class WorkItemServiceTest {
                 WorkItemQuery.builder().status(WorkItemStatus.COMPLETED).build());
         assertThat(result).isEmpty();
     }
+
+    @Test
+    void updateDeadline_setsNewExpiresAt() {
+        WorkItem wi          = service.create(basicRequest());
+        Instant  newDeadline = Instant.now().plus(48, ChronoUnit.HOURS);
+        WorkItem updated     = service.updateDeadline(wi.id, newDeadline, "admin");
+        assertThat(updated.expiresAt).isEqualTo(newDeadline);
+    }
+
+    @Test
+    void updateDeadline_allowsEarlierDeadline() {
+        WorkItem wi      = service.create(basicRequest());
+        Instant  earlier = Instant.now().plus(1, ChronoUnit.HOURS);
+        WorkItem updated = service.updateDeadline(wi.id, earlier, "admin");
+        assertThat(updated.expiresAt).isEqualTo(earlier);
+    }
+
+    @Test
+    void updateDeadline_writesAuditWithOldAndNew() {
+        WorkItem wi          = service.create(basicRequest());
+        Instant  oldDeadline = wi.expiresAt;
+        Instant  newDeadline = Instant.now().plus(48, ChronoUnit.HOURS);
+        service.updateDeadline(wi.id, newDeadline, "admin");
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        AuditEntry deadlineEntry = trail.stream()
+                                        .filter(a -> "DEADLINE_UPDATED".equals(a.event))
+                                        .findFirst().orElseThrow();
+        assertThat(deadlineEntry.actor).isEqualTo("admin");
+        assertThat(deadlineEntry.detail).contains("old=" + oldDeadline);
+        assertThat(deadlineEntry.detail).contains("new=" + newDeadline);
+    }
+
+    @Test
+    void updateDeadline_terminalStatus_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id, "user1");
+        service.start(wi.id, "user1");
+        service.complete(wi.id, "user1", "done", null);
+        Instant newDeadline = Instant.now().plus(48, ChronoUnit.HOURS);
+        assertThatThrownBy(() -> service.updateDeadline(wi.id, newDeadline, "admin"))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void updateDeadline_nullDeadline_throws() {
+        WorkItem wi = service.create(basicRequest());
+        assertThatThrownBy(() -> service.updateDeadline(wi.id, null, "admin"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
 }

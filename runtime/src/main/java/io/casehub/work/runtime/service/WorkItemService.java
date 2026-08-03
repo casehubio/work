@@ -786,6 +786,27 @@ public class WorkItemService {
     }
 
     @Transactional
+    public WorkItem updateDeadline(final UUID id, final Instant newDeadline, final String actorId) {
+        if (newDeadline == null) {
+            throw new IllegalArgumentException("newDeadline is required");
+        }
+        final WorkItem item = requireWorkItem(id);
+        if (item.status.isTerminal()) {
+            throw new IllegalStateException("Cannot update deadline on WorkItem in status: " + item.status);
+        }
+        final Instant oldDeadline = item.expiresAt;
+        item.expiresAt = newDeadline;
+        item.updatedAt = Instant.now();
+        final WorkItem saved = workItemStore.put(item);
+        timerService.rescheduleExpiry(saved.id, newDeadline);
+        audit(saved.id, "DEADLINE_UPDATED", actorId,
+              "old=" + oldDeadline + ", new=" + newDeadline);
+        lifecycleEmitter.emit(WorkItemLifecycleEvent.of("DEADLINE_UPDATED", saved, actorId, null));
+        return saved;
+    }
+
+
+    @Transactional
     public WorkItem addLabel(final UUID workItemId, final String path, final String appliedBy) {
         final WorkItem item = workItemStore.get(workItemId)
                 .orElseThrow(() -> new WorkItemNotFoundException(workItemId));

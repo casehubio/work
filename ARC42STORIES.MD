@@ -112,7 +112,7 @@ internal architectural concerns added incrementally across 35 build Chapters:
 | L1 Domain Baseline | WorkItem + AuditEntry entities, Storage SPI, JPA defaults, WorkItemService — the inbox foundation |
 | L2 REST API | `casehub-work-rest` module — WorkItemResource (7 sub-resources), DTOs, exception mappers, OpenAPI. Opt-in via dependency; extracted from runtime in #292 |
 | L3 Lifecycle Engine | ExpiryTimerJob, ClaimDeadlineTimerJob, ClaimSlaPolicy SPI, SlaBreachPolicy SPI, CDI lifecycle events |
-| L4 Label System | LabelVocabulary, MANUAL/INFERRED label persistence, FilterEngine (JEXL/JQ/Lambda), QueueView |
+| L4 Label System | LabelVocabulary, MANUAL/INFERRED label persistence, LabelRuleEngine (JEXL/JQ/Lambda), QueueView |
 | L5 Ledger Integration | WorkItemLedgerEntry (JOINED from LedgerEntry), hash chain, peer attestation, EigenTrust |
 | L6 Distribution | WorkItemEventBroadcaster SPI, LocalWorkItemEventBroadcaster @DefaultBean, PostgreSQL LISTEN/NOTIFY broadcaster |
 | L7 Optional Modules | SLA reports, AI (semantic routing + LLM assist), notifications, issue tracker, MongoDB persistence, Quarkus-Flow bridge |
@@ -125,7 +125,7 @@ Hard dependencies — order is non-negotiable:
 - C2 before C3: lifecycle transitions require service methods to exist first
 - C3 before C4: CDI events are emitted inside service transitions; transitions must exist
 - C6 (Ledger) after C4: `LedgerEventCapture @Observes WorkItemLifecycleEvent` — the event bus must exist first
-- C7 (Label Queues) before C16 (Confidence Routing): confidence-gated routing extends the filter engine from C7
+- C7 (Label Queues) before C16 (Confidence Routing): confidence-gated routing extends the label rule engine from C7
 - C18 (Module Separation) before C19 (Semantic AI + LLM Assist): semantic AI depends on the api/core SPI split
 - C26 (Broadcaster SPI) before C27 (Distributed SSE): PostgreSQL broadcaster implements the SPI extracted in C26
 - C33 (SlaBreachPolicy SPI) before C35 (Status Lifecycle): status correctness fixes (#243 EXPIRED in isTerminal, #244 Exhausted) depend on the sealed `BreachDecision` type from C33
@@ -151,7 +151,7 @@ C4Container
   }
 
   Container_Boundary(b4, "Layer: L4 Label System") {
-    Container(queues, "casehub-work-queues", "Optional Quarkus extension", "LabelVocabulary, FilterEngine (JEXL/JQ/Lambda), QueueView, WorkItemQueueEvent")
+    Container(queues, "casehub-work-queues", "Optional Quarkus extension", "LabelVocabulary, LabelRuleEngine (JEXL/JQ/Lambda), QueueView, WorkItemQueueEvent")
     Container(qdash, "casehub-work-queues-dashboard", "Optional Quarkus extension", "SSE-based queue dashboard UI")
   }
 
@@ -184,7 +184,7 @@ C4Container
 | `rest/` | `casehub-work-rest` | Jandex library | JAX-RS resources (12), request/response DTOs, exception mappers, WorkItemMapper; opt-in REST surface extracted from runtime (#292) |
 | `deployment/` | `casehub-work-deployment` | Quarkus deployment | Build-time processor, feature registration, `casehub.work.*` native config |
 | `persistence-memory/` | `casehub-work-persistence-memory` | In-memory persistence | InMemoryWorkItemStore, InMemoryAuditEntryStore, InMemoryWorkItemNoteStore, InMemoryIssueLinkStore, InMemoryRoutingCursorStore — `@Alternative @Priority(100)` (Tier 3) |
-| `queues/` | `casehub-work-queues` | Optional extension | LabelVocabulary, MANUAL/INFERRED label persistence, FilterEngine (JEXL/JQ/Lambda), FilterChain, QueueView, WorkItemQueueEventBroadcaster SPI |
+| `queues/` | `casehub-work-queues` | Optional extension | LabelVocabulary, MANUAL/INFERRED label persistence, LabelRuleEngine (JEXL/JQ/Lambda), QueueView, WorkItemQueueEventBroadcaster SPI |
 | `queues-dashboard/` | `casehub-work-queues-dashboard` | Optional extension | SSE queue dashboard UI |
 | `ledger/` | `casehub-work-ledger` | Optional extension | WorkItemLedgerEntry (JOINED from LedgerEntry), LedgerEventCapture @Observes, EigenTrust; depends on `casehub-ledger` |
 | `postgres-broadcaster/` | `casehub-work-postgres-broadcaster` | Optional extension | PostgresWorkItemEventBroadcaster @Alternative @Priority(1); no Flyway |
@@ -487,7 +487,7 @@ flowchart LR
 - C2 before C3: lifecycle transitions require service methods to exist
 - C3 before C4: CDI events are emitted inside service transitions; transitions must exist first
 - C6 (Ledger) after C4: `LedgerEventCapture @Observes WorkItemLifecycleEvent` — the event bus must exist
-- C7 (Label Queues) before C16 (Confidence Routing): C16 extends the filter engine from C7
+- C7 (Label Queues) before C16 (Confidence Routing): C16 extends the label rule engine from C7
 - C18 (Module Separation) before C19 (Semantic AI): semantic AI depends on the api/core SPI split
 - C26 (Broadcaster SPI) before C27 (Distributed SSE): PostgreSQL broadcaster implements the SPI from C26
 - C33 (SlaBreachPolicy SPI) before C35 (Status Lifecycle): C35 status correctness (#243 EXPIRED in isTerminal, #244 Exhausted) depends on sealed `BreachDecision` from C33
@@ -617,7 +617,7 @@ Before this chapter, lifecycle events had no tamper-evident record and actor tru
 **Delivered:** 2026-04-14 | **Issues:** #92
 
 **What this delivers**
-Before this chapter, WorkItems had no label-based routing and inbox queries returned unfiltered results. After: the optional `casehub-work-queues` module delivers `LabelVocabulary` (Path-based scope hierarchy), `WorkItemFilter` (JEXL/JQ/Lambda evaluators), `FilterChain`, `QueueView` named queries, and `WorkItemQueueEvent` CDI events; consuming apps define label vocabularies and query the inbox as named queue views.
+Before this chapter, WorkItems had no label-based routing and inbox queries returned unfiltered results. After: the optional `casehub-work-queues` module delivers `LabelVocabulary` (Path-based scope hierarchy), `LabelRuleEntity` (JEXL/JQ/Lambda evaluators), `QueueView` named queries, and `WorkItemQueueEvent` CDI events; consuming apps define label vocabularies and query the inbox as named queue views.
 
 **Accountability gaps closed**
 - No label-based routing audit → `WorkItemQueueEvent` fires on every queue membership change
@@ -781,10 +781,10 @@ Before this chapter, claim deadline breach had no configurable policy and breach
 **Delivered:** 2026-04-21 | **Issues:** Phase 11, #112–#114, Epic #100
 
 **What this delivers**
-Before this chapter, all WorkItems routed to the same candidate pool regardless of AI confidence metadata carried on the item. After: consuming apps register JEXL-based filter rules against the `FilterRegistryEngine`; rules that match on `confidenceScore` override candidate groups or priority, rerouting low-confidence items to a human review pool automatically.
+Before this chapter, all WorkItems routed to the same candidate pool regardless of AI confidence metadata carried on the item. After: consuming apps register JEXL-based label rules against the `LabelRuleEngine`; rules that match on `confidenceScore` override candidate groups or priority, rerouting low-confidence items to a human review pool automatically.
 
 **Accountability gaps closed**
-- No AI-driven routing differentiation → `FilterRegistryEngine` applies JEXL conditions to override routing on confidence threshold breach
+- No AI-driven routing differentiation → `LabelRuleEngine` applies JEXL conditions to override routing on confidence threshold breach
 
 **Layer Impact**
 | Layer | Delta |
@@ -1241,7 +1241,7 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 
 **Why conditions are evaluated at completion time, not at instantiation (ADR-0006):** `Outcome.condition` JEXL expressions can reference completion-time context (`resolution`, `actorId`, `reason`) that is not known at instantiation. Evaluating at instantiation to pre-filter `permittedOutcomes` would lose all runtime context. The full `List<Outcome>` (with conditions) is snapshotted at instantiation — consistent with schema snapshotting — and evaluated per-outcome at `complete()` / `reject()` time by `OutcomeValidator`.
 
-**Why JEXL as the condition expression language (ADR-0007):** `runtime.filter.JexlConditionEvaluator` was already present and used for filter rules, with an established `silent(true).strict(false)` profile and the same `workItem.*` context map. Reusing it means zero new Maven dependencies and one expression syntax for template authors. Tradeoff: `silent(true)` swallows both false conditions and broken expressions identically — syntax validation at template creation time is deferred.
+**Why JEXL as the condition expression language (ADR-0007):** `runtime.filter.JexlConditionEvaluator` was already present and used for label rules, with an established `silent(true).strict(false)` profile and the same `workItem.*` context map. Reusing it means zero new Maven dependencies and one expression syntax for template authors. Tradeoff: `silent(true)` swallows both false conditions and broken expressions identically — syntax validation at template creation time is deferred.
 
 #### Pattern Introduced
 
@@ -1312,7 +1312,7 @@ Not closed here: SLA breach (L3), label routing (L4), ledger recording (L5).
 - `runtime/src/main/java/io/casehub/work/runtime/api/AuditResource.java` — audit trail query endpoint at `@Path("/audit")`
 - `runtime/src/main/java/io/casehub/work/runtime/api/AsyncApiResource.java` — serves the AsyncAPI spec at `@Path("/q/asyncapi")`
 - `runtime/src/main/java/io/casehub/work/runtime/api/VocabularyResource.java` — vocabulary definition management at `@Path("/vocabulary")`
-- `runtime/src/main/java/io/casehub/work/runtime/filter/FilterRuleResource.java` — label filter rule CRUD at `@Path("/filter-rules")`
+- `runtime/src/main/java/io/casehub/work/runtime/filter/LabelRuleResource.java` — label rule CRUD at `@Path("/label-rules")`
 - `runtime/src/main/java/io/casehub/work/runtime/api/SpawnGroupResource.java` — spawn-group entity CRUD at `@Path("/spawn-groups")`
 - `runtime/src/main/java/io/casehub/work/runtime/api/CreateWorkItemRequest.java` — record DTO for HTTP request body; flat string fields decoded by the resource before service call
 - `runtime/src/main/java/io/casehub/work/runtime/model/WorkItemCreateRequest.java` — enforced-builder domain request object; private constructor, all required fields explicit and named
@@ -1442,7 +1442,7 @@ Item-level exception isolation — exceptions from policy execution are caught p
 ### Layer — L4 Label System
 
 **Participates in chapters:** C7, C11, C16
-**Architectural patterns:** Strategy (filter evaluators), Registry (vocabulary scopes)
+**Architectural patterns:** Strategy (label rule evaluators), Registry (vocabulary scopes)
 **Key protocols:** PP-20260525-607b33 (Flyway path scoping), ADR-0002
 **Issues:** Phase 7, #72, ADR-0002
 **Navigation:** `git log --grep="Phase 7\|#72" --oneline`
@@ -1451,13 +1451,13 @@ Item-level exception isolation — exceptions from policy execution are caught p
 #### What it adds
 
 **Before:** WorkItems had no labelling, no vocabulary enforcement, and no named queue views.
-**After:** `casehub-work-runtime` carries `LabelVocabulary` + `LabelDefinition` (path-typed scope hierarchy via `io.casehub.platform.api.path.Path`) and `WorkItemLabel` (MANUAL/INFERRED persistence on WorkItem). `casehub-work-queues` adds `WorkItemFilter` + `FilterChain` (inverse index for cascade), `QueueView` named label-pattern queries, `WorkItemQueueMembership` (persistent before-state for membership diffing), and `WorkItemQueueEvent` CDI events.
+**After:** `casehub-work-runtime` carries `LabelVocabulary` + `LabelDefinition` (path-typed scope hierarchy via `io.casehub.platform.api.path.Path`) and `WorkItemLabel` (MANUAL/INFERRED persistence on WorkItem). `casehub-work-queues` adds `LabelRuleEntity` (single-pass evaluation — no cascade tracking needed), `QueueView` named label-pattern queries, `WorkItemQueueMembership` (persistent before-state for membership diffing), and `WorkItemQueueEvent` CDI events.
 
 What this layer adds:
 - **Vocabulary** — `LabelVocabulary` (runtime) + `LabelDefinition` (runtime, path typed as `io.casehub.platform.api.path.Path`, stored as VARCHAR via `PathAttributeConverter`) define valid label paths scoped by `Path` hierarchy (root = widest)
-- **Label persistence** — `WorkItemLabel` (runtime, `@Embeddable`) carries a `path` String, a `LabelPersistence` enum (MANUAL/INFERRED), and `appliedBy` (userId or filterId)
-- **Filter engine** — `WorkItemFilter` (queues) stores conditions (JEXL/JQ/Lambda) and `FilterAction` lists; `FilterEngine` re-evaluates INFERRED labels on every WorkItem mutation via `FilterEvaluatorRegistry` dispatching to `JexlConditionEvaluator`, `JqConditionEvaluator`, or `LambdaFilterRegistry`
-- **Cascade tracking** — `FilterChain` (queues) is the inverse index: tracks which WorkItems a given filter has applied INFERRED labels to, enabling O(affected) cleanup on filter deletion without a full table scan
+- **Label persistence** — `WorkItemLabel` (runtime, `@Embeddable`) carries a `path` String, a `LabelPersistence` enum (MANUAL/INFERRED), and `appliedBy` (userId or labelRuleId)
+- **Label rule engine** — `LabelRuleEntity` (queues) stores conditions (JEXL/JQ/Lambda) and platform `LabelAction` lists; unified `LabelRuleEngine` re-evaluates INFERRED labels on every WorkItem mutation using internal dispatch to `JexlConditionEvaluator`, `JqConditionEvaluator`, or `LambdaLabelEvaluator`
+- **Label evaluation** — `LabelRuleEngine` (queues) uses single-pass evaluation; no cascade tracking or inverse index needed for rule deletion
 - **Queue views** — `QueueView` (queues) stores a `labelPattern` String (supports `*`/`**` wildcards) that resolves to `WorkItemStore.scan()` calls at request time
 - **Membership persistence** — `WorkItemQueueMembership` (queues) records the before-state of queue membership so `QueueMembershipTracker` can diff across JVM restarts without re-firing ADDED events on startup
 - **Queue events** — `WorkItemQueueEvent` CDI record fires on ADDED/REMOVED/CHANGED queue membership changes; `WorkItemQueueEventBroadcaster` (SPI) fans out to SSE subscribers
@@ -1469,7 +1469,7 @@ Not closed here: distribution of queue events across nodes (L6).
 | Gap | What breaks without it | Closed by |
 |---|---|---|
 | No label-based routing audit | Label application and removal have no observable record | `WorkItemQueueEvent` fires on every membership change |
-| Filter deletion leaves orphaned INFERRED labels | Removing a filter without cleanup leaves stale labels on all WorkItems it touched | `FilterChain` inverse index enables O(affected) cascade on filter delete |
+| Label rule deletion cleanup | Removing a rule without cleanup could leave stale labels | Single-pass evaluation in `LabelRuleEngine` — no cascade tracking needed |
 
 #### Key Files
 
@@ -1480,13 +1480,13 @@ Not closed here: distribution of queue events across nodes (L6).
 | `runtime/src/main/java/io/casehub/work/runtime/model/PathAttributeConverter.java` | JPA converter: `Path.value()` on write, `Path.parse()` on read; `autoApply = false` |
 | `runtime/src/main/java/io/casehub/work/runtime/model/WorkItemLabel.java` | `@Embeddable`; carries `path` (String), `persistence` (MANUAL/INFERRED), `appliedBy` |
 | `runtime/src/main/java/io/casehub/work/runtime/api/VocabularyResource.java` | REST resource for vocabulary CRUD; uses FQN `io.casehub.platform.api.path.Path` to avoid collision with `jakarta.ws.rs.Path` |
-| `queues/src/main/java/io/casehub/work/queues/model/WorkItemFilter.java` | Filter entity; stores `conditionLanguage`, `conditionExpression`, `FilterAction` list (serialised JSON), `Path` scope (management metadata — not an execution predicate) |
-| `queues/src/main/java/io/casehub/work/queues/model/FilterChain.java` | Inverse index: maps filterId → Set<workItemId> for O(affected) cascade on filter delete |
+| `queues/src/main/java/io/casehub/work/queues/model/LabelRuleEntity.java` | Label rule entity; stores `conditionLanguage`, `conditionExpression`, platform `LabelAction` list (serialised JSON), `Path` scope (management metadata — not an execution predicate) |
+| `queues/src/main/java/io/casehub/work/queues/service/LabelRuleEngine.java` | Single-pass label rule evaluation — no inverse index needed |
 | `queues/src/main/java/io/casehub/work/queues/model/QueueView.java` | Named queue; `labelPattern` String with wildcard support; `Path` scope for management visibility |
 | `queues/src/main/java/io/casehub/work/queues/model/WorkItemQueueMembership.java` | Persistent before-state; prevents re-firing ADDED events on JVM restart |
 | `queues/src/main/java/io/casehub/work/queues/event/WorkItemQueueEvent.java` | CDI record event: `workItemId`, `queueViewId`, `queueName`, `QueueEventType` |
-| `queues/src/main/java/io/casehub/work/queues/service/FilterEngine.java` | SPI: `evaluate(WorkItem)` and `cascadeDelete(UUID filterId)` |
-| `queues/src/main/java/io/casehub/work/queues/service/FilterEvaluatorRegistry.java` | Registry: discovers `WorkItemExpressionEvaluator` instances via CDI Instance; dispatches by language string |
+| `queues/src/main/java/io/casehub/work/queues/service/LabelRuleEngine.java` | Single-pass rule evaluation: `evaluate(WorkItem)` only |
+| `queues/src/main/java/io/casehub/work/queues/service/LabelRuleEngine.java` | Internal dispatch: discovers `WorkItemExpressionEvaluator` instances via CDI Instance; dispatches by language string |
 | `queues/src/main/java/io/casehub/work/queues/service/JqConditionEvaluator.java` | JQ evaluator strategy; injects `JQEvaluator` from `io.casehub.platform.expression` |
 | `queues/src/main/java/io/casehub/work/queues/service/WorkItemQueueEventBroadcaster.java` | SPI: `stream(UUID queueViewId)` returns hot Mutiny Multi; default impl is `LocalWorkItemQueueEventBroadcaster` |
 
@@ -1494,9 +1494,9 @@ Not closed here: distribution of queue events across nodes (L6).
 
 **`LabelDefinition.path` uses `PathAttributeConverter`.** The `path` field is `io.casehub.platform.api.path.Path` in Java but stored as `VARCHAR(500)` in the database. The converter calls `Path.value()` on write and `Path.parse()` on read. `autoApply = false` — the converter is opt-in per field, not global. `VocabularyResource` must use the fully qualified name `io.casehub.platform.api.path.Path` in method bodies — it cannot use a simple import because `jakarta.ws.rs.Path` is already in scope from the class-level `@Path` annotation. `LabelVocabulary.scope` also uses `PathAttributeConverter` — root scope stores as empty string, non-root as the path value string.
 
-**JQ filter evaluation delegates to `casehub-platform-expression`.** `JqConditionEvaluator` injects `JQEvaluator` from `io.casehub.platform.expression`. If that module is absent from the classpath, CDI fails to satisfy the injection point when a JQ filter is evaluated. JEXL and Lambda filters have no external dependency and work without it.
+**JQ label rule evaluation delegates to `casehub-platform-expression`.** `JqConditionEvaluator` injects `JQEvaluator` from `io.casehub.platform.expression`. If that module is absent from the classpath, CDI fails to satisfy the injection point when a JQ rule is evaluated. JEXL and Lambda rules have no external dependency and work without it.
 
-**`FilterChain` is an inverse index, not a parent of `QueueView`.** `FilterChain` maps `filterId → Set<workItemId>` — it records which WorkItems a filter has applied INFERRED labels to. When a filter is deleted, `FilterEngine.cascadeDelete(filterId)` uses the FilterChain to find affected WorkItems and remove only the INFERRED labels that filter applied. Deleting a `WorkItemFilter` directly without going through `FilterEngine.cascadeDelete()` leaves orphaned INFERRED labels on those WorkItems.
+**`LabelRuleEngine` uses single-pass evaluation.** The unified `LabelRuleEngine` evaluates label rules in a single pass — no inverse index or cascade tracking needed. Rule deletion is straightforward; INFERRED labels are re-evaluated on the next WorkItem mutation. No `cascadeDelete()` method exists.
 
 **`WorkItemQueueMembership` prevents startup event storms.** `QueueMembershipTracker` diffs the current membership set against the `work_item_queue_membership` table. On a clean JVM start with an empty membership table, every WorkItem in every queue would emit ADDED — rebuilding the persistent table first prevents this. The table is written atomically within the same transaction as the `WorkItemLifecycleEvent` that triggered the evaluation.
 
@@ -1506,7 +1506,7 @@ Not closed here: distribution of queue events across nodes (L6).
 
 **Why Path type for LabelDefinition.path:** `Path.isAncestorOf()` enables hierarchy-aware queries ("all children of legal/contracts") without string prefix operations. A bare String would require `LIKE 'legal/contracts/%'` in JPA, which is less expressive and non-portable. Tradeoff: REST boundaries must parse String → Path and serialize Path → String explicitly; `VocabularyResource` must use the fully qualified class name to avoid the `jakarta.ws.rs.Path` collision.
 
-**Why `FilterChain` is a separate entity rather than a join table on `WorkItemFilter`:** An explicit entity enables independent querying ("give me all WorkItems touched by filter X") without a join through the WorkItem table. It also allows the inverse index to be rebuilt independently if it becomes stale. Tradeoff: every INFERRED label application must also write to `filter_chain_work_item`.
+**Why single-pass evaluation rather than an inverse index:** The unified `LabelRuleEngine` evaluates rules fresh on each WorkItem mutation, avoiding the complexity of tracking which rules applied which labels. No inverse index table is needed. Tradeoff: rule evaluation is performed on every mutation, but persistence write overhead is eliminated.
 
 #### Pattern Introduced
 
@@ -1518,9 +1518,9 @@ MANUAL/INFERRED label persistence — human-applied labels survive re-evaluation
 
 #### Gotchas
 
-**Symptom:** JQ filter conditions throw `NullPointerException` or `UnsatisfiedResolutionException` at runtime even though the filter entity exists in the database.
-**Cause:** `JqConditionEvaluator` injects `JQEvaluator` from `io.casehub.platform.expression`. If that module is absent from the classpath, CDI cannot satisfy the injection point and the application fails to start or throws on first JQ filter evaluation.
-**Fix:** Add `casehub-platform-expression` as a runtime dependency alongside `casehub-work-queues` in the consuming application's `pom.xml`. JEXL and Lambda filters work without it.
+**Symptom:** JQ label rule conditions throw `NullPointerException` or `UnsatisfiedResolutionException` at runtime even though the rule entity exists in the database.
+**Cause:** `JqConditionEvaluator` injects `JQEvaluator` from `io.casehub.platform.expression`. If that module is absent from the classpath, CDI cannot satisfy the injection point and the application fails to start or throws on first JQ rule evaluation.
+**Fix:** Add `casehub-platform-expression` as a runtime dependency alongside `casehub-work-queues` in the consuming application's `pom.xml`. JEXL and Lambda rules work without it.
 
 **Symptom:** `VocabularyResource` fails to compile with "reference to Path is ambiguous".
 **Cause:** `VocabularyResource` has `jakarta.ws.rs.Path` in scope from the class-level `@Path("/vocabulary")` annotation; importing `io.casehub.platform.api.path.Path` creates a collision.
@@ -1534,8 +1534,8 @@ MANUAL/INFERRED label persistence — human-applied labels survive re-evaluation
 
 1. Define a vocabulary entity (`LabelVocabulary` equivalent) with a scope enum (GLOBAL → narrowest) and optional owner; define a definition entity (`LabelDefinition` equivalent) with a `Path` field stored via an `AttributeConverter<Path, String>` (`autoApply = false`).
 2. Embed a label annotation type (`WorkItemLabel` equivalent) as `@Embeddable` on the domain entity; carry both the path (String at storage level) and a persistence enum (MANUAL/INFERRED) so the filter engine can distinguish human from system labels.
-3. Implement filter evaluator strategies behind a common interface (`WorkItemExpressionEvaluator`); register them via CDI `Instance<>` in a registry; delegate JQ evaluation to an external library injected via CDI — do not bundle a JQ runtime.
-4. Maintain an inverse index entity (`FilterChain` equivalent) mapping filterId → Set<affectedEntityId>; update it on every INFERRED label application; use it for O(affected) cleanup on filter deletion.
+3. Implement label rule evaluator strategies behind a common interface (`WorkItemExpressionEvaluator`); register them via CDI `Instance<>` in the rule engine; delegate JQ evaluation to an external library injected via CDI — do not bundle a JQ runtime.
+4. Use single-pass evaluation for label rules; re-evaluate on entity mutation rather than maintaining an inverse index.
 5. Define named view entities (`QueueView` equivalent) that store a label pattern query with wildcard support; resolve them to store scan calls at request time rather than materialising the result set.
 6. Persist queue membership state (`WorkItemQueueMembership` equivalent) so membership diffs survive JVM restarts without re-firing ADDED events on startup.
 7. Fire CDI events synchronously on queue membership changes for downstream observers (SSE broadcaster, metrics, audit); expose an SPI interface (`WorkItemQueueEventBroadcaster` equivalent) so alternative fan-out backends can replace the in-process default.

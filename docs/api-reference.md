@@ -6,8 +6,8 @@ All responses are `application/json`. All request bodies require `Content-Type: 
 
 | Module | Base paths | Description |
 |---|---|---|
-| `casehub-work` (runtime) | `/workitems`, `/workitem-templates`, `/workitem-schedules`, `/spawn-groups`, `/audit`, `/vocabulary`, `/filter-rules`, `/q/asyncapi` | Core WorkItem lifecycle, templates, schedules, spawning, audit, vocabulary, filter rules |
-| `casehub-work-queues` | `/queues`, `/filters`, `/workitems/{id}/pickup`, `/workitems/{id}/relinquishable` | Queue views, filters, soft pickup |
+| `casehub-work` (runtime) | `/workitems`, `/workitem-templates`, `/workitem-schedules`, `/spawn-groups`, `/audit`, `/vocabulary`, `/label-rules`, `/q/asyncapi` | Core WorkItem lifecycle, templates, schedules, spawning, audit, vocabulary, label rules |
+| `casehub-work-queues` | `/queues`, `/workitems/{id}/pickup`, `/workitems/{id}/relinquishable` | Queue views, soft pickup |
 | `casehub-work-ledger` | `/workitems/{id}/ledger`, `/workitems/actors/{actorId}/trust` | Immutable audit ledger, trust scores |
 | `casehub-work-ai` | `/workitems/{id}/resolution-suggestion`, `/worker-skill-profiles`, `/workitems/{id}/escalation-summaries` | AI suggestions, skill profiles, escalation summaries |
 | `casehub-work-notifications` | `/workitem-notification-rules` | Webhook and Slack notification rules |
@@ -401,6 +401,27 @@ Cancels a WorkItem. Transitions any non-terminal status → `CANCELLED`.
 
 **Response:** `200 OK`
 **Body:** `WorkItemResponse`
+
+---
+
+### PUT /workitems/{id}/deadline
+
+Update the deadline on an active WorkItem. Unlike `/extend`, allows moving the deadline earlier or later. Reschedules the SLA timer and records old+new deadline in audit.
+
+**Path parameter:** `id` — UUID
+
+**Query parameter:** `actor` — string
+
+**Request body:** `UpdateDeadlineRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `newDeadline` | ISO-8601 instant | yes | New deadline (any direction) |
+
+**Response:** `200 OK`
+**Body:** WorkItem response
+
+**Error:** `400` — null deadline, `404` — not found, `409` — terminal status
 
 ---
 
@@ -1010,47 +1031,60 @@ Execute a bulk operation across multiple WorkItems. Partial success allowed. Max
 
 ---
 
-## Filter Rules
+## Label Rules
 
-### POST /filter-rules
+Label rules evaluate conditions against WorkItems and apply label actions (add/remove labels). They replace the former filter-rules and filters endpoints (consolidated in #314).
 
-Create a dynamic filter rule. Filter rules run when WorkItems are created or updated, evaluating a condition expression and applying actions.
+### GET /label-rules
 
-**Request body:** `CreateFilterRuleRequest`
+List all label rules (both persisted and permanent CDI-produced rules).
+
+**Response:** `200 OK`
+**Body:** array — each: `id` (UUID, persisted only), `name`, `description`, `enabled`, `conditionLanguage`, `conditionExpression`, `actionsJson`, `triggerEvents`, `scope`, `source` (`"persisted"` or `"permanent"`), `createdAt` (persisted only)
+
+---
+
+### POST /label-rules
+
+Create a persisted label rule.
+
+**Request body:** `CreateLabelRuleRequest`
 
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `name` | string | yes | |
 | `description` | string | no | |
-| `enabled` | boolean | no | Default `true` |
-| `condition` | string | yes | JEXL or JQ expression |
-| `events` | string[] | no | Default `["ADD","UPDATE","REMOVE"]` |
-| `actionsJson` | string | no | JSON-encoded actions array (default `"[]"`) |
+| `conditionLanguage` | string | yes | Expression language (e.g. `jexl`, `jq`) |
+| `conditionExpression` | string | yes | Condition expression |
+| `actions` | LabelActionDto[] | no | `[{"type": "Add", "label": "..."}]` |
+| `triggerEvents` | string | no | Comma-separated event types |
+| `scope` | string | no | Path-based scope |
 
 **Response:** `201 Created`
-**Body:** `id`, `name`, `description`, `enabled`, `condition`, `events`, `actionsJson`, `createdAt`
+**Body:** `id`, `name`, `enabled`
+
+**Error:** `400` — missing required fields or invalid expression
 
 ---
 
-### GET /filter-rules
+### PUT /label-rules/{id}
 
-List all dynamic filter rules.
-
-**Response:** `200 OK`
-
----
-
-### GET /filter-rules/{id}
+Update a persisted label rule. Null fields left unchanged.
 
 **Path parameter:** `id` — UUID
 
+**Request body:** `CreateLabelRuleRequest` (partial — only non-null fields applied)
+
 **Response:** `200 OK`
+**Body:** `id`, `name`
 
 **Error:** `404`
 
 ---
 
-### DELETE /filter-rules/{id}
+### DELETE /label-rules/{id}
+
+Delete a persisted label rule and re-evaluate all WorkItems.
 
 **Path parameter:** `id` — UUID
 
@@ -1060,26 +1094,22 @@ List all dynamic filter rules.
 
 ---
 
-### GET /filter-rules/permanent
+### POST /label-rules/evaluate
 
-List all permanent (CDI-produced) filter rules defined in code.
+Ad-hoc expression evaluation without persisting a rule.
 
-**Response:** `200 OK`
-**Body:** array — each: `name`, `description`, `enabled`, `events`, `condition`
+**Request body:**
 
----
-
-### PUT /filter-rules/permanent/enabled
-
-Toggle a permanent rule's enabled state at runtime. Override is in-memory — resets on restart.
-
-**Query parameter:** `name` — string (required)
-
-**Request body:** `{"enabled": true|false}`
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `conditionLanguage` | string | yes | Expression language |
+| `conditionExpression` | string | yes | Condition expression |
+| `context` | object | no | Context map for evaluation |
 
 **Response:** `200 OK`
+**Body:** `matches` (boolean)
 
-**Error:** `400`, `404`
+**Error:** `400` — missing fields or invalid expression
 
 ---
 
@@ -1228,70 +1258,6 @@ Set or clear the relinquishable flag.
 **Error:** `404`
 
 ---
-
-### GET /filters
-
-List all queue filters.
-
-**Response:** `200 OK`
-**Body:** array — each: `id` (UUID), `name`, `scope`, `conditionLanguage`, `active` (boolean)
-
----
-
-### POST /filters
-
-Create a queue filter.
-
-**Request body:** `CreateFilterRequest`
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `name` | string | no | |
-| `scope` | string | no | Path-based scope |
-| `conditionLanguage` | string | no | `jexl` or `jq` |
-| `conditionExpression` | string | no | |
-| `actions` | FilterAction[] | no | |
-
-**Response:** `201 Created`
-
----
-
-### PUT /filters/{id}
-
-Update a queue filter. Null fields left unchanged.
-
-**Path parameter:** `id` — UUID
-
-**Response:** `200 OK`
-
-**Error:** `404`
-
----
-
-### DELETE /filters/{id}
-
-**Path parameter:** `id` — UUID
-
-**Response:** `204 No Content`
-
-**Error:** `404`
-
----
-
-### POST /filters/evaluate
-
-Ad-hoc filter evaluation against a synthetic WorkItem without persisting.
-
-**Request body:** `AdHocEvalRequest`
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `conditionLanguage` | string | yes | `jexl` or `jq` |
-| `conditionExpression` | string | yes | |
-| `workItem` | object | yes | `title`, `status`, `priority`, `assigneeId`, `types` |
-
-**Response:** `200 OK`
-**Body:** `matches` (boolean)
 
 ---
 

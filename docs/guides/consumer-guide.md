@@ -268,7 +268,7 @@ JAX-RS resources in the `rest/` module:
 
 | Resource | Key Endpoints |
 |----------|---------------|
-| `WorkItemResource` | `POST /workitems` (create), `GET /workitems` (scan by assignee, candidateUser, candidateGroups, type), lifecycle transitions: `PUT /workitems/{id}/start`, `/complete`, `/cancel`, `/reject`, `/delegate`, `/escalate`, `/suspend`, `/resume`, `/fault`, `/obsolete`, `/extend` |
+| `WorkItemResource` | `POST /workitems` (create), `GET /workitems` (scan by assignee, candidateUser, candidateGroups, type), lifecycle transitions: `PUT /workitems/{id}/start`, `/complete`, `/cancel`, `/reject`, `/delegate`, `/escalate`, `/suspend`, `/resume`, `/fault`, `/obsolete`, `/extend`, `/deadline` |
 | `WorkItemTemplateResource` | `PATCH /workitem-templates/{id}` (RFC 7396 merge-patch) |
 | `WorkItemBulkResource` | Batch lifecycle operations |
 | `WorkItemInstancesResource` | Multi-instance group management |

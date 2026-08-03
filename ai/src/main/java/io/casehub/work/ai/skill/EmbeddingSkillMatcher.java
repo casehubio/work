@@ -1,19 +1,18 @@
 package io.casehub.work.ai.skill;
 
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import io.casehub.platform.api.util.Vectors;
+import io.casehub.work.api.Capability;
+import io.casehub.work.api.SelectionContext;
+import io.casehub.work.api.SkillProfile;
+import io.casehub.work.api.spi.SkillMatcher;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
-
 import org.jboss.logging.Logger;
 
-import dev.langchain4j.model.embedding.EmbeddingModel;
-import io.casehub.work.api.Capability;
-import io.casehub.work.api.SelectionContext;
-import io.casehub.work.api.spi.SkillMatcher;
-import io.casehub.work.api.SkillProfile;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Scores a worker's skill narrative against a work item using cosine similarity of embeddings.
@@ -50,20 +49,20 @@ public class EmbeddingSkillMatcher implements SkillMatcher {
     public double score(final SkillProfile workerProfile, final SelectionContext context) {
         if (embeddingModel == null) {
             LOG.warn("No EmbeddingModel available — returning -1.0. "
-                    + "Configure a langchain4j provider to enable semantic matching.");
+                     + "Configure a langchain4j provider to enable semantic matching.");
             return -1.0;
         }
         try {
             final float[] workerVec = embeddingModel
-                    .embed(workerProfile.narrative() != null ? workerProfile.narrative() : "")
-                    .content().vector();
+                                              .embed(workerProfile.narrative() != null ? workerProfile.narrative() : "")
+                                              .content().vector();
             final float[] requirementVec = embeddingModel
-                    .embed(requirementText(context))
-                    .content().vector();
-            return cosineSimilarity(workerVec, requirementVec);
+                                                   .embed(requirementText(context))
+                                                   .content().vector();
+            return Vectors.cosineSimilarity(workerVec, requirementVec);
         } catch (final Exception e) {
             LOG.warnf("EmbeddingModel failed — returning -1.0 for candidate scoring: %s",
-                    e.getMessage());
+                      e.getMessage());
             return -1.0;
         }
     }
@@ -80,19 +79,4 @@ public class EmbeddingSkillMatcher implements SkillMatcher {
                 .collect(Collectors.joining(" "));
     }
 
-    private double cosineSimilarity(final float[] a, final float[] b) {
-        if (a.length != b.length || a.length == 0) {
-            return 0.0;
-        }
-        double dot = 0, normA = 0, normB = 0;
-        for (int i = 0; i < a.length; i++) {
-            dot += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-        if (normA == 0 || normB == 0) {
-            return 0.0;
-        }
-        return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-    }
 }

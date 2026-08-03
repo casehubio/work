@@ -1,14 +1,28 @@
 package io.casehub.work.rest;
 
-import java.net.URI;
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Stream;
-
+import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.runtime.event.WorkItemEventBroadcaster;
+import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.runtime.model.AuditEntry;
+import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemLink;
+import io.casehub.work.runtime.model.WorkItemNote;
+import io.casehub.work.runtime.model.WorkItemRelationType;
+import io.casehub.work.runtime.model.WorkItemRootView;
+import io.casehub.work.runtime.repository.AuditEntryStore;
+import io.casehub.work.runtime.repository.WorkItemLinkStore;
+import io.casehub.work.runtime.repository.WorkItemNoteStore;
+import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.runtime.repository.WorkItemRelationStore;
+import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.runtime.service.LabelNotFoundException;
+import io.casehub.work.runtime.service.WorkItemNotFoundException;
+import io.casehub.work.runtime.service.WorkItemService;
+import io.casehub.work.runtime.service.WorkItemSummaryBuilder;
 import io.casehub.work.runtime.service.WorkItemSummaryBuilder.Summary;
+import io.smallrye.mutiny.Multi;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -23,31 +37,15 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
 import org.jboss.resteasy.reactive.RestStreamElementType;
 
-import io.casehub.platform.api.identity.CurrentPrincipal;
-import io.casehub.work.runtime.event.WorkItemEventBroadcaster;
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLink;
-import io.casehub.work.runtime.model.WorkItemNote;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.runtime.model.WorkItemRelationType;
-import io.casehub.work.runtime.model.WorkItemRootView;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemLinkStore;
-import io.casehub.work.runtime.repository.WorkItemNoteStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemRelationStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
-import io.casehub.work.runtime.service.WorkItemSummaryBuilder;
-import io.casehub.work.runtime.service.LabelNotFoundException;
-import io.casehub.work.runtime.service.WorkItemNotFoundException;
-import io.casehub.work.runtime.service.WorkItemService;
-import io.smallrye.mutiny.Multi;
+import java.net.URI;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Stream;
 
 @Path("/workitems")
 @Produces(MediaType.APPLICATION_JSON)
@@ -392,6 +390,27 @@ public class WorkItemResource {
                     .build();
         }
     }
+
+    @PUT
+    @Path("/{id}/deadline")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updateDeadline(@PathParam("id") final UUID id,
+                                   @QueryParam("actor") final String actor,
+                                   final UpdateDeadlineRequest body) {
+        try {
+            return Response.ok(WorkItemMapper.toResponse(
+                    workItemService.updateDeadline(id, body != null ? body.newDeadline() : null, actor))).build();
+        } catch (final IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity(Map.of("error", e.getMessage()))
+                           .build();
+        } catch (final IllegalStateException e) {
+            return Response.status(Response.Status.CONFLICT)
+                           .entity(Map.of("error", e.getMessage()))
+                           .build();
+        }
+    }
+
 
     @POST
     @Path("/{id}/labels")
