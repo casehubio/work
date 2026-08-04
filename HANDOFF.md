@@ -2,7 +2,12 @@
 
 ## Last Session
 
-Fixed CI (missing Flyway migration for `plan_item.completed_at`). Implemented #860 — `GoalFailureRecorder` now filters DECLINE signals by capability overlap using `AgentGoal.capabilities()` from eidos#135. Branch closed, pushed to both remotes.
+Closed branch `issue-864-sx-batch` — 3 XS/Low issues:
+- **#864** — `TrustRoutingPreferenceRegistrar` registers all 5 trust routing policy key schemas via `PreferenceSchemaRegistry` at startup (ledger module)
+- **#848** — Added `variantId` to `Assignment` record and persistence stores; `CbrCaseRetainObserver` reads it from `PlanItemRecord` for prompt variant outcome correlation
+- **#731** — Migrated `CaseMemoryObserver` from `Instance<CaseMemoryStore>` to `MemoryEmitter`; promoted `casehub-neocortex-memory` from runtime to compile scope
+
+All tests pass (7 across 2 modules). Squashed to 2 commits, pushed to both remotes.
 
 ## What's Left
 
@@ -11,4 +16,4 @@ Fixed CI (missing Flyway migration for `plan_item.completed_at`). Implemented #8
 
 ## What's Next
 
-*Updated: #860 closed — removed from backlog. See open issues via `gh issue list --repo casehubio/engine`.*
+*See open issues via `gh issue list --repo casehubio/engine`.*
