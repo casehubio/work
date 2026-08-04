@@ -1,38 +1,26 @@
-# HANDOFF — casehub-engine
-
-**Branch:** `issue-830-a2a-mcp-integration` (slot 67)
-**Issue:** engine#830 (A2A outbound), engine#831 (MCP tools)
-**Date:** 2026-08-02
+# HANDOFF — 2026-08-04
 
 ## Last Session
 
-Designed and partially implemented A2A outbound worker provisioning. Completed brainstorming, design spec (with standard adversarial review — 55 issues, 0 unresolved, $44 review cost), implementation plan, and 6 of 8 implementation tasks. The `casehub-engine-a2a` module compiles with 34 passing unit tests. Cross-cutting `HandlerResult` change landed across 4 modules.
+Housekeeping — diagnosed engine `wksp` symlink pointing at work repo root instead of engine subdirectory (changed 2026-08-02). Fixed symlink, cleaned contaminated HANDOFF, added issue repo cross-check (Step 5b) to handover skill write path. Closed epic #797 (all children shipped). Verified epic #800 status — 8/18 closed, neocortex foundations shipped, engine orchestration work unblocked.
 
 ## Immediate Next Step
 
-Continue implementation: Task 7 (integration test with MockWebServer + full engine stack) then Task 8 (CLAUDE.md documentation update). After that, begin engine#831 (MCP tool integration — same pattern, `casehub-engine-mcp` module).
-
-Run `/work` to resume the branch.
+Run `/work start 800` to begin epic #800 work. The engine has uncommitted changes on main: `wksp` symlink fix and two formatting-only ledger files (`WorkerDecisionEntry.java`, `WorkerDecisionEventCapture.java`). Commit or discard before branching.
 
 ## What's Left
 
-- **Task 7: Integration test** — `@QuarkusTest` end-to-end with mock A2A server, case start → binding fires → A2A handler → output in context → goal evaluates · S · Low
-- **Task 8: CLAUDE.md update** — document `casehub-engine-a2a` module · XS · Low
-- **Uncommitted file:** `runtime/src/test/java/.../PersonalitySignalRecorderTest.java` modified by linter — review and commit or discard · XS · Low
-- **Garden push blocked** — 4 garden entries committed locally but pre-push hook blocked. Push manually or via `--no-verify` · XS · Low
+- Uncommitted `wksp` symlink fix on engine main · XS · Low
+- Uncommitted formatting fixes in ledger (`WorkerDecisionEntry`, `WorkerDecisionEventCapture`) · XS · Low
+- Garden push blocked — pre-push hook; 3+ entries pending · XS · Low
+- Work-root HANDOFF.md (`/casehub/work/HANDOFF.md`) still has stale content from the cross-repo triage session — not engine's concern but worth cleaning up · XS · Low
 
 ## What's Next
 
 | # | Description | Scale | Complexity | Notes |
 |---|-------------|-------|------------|-------|
-| #831 | MCP tool integration — same WorkerFunction/Handler pattern as A2A | M | Med | Same slot, second issue. `casehub-engine-mcp` module, `io.modelcontextprotocol.sdk:mcp` SDK |
-| #835 | Follow-on epic — AgentCard bridge, health probing, semantic discovery | L | High | 9 child issues filed. Longer-term. |
-
-## References
-
-- Spec: `docs/specs/issue-830-a2a-mcp-integration/2026-08-01-a2a-outbound-design.md`
-- Plan: `docs/plans/2026-08-01-a2a-outbound.md`
-- Blog: `~/claude/casehub/work/engine/blog/2026-08-02-a2a-outbound-workers.md`
-- Design review: `~/reviews/casehub-worktrees/a2a-outbound-{coherence,structure,robustness,crosscutting}-*`
-- Follow-on epic: engine#835 (9 child issues: #836–#844)
-- Slot: `/Users/mdproctor/claude/casehub/worktrees/67/.slot`
+| #800 | Epic: Agent Learning & Memory — 8 open engine issues remaining | XL | High | Unblocked — neocortex deps shipped |
+| #833 | Epic: ACL engine integration (#865, #866, #867) | XL | High | 3 identity propagation issues |
+| #835 | Epic: A2A/MCP interop — follow-on integration | XL | High | 9 children; slot 67 has partial A2A work |
+| #862 | Populate SelectionContext on WorkerDecisionEvent | — | — | — |
+| #861 | Consolidate PlanItem terminal events | M | Med | — |
