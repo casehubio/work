@@ -36,7 +36,7 @@
 | `queues-dashboard/` | `casehub-work-queues-dashboard` | Optional | `QueueDashboard` (SSE-driven TUI), `QueueBoardBuilder`, `DashboardMain`, `ReviewStepService`, `SecurityWritersFilter`. |
 | `queues-postgres-broadcaster/` | — | Optional | `PostgresWorkItemQueueEventBroadcaster` — distributed SSE via PostgreSQL LISTEN/NOTIFY for queue events. |
 | `ai/` | `casehub-work-ai` | Optional | `SemanticWorkerSelectionStrategy` (embedding-based routing), `EmbeddingSkillMatcher`, `CapabilitiesSkillProfileProvider`, `CompositeSkillProfileProvider`, `ResolutionHistorySkillProfileProvider`, `WorkerProfileSkillProfileProvider`, `WorkerSkillProfile` entity, `EscalationSummaryObserver` + `EscalationSummaryService` + `EscalationSummary` entity, `ResolutionSuggestionService` + `ResolutionSuggestionResource`, `LowConfidenceFilterProducer` (queue filter for AI confidence), REST: `WorkerSkillProfileResource`, `EscalationSummaryResource`, `ResolutionSuggestionResource`, `AiRlsPolicyApplicator`. |
-| `notifications/` | `casehub-work-notifications` | Optional | `NotificationDispatcher` (lifecycle event observer), channels: `SlackNotificationChannel`, `TeamsNotificationChannel`, `HttpWebhookChannel`, `WorkItemNotificationRule` entity + `NotificationRuleStore`, REST: `NotificationRuleResource`, `NotificationsRlsPolicyApplicator`. |
+| ~~`notifications/`~~ | ~~`casehub-work-notifications`~~ | **Removed** | Replaced by platform subscription engine (#315). `WorkItemSubscriptionBridge` in `runtime/` inserts lifecycle events into the platform DataSource. `WorkItemLifecycleEvent` implements `SubscribableEvent`. |
 | `reports/` | `casehub-work-reports` | Optional | `ReportService`, `SlaBreachReport` + `SlaBreachItem`, `SlaSummary`, `ThroughputReport` + `ThroughputBucket` + `ThroughputBucketAggregator`, `QueueHealthReport`, `ActorReport`, REST: `ReportResource`. |
 | `issue-tracker/` | `casehub-work-issue-tracker` | Optional | `IssueLinkService`, `IssueTrackerProvider` SPI + `GitHubIssueTrackerProvider`, `JiraIssueTrackerConfig`/`GitHubIssueTrackerConfig`, `WorkItemIssueLink` entity + `IssueLinkStore`, webhook handling: `WebhookEventHandler` + `WebhookEvent` + `WebhookEventKind`, `GitHubWebhookResource` + `GitHubWebhookParser`, `JiraWebhookResource` + `JiraWebhookParser`, `ExternalIssueRef`, `NormativeResolution` (speech-act-based: DONE/DECLINE/FAILURE), `IssueTrackerRlsPolicyApplicator`. |
 | `postgres-broadcaster/` | — | Optional | `PostgresWorkItemEventBroadcaster` + `WorkItemEventPayload` — distributed SSE for WorkItem lifecycle events via PostgreSQL LISTEN/NOTIFY. |
@@ -165,7 +165,7 @@ Three `HolidayCalendar` implementations:
 
 ## Notification Concern
 
-`casehub-work-notifications` ships Slack/Teams/webhook directly, overlapping with `casehub-connectors`. Open issue (#315) to migrate to platform subscription engine + connector bridge.
+**Resolved (#315).** The `casehub-work-notifications` module has been removed. Lifecycle event notifications now flow through the platform subscription engine via `WorkItemSubscriptionBridge` (in `runtime/`). `WorkItemLifecycleEvent` implements `SubscribableEvent` for type/tenant discrimination. The bridge is optional — active only when `casehub-platform` subscriptions module is on the classpath (`Instance<DataSourceRegistry>` unsatisfied = no-op).
 
 ## Recent Changes (since April 2026)
 
@@ -188,7 +188,7 @@ Three `HolidayCalendar` implementations:
 ## Pending Work
 
 - `casehub-work-qhorus` adapter — MCP tools for agent-driven approval flows
-- Notification migration (#315) — delegate to platform subscription engine + connectors
+- ~~Notification migration (#315)~~ — **done**: platform subscription engine + `WorkItemSubscriptionBridge`
 - Progress: visualisation modes (#309), rollback control (#308), arbitrary JSON schema shapes (#307)
 - Queue summary: caching (#306), database-level aggregation (#305)
 - CloudEvent bridge for cross-service HumanTask creation (#299)

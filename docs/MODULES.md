@@ -27,7 +27,7 @@ Use `ide_find_class` / `ide_find_symbol` to locate specific classes. This file d
 | `queues-dashboard/` | Optional queue dashboard UI |
 | `queues-examples/` | Example scenarios for the queue module |
 | `ai/` | AI-native features; confidence gating via `LowConfidenceFilterProducer`; `SemanticWorkerSelectionStrategy` (@Alternative @Priority(1)) for embedding-based worker scoring |
-| `notifications/` | Optional outbound notification module; CDI observer dispatches to HTTP webhook, Slack, and Teams channels. Flyway V3000. |
+| ~~`notifications/`~~ | **Removed** (#315) — replaced by platform subscription engine. `WorkItemSubscriptionBridge` in `runtime/` inserts lifecycle events into the platform DataSource. Flyway V3000–V3002 moved to runtime; V3003 drops the table. |
 | `reports/` | Optional SLA compliance reporting; `/reports/sla-breaches`, `/actors/{id}`, `/throughput`, `/queue-health` |
 | `postgres-broadcaster/` | Optional distributed SSE; PostgreSQL LISTEN/NOTIFY for WorkItem events (`casehub_work_events`) |
 | `queues-postgres-broadcaster/` | Optional distributed SSE for queue events (`casehub_work_queue_events`); depends on `casehub-work-queues` + `quarkus-reactive-pg-client` |

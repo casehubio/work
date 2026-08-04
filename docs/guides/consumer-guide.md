@@ -25,7 +25,7 @@ A `WorkItem` is deliberately NOT called `Task` — CNCF Serverless Workflow and 
 | `queues/` | `casehub-work-queues` | compile (opt-in) | Label-based queue views with LabelRule filter expressions, queue state tracking, trend snapshots (`QueueSnapshotJob`), and queue membership. |
 | `queues-dashboard/` | `casehub-work-queues-dashboard` | compile (opt-in) | SSE-driven queue dashboard with TUI rendering. |
 | `ai/` | `casehub-work-ai` | compile (opt-in) | Semantic worker selection (`SemanticWorkerSelectionStrategy`), embedding-based skill matching, escalation summaries, resolution suggestions, low-confidence queue filtering, worker skill profiles. |
-| `notifications/` | `casehub-work-notifications` | compile (opt-in) | Slack, Teams, and HTTP webhook lifecycle notifications with configurable rules. |
+| ~~`notifications/`~~ | ~~`casehub-work-notifications`~~ | — | **Removed** (#315) — replaced by platform subscription engine. Add `casehub-platform` subscriptions module for notification matching. |
 | `reports/` | `casehub-work-reports` | compile (opt-in) | SLA compliance reporting — breach reports, throughput buckets, actor reports, queue health. |
 | `issue-tracker/` | `casehub-work-issue-tracker` | compile (opt-in) | GitHub and Jira issue linking — webhook-based bidirectional sync, `IssueTrackerProvider` SPI, `WorkItemIssueLink` entity, `NormativeResolution` vocabulary. |
 | `flow/` | `casehub-work-flow` | compile (opt-in) | Quarkus-Flow bridge — `WorkItemsFlow` base class with `workItem()` DSL for workflow definitions, `HumanTaskFlowBridge` for programmatic human-in-the-loop suspension. |
@@ -121,7 +121,7 @@ Builder-pattern request object for creating WorkItems. All fields are optional e
 | `CapabilityRegistry` | Capability vocabulary validation (STRICT/WARN/PERMISSIVE). | no | permissive |
 | `SkillMatcher` | Worker skill scoring against WorkItem requirements. | no | — |
 | `SkillProfileProvider` | Builds worker `SkillProfile` for AI-based selection. | no | — |
-| `NotificationChannel` | Outbound notification delivery (Slack, Teams, webhook). | no | — |
+| ~~`NotificationChannel`~~ | **Removed** (#315) — use platform subscription engine for notification delivery. | — | — |
 | `SpawnPort` | Child WorkItem creation with `spawn(SpawnRequest)` and `cancelGroup(UUID, boolean)`. | no | — |
 
 ### Progress Model SPIs
@@ -149,7 +149,7 @@ In `io.casehub.work.issuetracker.spi`:
 
 `CREATED`, `ASSIGNED`, `STARTED`, `COMPLETED`, `REJECTED`, `FAULTED`, `DELEGATED`, `DELEGATION_ACCEPTED`, `DELEGATION_DECLINED`, `RELEASED`, `SUSPENDED`, `RESUMED`, `CANCELLED`, `OBSOLETE`, `EXPIRED`, `CLAIM_EXPIRED`, `SPAWNED`, `ESCALATED`, `DEADLINE_EXTENDED`, `SLA_REASSIGNED`, `SLA_EXTENDED`, `SIGNAL_RECEIVED`, `MANUALLY_ESCALATED`, `PROGRESS_UPDATE`, `LABEL_ADDED`, `LABEL_REMOVED`.
 
-CDI events fire on every status transition via `WorkItemLifecycleEmitter`. Downstream adapters (engine, ledger, notifications) observe these events.
+CDI events fire on every status transition via `WorkItemLifecycleEmitter`. Downstream adapters (engine, ledger) observe these events. `WorkItemSubscriptionBridge` inserts events into the platform subscription engine DataSource when present.
 
 ## CloudEvent Types
 
@@ -365,7 +365,8 @@ All migrations in `db/work/migration`:
 | V1000-V1004 | shared ledger base schema |
 | V2000-V2004 | queues (schema, membership, tenancy, snapshots) |
 | V2001 | ledger (work-item ledger entries) |
-| V3000-V3002 | notifications (rules, tenancy, types rename) |
+| V3000-V3002 | notifications (rules, tenancy, types rename) — **historical, module removed** |
+| V3003 | drop notification_rules table (#315) |
 | V4001-V4002 | ai (escalation summaries, tenancy) |
 | V5003-V5004 | queues subject view migration + label rule schema |
 | V6000-V6002 | issue-tracker (issue links, priority rename, tenancy) |
