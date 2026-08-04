@@ -1,5 +1,6 @@
 package io.casehub.work.queues.service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -7,23 +8,33 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
 import io.casehub.platform.api.expression.ExpressionEngineRegistry;
-import io.casehub.platform.api.view.SubjectViewQuery;
 import io.casehub.platform.api.view.SubjectViewSpec;
+import io.casehub.work.api.WorkItemSummary;
+import io.casehub.work.queues.repository.WorkItemViewQuery;
 import io.casehub.work.runtime.event.WorkItemContextBuilder;
 import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.service.WorkItemSummaryBuilder;
 
 @ApplicationScoped
 public class QueueMembershipService {
 
-    private final SubjectViewQuery<WorkItem> viewQuery;
-    private final ExpressionEngineRegistry   expressionRegistry;
+    private final WorkItemViewQuery         viewQuery;
+    private final ExpressionEngineRegistry  expressionRegistry;
 
     @Inject
     public QueueMembershipService(
-            final SubjectViewQuery<WorkItem> viewQuery,
+            final WorkItemViewQuery viewQuery,
             final ExpressionEngineRegistry expressionRegistry) {
         this.viewQuery          = viewQuery;
         this.expressionRegistry = expressionRegistry;
+    }
+
+    public WorkItemSummary summarize(final SubjectViewSpec queue, final Instant now) {
+        if (queue.additionalConditions() != null
+            && !queue.additionalConditions().isBlank()) {
+            return WorkItemSummaryBuilder.build(evaluateMembers(queue), now);
+        }
+        return viewQuery.summarizeByView(queue, now);
     }
 
     @SuppressWarnings("unchecked")

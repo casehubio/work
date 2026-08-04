@@ -1,12 +1,15 @@
 package io.casehub.work.runtime.repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItemSummary;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRootView;
 import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.runtime.service.WorkItemSummaryBuilder;
 
 /**
  * KV-native store SPI for {@link WorkItem} persistence.
@@ -112,6 +115,10 @@ public interface WorkItemStore {
      */
     default long countByQuery(WorkItemQuery query) {
         return scan(query).size();
+    }
+
+    default WorkItemSummary summaryByQuery(WorkItemQuery query, Instant now) {
+        return WorkItemSummaryBuilder.build(scan(query), now);
     }
 
     /**

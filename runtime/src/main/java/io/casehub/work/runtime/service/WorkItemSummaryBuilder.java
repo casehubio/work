@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import io.casehub.work.api.WorkItemSummary;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 
@@ -22,30 +23,13 @@ public final class WorkItemSummaryBuilder {
     }
 
     /**
-     * @param total total WorkItems in scope
-     * @param byStatus count per {@link WorkItemStatus} name
-     * @param byPriority count per priority name; excludes items with null priority
-     * @param overdue non-terminal items whose {@code expiresAt} is before {@code now}
-     * @param claimDeadlineBreached PENDING items whose {@code claimDeadline} is before {@code now}
-     * @param oldestCreatedAt {@code min(createdAt)} across non-terminal items; null when none exist
-     */
-    public record Summary(
-            long total,
-            Map<String, Long> byStatus,
-            Map<String, Long> byPriority,
-            long overdue,
-            long claimDeadlineBreached,
-            Instant oldestCreatedAt) {
-    }
-
-    /**
      * Build a summary from a pre-loaded list of WorkItems.
      *
      * @param items the WorkItems to summarise; may be empty
      * @param now the reference instant for overdue and claim-deadline checks
      * @return the aggregate summary
      */
-    public static Summary build(final List<WorkItem> items, final Instant now) {
+    public static WorkItemSummary build(final List<WorkItem> items, final Instant now) {
         final long total = items.size();
 
         final Map<String, Long> byStatus = items.stream()
@@ -73,6 +57,6 @@ public final class WorkItemSummaryBuilder {
                 .min(Instant::compareTo)
                 .orElse(null);
 
-        return new Summary(total, byStatus, byPriority, overdue, claimDeadlineBreached, oldestCreatedAt);
+        return new WorkItemSummary(total, byStatus, byPriority, overdue, claimDeadlineBreached, oldestCreatedAt);
     }
 }

@@ -1,6 +1,9 @@
 package io.casehub.work.queues.repository;
 
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -14,8 +17,10 @@ import jakarta.persistence.criteria.Root;
 import io.casehub.platform.api.view.SubjectViewQuery;
 import io.casehub.platform.api.view.SubjectViewSpec;
 import io.casehub.platform.view.jpa.LabelPatternPredicates;
+import io.casehub.work.api.WorkItemSummary;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemLabel;
+import io.casehub.work.runtime.service.SummaryQueryBuilder;
 
 @ApplicationScoped
 public class WorkItemViewQuery implements SubjectViewQuery<WorkItem> {
@@ -73,6 +78,31 @@ public class WorkItemViewQuery implements SubjectViewQuery<WorkItem> {
         ));
 
         return em.createQuery(cq).getSingleResult();
+    }
+
+    public WorkItemSummary summarizeByView(final SubjectViewSpec view, final Instant now) {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("tenancyId", view.tenancyId());
+
+        final String labelJpql = buildLabelJpql(view.labelPattern(), params);
+        final String baseJpql = "FROM WorkItem wi JOIN wi.labels l WHERE wi.tenancyId = :tenancyId AND " + labelJpql;
+        return SummaryQueryBuilder.build(em, baseJpql, params, true, now);
+    }
+
+    private String buildLabelJpql(final String pattern, final Map<String, Object> params) {
+        if (pattern.endsWith("/**")) {
+            final String prefix = pattern.substring(0, pattern.length() - 3) + "/";
+            params.put("labelPattern", prefix + "%");
+            return "l.path LIKE :labelPattern";
+        }
+        if (pattern.endsWith("/*")) {
+            final String prefix = pattern.substring(0, pattern.length() - 2) + "/";
+            params.put("labelPattern", prefix + "%");
+            params.put("labelPatternDeep", prefix + "%/%");
+            return "l.path LIKE :labelPattern AND l.path NOT LIKE :labelPatternDeep";
+        }
+        params.put("labelPattern", pattern);
+        return "l.path = :labelPattern";
     }
 
     private void applySorting(CriteriaBuilder cb, CriteriaQuery<WorkItem> cq,

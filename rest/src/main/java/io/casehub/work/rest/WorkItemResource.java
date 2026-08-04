@@ -20,8 +20,7 @@ import io.casehub.work.runtime.repository.WorkItemStore;
 import io.casehub.work.runtime.service.LabelNotFoundException;
 import io.casehub.work.runtime.service.WorkItemNotFoundException;
 import io.casehub.work.runtime.service.WorkItemService;
-import io.casehub.work.runtime.service.WorkItemSummaryBuilder;
-import io.casehub.work.runtime.service.WorkItemSummaryBuilder.Summary;
+import io.casehub.work.api.WorkItemSummary;
 import io.smallrye.mutiny.Multi;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -126,7 +125,7 @@ public class WorkItemResource {
      */
     @GET
     @Path("/inbox/summary")
-    public Summary inboxSummary(
+    public WorkItemSummary inboxSummary(
             @QueryParam("assignee") final String assignee,
             @QueryParam("candidateGroup") final List<String> candidateGroups,
             @QueryParam("candidateUser") final String candidateUser,
@@ -142,7 +141,7 @@ public class WorkItemResource {
         if (type != null)
             qb.type(type);
 
-        return WorkItemSummaryBuilder.build(workItemStore.scan(qb.build()), Instant.now());
+        return workItemStore.summaryByQuery(qb.build(), Instant.now());
     }
 
     /**

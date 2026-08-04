@@ -1,5 +1,6 @@
 package io.casehub.work.runtime.repository.jpa;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -10,14 +11,18 @@ import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 
 import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.api.GroupStatus;
+import io.casehub.work.api.WorkItemSummary;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRootView;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.runtime.service.SummaryQueryBuilder;
+import io.casehub.work.runtime.service.WorkItemSummaryBuilder;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.repository.WorkItemStore;
 
@@ -36,6 +41,9 @@ import io.casehub.work.runtime.repository.WorkItemStore;
  */
 @ApplicationScoped
 public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore {
+
+    @Inject
+    EntityManager em;
 
     @Inject
     WorkItemSpawnGroupStore spawnGroupStore;
@@ -74,17 +82,15 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                         .firstResultOptional());
     }
 
-    @Override
-    public List<WorkItem> scan(final WorkItemQuery query) {
-        return withTenantQuery(() -> {
-            final Map<String, Object> params = new HashMap<>();
-            final StringBuilder jpql = new StringBuilder();
+    private record JpqlAndParams(String jpql, Map<String, Object> params) {}
 
-            // ── Tenant isolation — always first ──────────────────────────────────
-            jpql.append("tenancyId = :tenancyId");
-            params.put("tenancyId", query.tenancyId() != null ? query.tenancyId() : currentPrincipal.tenancyId());
+    private JpqlAndParams buildScanJpql(final WorkItemQuery query) {
+        final Map<String, Object> params = new HashMap<>();
+        final StringBuilder jpql = new StringBuilder();
 
-        // ── Assignment — OR logic ────────────────────────────────────────────
+        jpql.append("tenancyId = :tenancyId");
+        params.put("tenancyId", query.tenancyId() != null ? query.tenancyId() : currentPrincipal.tenancyId());
+
         final boolean hasAssigneeId = query.assigneeId() != null;
         final boolean hasCandidateGroups = query.candidateGroups() != null && !query.candidateGroups().isEmpty();
         final boolean hasCandidateUserId = query.candidateUserId() != null;
@@ -105,85 +111,68 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                 }
             }
             if (hasCandidateUserId && !hasAssigneeId) {
-                // candidateUserId provided without assigneeId — match via candidateUsers LIKE
                 jpql.append(" OR candidateUsers LIKE :candidateUserIdLike");
                 params.put("candidateUserIdLike", "%" + query.candidateUserId() + "%");
             }
             jpql.append(")");
         }
 
-        // ── Filters — AND logic ──────────────────────────────────────────────
         if (query.status() != null) {
-            if (jpql.length() > 0) {
-                jpql.append(" AND ");
-            }
-            jpql.append("status = :status");
+            jpql.append(" AND status = :status");
             params.put("status", query.status());
         }
-
         if (query.statusIn() != null && !query.statusIn().isEmpty()) {
-            if (jpql.length() > 0) {
-                jpql.append(" AND ");
-            }
-            jpql.append("status IN (:statusIn)");
+            jpql.append(" AND status IN (:statusIn)");
             params.put("statusIn", query.statusIn());
         }
-
         if (query.priority() != null) {
-            if (jpql.length() > 0) {
-                jpql.append(" AND ");
-            }
-            jpql.append("priority = :priority");
+            jpql.append(" AND priority = :priority");
             params.put("priority", query.priority());
         }
-
         if (query.type() != null) {
-            if (jpql.length() > 0) {
-                jpql.append(" AND ");
-            }
-            jpql.append("id IN (SELECT w.id FROM WorkItem w JOIN w.types t WHERE t.path = :type OR t.path LIKE :typePrefix)");
+            jpql.append(" AND id IN (SELECT w.id FROM WorkItem w JOIN w.types t WHERE t.path = :type OR t.path LIKE :typePrefix)");
             params.put("type", query.type());
             params.put("typePrefix", query.type() + "/%");
         }
-
         if (query.outcome() != null) {
-            if (jpql.length() > 0) {
-                jpql.append(" AND ");
-            }
-            jpql.append("outcome = :outcome");
+            jpql.append(" AND outcome = :outcome");
             params.put("outcome", query.outcome());
         }
-
         if (query.followUpBefore() != null) {
-            if (jpql.length() > 0) {
-                jpql.append(" AND ");
-            }
-            jpql.append("followUpDate <= :followUpBefore");
+            jpql.append(" AND followUpDate <= :followUpBefore");
             params.put("followUpBefore", query.followUpBefore());
         }
-
         if (query.expiresAtOrBefore() != null) {
-            if (jpql.length() > 0) {
-                jpql.append(" AND ");
-            }
-            jpql.append("expiresAt <= :expiresAtOrBefore");
+            jpql.append(" AND expiresAt <= :expiresAtOrBefore");
             params.put("expiresAtOrBefore", query.expiresAtOrBefore());
         }
-
         if (query.claimDeadlineOrBefore() != null) {
-            if (jpql.length() > 0) {
-                jpql.append(" AND ");
-            }
-            jpql.append("claimDeadline <= :claimDeadlineOrBefore");
+            jpql.append(" AND claimDeadline <= :claimDeadlineOrBefore");
             params.put("claimDeadlineOrBefore", query.claimDeadlineOrBefore());
         }
 
-            // ── Label pattern — requires JOIN ────────────────────────────────────
+        return new JpqlAndParams(jpql.toString(), params);
+    }
+
+    @Override
+    public List<WorkItem> scan(final WorkItemQuery query) {
+        return withTenantQuery(() -> {
             if (query.labelPattern() != null) {
                 return scanByLabelPattern(query.labelPattern());
             }
+            final JpqlAndParams jp = buildScanJpql(query);
+            return WorkItem.find(jp.jpql(), jp.params()).list();
+        });
+    }
 
-            return WorkItem.find(jpql.toString(), params).list();
+    @Override
+    public WorkItemSummary summaryByQuery(final WorkItemQuery query, final Instant now) {
+        return withTenantQuery(() -> {
+            if (query.labelPattern() != null) {
+                return WorkItemSummaryBuilder.build(scan(query), now);
+            }
+            final JpqlAndParams jp = buildScanJpql(query);
+            return SummaryQueryBuilder.build(em, "FROM WorkItem wi WHERE " + jp.jpql(), jp.params(), false, now);
         });
     }
 

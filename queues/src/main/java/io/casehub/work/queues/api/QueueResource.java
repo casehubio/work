@@ -10,7 +10,6 @@ import io.casehub.work.queues.service.QueueMembershipService;
 import io.casehub.work.queues.service.WorkItemQueueEventBroadcaster;
 import io.casehub.work.rest.WorkItemMapper;
 import io.casehub.work.rest.WorkItemResponse;
-import io.casehub.work.runtime.service.WorkItemSummaryBuilder;
 import io.smallrye.mutiny.Multi;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -145,8 +144,7 @@ public class QueueResource {
         if (spec == null) {
             return Response.status(404).entity(Map.of("error", "Queue view not found")).build();
         }
-        final var members = membershipService.evaluateMembers(spec);
-        return Response.ok(WorkItemSummaryBuilder.build(members, Instant.now())).build();
+        return Response.ok(membershipService.summarize(spec, Instant.now())).build();
     }
 
     @GET
