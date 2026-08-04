@@ -42,17 +42,21 @@ The existing `callerRef` field on WorkItem is the correlation mechanism, followi
 ### Format
 
 ```
-qhorus:{channelName}/{correlationId}
+qhorus:{channelId}/{messageId}/{correlationId}
 ```
 
-Example: `qhorus:case-abc/oversight/550e8400-e29b-41d4-a716-446655440000`
+- `channelId` — UUID of the Qhorus channel (required for `MessageService.dispatch()`)
+- `messageId` — Long ID of the QUERY message posted by `request_human_work` (used as `inReplyTo` on the response)
+- `correlationId` — UUID generated at creation time (threaded through QUERY and response)
+
+Example: `qhorus:a1b2c3d4-e5f6-7890-abcd-ef1234567890/42/550e8400-e29b-41d4-a716-446655440000`
 
 ### QhorusCallerRef
 
 Utility record in `io.casehub.work.qhorus`:
 
 ```java
-public record QhorusCallerRef(String channelName, String correlationId) {
+public record QhorusCallerRef(UUID channelId, long messageId, String correlationId) {
     public static final String PREFIX = "qhorus:";
 
     public static boolean isQhorus(String callerRef) {
@@ -60,12 +64,12 @@ public record QhorusCallerRef(String channelName, String correlationId) {
     }
 
     public static QhorusCallerRef parse(String callerRef) {
-        // Strip prefix, split on last '/' to separate channel name from correlationId
-        // Channel names may contain '/' (e.g. "case-abc/oversight")
+        // Strip prefix, split on '/' — exactly 3 segments: channelId/messageId/correlationId
+        // No ambiguity: channelId is a UUID (no slashes), messageId is a long
     }
 
     public String encode() {
-        return PREFIX + channelName + "/" + correlationId;
+        return PREFIX + channelId + "/" + messageId + "/" + correlationId;
     }
 }
 ```
@@ -83,13 +87,14 @@ Creates a WorkItem and posts an oversight/QUERY to the originating channel.
 **Parameters:** `channel` (channel name), `title`, `description`, `candidate_groups` (optional), `priority` (optional), `payload` (optional JSON), `template_id` (optional), `sender` (requesting agent's instance ID).
 
 **Flow:**
-1. Generate `correlationId` (UUID)
-2. Build `callerRef = QhorusCallerRef.encode(channel, correlationId)`
-3. Create WorkItem via `WorkItemCreator.create()` — `createdBy = "qhorus:" + sender`, `tenancyId` from `CurrentPrincipal`
-4. Post oversight/QUERY to the named channel via `MessageService.dispatch()` with the correlationId
-5. Return `HumanWorkResponse(workItemId, callerRef, correlationId, status)`
+1. Resolve `channel` name to `channelId` (UUID) via `ChannelService.findByName()`. If not found → reject with error before creating anything.
+2. Generate `correlationId` (UUID)
+3. Post oversight/QUERY to the channel via `MessageService.dispatch()` with the correlationId. Capture the returned `messageId`.
+4. Build `callerRef = QhorusCallerRef.encode(channelId, messageId, correlationId)`
+5. Create WorkItem via `WorkItemCreator.create()` — `createdBy = "qhorus:" + sender`, `tenancyId` from `CurrentPrincipal`
+6. Return `HumanWorkResponse(workItemId, callerRef, correlationId, status)`
 
-If WorkItem creation succeeds but the channel post fails: log at WARN, return success. The WorkItem is the primary artifact; the channel post is a normative side effect.
+**Transaction boundaries:** Steps 3 and 5 run in separate transactions (different datasources — qhorus and work). The channel post runs first so the QUERY message ID is available for the callerRef. If WorkItem creation fails after the QUERY is posted, the channel has a QUERY with no materialised WorkItem — the agent gets an error and can retry.
 
 ### check_work_status
 
@@ -103,19 +108,18 @@ Polls current WorkItem status.
 
 ### wait_for_work
 
-Blocks until the WorkItem reaches a terminal state or times out.
+Polls until the WorkItem reaches a terminal state or times out.
 
-**Parameters:** `caller_ref`, `timeout_seconds` (default 300).
+**Parameters:** `caller_ref`, `timeout_seconds` (default 300), `poll_interval_seconds` (default 5).
 
 **Flow:**
-1. Check current status — if already terminal, return immediately
-2. Register a `CompletableFuture<WorkItemRef>` in `PendingWorkCompletionRegistry`
-3. Block with timeout
-4. Return status + outcome, or `timedOut = true`
+1. `WorkItemCreator.findByCallerRef(callerRef)` — if not found, return "not found"
+2. If already terminal, return immediately with status + outcome
+3. Poll in a loop: sleep `poll_interval_seconds`, then re-query via `findByCallerRef()`
+4. On terminal status → return status + outcome
+5. On timeout → return current status with `timedOut = true`
 
-### PendingWorkCompletionRegistry
-
-`@ApplicationScoped` bean. `ConcurrentHashMap<String, CompletableFuture<WorkItemStatusEvent>>` keyed by callerRef. The outbound lifecycle adapter completes futures on terminal events. Same pattern as Qhorus's `PendingReply` for `wait_for_reply`.
+No in-memory registry needed. Polling via `findByCallerRef()` is cluster-safe (reads from the shared database), has no memory growth concerns, and avoids coordinating CompletableFuture completion across observer and MCP tool threads.
 
 ## Outbound Lifecycle Adapter
 
@@ -126,11 +130,10 @@ Blocks until the WorkItem reaches a terminal state or times out.
 On every `WorkItemStatusEvent`:
 
 1. Check `QhorusCallerRef.isQhorus(event.callerRef())` — if not Qhorus-originated, return
-2. Notify `PendingWorkCompletionRegistry` (for `wait_for_work` futures) — runs on ALL status changes, not just terminal
-3. If status is not terminal, return
-4. Parse `QhorusCallerRef` from callerRef
-5. Map terminal status to speech act
-6. Post to originating channel via `MessageService.dispatch()`
+2. If status is not terminal, return
+3. Parse `QhorusCallerRef` from callerRef — extract `channelId`, `messageId`, `correlationId`
+4. Map terminal status to speech act
+5. Post to originating channel via `MessageService.dispatch()` using `channelId` (UUID), `correlationId`, and `inReplyTo = messageId`. **Wrapped in try-catch** — exceptions are logged at WARN and swallowed to prevent rolling back the WorkItem lifecycle transaction.
 
 ### Speech Act Mapping (terminal only)
 
@@ -140,6 +143,8 @@ On every `WorkItemStatusEvent`:
 | REJECTED | FAILURE | Tried and could not complete |
 | CANCELLED | DECLINE | Reasoned refusal |
 | EXPIRED | DECLINE | Deadline passed without resolution |
+| ESCALATED | FAILURE | Escalated beyond original scope |
+| OBSOLETE | DECLINE | Superseded — no longer needed |
 
 ### Message Content
 
@@ -155,7 +160,7 @@ Posts as `"workitems"` — a system identity. The human's identity is in the mes
 
 ### Error Handling
 
-`MessageService.dispatch()` failure: log at WARN. The WorkItem lifecycle is already committed. The channel post is best-effort notification.
+The entire `onStatusChange()` body is wrapped in a try-catch. `WorkItemObserver` runs synchronously inside the `WorkItemLifecycleEmitter`'s transaction — an uncaught exception would mark the transaction for rollback, undoing the WorkItem lifecycle transition itself. The channel post is best-effort: catch all exceptions, log at WARN with `channelId` and `callerRef` for diagnosis, and return normally.
 
 ## What We Don't Touch
 
@@ -170,13 +175,15 @@ Posts as `"workitems"` — a system identity. The human's identity is in the mes
 
 ### Test Cases
 
-1. **request_human_work round-trip** — call tool, assert WorkItem created with correct callerRef, assert QUERY posted to channel with matching correlationId
-2. **check_work_status** — create via tool, check PENDING; complete, check COMPLETED with outcome
-3. **wait_for_work happy path** — request, complete after delay in separate thread, assert wait returns terminal status
-4. **wait_for_work timeout** — request, wait with 1s timeout, assert timedOut
-5. **wait_for_work already terminal** — create and complete, wait returns immediately
-6. **Outbound terminal posting** — Qhorus-originated WorkItem completed → DONE posted to originating channel
-7. **Non-Qhorus WorkItem ignored** — non-Qhorus callerRef → no channel messages
-8. **Speech act mapping** — REJECTED→FAILURE, CANCELLED→DECLINE, EXPIRED→DECLINE
-9. **Idempotency** — two `request_human_work` calls → two distinct WorkItems (unique correlationIds)
-10. **CallerRef parsing** — unit tests for parse/encode/isQhorus with valid, malformed, edge-case inputs
+1. **request_human_work round-trip** — call tool, assert WorkItem created with correct callerRef (contains channelId, messageId, correlationId), assert QUERY posted to channel with matching correlationId
+2. **request_human_work channel-not-found** — call tool with nonexistent channel name, assert error returned, assert no WorkItem created
+3. **check_work_status** — create via tool, check PENDING; complete, check COMPLETED with outcome
+4. **wait_for_work happy path** — request, complete after delay in separate thread, assert poll returns terminal status
+5. **wait_for_work timeout** — request, wait with 1s timeout and 200ms poll interval, assert timedOut with current status
+6. **wait_for_work already terminal** — create and complete, wait returns immediately without polling
+7. **Outbound terminal posting** — Qhorus-originated WorkItem completed → DONE posted to originating channel with correct inReplyTo and correlationId
+8. **Outbound adapter exception isolation** — dispatch throws → WorkItem lifecycle transaction still commits, exception logged
+9. **Non-Qhorus WorkItem ignored** — non-Qhorus callerRef → no channel messages
+10. **Speech act mapping** — REJECTED→FAILURE, CANCELLED→DECLINE, EXPIRED→DECLINE, ESCALATED→FAILURE, OBSOLETE→DECLINE
+11. **Idempotency** — two `request_human_work` calls → two distinct WorkItems (unique correlationIds)
+12. **CallerRef parsing** — unit tests for parse/encode/isQhorus with valid, malformed, edge-case inputs
