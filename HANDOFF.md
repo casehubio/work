@@ -11,4 +11,4 @@ Fixed CI (missing Flyway migration for `plan_item.completed_at`). Implemented #8
 
 ## What's Next
 
-*Unchanged — `git show HEAD~1:HANDOFF.md`*
+*Updated: #860 closed — removed from backlog. See open issues via `gh issue list --repo casehubio/engine`.*
