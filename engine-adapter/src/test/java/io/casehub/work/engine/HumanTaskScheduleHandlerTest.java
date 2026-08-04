@@ -85,6 +85,7 @@ class HumanTaskScheduleHandlerTest {
     }
     caseId = UUID.randomUUID();
     planItem = PlanItem.create("irb-binding", io.casehub.api.model.ExecutorRef.of("unused-worker"), 5);
+    assertThat(planItem.tryMarkDispatching()).isTrue();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(planItem);
   }
 
@@ -625,7 +626,7 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.PENDING);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DISPATCHING);
     assertThat(workItemStore.scanAll()).isEmpty();
   }
 
@@ -652,7 +653,7 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.PENDING);
+    assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DISPATCHING);
     assertThat(workItemStore.scanAll()).isEmpty();
   }
 
