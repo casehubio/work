@@ -188,6 +188,18 @@ Two-way bridge:
 
 ---
 
+## qhorus Module
+
+Qhorus bridge (`casehub-work-qhorus`, package `io.casehub.work.qhorus`). Bridges casehub-work WorkItem lifecycle with Qhorus agent mesh channels.
+
+Activated by adding `casehub-work-qhorus` to the consumer's classpath. Requires both `casehub-work` and `casehub-qhorus` at runtime.
+
+Three MCP tools: `request_human_work` (creates WorkItem + posts oversight/QUERY), `check_work_status` (polls status), `wait_for_work` (polls until terminal).
+
+Outbound: `QhorusWorkItemLifecycleAdapter` implements `WorkItemObserver`, posts terminal events (COMPLETED→DONE, REJECTED→FAILURE, CANCELLED→DECLINE) back to the originating Qhorus channel. CallerRef format: `qhorus:{channelId}/{messageId}/{correlationId}`.
+
+---
+
 ## Project Artifacts
 
 Paths that are project content (not workspace noise). Skills use this to avoid
