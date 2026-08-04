@@ -107,6 +107,7 @@ class WorkItemLifecycleAdapterTest {
   void workItemRejected_marksPlanItemRejected() {
     // Human task refusal — PlanItem must be DELEGATED (human task lifecycle)
     PlanItem delegatedItem = PlanItem.create("review-ht", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
+    delegatedItem.tryMarkDispatching();
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
@@ -128,6 +129,7 @@ class WorkItemLifecycleAdapterTest {
   void workItemExpired_marksPlanItemFaulted() {
     // Deadline expiry — a time-based failure, maps to FAULTED
     PlanItem delegatedItem = PlanItem.create("review-ht-expired", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
+    delegatedItem.tryMarkDispatching();
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
@@ -148,6 +150,7 @@ class WorkItemLifecycleAdapterTest {
   @Test
   void workItemFaulted_marksPlanItemFaulted() {
     PlanItem delegatedItem = PlanItem.create("review-ht-faulted", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
+    delegatedItem.tryMarkDispatching();
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
@@ -168,6 +171,7 @@ class WorkItemLifecycleAdapterTest {
   @Test
   void workItemObsolete_marksPlanItemObsolete() {
     PlanItem delegatedItem = PlanItem.create("review-ht-obsolete", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
+    delegatedItem.tryMarkDispatching();
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
@@ -225,6 +229,7 @@ class WorkItemLifecycleAdapterTest {
   @Test
   void workItemSuspended_marksPlanItemSuspended() {
     PlanItem delegatedItem = PlanItem.create("review-ht-suspend", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
+    delegatedItem.tryMarkDispatching();
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
@@ -245,6 +250,7 @@ class WorkItemLifecycleAdapterTest {
   @Test
   void workItemResumed_marksPlanItemDelegated() {
     PlanItem delegatedItem = PlanItem.create("review-ht-resume", io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
+    delegatedItem.tryMarkDispatching();
     delegatedItem.markDelegated();
     delegatedItem.markSuspended();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
@@ -447,6 +453,7 @@ class WorkItemLifecycleAdapterTest {
   void workItemGroupRejected_marksPlanItemRejected() {
     // Group threshold unreachable — group PlanItems are always DELEGATED (HumanTask SpawnGroup)
     PlanItem delegatedItem = PlanItem.create("group-binding", io.casehub.api.model.ExecutorRef.of("group-worker"), 10);
+    delegatedItem.tryMarkDispatching();
     delegatedItem.markDelegated();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
     String delegatedItemId = delegatedItem.getPlanItemId();
