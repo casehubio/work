@@ -2,18 +2,20 @@
 
 ## Last Session
 
-Closed branch `issue-864-sx-batch` — 3 XS/Low issues:
-- **#864** — `TrustRoutingPreferenceRegistrar` registers all 5 trust routing policy key schemas via `PreferenceSchemaRegistry` at startup (ledger module)
-- **#848** — Added `variantId` to `Assignment` record and persistence stores; `CbrCaseRetainObserver` reads it from `PlanItemRecord` for prompt variant outcome correlation
-- **#731** — Migrated `CaseMemoryObserver` from `Instance<CaseMemoryStore>` to `MemoryEmitter`; promoted `casehub-neocortex-memory` from runtime to compile scope
-
-All tests pass (7 across 2 modules). Squashed to 2 commits, pushed to both remotes.
+Triage and planning — reviewed open work backlog, grouped issues into three epics (#329 Progress model, #330 Queue summary, #331 Notification arch). Discovered #315, #316, #305 were already closed, so closed #331 immediately and updated #330 scope. Created slot 8 for #329. Stamped dead `issue-864-sx-batch` branch.
 
 ## What's Left
 
-- Unrecovered artifacts on `issue-807-sx-batch` workspace branch (89 blog entries, 10 specs never promoted to main) · M · Low
-- 65+ stale workspace branches (backup/pre-squash and old issue branches) · L · Low
+- Slots 9, 10 reported created but don't exist on disk — may need re-creation if #330 work is picked up via a slot · XS · Low
+- Pre-existing `scheduler-quartz` build error (engine) · S · Low
+- Pre-existing `engine-api` checkstyle errors (engine) · XS · Low
 
 ## What's Next
 
-*See open issues via `gh issue list --repo casehubio/engine`.*
+| # | Description | Scale | Complexity | Notes |
+|---|-------------|-------|------------|-------|
+| #329 | Epic: Progress model enhancements (#307, #309, #308) | L | Med | Slot 8 created |
+| #330 | Epic: Queue summary — only #306 remains (caching/materialised views) | M | Med | #305 already closed |
+| #298 | Replace event-as-request pattern with direct WorkItemCreator.create() | M | Med | Design |
+| #152 | Split examples into core and full variants | M | Low | — |
+| #328 | Register work preference schemas via PreferenceSchemaRegistry | S | Low | — |
