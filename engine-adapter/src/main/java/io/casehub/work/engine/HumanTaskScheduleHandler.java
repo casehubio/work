@@ -92,9 +92,9 @@ public class HumanTaskScheduleHandler {
       return;
     }
 
-    if (item.getStatus() != TaskStatus.PENDING) {
+    if (item.getStatus() != TaskStatus.DISPATCHING) {
       LOG.warnf(
-          "PlanItem for binding '%s' case %s is not PENDING (status=%s) — skipping",
+          "PlanItem for binding '%s' case %s is not DISPATCHING (status=%s) — skipping",
           event.bindingName(), event.caseId(), item.getStatus());
       return;
     }
@@ -114,8 +114,9 @@ public class HumanTaskScheduleHandler {
       templateId = UUID.fromString(target.templateRef());
     } catch (IllegalArgumentException e) {
       LOG.warnf(
-          "templateRef '%s' is not a valid UUID for binding '%s' case %s — PlanItem left PENDING",
+          "templateRef '%s' is not a valid UUID for binding '%s' case %s — reverting to PENDING",
           target.templateRef(), event.bindingName(), event.caseId());
+      item.revertDispatching();
       return;
     }
 
@@ -148,8 +149,9 @@ public class HumanTaskScheduleHandler {
       workItemCreator.create(requestBuilder.build());
     } catch (final Exception e) {
       LOG.warnf(
-          "Failed to create WorkItem from template '%s' binding '%s' case %s — PlanItem left PENDING: %s",
+          "Failed to create WorkItem from template '%s' binding '%s' case %s — reverting to PENDING: %s",
           target.templateRef(), event.bindingName(), event.caseId(), e.getMessage());
+      item.revertDispatching();
       return;
     }
 
@@ -171,18 +173,26 @@ public class HumanTaskScheduleHandler {
 
   private void handleInlineMode(PlanItem item, HumanTaskScheduleEvent event) {
     String callerRef = PlanItemCallerRef.encode(event.caseId(), item.getPlanItemId());
-    createInline(
-        event.target(),
-        event.inputData(),
-        event.resolvedCandidateGroups(),
-        event.resolvedCandidateUsers(),
-        callerRef,
-        event.expiresAtDeadline(),
-        event.caseBudgetDeadline(),
-        event.payloadTypeName(),
-        event.resolutionTypeName(),
-        event.candidateScores(),
-        event.experiences());
+    try {
+      createInline(
+          event.target(),
+          event.inputData(),
+          event.resolvedCandidateGroups(),
+          event.resolvedCandidateUsers(),
+          callerRef,
+          event.expiresAtDeadline(),
+          event.caseBudgetDeadline(),
+          event.payloadTypeName(),
+          event.resolutionTypeName(),
+          event.candidateScores(),
+          event.experiences());
+    } catch (Exception e) {
+      LOG.warnf(
+          "Failed to create inline WorkItem for binding '%s' case %s — reverting to PENDING: %s",
+          event.bindingName(), event.caseId(), e.getMessage());
+      item.revertDispatching();
+      return;
+    }
     planItemStore.save(
         PlanItemSaveRequest.primitive(
             event.caseId(),
