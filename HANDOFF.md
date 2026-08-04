@@ -1,23 +1,14 @@
-*Updated: #648 closed — removed from backlog.*
-
-# HANDOFF — 2026-08-03
+# HANDOFF — 2026-08-04
 
 ## Last Session
 
-S/XS batch — closed #807 (goal abandonment), #648 (OutcomeRecorder.addAttestation), #850 (spec s4 update). Cleaned up orphaned `blackboard/` directory. Filed #860 (goal-capability mapping follow-on).
-
-## CI Status
-
-- **Engine** — `b34132fa` on main (goal abandonment + promoted specs). Pre-existing `scheduler-quartz` build error (WorkerScheduleEvent constructor mismatch) — not introduced by this session.
-- **Ledger** — `3271c88` on `issue-648-add-attestation` branch. `record()` returns UUID (breaking). 884 tests green. Branch not yet merged to ledger main.
+Fixed CI (missing Flyway migration for `plan_item.completed_at`). Implemented #860 — `GoalFailureRecorder` now filters DECLINE signals by capability overlap using `AgentGoal.capabilities()` from eidos#135. Branch closed, pushed to both remotes.
 
 ## What's Left
 
-- Pre-existing `scheduler-quartz` build error (`ScheduledTriggerJob`/`ConditionalScheduledTriggerJob` — `WorkerScheduleEvent` constructor args) · S · Low
-- Pre-existing `engine-api` checkstyle errors · XS · Low
+- Unrecovered artifacts on `issue-807-sx-batch` workspace branch (89 blog entries, 10 specs never promoted to main) · M · Low
+- 65+ stale workspace branches (backup/pre-squash and old issue branches) · L · Low
 
 ## What's Next
 
-| # | Description | Scale | Complexity | Notes |
-|---|-------------|-------|------------|-------|
-| #860 | Goal-capability mapping on AgentGoal for per-goal abandonment discrimination | S | Med | Follow-on from #807 — needs eidos change |
+*Unchanged — `git show HEAD~1:HANDOFF.md`*
