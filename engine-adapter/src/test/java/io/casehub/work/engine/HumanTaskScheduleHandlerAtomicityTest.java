@@ -147,6 +147,7 @@ class HumanTaskScheduleHandlerAtomicityTest {
     }
     caseId = UUID.randomUUID();
     planItem = PlanItem.create("irb-binding", io.casehub.api.model.ExecutorRef.of("unused-worker"), 5);
+    assertThat(planItem.tryMarkDispatching()).isTrue();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(planItem);
   }
 
@@ -177,7 +178,8 @@ class HumanTaskScheduleHandlerAtomicityTest {
         throw new RuntimeException("Interrupted waiting for put() attempt", e);
       }
 
-      assertThat(planItem.getStatus()).isEqualTo(TaskStatus.PENDING);
+      org.awaitility.Awaitility.await().atMost(2, TimeUnit.SECONDS)
+          .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(TaskStatus.PENDING));
       assertThat(workItemStore.scanAll()).isEmpty();
       List<PlanItemRecord> records = planItemStore.findByCaseId(caseId, "test-tenant");
       assertThat(records)
