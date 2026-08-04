@@ -20,28 +20,30 @@ public final class ProgressInstanceMapper {
                 entity.state,
                 entity.status,
                 entity.rollupStrategyId,
+                entity.rollbackPolicy,
+                entity.visualisationMode,
                 entity.createdAt,
                 entity.updatedAt
-        );
-    }
+        );}
 
     public static ProgressInstanceEntity toEntity(ProgressInstance instance) {
         ProgressInstanceEntity entity = new ProgressInstanceEntity();
-        entity.id = instance.id();
-        entity.tenancyId = instance.tenancyId();
-        entity.scopeType = instance.scopeType();
-        entity.scopeId = instance.scopeId();
-        entity.parentProgressId = instance.parentProgressId();
-        entity.rootProgressId = instance.rootProgressId();
-        entity.shapeType = instance.shapeType();
-        entity.definition = instance.definition();
-        entity.state = instance.state();
-        entity.status = instance.status();
-        entity.rollupStrategyId = instance.rollupStrategyId();
-        entity.createdAt = instance.createdAt();
-        entity.updatedAt = instance.updatedAt();
-        return entity;
-    }
+        entity.id                = instance.id();
+        entity.tenancyId         = instance.tenancyId();
+        entity.scopeType         = instance.scopeType();
+        entity.scopeId           = instance.scopeId();
+        entity.parentProgressId  = instance.parentProgressId();
+        entity.rootProgressId    = instance.rootProgressId();
+        entity.shapeType         = instance.shapeType();
+        entity.definition        = instance.definition();
+        entity.state             = instance.state();
+        entity.status            = instance.status();
+        entity.rollupStrategyId  = instance.rollupStrategyId();
+        entity.rollbackPolicy    = instance.rollbackPolicy();
+        entity.visualisationMode = instance.visualisationMode();
+        entity.createdAt         = instance.createdAt();
+        entity.updatedAt         = instance.updatedAt();
+        return entity;}
 
     public static void updateEntity(ProgressInstanceEntity entity, ProgressInstance instance) {
         entity.state = instance.state();

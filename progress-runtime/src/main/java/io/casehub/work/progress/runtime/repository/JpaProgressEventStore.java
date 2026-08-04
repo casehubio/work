@@ -3,13 +3,14 @@ package io.casehub.work.progress.runtime.repository;
 import io.casehub.work.progress.ProgressChangeType;
 import io.casehub.work.progress.ProgressStatus;
 import io.casehub.work.progress.ProgressUpdatedEvent;
-import io.casehub.work.progress.spi.ProgressEventStore;
 import io.casehub.work.progress.runtime.model.ProgressEventEntity;
+import io.casehub.work.progress.spi.ProgressEventStore;
 import io.casehub.work.runtime.repository.jpa.TenantAwareStore;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
@@ -22,6 +23,14 @@ public class JpaProgressEventStore extends TenantAwareStore implements ProgressE
             entity.persistAndFlush();
         });
     }
+
+    @Override
+    public Optional<ProgressUpdatedEvent> findById(UUID eventId) {
+        return withTenantQuery(() ->
+                                       ProgressEventEntity.<ProgressEventEntity>findByIdOptional(eventId)
+                                                          .map(this::toDomain));
+    }
+
 
     @Override
     public List<ProgressUpdatedEvent> findByProgressId(UUID progressId) {
@@ -60,22 +69,22 @@ public class JpaProgressEventStore extends TenantAwareStore implements ProgressE
 
     private ProgressEventEntity toEntity(ProgressUpdatedEvent event) {
         ProgressEventEntity entity = new ProgressEventEntity();
-        entity.id = UUID.randomUUID();
-        entity.tenancyId = event.tenancyId();
-        entity.progressId = event.progressId();
+        entity.id             = event.id();
+        entity.tenancyId      = event.tenancyId();
+        entity.progressId     = event.progressId();
         entity.rootProgressId = event.rootProgressId();
-        entity.scopeType = event.scopeType();
-        entity.scopeId = event.scopeId();
-        entity.changeType = event.changeType().name();
-        entity.previousState = event.previousState();
-        entity.currentState = event.currentState();
-        entity.status = event.status().name();
-        entity.occurredAt = event.timestamp();
-        return entity;
-    }
+        entity.scopeType      = event.scopeType();
+        entity.scopeId        = event.scopeId();
+        entity.changeType     = event.changeType().name();
+        entity.previousState  = event.previousState();
+        entity.currentState   = event.currentState();
+        entity.status         = event.status().name();
+        entity.occurredAt     = event.timestamp();
+        return entity;}
 
     private ProgressUpdatedEvent toDomain(ProgressEventEntity entity) {
         return new ProgressUpdatedEvent(
+                entity.id,
                 entity.progressId,
                 entity.tenancyId,
                 entity.scopeType,
@@ -88,6 +97,5 @@ public class JpaProgressEventStore extends TenantAwareStore implements ProgressE
                 ProgressStatus.valueOf(entity.status),
                 ProgressChangeType.valueOf(entity.changeType),
                 entity.occurredAt
-        );
-    }
+        );}
 }

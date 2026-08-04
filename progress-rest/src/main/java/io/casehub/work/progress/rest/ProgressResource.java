@@ -1,8 +1,8 @@
 package io.casehub.work.progress.rest;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import io.casehub.work.progress.ProgressCreateRequest;
 import io.casehub.work.progress.ProgressInstance;
+import io.casehub.work.progress.ProgressSnapshot;
 import io.casehub.work.progress.ProgressUpdatedEvent;
 import io.casehub.work.progress.runtime.event.ProgressEventBroadcaster;
 import io.casehub.work.progress.runtime.service.ProgressService;
@@ -49,10 +49,10 @@ public class ProgressResource {
                 request.tenancyId(), request.scopeType(), request.scopeId(),
                 request.shapeType(), request.state(),
                 request.parentProgressId(), request.rollupStrategyId(),
-                request.definition());
+                request.definition(), request.rollbackPolicy(),
+                request.visualisationMode());
         ProgressInstance instance = progressService.create(domainReq);
-        return Response.status(Response.Status.CREATED).entity(instance).build();
-    }
+        return Response.status(Response.Status.CREATED).entity(instance).build();}
 
     @PUT
     @Path("/{id}/state")
@@ -88,10 +88,10 @@ public class ProgressResource {
         ProgressCreateRequest domainReq = new ProgressCreateRequest(
                 request.tenancyId(), request.scopeType(), request.scopeId(),
                 request.shapeType(), request.state(),
-                null, request.rollupStrategyId(), request.definition());
+                null, request.rollupStrategyId(), request.definition(),
+                request.rollbackPolicy(), request.visualisationMode());
         ProgressInstance child = progressService.attachChild(parentId, domainReq);
-        return Response.status(Response.Status.CREATED).entity(child).build();
-    }
+        return Response.status(Response.Status.CREATED).entity(child).build();}
 
     @GET
     @Path("/{id}")
@@ -129,6 +129,28 @@ public class ProgressResource {
         }
         return eventStore.findByProgressId(id);
     }
+
+    @POST
+    @Path("/{id}/rollback")
+    public Response rollback(@PathParam("id") UUID id, @QueryParam("toEvent") UUID toEventId) {
+        ProgressInstance result;
+        if (toEventId != null) {
+            result = progressService.rollbackToEvent(id, toEventId);
+        } else {
+            result = progressService.rollback(id);
+        }
+        return Response.ok(result).build();
+    }
+
+    @GET
+    @Path("/{id}/snapshots")
+    public List<ProgressSnapshot> getSnapshots(
+            @PathParam("id") UUID id,
+            @QueryParam("limit") Integer limit) {
+        int effectiveLimit = (limit != null && limit > 0) ? Math.min(limit, 1000) : 100;
+        return progressService.getSnapshots(id, effectiveLimit);
+    }
+
 
     @GET
     @Path("/{id}/stream")

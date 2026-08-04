@@ -59,6 +59,11 @@ public class ProgressInstanceEntity extends PanacheEntityBase {
 
     @Column(name = "rollup_strategy_id")
     public String rollupStrategyId;
+    @Column(name = "rollback_policy")
+    public String rollbackPolicy;
+    @Column(name = "visualisation_mode")
+    public String visualisationMode;
+
 
     @Column(name = "created_at", nullable = false)
     public Instant createdAt;

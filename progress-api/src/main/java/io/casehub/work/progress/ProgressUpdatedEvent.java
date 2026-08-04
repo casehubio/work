@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record ProgressUpdatedEvent(
+        UUID id,
         UUID progressId,
         String tenancyId,
         String scopeType,

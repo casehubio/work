@@ -4,10 +4,14 @@ import io.casehub.work.progress.ProgressUpdatedEvent;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ProgressEventStore {
     void append(ProgressUpdatedEvent event);
+
+    Optional<ProgressUpdatedEvent> findById(UUID eventId);
+
 
     List<ProgressUpdatedEvent> findByProgressId(UUID progressId);
 

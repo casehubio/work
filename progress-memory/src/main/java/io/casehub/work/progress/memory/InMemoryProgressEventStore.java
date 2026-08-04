@@ -2,12 +2,13 @@ package io.casehub.work.progress.memory;
 
 import io.casehub.work.progress.ProgressUpdatedEvent;
 import io.casehub.work.progress.spi.ProgressEventStore;
+import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
-import jakarta.annotation.Priority;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -22,6 +23,14 @@ public class InMemoryProgressEventStore implements ProgressEventStore {
     public void append(ProgressUpdatedEvent event) {
         events.add(event);
     }
+
+    @Override
+    public Optional<ProgressUpdatedEvent> findById(UUID eventId) {
+        return events.stream()
+                     .filter(e -> e.id().equals(eventId))
+                     .findFirst();
+    }
+
 
     @Override
     public List<ProgressUpdatedEvent> findByProgressId(UUID progressId) {

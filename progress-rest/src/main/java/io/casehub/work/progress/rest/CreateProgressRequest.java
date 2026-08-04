@@ -12,5 +12,7 @@ public record CreateProgressRequest(
         JsonNode state,
         UUID parentProgressId,
         String rollupStrategyId,
-        JsonNode definition
+        JsonNode definition,
+        String rollbackPolicy,
+        String visualisationMode
 ) {}

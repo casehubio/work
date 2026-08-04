@@ -12,7 +12,9 @@ public record ProgressCreateRequest(
         JsonNode state,
         UUID parentProgressId,
         String rollupStrategyId,
-        JsonNode definition
+        JsonNode definition,
+        String rollbackPolicy,
+        String visualisationMode
 ) {
     public ProgressCreateRequest {
         if (tenancyId == null || tenancyId.isBlank()) {

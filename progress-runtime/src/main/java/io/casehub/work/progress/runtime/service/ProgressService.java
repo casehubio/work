@@ -6,6 +6,7 @@ import io.casehub.work.progress.ConditionEvaluator;
 import io.casehub.work.progress.ProgressChangeType;
 import io.casehub.work.progress.ProgressCreateRequest;
 import io.casehub.work.progress.ProgressInstance;
+import io.casehub.work.progress.ProgressSnapshot;
 import io.casehub.work.progress.ProgressStatus;
 import io.casehub.work.progress.ProgressUpdatedEvent;
 import io.casehub.work.progress.StepDefinition;
@@ -18,6 +19,7 @@ import io.casehub.work.progress.validation.StepShapeValidator;
 import io.casehub.work.progress.validation.StepValidator;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -67,7 +69,7 @@ public class ProgressService {
 
         validateShape(request.shapeType(), request.state(), request.definition());
 
-        UUID id = UUID.randomUUID();
+        UUID    id  = UUID.randomUUID();
         Instant now = Instant.now();
 
         UUID rootProgressId;
@@ -83,12 +85,12 @@ public class ProgressService {
                 request.parentProgressId(), rootProgressId,
                 request.shapeType(), request.definition(), request.state(),
                 ProgressStatus.PENDING, request.rollupStrategyId(),
+                request.rollbackPolicy(), request.visualisationMode(),
                 now, now);
 
         instanceStore.put(instance);
         emitEvent(instance, null, ProgressChangeType.CREATED);
-        return instance;
-    }
+        return instance;}
 
     public ProgressInstance updateState(UUID id, JsonNode newState) {
         ProgressInstance instance = requireInstance(id);
@@ -100,7 +102,10 @@ public class ProgressService {
         }
 
         ProgressChangeType changeType;
-        if (rollbackDetector.isRollback(instance.shapeType(), instance.state(), newState)) {
+        if (rollbackDetector.isRollback(instance.shapeType(), instance.state(), newState, instance.definition())) {
+            if ("denied".equalsIgnoreCase(instance.rollbackPolicy())) {
+                throw new IllegalStateException("Rollback denied by policy");
+            }
             changeType = ProgressChangeType.ROLLED_BACK;
         } else {
             changeType = ProgressChangeType.STATE_UPDATED;
@@ -109,8 +114,7 @@ public class ProgressService {
         ProgressInstance updated = withState(instance, newState, newStatus);
         instanceStore.put(updated);
         emitEvent(updated, instance.state(), changeType);
-        return updated;
-    }
+        return updated;}
 
     public ProgressInstance complete(UUID id) {
         ProgressInstance instance = requireInstance(id);
@@ -151,13 +155,13 @@ public class ProgressService {
         ProgressCreateRequest withParent = new ProgressCreateRequest(
                 childRequest.tenancyId(), childRequest.scopeType(), childRequest.scopeId(),
                 childRequest.shapeType(), childRequest.state(),
-                parentId, childRequest.rollupStrategyId(), childRequest.definition());
+                parentId, childRequest.rollupStrategyId(), childRequest.definition(),
+                childRequest.rollbackPolicy(), childRequest.visualisationMode());
 
         ProgressInstance child = create(withParent);
 
         emitEvent(parent, parent.state(), ProgressChangeType.CHILD_ATTACHED);
-        return child;
-    }
+        return child;}
 
     public Optional<ProgressInstance> findById(UUID id) {
         return instanceStore.get(id);
@@ -170,6 +174,69 @@ public class ProgressService {
     public List<ProgressInstance> findChildren(UUID parentId) {
         return instanceStore.findByParentProgressId(parentId);
     }
+
+    public ProgressInstance rollback(UUID id) {
+        ProgressInstance           instance = requireInstance(id);
+        List<ProgressUpdatedEvent> events   = eventStore.findByProgressId(id);
+
+        List<JsonNode> forwardStates = new ArrayList<>();
+        for (ProgressUpdatedEvent e : events) {
+            if (e.changeType() == ProgressChangeType.STATE_UPDATED || e.changeType() == ProgressChangeType.CREATED) {
+                forwardStates.add(e.currentState());
+            }
+        }
+
+        JsonNode currentState = instance.state();
+        for (int i = forwardStates.size() - 1; i >= 0; i--) {
+            if (forwardStates.get(i).equals(currentState)) {
+                if (i == 0) {
+                    throw new IllegalStateException("No previous state to roll back to");
+                }
+                return applyRollbackState(instance, forwardStates.get(i - 1));
+            }
+        }
+
+        for (int i = events.size() - 1; i >= 0; i--) {
+            if (events.get(i).currentState().equals(currentState) && events.get(i).previousState() != null) {
+                return applyRollbackState(instance, events.get(i).previousState());
+            }
+        }
+
+        throw new IllegalStateException("No previous state to roll back to");}
+
+    public ProgressInstance rollbackToEvent(UUID id, UUID eventId) {
+        ProgressInstance instance = requireInstance(id);
+        ProgressUpdatedEvent event = eventStore.findById(eventId)
+                                               .orElseThrow(() -> new IllegalArgumentException("Event not found: " + eventId));
+
+        if (!event.progressId().equals(id)) {
+            throw new IllegalArgumentException("Event " + eventId + " does not belong to instance " + id);
+        }
+
+        return applyRollbackState(instance, event.currentState());
+    }
+
+    public List<ProgressSnapshot> getSnapshots(UUID id, int limit) {
+        return eventStore.findByProgressId(id).stream()
+                         .map(e -> new ProgressSnapshot(e.id(), e.currentState(), e.status(), e.changeType(), e.timestamp()))
+                         .limit(limit)
+                         .toList();
+    }
+
+    private ProgressInstance applyRollbackState(ProgressInstance instance, JsonNode newState) {
+        validateShape(instance.shapeType(), newState, instance.definition());
+
+        ProgressStatus newStatus = instance.status();
+        if (newStatus == ProgressStatus.PENDING) {
+            newStatus = ProgressStatus.ACTIVE;
+        }
+
+        ProgressInstance updated = withState(instance, newState, newStatus);
+        instanceStore.put(updated);
+        emitEvent(updated, instance.state(), ProgressChangeType.ROLLED_BACK);
+        return updated;
+    }
+
 
     // --- Step convenience methods ---
 
@@ -242,7 +309,7 @@ public class ProgressService {
         }
 
         ProgressChangeType changeType = ProgressChangeType.STATE_UPDATED;
-        if (rollbackDetector.isRollback(instance.shapeType(), instance.state(), newState)) {
+        if (rollbackDetector.isRollback(instance.shapeType(), instance.state(), newState, instance.definition())) {
             changeType = ProgressChangeType.ROLLED_BACK;
         }
 
@@ -315,8 +382,8 @@ public class ProgressService {
                 instance.parentProgressId(), instance.rootProgressId(),
                 instance.shapeType(), instance.definition(), newState,
                 newStatus, instance.rollupStrategyId(),
-                instance.createdAt(), Instant.now());
-    }
+                instance.rollbackPolicy(), instance.visualisationMode(),
+                instance.createdAt(), Instant.now());}
 
     private ProgressInstance withStatus(ProgressInstance instance, ProgressStatus newStatus) {
         return withState(instance, instance.state(), newStatus);
@@ -325,12 +392,12 @@ public class ProgressService {
     private void emitEvent(ProgressInstance instance, JsonNode previousState,
                            ProgressChangeType changeType) {
         ProgressUpdatedEvent event = new ProgressUpdatedEvent(
+                UUID.randomUUID(),
                 instance.id(), instance.tenancyId(),
                 instance.scopeType(), instance.scopeId(),
                 instance.parentProgressId(), instance.rootProgressId(),
                 instance.shapeType(), previousState, instance.state(),
                 instance.status(), changeType, Instant.now());
         eventStore.append(event);
-        eventEmitter.accept(event);
-    }
+        eventEmitter.accept(event);}
 }

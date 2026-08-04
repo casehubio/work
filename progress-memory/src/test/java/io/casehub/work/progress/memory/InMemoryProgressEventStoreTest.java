@@ -23,11 +23,10 @@ class InMemoryProgressEventStoreTest {
     }
 
     private ProgressUpdatedEvent event(UUID progressId, UUID rootId, Instant timestamp) {
-        return new ProgressUpdatedEvent(progressId, "t1", "workitem", "wi-1",
-                null, rootId, "percentage", null,
-                mapper.createObjectNode().put("value", 50),
-                ProgressStatus.ACTIVE, ProgressChangeType.STATE_UPDATED, timestamp);
-    }
+        return new ProgressUpdatedEvent(UUID.randomUUID(), progressId, "t1", "workitem", "wi-1",
+                                        null, rootId, "percentage", null,
+                                        mapper.createObjectNode().put("value", 50),
+                                        ProgressStatus.ACTIVE, ProgressChangeType.STATE_UPDATED, timestamp);}
 
     @Test
     void appendAndFindByProgressId() {

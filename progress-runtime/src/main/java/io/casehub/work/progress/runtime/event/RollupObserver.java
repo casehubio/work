@@ -1,13 +1,13 @@
 package io.casehub.work.progress.runtime.event;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import io.casehub.work.progress.ProgressChangeType;
 import io.casehub.work.progress.ProgressInstance;
 import io.casehub.work.progress.ProgressUpdatedEvent;
 import io.casehub.work.progress.rollup.RollupEngine;
-import io.casehub.work.progress.spi.ProgressInstanceStore;
 import io.casehub.work.progress.spi.ProgressEventStore;
+import io.casehub.work.progress.spi.ProgressInstanceStore;
 import io.casehub.work.runtime.service.TenantContextRunner;
-import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.ObservesAsync;
@@ -71,9 +71,9 @@ public class RollupObserver {
             return;
         }
 
-        List<ProgressInstance> children = instanceStore.findByParentProgressId(parentId);
-        JsonNode previousState = parent.state();
-        JsonNode newState = rollupEngine.recompute(parent, children);
+        List<ProgressInstance> children      = instanceStore.findByParentProgressId(parentId);
+        JsonNode               previousState = parent.state();
+        JsonNode               newState      = rollupEngine.recompute(parent, children);
 
         if (newState != null && rollupEngine.hasStateChanged(previousState, newState)) {
             ProgressInstance updated = new ProgressInstance(
@@ -81,10 +81,12 @@ public class RollupObserver {
                     parent.parentProgressId(), parent.rootProgressId(),
                     parent.shapeType(), parent.definition(), newState,
                     parent.status(), parent.rollupStrategyId(),
+                    parent.rollbackPolicy(), parent.visualisationMode(),
                     parent.createdAt(), Instant.now());
             instanceStore.put(updated);
 
             ProgressUpdatedEvent rollupEvent = new ProgressUpdatedEvent(
+                    java.util.UUID.randomUUID(),
                     parent.id(), tenancyId,
                     parent.scopeType(), parent.scopeId(),
                     parent.parentProgressId(), parent.rootProgressId(),
@@ -93,6 +95,5 @@ public class RollupObserver {
                     Instant.now());
             eventStore.append(rollupEvent);
             cdiEvent.fireAsync(rollupEvent);
-        }
-    }
+        }}
 }

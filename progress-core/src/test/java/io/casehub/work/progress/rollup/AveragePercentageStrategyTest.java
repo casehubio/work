@@ -20,17 +20,15 @@ class AveragePercentageStrategyTest {
 
     private ProgressInstance childWithPercentage(int value, ProgressStatus status) {
         return new ProgressInstance(UUID.randomUUID(), "t1", "workitem", UUID.randomUUID().toString(),
-                UUID.randomUUID(), UUID.randomUUID(), "percentage", null,
-                mapper.createObjectNode().put("value", value), status, null,
-                Instant.now(), Instant.now());
-    }
+                                    UUID.randomUUID(), UUID.randomUUID(), "percentage", null,
+                                    mapper.createObjectNode().put("value", value), status, null,
+                                    null, null, Instant.now(), Instant.now());}
 
     private ProgressInstance parent() {
         return new ProgressInstance(UUID.randomUUID(), "t1", "workitem", UUID.randomUUID().toString(),
-                null, UUID.randomUUID(), "percentage", null,
-                mapper.createObjectNode().put("value", 0),
-                ProgressStatus.ACTIVE, "average-percentage", Instant.now(), Instant.now());
-    }
+                                    null, UUID.randomUUID(), "percentage", null,
+                                    mapper.createObjectNode().put("value", 0),
+                                    ProgressStatus.ACTIVE, "average-percentage", null, null, Instant.now(), Instant.now());}
 
     @Test
     void averageOfThreeChildren() {

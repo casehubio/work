@@ -17,6 +17,8 @@ public record ProgressInstance(
         JsonNode state,
         ProgressStatus status,
         String rollupStrategyId,
+        String rollbackPolicy,
+        String visualisationMode,
         Instant createdAt,
         Instant updatedAt
 ) {}

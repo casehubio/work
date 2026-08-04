@@ -20,17 +20,15 @@ class CountCompletedStrategyTest {
 
     private ProgressInstance child(ProgressStatus status) {
         return new ProgressInstance(UUID.randomUUID(), "t1", "workitem", UUID.randomUUID().toString(),
-                UUID.randomUUID(), UUID.randomUUID(), "percentage", null,
-                mapper.createObjectNode().put("value", 100), status, null,
-                Instant.now(), Instant.now());
-    }
+                                    UUID.randomUUID(), UUID.randomUUID(), "percentage", null,
+                                    mapper.createObjectNode().put("value", 100), status, null,
+                                    null, null, Instant.now(), Instant.now());}
 
     private ProgressInstance parent() {
         return new ProgressInstance(UUID.randomUUID(), "t1", "workitem", UUID.randomUUID().toString(),
-                null, UUID.randomUUID(), "count", null,
-                mapper.createObjectNode().put("current", 0).put("total", 0),
-                ProgressStatus.ACTIVE, "count-completed", Instant.now(), Instant.now());
-    }
+                                    null, UUID.randomUUID(), "count", null,
+                                    mapper.createObjectNode().put("current", 0).put("total", 0),
+                                    ProgressStatus.ACTIVE, "count-completed", null, null, Instant.now(), Instant.now());}
 
     @Test
     void twoCompletedOneActive() {
