@@ -21,7 +21,6 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <module>deployment</module>
     <module>flow</module>
     <module>ledger</module>
-    <module>notifications</module>
     <module>queues</module>
     <module>queues-examples</module>
     <module>queues-dashboard</module>

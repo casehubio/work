@@ -1,15 +1,5 @@
 package io.casehub.work.runtime.filter;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import io.casehub.platform.api.expression.ExpressionEvaluationException;
 import io.casehub.platform.api.expression.LambdaExpression;
 import io.casehub.platform.api.label.LabelAction;
@@ -18,6 +8,16 @@ import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemLabel;
+import jakarta.enterprise.event.Event;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class LabelRuleEngineTest {
 
@@ -184,4 +184,74 @@ class LabelRuleEngineTest {
         assertThat(wi.labels).extracting(l -> l.path)
                 .contains("tier/urgent", "tier/urgent/unassigned");
     }
+
+
+    // ── LabelChangeEvent tests ──────────────────────────────────────────
+
+    @Test
+    void evaluate_firesLabelChangeEvent_whenLabelsAdded() {
+        cdiRules.add(new LabelRule("add-priority",
+                                   new LambdaExpression<>(ctx -> true),
+                                   List.of(new LabelAction.Add("priority/high"))));
+
+        var firedEvents = new ArrayList<LabelChangeEvent>();
+        injectLabelChangeEvent(engine, firedEvents::add);
+
+        var wi = new WorkItem();
+        engine.evaluate(wi, Map.of(), "ADD");
+
+        assertThat(firedEvents).hasSize(1);
+        var event = firedEvents.get(0);
+        assertThat(event.workItem()).isSameAs(wi);
+        assertThat(event.deltas()).hasSize(1);
+        assertThat(event.deltas().get(0).path()).isEqualTo("priority/high");
+        assertThat(event.deltas().get(0).changeType()).isEqualTo(LabelChangeEvent.ChangeType.ADDED);
+    }
+
+    @Test
+    void evaluate_doesNotFireEvent_whenNoLabelsChange() {
+        cdiRules.add(new LabelRule("never-match",
+                                   new LambdaExpression<>(ctx -> false),
+                                   List.of(new LabelAction.Add("priority/high"))));
+
+        var firedEvents = new ArrayList<LabelChangeEvent>();
+        injectLabelChangeEvent(engine, firedEvents::add);
+
+        engine.evaluate(new WorkItem(), Map.of(), "ADD");
+
+        assertThat(firedEvents).isEmpty();
+    }
+
+    @Test
+    void evaluate_includesRemovedLabelsInDelta() {
+        var firedEvents = new ArrayList<LabelChangeEvent>();
+        injectLabelChangeEvent(engine, firedEvents::add);
+
+        var wi = new WorkItem();
+        wi.labels.add(new WorkItemLabel("stale", LabelPersistence.INFERRED, "old-rule"));
+        engine.evaluate(wi, Map.of(), "UPDATE");
+
+        assertThat(firedEvents).hasSize(1);
+        assertThat(firedEvents.get(0).removals()).hasSize(1);
+        assertThat(firedEvents.get(0).removals().get(0).path()).isEqualTo("stale");
+    }
+
+    @SuppressWarnings("unchecked")
+    private void injectLabelChangeEvent(LabelRuleEngine target,
+                                        java.util.function.Consumer<LabelChangeEvent> capture) {
+        try {
+            var field = LabelRuleEngine.class.getDeclaredField("labelChangeEvent");
+            field.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            Event<LabelChangeEvent> mockEvent = org.mockito.Mockito.mock(Event.class);
+            org.mockito.Mockito.doAnswer(inv -> {
+                capture.accept(inv.getArgument(0));
+                return null;
+            }).when(mockEvent).fire(org.mockito.ArgumentMatchers.any());
+            field.set(target, mockEvent);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }

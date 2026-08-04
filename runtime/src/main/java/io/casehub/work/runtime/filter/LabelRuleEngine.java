@@ -8,6 +8,7 @@ import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemLabel;
 import io.casehub.work.runtime.repository.LabelRuleStore;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class LabelRuleEngine {
@@ -31,6 +33,9 @@ public class LabelRuleEngine {
 
     @Inject
     ExpressionEngineRegistry expressionRegistry;
+    @Inject
+    Event<LabelChangeEvent>  labelChangeEvent;
+
 
     private List<LabelRule> testRules;
 
@@ -47,19 +52,47 @@ public class LabelRuleEngine {
         }
         RUNNING.set(true);
         try {
+            Set<String> before = workItem.labels.stream()
+                                                .filter(l -> l.persistence == LabelPersistence.INFERRED)
+                                                .map(l -> l.path)
+                                                .collect(Collectors.toSet());
+
             workItem.labels.removeIf(l -> l.persistence == LabelPersistence.INFERRED);
 
             List<LabelRule>     allRules       = collectRules();
             Map<String, Object> currentContext = io.casehub.work.runtime.event.WorkItemContextBuilder.toMap(workItem);
             int                 maxPasses      = 5;
             for (int pass = 0; pass < maxPasses; pass++) {
-                List<RuleAction> matched = evaluateRules(allRules, currentContext, event);
-                int              before  = workItem.labels.size();
+                List<RuleAction> matched    = evaluateRules(allRules, currentContext, event);
+                int              beforeSize = workItem.labels.size();
                 applyActions(workItem, matched);
-                if (workItem.labels.size() == before) {
+                if (workItem.labels.size() == beforeSize) {
                     break;
                 }
                 currentContext = io.casehub.work.runtime.event.WorkItemContextBuilder.toMap(workItem);
+            }
+
+            Set<String> after = workItem.labels.stream()
+                                               .filter(l -> l.persistence == LabelPersistence.INFERRED)
+                                               .map(l -> l.path)
+                                               .collect(Collectors.toSet());
+
+            List<LabelChangeEvent.LabelDelta> deltas = new ArrayList<>();
+            for (String path : after) {
+                if (!before.contains(path)) {
+                    deltas.add(new LabelChangeEvent.LabelDelta(path,
+                                                               LabelChangeEvent.ChangeType.ADDED));
+                }
+            }
+            for (String path : before) {
+                if (!after.contains(path)) {
+                    deltas.add(new LabelChangeEvent.LabelDelta(path,
+                                                               LabelChangeEvent.ChangeType.REMOVED));
+                }
+            }
+
+            if (!deltas.isEmpty() && labelChangeEvent != null) {
+                labelChangeEvent.fire(new LabelChangeEvent(workItem, deltas));
             }
         } finally {
             RUNNING.remove();

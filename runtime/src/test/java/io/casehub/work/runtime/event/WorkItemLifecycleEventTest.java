@@ -1,13 +1,12 @@
 package io.casehub.work.runtime.event;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.runtime.model.WorkItem;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-import org.junit.jupiter.api.Test;
-
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemStatus;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Pure JUnit 5 unit tests for {@link WorkItemLifecycleEvent} — no container needed.
@@ -130,4 +129,20 @@ class WorkItemLifecycleEventTest {
         assertThat(ref.resolution()).isEqualTo("{}");
         assertThat(ref.candidateGroups()).isEqualTo("team-a");
     }
+
+
+    @Test
+    void implementsSubscribableEvent() {
+        WorkItem wi = new WorkItem();
+        wi.id        = UUID.randomUUID();
+        wi.status    = WorkItemStatus.IN_PROGRESS;
+        wi.tenancyId = "test-tenant";
+        WorkItemLifecycleEvent e = WorkItemLifecycleEvent.of("CREATED", wi, "alice", null);
+
+        assertThat(e).isInstanceOf(io.casehub.platform.api.subscription.SubscribableEvent.class);
+        io.casehub.platform.api.subscription.SubscribableEvent se = e;
+        assertThat(se.type()).isEqualTo("io.casehub.work.workitem.created");
+        assertThat(se.tenancyId()).isEqualTo("test-tenant");
+    }
+
 }

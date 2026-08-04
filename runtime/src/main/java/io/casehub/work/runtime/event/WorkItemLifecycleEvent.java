@@ -1,102 +1,79 @@
 package io.casehub.work.runtime.event;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.casehub.work.api.WorkCloudEventTypes;
+import io.casehub.work.api.WorkEventType;
+import io.casehub.work.api.WorkItemEvent;
+import io.casehub.work.api.WorkItemRef;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.platform.api.subscription.SubscribableEvent;
+import io.casehub.work.runtime.model.WorkItem;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
+public final class WorkItemLifecycleEvent implements WorkItemEvent, SubscribableEvent {
 
-import io.casehub.work.api.WorkEventType;
-import io.casehub.work.api.WorkItemEvent;
-import io.casehub.work.api.WorkItemRef;
-import io.casehub.work.api.WorkCloudEventTypes;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemStatus;
-
-/**
- * CDI event fired on every WorkItem lifecycle transition.
- * Implements {@link WorkItemEvent} so observers can access current state without
- * a separate store lookup. All existing accessor methods are preserved.
- *
- * <h2>Firing contract — fires AFTER the mutation is persisted</h2>
- * <p>
- * This event is fired by {@link io.casehub.work.runtime.service.WorkItemService}
- * <em>after</em> the WorkItem has been mutated and written to the store via
- * {@code workItemStore.put(workItem)}. By the time any observer receives this event,
- * the WorkItem's new state is already the current state in the store.
- *
- * <p>
- * <strong>This has a critical consequence for observers that need the pre-mutation state.</strong>
- * If an observer calls {@code workItemStore.get(event.workItemId())} inside its handler,
- * it receives the <em>post</em>-mutation entity — the "before" is gone. Observers that
- * must compare before and after (for example, to detect which queues a WorkItem entered
- * or left) must maintain their own record of the previous state between events.
- *
- * <p>
- * The {@code status} field in this event records the status <em>after</em> the transition.
- * No "previous status" field is provided in the event itself.
- */
-public final class WorkItemLifecycleEvent implements WorkItemEvent {
-
-    private final String type;
-    private final String sourceUri;
-    private final String subject;
-    private final UUID workItemId;
+    private final String         type;
+    private final String         sourceUri;
+    private final String         subject;
+    private final UUID           workItemId;
     private final WorkItemStatus status;
-    private final Instant occurredAt;
-    private final String actor;
-    private final String detail;
-    private final String rationale;
-    private final String planRef;
-    private final String outcome;
-    private final String tenancyId;
-    private final String callerRef;
-    private final String assigneeId;
-    private final String resolution;
-    private final String candidateGroups;
-    private final List<String> types;
-    private final WorkItem workItem;
+    private final Instant        occurredAt;
+    private final String         actor;
+    private final String         detail;
+    private final String         rationale;
+    private final String         planRef;
+    private final String         outcome;
+    private final String         tenancyId;
+    private final String         callerRef;
+    private final String         assigneeId;
+    private final String         resolution;
+    private final String         candidateGroups;
+    private final List<String>   types;
+    private final WorkItem       workItem;
 
     private WorkItemLifecycleEvent(final String type, final String sourceUri, final String subject,
-            final UUID workItemId, final WorkItemStatus status, final Instant occurredAt,
-            final String actor, final String detail, final String rationale, final String planRef,
-            final String outcome, final String tenancyId,
-            final String callerRef, final String assigneeId, final String resolution, final String candidateGroups,
-            final List<String> types,
-            final WorkItem workItem) {
-        this.type = type;
-        this.sourceUri = sourceUri;
-        this.subject = subject;
-        this.workItemId = workItemId;
-        this.status = status;
-        this.occurredAt = occurredAt;
-        this.actor = actor;
-        this.detail = detail;
-        this.rationale = rationale;
-        this.planRef = planRef;
-        this.outcome = outcome;
-        this.tenancyId = tenancyId;
-        this.callerRef = callerRef;
-        this.assigneeId = assigneeId;
-        this.resolution = resolution;
+                                   final UUID workItemId, final WorkItemStatus status, final Instant occurredAt,
+                                   final String actor, final String detail, final String rationale, final String planRef,
+                                   final String outcome, final String tenancyId,
+                                   final String callerRef, final String assigneeId, final String resolution, final String candidateGroups,
+                                   final List<String> types,
+                                   final WorkItem workItem) {
+        this.type            = type;
+        this.sourceUri       = sourceUri;
+        this.subject         = subject;
+        this.workItemId      = workItemId;
+        this.status          = status;
+        this.occurredAt      = occurredAt;
+        this.actor           = actor;
+        this.detail          = detail;
+        this.rationale       = rationale;
+        this.planRef         = planRef;
+        this.outcome         = outcome;
+        this.tenancyId       = tenancyId;
+        this.callerRef       = callerRef;
+        this.assigneeId      = assigneeId;
+        this.resolution      = resolution;
         this.candidateGroups = candidateGroups;
-        this.types = types;
-        this.workItem = workItem;
+        this.types           = types;
+        this.workItem        = workItem;
     }
 
     /**
      * Creates a lifecycle event with the standard WorkItems type prefix.
      *
      * @param eventName the audit event name (e.g. "CREATED") — lowercased automatically
-     * @param workItem the WorkItem entity in its post-mutation state
-     * @param actor who triggered the transition
-     * @param detail optional JSON detail (nullable)
+     * @param workItem  the WorkItem entity in its post-mutation state
+     * @param actor     who triggered the transition
+     * @param detail    optional JSON detail (nullable)
      */
     public static WorkItemLifecycleEvent of(final String eventName, final WorkItem workItem,
-            final String actor, final String detail) {
+                                            final String actor, final String detail) {
         return new WorkItemLifecycleEvent(
                 WorkCloudEventTypes.PREFIX + eventName.toLowerCase(Locale.ROOT),
                 "/workitems/" + workItem.id,
@@ -113,15 +90,15 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
      * Used when the actor's stated basis and governing policy are known.
      *
      * @param eventName the audit event name
-     * @param workItem the WorkItem entity in its post-mutation state
-     * @param actor who triggered the transition
-     * @param detail optional JSON detail (nullable)
+     * @param workItem  the WorkItem entity in its post-mutation state
+     * @param actor     who triggered the transition
+     * @param detail    optional JSON detail (nullable)
      * @param rationale the actor's stated basis for the decision (nullable)
-     * @param planRef the policy/procedure version that governed this action (nullable)
+     * @param planRef   the policy/procedure version that governed this action (nullable)
      */
     public static WorkItemLifecycleEvent of(final String eventName, final WorkItem workItem,
-            final String actor, final String detail,
-            final String rationale, final String planRef) {
+                                            final String actor, final String detail,
+                                            final String rationale, final String planRef) {
         return new WorkItemLifecycleEvent(
                 WorkCloudEventTypes.PREFIX + eventName.toLowerCase(Locale.ROOT),
                 "/workitems/" + workItem.id,
@@ -145,19 +122,21 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
      * or {@link #context()} on wire-reconstructed events.
      */
     public static WorkItemLifecycleEvent fromWire(final String type, final String sourceUri,
-            final String subject, final UUID workItemId, final WorkItemStatus status,
-            final Instant occurredAt, final String actor, final String detail,
-            final String rationale, final String planRef, final String outcome, final String tenancyId,
-            final String callerRef, final String assigneeId, final String resolution, final String candidateGroups,
-            final List<String> types) {
+                                                  final String subject, final UUID workItemId, final WorkItemStatus status,
+                                                  final Instant occurredAt, final String actor, final String detail,
+                                                  final String rationale, final String planRef, final String outcome, final String tenancyId,
+                                                  final String callerRef, final String assigneeId, final String resolution, final String candidateGroups,
+                                                  final List<String> types) {
         return new WorkItemLifecycleEvent(type, sourceUri, subject, workItemId, status,
-                occurredAt, actor, detail, rationale, planRef, outcome, tenancyId,
-                callerRef, assigneeId, resolution, candidateGroups, types, null);
+                                          occurredAt, actor, detail, rationale, planRef, outcome, tenancyId,
+                                          callerRef, assigneeId, resolution, candidateGroups, types, null);
     }
 
     // ---- Existing accessors preserved (same names as old record components) ----
 
-    /** The CloudEvents type string (e.g. "io.casehub.work.workitem.created"). */
+    /**
+     * The CloudEvents type string (e.g. "io.casehub.work.workitem.created").
+     */
     @JsonProperty("type")
     public String type() {
         return type;
@@ -172,52 +151,68 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
         return sourceUri;
     }
 
-    /** The CloudEvents subject — the WorkItem UUID as a string. */
+    /**
+     * The CloudEvents subject — the WorkItem UUID as a string.
+     */
     @JsonProperty("subject")
     public String subject() {
         return subject;
     }
 
-    /** The affected WorkItem's UUID. */
+    /**
+     * The affected WorkItem's UUID.
+     */
     @JsonProperty("workItemId")
     public UUID workItemId() {
         return workItemId;
     }
 
-    /** The status AFTER the transition. */
+    /**
+     * The status AFTER the transition.
+     */
     @JsonProperty("status")
     public WorkItemStatus status() {
         return status;
     }
 
-    /** When this event was created. */
+    /**
+     * When this event was created.
+     */
     @JsonProperty("occurredAt")
     @Override
     public Instant occurredAt() {
         return occurredAt;
     }
 
-    /** Who triggered the transition. */
+    /**
+     * Who triggered the transition.
+     */
     @JsonProperty("actor")
     @Override
     public String actor() {
         return actor;
     }
 
-    /** Optional detail payload (e.g. resolution text, rejection reason). */
+    /**
+     * Optional detail payload (e.g. resolution text, rejection reason).
+     */
     @JsonProperty("detail")
     @Override
     public String detail() {
         return detail;
     }
 
-    /** The actor's stated basis for the decision (nullable). */
+    /**
+     * The actor's stated basis for the decision (nullable).
+     */
     @JsonProperty("rationale")
     public String rationale() {
         return rationale;
     }
 
-    /** The policy/procedure version that governed this action (nullable). */
+    /**
+     * The policy/procedure version that governed this action (nullable).
+     */
     @JsonProperty("planRef")
     public String planRef() {
         return planRef;
@@ -245,6 +240,7 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
      * Server-side only — never serialised to SSE clients.
      */
     @JsonIgnore
+    @Override
     public String tenancyId() {
         return tenancyId;
     }
@@ -311,11 +307,11 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent {
     public WorkItemRef ref() {
         if (workItem != null) {
             return new WorkItemRef(workItemId, status, workItem.callerRef, workItem.assigneeId,
-                    workItem.resolution, workItem.candidateGroups, outcome, tenancyId,
-                    workItem.payload, workItem.payloadTypeName, workItem.resolutionTypeName);
+                                   workItem.resolution, workItem.candidateGroups, outcome, tenancyId,
+                                   workItem.payload, workItem.payloadTypeName, workItem.resolutionTypeName);
         }
         return new WorkItemRef(workItemId, status, callerRef, assigneeId,
-                resolution, candidateGroups, outcome, tenancyId, null, null, null);
+                               resolution, candidateGroups, outcome, tenancyId, null, null, null);
     }
 
     @JsonIgnore
