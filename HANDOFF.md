@@ -1,23 +1,30 @@
-# HANDOFF — 2026-08-04
+# HANDOFF — 2026-08-05
 
 ## Last Session
 
-Built and shipped `casehub-work-qhorus` (#97) — new module bridging WorkItem lifecycle with Qhorus agent mesh channels. Three MCP tools (`request_human_work`, `check_work_status`, `wait_for_work`), outbound lifecycle adapter posting terminal speech acts (COMPLETED→DONE, REJECTED→FAILURE, CANCELLED→DECLINE). 20 tests, pushed to upstream. Issue #97 closed.
+Implemented engine#647 (eidos behavioral contracts integration) — 3 commits on `issue-647-behavioral-contracts`. `AgentHealth.BEHAVIORAL_VIOLATION` enum, `AgentCandidate.violations` field, exhaustive `CapabilityStatus` switch (no default branch), `BehavioralComplianceRecorder` for latency and attestation-rate observations. All tests green, code review clean. Blog written.
+
+Also created slot 83 for epic#800 (Agent Learning & Memory) with engine, neocortex, eidos, blocks. Brainstorming paused at the scoping question.
 
 ## Immediate Next Step
 
-Pick up #329 (progress model epic) — slot 8 was created two sessions ago. Run `/work` to start.
+**Finish work-end for engine#647.** The workspace branch mismatch must be resolved first — the shared `work` repo was on `issue-328-register-queue-prefs`. The blog entry committed there needs cherry-picking to `issue-647-behavioral-contracts`. Then run `work-end` to rebase, squash, push, stamp, close.
 
 ## What's Left
 
-- Slots 9, 10 reported created but don't exist on disk — may need re-creation if #330 work is picked up via a slot · XS · Low
+- engine#647 work-end incomplete — rebase/squash/push/stamp/close remaining · XS · Low
+- PLATFORM.md update for behavioral contracts capability ownership (AC4 from #647) — parent repo · S · Low
+- Garden entry `GE-20260805-912fa7` push failed — retry `git push` in `~/.hortora/garden` · XS · Low
 
 ## What's Next
 
 | # | Description | Scale | Complexity | Notes |
 |---|-------------|-------|------------|-------|
-| #329 | Epic: Progress model enhancements (#307, #309, #308) | L | Med | Slot 8 created |
-| #330 | Epic: Queue summary — only #306 remains (caching/materialised views) | M | Med | #305 already closed |
-| #298 | Replace event-as-request pattern with direct WorkItemCreator.create() | M | Med | Design |
-| #152 | Split examples into core and full variants | M | Low | — |
-| #328 | Register work preference schemas via PreferenceSchemaRegistry | S | Low | — |
+| #800 | Agent Learning & Memory epic | XL | High | Slot 83 ready at `slots/83/engine`; brainstorming paused at scope question |
+| #860 | Goal-capability filtering in GoalFailureRecorder | S | Med | Spec exists at `docs/specs/issue-860-goal-capability-mapping/` |
+
+## References
+
+- Spec: `engine/specs/issue-647-behavioral-contracts/2026-08-05-behavioral-contracts-integration-design.md`
+- Plan: `engine/plans/2026-08-05-behavioral-contracts-integration.md`
+- Blog: `engine/blog/2026-08-05-teaching-agents-to-notice-their-own-behaviour.md`

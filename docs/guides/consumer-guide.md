@@ -345,6 +345,8 @@ All properties prefixed with `casehub.work`:
 |-----|-----------|---------|
 | `sla.default-hours` | `casehub.work` | 24 |
 | `sla.default-claim-hours` | `casehub.work` | 4 |
+| `snapshot-interval` | `casehub.work.queues` | PT1H |
+| `trend-retention` | `casehub.work.queues` | PT168H |
 
 ## Boundary Rules
 
