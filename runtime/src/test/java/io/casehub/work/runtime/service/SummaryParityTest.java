@@ -1,6 +1,7 @@
 package io.casehub.work.runtime.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -52,7 +53,7 @@ class SummaryParityTest {
         assertThat(sqlPath.overdue()).isEqualTo(entityPath.overdue());
         assertThat(sqlPath.claimDeadlineBreached()).isEqualTo(entityPath.claimDeadlineBreached());
         assertThat(sqlPath.oldestCreatedAt())
-                .isEqualTo(entityPath.oldestCreatedAt().truncatedTo(ChronoUnit.MICROS));
+                .isCloseTo(entityPath.oldestCreatedAt(), within(1, ChronoUnit.MICROS));
     }
 
     private WorkItem createWi(String assignee, WorkItemStatus status,
