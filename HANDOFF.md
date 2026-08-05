@@ -2,13 +2,15 @@
 
 ## Last Session
 
-Triage and planning — reviewed open work backlog, grouped issues into three epics (#329 Progress model, #330 Queue summary, #331 Notification arch). Discovered #315, #316, #305 were already closed, so closed #331 immediately and updated #330 scope. Created slot 8 for #329. Stamped dead `issue-864-sx-batch` branch.
+Built and shipped `casehub-work-qhorus` (#97) — new module bridging WorkItem lifecycle with Qhorus agent mesh channels. Three MCP tools (`request_human_work`, `check_work_status`, `wait_for_work`), outbound lifecycle adapter posting terminal speech acts (COMPLETED→DONE, REJECTED→FAILURE, CANCELLED→DECLINE). 20 tests, pushed to upstream. Issue #97 closed.
+
+## Immediate Next Step
+
+Pick up #329 (progress model epic) — slot 8 was created two sessions ago. Run `/work` to start.
 
 ## What's Left
 
 - Slots 9, 10 reported created but don't exist on disk — may need re-creation if #330 work is picked up via a slot · XS · Low
-- Pre-existing `scheduler-quartz` build error (engine) · S · Low
-- Pre-existing `engine-api` checkstyle errors (engine) · XS · Low
 
 ## What's Next
 

@@ -2,25 +2,39 @@
 
 ## Last Session
 
-Housekeeping — diagnosed engine `wksp` symlink pointing at work repo root instead of engine subdirectory (changed 2026-08-02). Fixed symlink, cleaned contaminated HANDOFF, added issue repo cross-check (Step 5b) to handover skill write path. Closed epic #797 (all children shipped). Verified epic #800 status — 8/18 closed, neocortex foundations shipped, engine orchestration work unblocked.
+Designed cross-cutting architecture for agent learning & memory (engine#800). Architecture spec created and reviewed (4 dimensions, 66 issues, 0 unresolved). Implementation plan written (5 tasks for Sub-epic A). Task 1 complete — ExperienceRecorder and ReflectionOrchestrator SPIs extracted in neocortex.
 
 ## Immediate Next Step
 
-Run `/work start 800` to begin epic #800 work. The engine has uncommitted changes on main: `wksp` symlink fix and two formatting-only ledger files (`WorkerDecisionEntry.java`, `WorkerDecisionEventCapture.java`). Commit or discard before branching.
+Start Task 2: `ReflectionConfig` on `CaseDefinition`. Read `plans/2026-08-04-agent-memory-patterns.md` for details. Run `/work` to resume the branch.
 
 ## What's Left
 
-- Uncommitted `wksp` symlink fix on engine main · XS · Low
-- Uncommitted formatting fixes in ledger (`WorkerDecisionEntry`, `WorkerDecisionEventCapture`) · XS · Low
-- Garden push blocked — pre-push hook; 3+ entries pending · XS · Low
-- Work-root HANDOFF.md (`/casehub/work/HANDOFF.md`) still has stale content from the cross-repo triage session — not engine's concern but worth cleaning up · XS · Low
+- Task 2: ReflectionConfig record + CaseDefinition + YAML mapping · S · Low
+- Task 3: AgentExperienceRecorder + handler wiring · M · Med
+- Task 4: Reflection trigger — threshold tracking + async handler · M · Med
+- Task 5: Personality transition CBR case producer · S · Low
+- LLM-backed ReflectionSynthesizer (neocortex, deferred) · M · High
+- Sub-epic B: Reflection & Planning (#801-#804, future branch) · L · High
+- Sub-epic C: Goal Lifecycle (#805-#808, future branch) · L · High
+
+## Cross-Module
+
+**Enabled** (we delivered, downstream work unblocked):
+- neocortex — ExperienceRecorder + ReflectionOrchestrator SPIs extracted, commit `a0d3acd` on `issue-800-agent-learning-memory` (gates engine Tasks 3-4) · S · Low
 
 ## What's Next
 
 | # | Description | Scale | Complexity | Notes |
 |---|-------------|-------|------------|-------|
-| #800 | Epic: Agent Learning & Memory — 8 open engine issues remaining | XL | High | Unblocked — neocortex deps shipped |
+| #800 | Epic: Agent Learning & Memory — Tasks 2-5 of Sub-epic A | XL | High | In progress — Task 1 done |
 | #833 | Epic: ACL engine integration (#865, #866, #867) | XL | High | 3 identity propagation issues |
-| #835 | Epic: A2A/MCP interop — follow-on integration | XL | High | 9 children; slot 67 has partial A2A work |
-| #862 | Populate SelectionContext on WorkerDecisionEvent | — | — | — |
-| #861 | Consolidate PlanItem terminal events | M | Med | — |
+| #835 | Epic: A2A/MCP interop — follow-on integration | XL | High | 9 children |
+
+## References
+
+| Doc | Path |
+|-----|------|
+| Architecture spec | `specs/issue-800-agent-learning-memory/2026-08-04-agent-learning-memory-architecture-design.md` |
+| Implementation plan | `plans/2026-08-04-agent-memory-patterns.md` |
+| Design journal | `design/JOURNAL.md` |
