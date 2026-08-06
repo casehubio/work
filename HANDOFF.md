@@ -6,6 +6,8 @@ Closed #328 — registered 2 unregistered queue `PreferenceKey`s (`QueueSnapshot
 
 Also landed on upstream: docs(#800) agent experience recording spec, docs(#404) API reference, and several prior-session doc/spec commits that had accumulated on local main.
 
+Lifecycle cleanup: stamped `issue-800-agent-learning-memory` workspace branch (fully merged, never stamped). Validated slots 1/6/84/86 are active work (not empty scaffolding). Confirmed unstamped branch counts for pages/iot/soc are now all zero.
+
 ## Immediate Next Step
 
 Pick up #329 (progress model epic) or #800 (agent learning & memory, slot 83). Run `/work` to start.
@@ -14,6 +16,7 @@ Pick up #329 (progress model epic) or #800 (agent learning & memory, slot 83). R
 
 - engine#647 work-end incomplete — rebase/squash/push/stamp/close remaining · XS · Low
 - PLATFORM.md update for behavioral contracts capability ownership (AC4 from #647) — parent repo · S · Low
+- Soredium HANDOFF stale items to clear: slots 1/6/84/86 are active (not orphaned); pages/iot/soc unstamped counts now 0; issue-800 workspace branch stamped · XS · Low
 
 ## What's Next
 
