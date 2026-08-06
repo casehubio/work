@@ -9,6 +9,7 @@ import io.casehub.work.queues.event.WorkItemQueueEvent;
 import io.quarkus.arc.DefaultBean;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.operators.multi.processors.BroadcastProcessor;
+import io.smallrye.mutiny.subscription.BackPressureFailure;
 
 /**
  * Default {@link WorkItemQueueEventBroadcaster} — in-process fan-out via a Mutiny
@@ -24,12 +25,16 @@ public class LocalWorkItemQueueEventBroadcaster implements WorkItemQueueEventBro
      * CDI observer: re-publishes every {@link WorkItemQueueEvent} to all SSE clients.
      */
     public void onEvent(@Observes final WorkItemQueueEvent event) {
-        processor.onNext(event);
+        try {
+            processor.onNext(event);
+        } catch (BackPressureFailure ignored) {
+        }
     }
 
     @Override
     public Multi<WorkItemQueueEvent> stream(final UUID queueViewId, final String tenancyId) {
-        Multi<WorkItemQueueEvent> source = processor.toHotStream();
+        Multi<WorkItemQueueEvent> source = processor.toHotStream()
+                .onOverflow().buffer(256);
 
         // Tenant filter is always applied first — never null
         source = source.filter(e -> tenancyId.equals(e.tenancyId()));

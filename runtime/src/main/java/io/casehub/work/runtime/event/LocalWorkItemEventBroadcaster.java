@@ -45,7 +45,8 @@ public class LocalWorkItemEventBroadcaster implements WorkItemEventBroadcaster {
 
     @Override
     public Multi<WorkItemLifecycleEvent> stream(final UUID workItemId, final String type, final String tenancyId) {
-        Multi<WorkItemLifecycleEvent> source = processor.toHotStream();
+        Multi<WorkItemLifecycleEvent> source = processor.toHotStream()
+                .onOverflow().buffer(256);
 
         // Tenant filter is always applied first — never null
         source = source.filter(e -> tenancyId.equals(e.tenancyId()));

@@ -141,7 +141,8 @@ public class PostgresWorkItemQueueEventBroadcaster implements WorkItemQueueEvent
 
     @Override
     public Multi<WorkItemQueueEvent> stream(final UUID queueViewId, final String tenancyId) {
-        Multi<WorkItemQueueEvent> source = processor.toHotStream();
+        Multi<WorkItemQueueEvent> source = processor.toHotStream()
+                .onOverflow().buffer(256);
 
         // Tenant filter is always applied first — never null
         source = source.filter(e -> tenancyId.equals(e.tenancyId()));
