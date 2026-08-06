@@ -1,30 +1,26 @@
-# HANDOFF — 2026-08-05
+# HANDOFF — 2026-08-06
 
 ## Last Session
 
-Implemented engine#647 (eidos behavioral contracts integration) — 3 commits on `issue-647-behavioral-contracts`. `AgentHealth.BEHAVIORAL_VIOLATION` enum, `AgentCandidate.violations` field, exhaustive `CapabilityStatus` switch (no default branch), `BehavioralComplianceRecorder` for latency and attestation-rate observations. All tests green, code review clean. Blog written.
+Closed #328 — registered 2 unregistered queue `PreferenceKey`s (`QueueSnapshotInterval`, `QueueTrendRetention`) via a new `QueuePreferenceRegistrar` in the queues module. First-principles audit across the codebase found 5 total `PreferenceKey` definitions; 3 were already registered in the runtime module, 2 in queues were not. Per-module registrar pattern required because `runtime` can't depend on `queues` (reverse dependency). Consumer guide updated, blog written, pushed to upstream.
 
-Also created slot 83 for epic#800 (Agent Learning & Memory) with engine, neocortex, eidos, blocks. Brainstorming paused at the scoping question.
+Also landed on upstream: docs(#800) agent experience recording spec, docs(#404) API reference, and several prior-session doc/spec commits that had accumulated on local main.
 
 ## Immediate Next Step
 
-**Finish work-end for engine#647.** The workspace branch mismatch must be resolved first — the shared `work` repo was on `issue-328-register-queue-prefs`. The blog entry committed there needs cherry-picking to `issue-647-behavioral-contracts`. Then run `work-end` to rebase, squash, push, stamp, close.
+Pick up #329 (progress model epic) or #800 (agent learning & memory, slot 83). Run `/work` to start.
 
 ## What's Left
 
 - engine#647 work-end incomplete — rebase/squash/push/stamp/close remaining · XS · Low
 - PLATFORM.md update for behavioral contracts capability ownership (AC4 from #647) — parent repo · S · Low
-- Garden entry `GE-20260805-912fa7` push failed — retry `git push` in `~/.hortora/garden` · XS · Low
 
 ## What's Next
 
 | # | Description | Scale | Complexity | Notes |
 |---|-------------|-------|------------|-------|
-| #800 | Agent Learning & Memory epic | XL | High | Slot 83 ready at `slots/83/engine`; brainstorming paused at scope question |
-| #860 | Goal-capability filtering in GoalFailureRecorder | S | Med | Spec exists at `docs/specs/issue-860-goal-capability-mapping/` |
-
-## References
-
-- Spec: `engine/specs/issue-647-behavioral-contracts/2026-08-05-behavioral-contracts-integration-design.md`
-- Plan: `engine/plans/2026-08-05-behavioral-contracts-integration.md`
-- Blog: `engine/blog/2026-08-05-teaching-agents-to-notice-their-own-behaviour.md`
+| #329 | Epic: Progress model enhancements (#307, #309, #308) | L | Med | Slot 8 created |
+| #800 | Agent Learning & Memory epic | XL | High | Slot 83 ready; brainstorming paused at scope |
+| #330 | Epic: Queue summary — only #306 remains (caching/materialised views) | M | Med | #305 already closed |
+| #298 | Replace event-as-request pattern with direct WorkItemCreator.create() | M | Med | Design |
+| #152 | Split examples into core and full variants | M | Low | — |
