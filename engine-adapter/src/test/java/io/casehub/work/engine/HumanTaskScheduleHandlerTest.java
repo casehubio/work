@@ -18,11 +18,11 @@ package io.casehub.work.engine;
 import io.casehub.api.model.HumanTaskTarget;
 import io.casehub.api.model.TaskStatus;
 import io.casehub.api.spi.routing.RetrievedExperience;
-import io.casehub.engine.planning.plan.PlanItem;
-import io.casehub.engine.planning.registry.BlackboardRegistry;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.event.HumanTaskScheduleEvent;
 import io.casehub.engine.common.spi.PlanItemStore;
+import io.casehub.engine.planning.plan.PlanItem;
+import io.casehub.engine.planning.registry.BlackboardRegistry;
 import io.casehub.persistence.memory.InMemoryPlanItemStore;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.WorkItemStatus;
@@ -793,8 +793,126 @@ class HumanTaskScheduleHandlerTest {
     assertThat(created).isNotNull();
     assertThat(created.scope).isNull();
   }
+// ── resolvedScope overrides static scope ─────────────────────────────────
 
-  // ── Dynamic candidateGroups — inline mode ────────────────────────────────
+    @Test
+    void inlineMode_resolvedScope_overridesStaticScope() {
+        HumanTaskTarget target =
+                HumanTaskTarget.inline()
+                               .title("Review")
+                               .scope("static-scope")
+                               .build();
+
+        handler.onHumanTaskSchedule(
+                new HumanTaskScheduleEvent(
+                        caseId, TENANCY_ID, "irb-binding", target, Map.of(),
+                        null, null, null, null, null, null,
+                        null, "dynamic-scope", null, null, null, null));
+
+        WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
+        assertThat(created).isNotNull();
+        assertThat(created.scope).isEqualTo("dynamic-scope");
+    }
+
+    @Test
+    void inlineMode_nullResolvedScope_fallsBackToStaticScope() {
+        HumanTaskTarget target =
+                HumanTaskTarget.inline()
+                               .title("Review")
+                               .scope("static-scope")
+                               .build();
+
+        handler.onHumanTaskSchedule(
+                new HumanTaskScheduleEvent(
+                        caseId, TENANCY_ID, "irb-binding", target, Map.of(),
+                        null, null, null, null, null, null,
+                        null, null, null, null, null, null));
+
+        WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
+        assertThat(created).isNotNull();
+        assertThat(created.scope).isEqualTo("static-scope");
+    }
+
+    @Test
+    void templateMode_resolvedScope_overridesStaticScope() {
+        WorkItemTemplate tmpl = persistTemplate("Template");
+
+        HumanTaskTarget target =
+                HumanTaskTarget.template(tmpl.id.toString())
+                               .scope("static-scope")
+                               .build();
+
+        handler.onHumanTaskSchedule(
+                new HumanTaskScheduleEvent(
+                        caseId, TENANCY_ID, "irb-binding", target, Map.of(),
+                        null, null, null, null, null, null,
+                        null, "dynamic-scope", null, null, null, null));
+
+        WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
+        assertThat(created).isNotNull();
+        assertThat(created.scope).isEqualTo("dynamic-scope");
+    }
+
+// ── resolvedTitle overrides static title ────────────────────────────────
+
+    @Test
+    void inlineMode_resolvedTitle_overridesStaticTitle() {
+        HumanTaskTarget target =
+                HumanTaskTarget.inline()
+                               .title("Static Title")
+                               .build();
+
+        handler.onHumanTaskSchedule(
+                new HumanTaskScheduleEvent(
+                        caseId, TENANCY_ID, "irb-binding", target, Map.of(),
+                        null, null, null, null, null, null,
+                        "Dynamic Title", null, null, null, null, null));
+
+        WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
+        assertThat(created).isNotNull();
+        assertThat(created.title).isEqualTo("Dynamic Title");
+    }
+
+    @Test
+    void inlineMode_nullResolvedTitle_fallsBackToStaticTitle() {
+        HumanTaskTarget target =
+                HumanTaskTarget.inline()
+                               .title("Static Title")
+                               .build();
+
+        handler.onHumanTaskSchedule(
+                new HumanTaskScheduleEvent(
+                        caseId, TENANCY_ID, "irb-binding", target, Map.of(),
+                        null, null, null, null, null, null,
+                        null, null, null, null, null, null));
+
+        WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
+        assertThat(created).isNotNull();
+        assertThat(created.title).isEqualTo("Static Title");
+    }
+
+    @Test
+    void templateMode_resolvedTitle_overridesStaticTitle() {
+        WorkItemTemplate tmpl = persistTemplate("Template");
+
+        HumanTaskTarget target =
+                HumanTaskTarget.template(tmpl.id.toString())
+                               .title("Static Title")
+                               .build();
+
+        handler.onHumanTaskSchedule(
+                new HumanTaskScheduleEvent(
+                        caseId, TENANCY_ID, "irb-binding", target, Map.of(),
+                        null, null, null, null, null, null,
+                        "Dynamic Title", null, null, null, null, null));
+
+        WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
+        assertThat(created).isNotNull();
+        assertThat(created.title).isEqualTo("Dynamic Title");
+    }
+
+
+    // ── Dynamic candidateGroups — inline mode ────────────────────────────────
 
   @Test
   void inlineMode_resolvedCandidateGroups_passedToWorkItem() {
