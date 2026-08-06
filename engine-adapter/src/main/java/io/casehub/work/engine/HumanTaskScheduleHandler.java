@@ -129,10 +129,10 @@ public class HumanTaskScheduleHandler {
     final WorkItemCreateRequest.Builder requestBuilder =
         WorkItemCreateRequest.builder()
             .templateId(templateId)
-            .title(target.title())
+            .title(event.resolvedTitle() != null ? event.resolvedTitle() : target.title())
             .createdBy("casehub-engine")
             .callerRef(callerRef)
-            .scope(target.scope())
+            .scope(event.resolvedScope() != null ? event.resolvedScope() : target.scope())
             .payload(payload)
             .candidateGroups(toCsv(event.resolvedCandidateGroups()))
             .candidateUsers(toCsv(event.resolvedCandidateUsers()))
@@ -185,7 +185,9 @@ public class HumanTaskScheduleHandler {
           event.payloadTypeName(),
           event.resolutionTypeName(),
           event.candidateScores(),
-          event.experiences());
+          event.experiences(),
+          event.resolvedTitle(),
+          event.resolvedScope());
     } catch (Exception e) {
       LOG.warnf(
           "Failed to create inline WorkItem for binding '%s' case %s — reverting to PENDING: %s",
@@ -219,7 +221,9 @@ public class HumanTaskScheduleHandler {
       String payloadTypeName,
       String resolutionTypeName,
       Map<String, Double> candidateScores,
-      List<RetrievedExperience> experiences) {
+      List<RetrievedExperience> experiences,
+      String resolvedTitle,
+      String resolvedScope) {
     String payload = serializePayload(inputData);
     Instant taskDeadline =
         target.expiresIn() != null ? Instant.now().plus(target.expiresIn()) : null;
@@ -228,7 +232,7 @@ public class HumanTaskScheduleHandler {
 
     WorkItemCreateRequest.Builder requestBuilder =
         WorkItemCreateRequest.builder()
-            .title(target.title())
+            .title(resolvedTitle != null ? resolvedTitle : target.title())
             .candidateGroups(toCsv(resolvedGroups))
             .candidateUsers(toCsv(resolvedUsers))
             .createdBy("casehub-engine")
@@ -236,7 +240,7 @@ public class HumanTaskScheduleHandler {
             .expiresAt(effectiveDeadline)
             .claimDeadlineBusinessHours(target.claimDeadlineHours())
             .callerRef(callerRef)
-            .scope(target.scope())
+            .scope(resolvedScope != null ? resolvedScope : target.scope())
             .payloadTypeName(payloadTypeName)
             .resolutionTypeName(resolutionTypeName)
             .candidateScores(serializeScores(candidateScores))
