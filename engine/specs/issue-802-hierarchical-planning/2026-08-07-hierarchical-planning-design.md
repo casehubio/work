@@ -296,8 +296,12 @@ Both must be satisfied: compound says "it's your turn" AND trigger condition is 
    - Skips agents without AgentDescriptor or goals
    - Filters abandoned goals
    - Rejects sub-steps with unknown capability names
+   - Rejects non-linear plans (parallel branches) with warning
+   - Overlapping compound scopes: higher-priority goal wins contested bindings
+   - Idempotency: skips decomposition when PlanItems already exist
+   - Timeout: per-goal timeout triggers graceful degradation
    - Error isolation: LLM failure doesn't prevent case start
-   - Empty plan → no compound created
+   - Empty plan → no compound created (check before DagPlan construction)
 
 2. **`LlmDecompositionStrategyTest`** — LLM interaction:
    - Produces DagPlan from structured response
@@ -311,10 +315,10 @@ Both must be satisfied: compound says "it's your turn" AND trigger condition is 
    - TaskDescriptor contract (id, description, status = PENDING)
    - Null capability name rejected
 
-4. **`DefaultCasePlanModel.addCompound()` test**:
-   - Compound added and discoverable
-   - Scoped bindings registered
-   - Duplicate name rejected
+4. **`GoalDecompositionRecoveryTest`**:
+   - CasePlanModel compounds rebuilt from PlanItem metadata after restart
+   - Idempotency: second decompose() call is no-op when PlanItems exist
+   - Compound ordering preserved after reconstruction
 
 ### Integration test
 
@@ -333,9 +337,19 @@ Both must be satisfied: compound says "it's your turn" AND trigger condition is 
 - EventLog audit trail
 - Recovery via existing PlanItem infrastructure
 
+**v1 limitations (deliberate, not gaps):**
+- Plans must be linear chains (sequential only). Parallel branches in
+  decomposed plans are rejected at validation time. Parallel decomposition
+  requires dispatch infrastructure beyond CHOREOGRAPHED — tracked as
+  future work.
+- Single decomposition strategy per case definition. Per-agent or per-goal
+  strategy override is not supported in v1.
+
 **Out of scope (future work):**
+- Parallel branch dispatch in decomposed plans (requires DagDriver integration or new dispatch mode)
 - Re-decomposition on context change (#803 — plan adaptation)
 - Static/YAML-declared decomposition strategy (add when needed)
 - GOAP (Goal-Oriented Action Planning) strategy
 - Multi-agent coordinated planning
 - Plan visualization or inspection API
+- Per-agent or per-goal decomposition strategy override
