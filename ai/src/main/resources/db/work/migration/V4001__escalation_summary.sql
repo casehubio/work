@@ -1,6 +1,7 @@
 CREATE TABLE escalation_summary (
     id            UUID         NOT NULL,
     work_item_id  UUID         NOT NULL,
+    tenancy_id    VARCHAR(255) NOT NULL,
     event_type    VARCHAR(50)  NOT NULL,
     summary       TEXT,
     generated_at  TIMESTAMP    NOT NULL,
@@ -8,3 +9,4 @@ CREATE TABLE escalation_summary (
 );
 
 CREATE INDEX idx_escalation_summary_work_item_id ON escalation_summary (work_item_id);
+CREATE INDEX idx_escalation_summary_tenancy ON escalation_summary(tenancy_id);

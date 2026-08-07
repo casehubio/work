@@ -1,3 +1,5 @@
+-- Progress tracking schema — consolidated from V7000..V7002
+
 CREATE TABLE progress_instance (
     id                  UUID         NOT NULL,
     version             BIGINT       NOT NULL DEFAULT 0,
@@ -11,6 +13,8 @@ CREATE TABLE progress_instance (
     state               JSONB        NOT NULL,
     status              VARCHAR(20)  NOT NULL,
     rollup_strategy_id  VARCHAR(255),
+    visualisation_mode  VARCHAR(50),
+    rollback_policy     VARCHAR(20),
     created_at          TIMESTAMP    NOT NULL,
     updated_at          TIMESTAMP    NOT NULL,
     CONSTRAINT pk_progress_instance PRIMARY KEY (id)
