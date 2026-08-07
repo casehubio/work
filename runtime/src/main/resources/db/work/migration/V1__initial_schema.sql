@@ -391,3 +391,174 @@ CREATE TABLE IF NOT EXISTS label_rule (
     enabled              BOOLEAN      DEFAULT true,
     created_at           TIMESTAMP    NOT NULL
 );
+
+-- ============================================================
+-- work_item_filter (queues module)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS work_item_filter (
+    id                   UUID            PRIMARY KEY,
+    tenancy_id           VARCHAR(255)    NOT NULL,
+    name                 VARCHAR(255)    NOT NULL,
+    scope                VARCHAR(500)    NOT NULL,
+    condition_language   VARCHAR(20)     NOT NULL,
+    condition_expression VARCHAR(4000),
+    actions              VARCHAR(4000),
+    active               BOOLEAN         NOT NULL DEFAULT TRUE,
+    created_at           TIMESTAMP       NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_work_item_filter_tenancy ON work_item_filter(tenancy_id);
+
+-- ============================================================
+-- filter_chain (queues module)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS filter_chain (
+    id          UUID            PRIMARY KEY,
+    tenancy_id  VARCHAR(255)    NOT NULL,
+    filter_id   UUID            NOT NULL REFERENCES work_item_filter(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_fc_filter_id ON filter_chain(filter_id);
+CREATE INDEX IF NOT EXISTS idx_filter_chain_tenancy ON filter_chain(tenancy_id);
+
+-- ============================================================
+-- filter_chain_work_item (queues module — junction)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS filter_chain_work_item (
+    filter_chain_id UUID    NOT NULL REFERENCES filter_chain(id) ON DELETE CASCADE,
+    work_item_id    UUID    NOT NULL REFERENCES work_item(id) ON DELETE CASCADE,
+    PRIMARY KEY (filter_chain_id, work_item_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fcwi_work_item_id ON filter_chain_work_item(work_item_id);
+
+-- ============================================================
+-- work_item_queue_state (queues module)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS work_item_queue_state (
+    work_item_id    UUID        PRIMARY KEY REFERENCES work_item(id) ON DELETE CASCADE,
+    tenancy_id      VARCHAR(255) NOT NULL,
+    relinquishable  BOOLEAN     NOT NULL DEFAULT FALSE
+);
+
+CREATE INDEX IF NOT EXISTS idx_work_item_queue_state_tenancy ON work_item_queue_state(tenancy_id);
+
+-- ============================================================
+-- queue_snapshot (queues module)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS queue_snapshot (
+    id            UUID         NOT NULL,
+    tenancy_id    VARCHAR(255) NOT NULL,
+    queue_view_id UUID         NOT NULL,
+    member_count  BIGINT       NOT NULL,
+    snapshot_at   TIMESTAMP    NOT NULL,
+    CONSTRAINT pk_queue_snapshot PRIMARY KEY (id),
+    CONSTRAINT uq_queue_snapshot_tenant_queue_time
+        UNIQUE (tenancy_id, queue_view_id, snapshot_at)
+);
+
+CREATE INDEX IF NOT EXISTS idx_queue_snapshot_trend
+    ON queue_snapshot (tenancy_id, queue_view_id, snapshot_at);
+
+-- ============================================================
+-- worker_skill_profile (ai module)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS worker_skill_profile (
+    worker_id    VARCHAR(255) NOT NULL,
+    tenancy_id   VARCHAR(255) NOT NULL,
+    narrative    TEXT,
+    created_at   TIMESTAMP    NOT NULL,
+    updated_at   TIMESTAMP    NOT NULL,
+    CONSTRAINT pk_worker_skill_profile PRIMARY KEY (worker_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_worker_skill_profile_tenancy ON worker_skill_profile(tenancy_id);
+
+-- ============================================================
+-- escalation_summary (ai module)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS escalation_summary (
+    id            UUID         NOT NULL,
+    work_item_id  UUID         NOT NULL,
+    tenancy_id    VARCHAR(255) NOT NULL,
+    event_type    VARCHAR(50)  NOT NULL,
+    summary       TEXT,
+    generated_at  TIMESTAMP    NOT NULL,
+    CONSTRAINT pk_escalation_summary PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_escalation_summary_work_item_id ON escalation_summary (work_item_id);
+CREATE INDEX IF NOT EXISTS idx_escalation_summary_tenancy ON escalation_summary(tenancy_id);
+
+-- ============================================================
+-- work_item_issue_link (issue-tracker module)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS work_item_issue_link (
+    id            UUID         NOT NULL,
+    work_item_id  UUID         NOT NULL,
+    tracker_type  VARCHAR(50)  NOT NULL,
+    external_ref  VARCHAR(500) NOT NULL,
+    title         VARCHAR(500),
+    url           VARCHAR(2000),
+    status        VARCHAR(50)  NOT NULL DEFAULT 'unknown',
+    linked_at     TIMESTAMP    NOT NULL,
+    linked_by     VARCHAR(255) NOT NULL,
+    tenancy_id    VARCHAR(255) NOT NULL,
+    CONSTRAINT pk_work_item_issue_link PRIMARY KEY (id),
+    CONSTRAINT uq_work_item_issue_link UNIQUE (work_item_id, tracker_type, external_ref)
+);
+
+CREATE INDEX IF NOT EXISTS idx_wiil_work_item_id ON work_item_issue_link (work_item_id);
+CREATE INDEX IF NOT EXISTS idx_wiil_tracker_ref ON work_item_issue_link (tracker_type, external_ref);
+CREATE INDEX IF NOT EXISTS idx_work_item_issue_link_tenancy ON work_item_issue_link (tenancy_id);
+
+-- ============================================================
+-- progress_instance (progress module)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS progress_instance (
+    id                  UUID         NOT NULL,
+    version             BIGINT       NOT NULL DEFAULT 0,
+    tenancy_id          VARCHAR(255) NOT NULL,
+    scope_type          VARCHAR(255) NOT NULL,
+    scope_id            VARCHAR(255) NOT NULL,
+    parent_progress_id  UUID,
+    root_progress_id    UUID         NOT NULL,
+    shape_type          VARCHAR(50)  NOT NULL,
+    definition          JSONB,
+    state               JSONB        NOT NULL,
+    status              VARCHAR(20)  NOT NULL,
+    rollup_strategy_id  VARCHAR(255),
+    visualisation_mode  VARCHAR(50),
+    rollback_policy     VARCHAR(20),
+    created_at          TIMESTAMP    NOT NULL,
+    updated_at          TIMESTAMP    NOT NULL,
+    CONSTRAINT pk_progress_instance PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_progress_scope ON progress_instance (scope_type, scope_id);
+CREATE INDEX IF NOT EXISTS idx_progress_parent ON progress_instance (parent_progress_id);
+CREATE INDEX IF NOT EXISTS idx_progress_root ON progress_instance (root_progress_id);
+CREATE INDEX IF NOT EXISTS idx_progress_tenancy ON progress_instance (tenancy_id);
+
+-- ============================================================
+-- progress_event (progress module)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS progress_event (
+    id                UUID         NOT NULL,
+    tenancy_id        VARCHAR(255) NOT NULL,
+    progress_id       UUID         NOT NULL,
+    root_progress_id  UUID         NOT NULL,
+    scope_type        VARCHAR(255) NOT NULL,
+    scope_id          VARCHAR(255) NOT NULL,
+    change_type       VARCHAR(30)  NOT NULL,
+    previous_state    JSONB,
+    current_state     JSONB,
+    status            VARCHAR(20)  NOT NULL,
+    occurred_at       TIMESTAMP    NOT NULL,
+    CONSTRAINT pk_progress_event PRIMARY KEY (id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_progress_event_progress ON progress_event (progress_id, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_progress_event_root ON progress_event (root_progress_id, occurred_at);
+CREATE INDEX IF NOT EXISTS idx_progress_event_tenancy ON progress_event (tenancy_id);
+CREATE INDEX IF NOT EXISTS idx_progress_event_scope ON progress_event (scope_type, scope_id, occurred_at);
