@@ -1,4 +1,4 @@
--- quarkus-work-issue-tracker V3000: WorkItem → external issue links
+-- quarkus-work-issue-tracker V6000: WorkItem issue links + priority vocabulary
 --
 -- work_item_issue_link: one row per (WorkItem, external issue) pair.
 --   tracker_type  — "github", "jira", "linear", or any custom type
@@ -8,6 +8,7 @@
 --   status        — last-known status: "open", "closed", "unknown"
 --   linked_at     — when the link was created
 --   linked_by     — actor who created the link (user or system)
+--   tenancy_id    — tenant partition key
 --
 -- status is refreshed by PUT /workitems/{id}/issues/sync. It is intentionally
 -- not kept continuously in sync — the issue tracker is the source of truth for
@@ -26,9 +27,11 @@ CREATE TABLE work_item_issue_link (
     status        VARCHAR(50)  NOT NULL DEFAULT 'unknown',
     linked_at     TIMESTAMP    NOT NULL,
     linked_by     VARCHAR(255) NOT NULL,
+    tenancy_id    VARCHAR(255) NOT NULL,
     CONSTRAINT pk_work_item_issue_link PRIMARY KEY (id),
     CONSTRAINT uq_work_item_issue_link UNIQUE (work_item_id, tracker_type, external_ref)
 );
 
 CREATE INDEX idx_wiil_work_item_id ON work_item_issue_link (work_item_id);
 CREATE INDEX idx_wiil_tracker_ref ON work_item_issue_link (tracker_type, external_ref);
+CREATE INDEX idx_work_item_issue_link_tenancy ON work_item_issue_link (tenancy_id);
