@@ -1,40 +1,22 @@
-# HANDOFF — 2026-08-04
+# HANDOFF — 2026-08-07
 
 ## Last Session
 
-Designed cross-cutting architecture for agent learning & memory (engine#800). Architecture spec created and reviewed (4 dimensions, 66 issues, 0 unresolved). Implementation plan written (5 tasks for Sub-epic A). Task 1 complete — ExperienceRecorder and ReflectionOrchestrator SPIs extracted in neocortex.
+Implemented #802 hierarchical planning — GoalDecomposer SPI + LlmDecompositionStrategy + CaseStartedEventHandler wiring. Design reviewed (light, 4 dimensions, 6 findings addressed). Key discovery: runtime doesn't depend on planning — used SPI-in-common pattern. Filed #877 platform-wide example gap analysis. Published 6 blog entries to both personal and casehub sites.
 
 ## Immediate Next Step
 
-Start Task 2: `ReflectionConfig` on `CaseDefinition`. Read `plans/2026-08-04-agent-memory-patterns.md` for details. Run `/work` to resume the branch.
-
-## What's Left
-
-- Task 2: ReflectionConfig record + CaseDefinition + YAML mapping · S · Low
-- Task 3: AgentExperienceRecorder + handler wiring · M · Med
-- Task 4: Reflection trigger — threshold tracking + async handler · M · Med
-- Task 5: Personality transition CBR case producer · S · Low
-- LLM-backed ReflectionSynthesizer (neocortex, deferred) · M · High
-- Sub-epic B: Reflection & Planning (#801-#804, future branch) · L · High
-- Sub-epic C: Goal Lifecycle (#805-#808, future branch) · L · High
+Continue #800 Sub-epic B with #803 (plan adaptation — revise active plans based on new observations). Run `/work` to start.
 
 ## Cross-Module
 
 **Enabled** (we delivered, downstream work unblocked):
-- neocortex — ExperienceRecorder + ReflectionOrchestrator SPIs extracted, commit `a0d3acd` on `issue-800-agent-learning-memory` (gates engine Tasks 3-4) · S · Low
-
-## What's Next
-
-| # | Description | Scale | Complexity | Notes |
-|---|-------------|-------|------------|-------|
-| #800 | Epic: Agent Learning & Memory — Tasks 2-5 of Sub-epic A | XL | High | In progress — Task 1 done |
-| #833 | Epic: ACL engine integration (#865, #866, #867) | XL | High | 3 identity propagation issues |
-| #835 | Epic: A2A/MCP interop — follow-on integration | XL | High | 9 children |
+- neocortex — ExperienceRecorder + ReflectionOrchestrator SPIs (from prior session, gates engine tasks) · S · Low
 
 ## References
 
 | Doc | Path |
 |-----|------|
-| Architecture spec | `specs/issue-800-agent-learning-memory/2026-08-04-agent-learning-memory-architecture-design.md` |
-| Implementation plan | `plans/2026-08-04-agent-memory-patterns.md` |
-| Design journal | `design/JOURNAL.md` |
+| Design spec | `specs/issue-802-hierarchical-planning/2026-08-07-hierarchical-planning-design.md` |
+| Implementation plan | `plans/2026-08-07-hierarchical-planning.md` |
+| Gap analysis issue | engine#877 |
