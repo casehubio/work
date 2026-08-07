@@ -15,9 +15,6 @@
  */
 package io.casehub.work.engine;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
-
 import io.casehub.api.spi.RiskDecision.GateRequired;
 import io.casehub.api.spi.routing.StaticSetStrategy;
 import io.casehub.engine.common.internal.event.ActionGateApprovedEvent;
@@ -37,6 +34,10 @@ import io.quarkus.vertx.ConsumeEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -45,9 +46,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 /**
  * Tests for ActionGateWorkItemHandler, ActionGateCompletionApplier, and gate routing in
@@ -244,7 +245,23 @@ class ActionGateHandlerTest {
     assertThat(GateEventRecorder.expiredEvents.get(0).gateId()).isEqualTo(40L);
   }
 
-  @ApplicationScoped
+    @Test
+    void completionApplier_escalated_publishesExpiredEvent() {
+        final UUID     caseId   = UUID.randomUUID();
+        final WorkItem workItem = new WorkItem();
+        workItem.callerRef = GateCallerRef.encode(caseId, 42L);
+
+        actionGateCompletionApplier.apply(
+                new GateCallerRef(caseId, 42L), WorkItemStatus.ESCALATED, toRef(workItem), "test-tenant");
+
+        await().atMost(2, TimeUnit.SECONDS).until(() ->
+                                                          GateEventRecorder.expiredEvents.stream().anyMatch(e -> e.gateId() == 42L));
+        assertThat(GateEventRecorder.expiredEvents)
+                .anyMatch(e -> e.caseId().equals(caseId) && e.gateId() == 42L);
+    }
+
+
+    @ApplicationScoped
   static class GateEventRecorder {
 
     static final List<ActionGateApprovedEvent> approvedEvents = new CopyOnWriteArrayList<>();

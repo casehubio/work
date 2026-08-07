@@ -190,40 +190,39 @@ class WorkItemLifecycleAdapterTest {
   }
 
   @Test
-  void workItemEscalated_writesContextSignal_planItemUnchanged() {
-    // ESCALATED is terminal (all SLA breach policies exhausted) but the PlanItem stays
-    // DELEGATED — the adapter writes a workItemEscalated signal instead. Refs engine#400.
+  void workItemEscalated_routesToApplier_marksPlanItemFaulted() {
+    PlanItem delegatedItem = PlanItem.create("escalation-ht",
+            io.casehub.api.model.ExecutorRef.of("ht-worker"), 10);
+    delegatedItem.tryMarkDispatching();
+    delegatedItem.markDelegated();
+    registry.getOrCreate(caseId, "test-tenant").addPlanItem(delegatedItem);
+    String delegatedItemId = delegatedItem.getPlanItemId();
+
     WorkItem escalatedItem = new WorkItem();
     escalatedItem.id = UUID.randomUUID();
     escalatedItem.status = WorkItemStatus.ESCALATED;
     escalatedItem.candidateGroups = "committee-a,committee-b";
-    escalatedItem.callerRef = PlanItemCallerRef.encode(caseId, planItemId);
+    escalatedItem.callerRef = PlanItemCallerRef.encode(caseId, delegatedItemId);
 
     lifecycleEvents.fireAsync(
-        WorkItemLifecycleEvent.of("workitem.escalated", escalatedItem, "system", null));
+            WorkItemLifecycleEvent.of("workitem.escalated", escalatedItem, "system", null));
 
     await()
-        .atMost(5, TimeUnit.SECONDS)
-        .untilAsserted(
-            () -> {
-              CaseInstance updated =
-                  caseInstanceRepository.findByUuid(caseId, "test-tenant");
-              Object signal = updated.getCaseContext().get("workItemEscalated");
-              assertThat(signal).isNotNull().isInstanceOf(Map.class);
-              @SuppressWarnings("unchecked")
-              Map<String, Object> signalMap = (Map<String, Object>) signal;
-              assertThat(signalMap)
-                  .containsEntry("workItemId", escalatedItem.id.toString())
-                  .containsEntry("bindingName", "review-binding");
-              assertThat(signalMap.get("newGroups"))
-                  .asList()
-                  .containsExactlyInAnyOrder("committee-a", "committee-b");
-            });
+            .atMost(5, TimeUnit.SECONDS)
+            .untilAsserted(
+                    () -> assertThat(delegatedItem.getStatus()).isEqualTo(TaskStatus.FAULTED));
 
-    // PlanItem status must remain unchanged — ESCALATED is not terminal
-    assertThat(planItem.getStatus())
-        .as("ESCALATED must not change PlanItem status")
-        .isEqualTo(TaskStatus.RUNNING);
+    CaseInstance updated = caseInstanceRepository.findByUuid(caseId, "test-tenant");
+    Object signal = updated.getCaseContext().get("workItemEscalated");
+    assertThat(signal).isNotNull().isInstanceOf(Map.class);
+    @SuppressWarnings("unchecked")
+    Map<String, Object> signalMap = (Map<String, Object>) signal;
+    assertThat(signalMap)
+            .containsEntry("workItemId", escalatedItem.id.toString())
+            .containsEntry("bindingName", "escalation-ht");
+    assertThat(signalMap.get("lastCandidateGroups"))
+            .asList()
+            .containsExactlyInAnyOrder("committee-a", "committee-b");
   }
 
   @Test

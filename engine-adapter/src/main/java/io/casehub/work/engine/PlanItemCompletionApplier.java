@@ -102,7 +102,8 @@ public class PlanItemCompletionApplier {
             return;
         }
 
-        if (ref != null && ref.resolutionTypeName() != null && ref.resolution() != null) {
+        if (status != WorkItemStatus.ESCALATED
+            && ref != null && ref.resolutionTypeName() != null && ref.resolution() != null) {
             try {
                 var bridge = bridgeResolver.resolveByTypeNameStrict(ref.resolutionTypeName());
                 bridge.deserialise(MAPPER.readTree(ref.resolution()));
@@ -118,7 +119,11 @@ public class PlanItemCompletionApplier {
 
         TaskStatus previousStatus = item.getStatus();
         if (!applyStatus(item, status)) {
-            return; // already terminal or invalid transition — idempotent skip
+            return;
+        }
+
+        if (status == WorkItemStatus.ESCALATED) {
+            writeEscalationSignal(instance, item, ref);
         }
 
         applyOutputMapping(item, ref, instance);
@@ -129,7 +134,8 @@ public class PlanItemCompletionApplier {
                     new PlanItemStateChangedEvent(caseId, planItemId, bindingName,
                                                   previousStatus, TaskStatus.REJECTED, instance.tenancyId));
         }
-        if (status == WorkItemStatus.FAULTED || status == WorkItemStatus.EXPIRED) {
+        if (status == WorkItemStatus.FAULTED || status == WorkItemStatus.EXPIRED
+            || status == WorkItemStatus.ESCALATED) {
             planItemStateChangedEvents.fireAsync(
                     new PlanItemStateChangedEvent(caseId, planItemId, bindingName,
                                                   previousStatus, TaskStatus.FAULTED, instance.tenancyId));
@@ -152,6 +158,7 @@ public class PlanItemCompletionApplier {
                 case REJECTED -> item.markRejected();
                 case FAULTED -> item.markFaulted();
                 case EXPIRED -> item.markFaulted();
+                case ESCALATED -> item.markFaulted();
                 case OBSOLETE -> item.markObsolete();
                 case CANCELLED -> item.markCancelled();
                 default -> {
@@ -226,6 +233,22 @@ public class PlanItemCompletionApplier {
                   .map(Binding::getConflictResolverStrategy)
                   .findFirst()
                   .orElse(null);
+    }
+
+
+    private void writeEscalationSignal(CaseInstance instance, PlanItem item, WorkItemRef ref) {
+        final List<String> lastGroups =
+                ref.candidateGroups() != null
+                ? List.of(ref.candidateGroups().split("\\s*,\\s*"))
+                : List.of();
+        instance
+                .getCaseContext()
+                .set(
+                        "workItemEscalated",
+                        Map.of(
+                                "workItemId", ref.id().toString(),
+                                "lastCandidateGroups", lastGroups,
+                                "bindingName", item.getBindingName()));
     }
 
     private void writeValidationFailedSignal(
