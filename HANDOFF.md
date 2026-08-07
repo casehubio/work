@@ -1,8 +1,10 @@
-# HANDOFF — 2026-08-06
+# HANDOFF — 2026-08-07
 
 ## Last Session
 
-Closed `issue-869-humantask-resolved-scope` — fix for engine#869 where `HumanTaskScheduleHandler` ignored `resolvedScope` and `resolvedTitle` from `HumanTaskScheduleEvent`, always using static `target.scope()` and `target.title()`. Both `createInline()` and `handleTemplateMode()` now prefer resolved values when non-null, falling back to static values. Landed on origin/main as `5040f871`. PR #339 to casehubio still open.
+Closed `issue-341-escalated-status-handling` — `PlanItemCompletionApplier` did not handle ESCALATED WorkItem status. The adapter intercepted ESCALATED before it could reach the applier, leaving PlanItems stuck in DELEGATED. Removed the intercept, added `case ESCALATED → markFaulted()` with escalation signal and resolution validation bypass. Also fixed gate-backed ESCALATED (ActionGateCompletionApplier). Landed on origin/main as `d61a84e5`. Issue #341 closed.
+
+Key discovery: the issue's diagnosis was wrong — ESCALATED never hit `applyStatus()`'s default branch because the adapter intercepted it first. The Javadoc contradicted itself about whether ESCALATED was terminal. Design review caught that stale resolution data could silently re-introduce the original bug through the validation guard.
 
 ## Immediate Next Step
 
