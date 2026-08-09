@@ -1,1 +1,1 @@
-# Design Journal — issue-306-queue-summary-caching
+# Design Journal — issue-346-v2-label-schema-conflict

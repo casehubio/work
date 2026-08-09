@@ -19,6 +19,7 @@ Jump to the section relevant to what you're about to do.
 
 ## Flyway / SQL
 
+- **Migration consolidation requires `mvn clean`** — Maven incremental builds do not delete stale resources from `target/classes/`. After deleting migration files (e.g. consolidation), run `mvn clean install`; otherwise the deleted `.sql` files survive in `target/classes/` and Flyway applies them alongside the new consolidated migration, causing "Table already exists" errors. (#346)
 - `key` is a reserved word in H2 — avoid it as a column name in Flyway migrations
 - Multi-column `ALTER TABLE ... ADD COLUMN x, ADD COLUMN y` is not supported in H2 even in `MODE=PostgreSQL` — split into separate `ALTER TABLE` statements per column.
 - `PostgresDialectValidationTest` runs against a real PostgreSQL Testcontainer via a dedicated Surefire execution (`postgres-dialect-test`) that: (1) sets `quarkus.datasource.db-kind=postgresql` as a **system property** before augmentation (test resource overrides don't reach the augmentation cache check), (2) uses `reuseForks=false` for a clean JVM so the fresh augmentation uses PostgreSQL, (3) runs **first** before H2 tests so no cached H2 artifact exists yet. `PostgresTestResource` starts the container and injects the JDBC URL. Flyway is disabled in the PostgreSQL test and replaced with `hibernate-orm.database.generation=drop-and-create` because the Flyway migrations use H2-permissive SQL (e.g. bare `DOUBLE` type) that PostgreSQL rejects — this is a known production compatibility issue to address separately.
