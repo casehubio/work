@@ -66,6 +66,10 @@ FilterChain derivation graph, and QueueView named queries. The core extension is
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-flyway</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-cache</artifactId>
+    </dependency>
 
     <!-- Testing -->
     <!-- Provides MockPreferenceProvider @DefaultBean (required since casehub-work-api now depends on casehub-platform-api) -->

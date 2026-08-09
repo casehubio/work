@@ -29,6 +29,7 @@ public class QueueMembershipService {
         this.expressionRegistry = expressionRegistry;
     }
 
+    @io.quarkus.cache.CacheResult(cacheName = "queue-summary", keyGenerator = QueueSummaryCacheKeyGenerator.class)
     public WorkItemSummary summarize(final SubjectViewSpec queue, final Instant now) {
         if (queue.additionalConditions() != null
             && !queue.additionalConditions().isBlank()) {
@@ -51,6 +52,12 @@ public class QueueMembershipService {
                                    .toList();
         }
         return candidates;
+    }
+
+    @io.quarkus.cache.CacheInvalidateAll(cacheName = "queue-summary")
+    void onWorkItemLifecycle(
+            @jakarta.enterprise.event.Observes(during = jakarta.enterprise.event.TransactionPhase.AFTER_SUCCESS)
+            io.casehub.work.runtime.event.WorkItemLifecycleEvent event) {
     }
 
     public int countMembers(final SubjectViewSpec queue) {
