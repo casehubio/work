@@ -11,7 +11,7 @@
 
 **Goal:** Wire neocortex ExperienceRecorder and ReflectionOrchestrator SPIs into the engine's worker completion and dispatch paths, enabling agents to accumulate experiences, trigger periodic reflection, and receive relevant memories at dispatch time.
 
-**Architecture:** Two new engine-runtime beans (`AgentExperienceRecorder`, `AgentMemoryRetriever`) following the established `PersonalitySignalRecorder`/`GoalFailureRecorder` pattern. Configuration via two new records on `CaseDefinition` (`ReflectionTriggerConfig`, `MemoryRetrievalConfig`). Retrieved memories flow through `WorkerContext.memories` to workers at execution time.
+**Architecture:** Two new engine-runtime beans (`AgentExperienceRecorder`, `AgentMemoryRetriever`) following the established `PersonalitySignalRecorder`/`GoalOutcomeRecorder` pattern. Configuration via two new records on `CaseDefinition` (`ReflectionTriggerConfig`, `MemoryRetrievalConfig`). Retrieved memories flow through `WorkerContext.memories` to workers at execution time.
 
 **Tech Stack:** Java 21, Quarkus 3.32.2, CDI (`@ApplicationScoped`, `Instance<>`), `ConcurrentHashMap.compute()` for atomic state, virtual threads for async reflection.
 
@@ -1261,7 +1261,7 @@ Refs #804"
 
 - [ ] **Step 1: Inject AgentExperienceRecorder into WorkflowExecutionCompletedHandler**
 
-Use `ide_insert_member` to add field after `goalFailureRecorder` (line 93):
+Use `ide_insert_member` to add field after `goalOutcomeRecorder` (line 93):
 
 ```java
 @Inject AgentExperienceRecorder agentExperienceRecorder;

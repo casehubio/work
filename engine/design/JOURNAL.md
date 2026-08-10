@@ -1,1 +1,1 @@
-# Design Journal — issue-869-humantask-resolved-scope
+# Design Journal — issue-800-agent-learning-subepics-bc

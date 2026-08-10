@@ -15,7 +15,7 @@ refinable to better capture what the agent actually accomplishes.
 
 The existing goal lifecycle infrastructure tracks signals but never acts on
 them beyond abandonment:
-- `GoalFailureRecorder` records DECLINE signals per goal via
+- `GoalOutcomeRecorder` records DECLINE signals per goal via
   `BehavioralSignalStore` using a `__goal__` sentinel capability (a
   workaround — the signal store wasn't designed for goal outcomes)
 - `GoalAbandonmentEvaluator` reads DECLINE counts from the same store
@@ -109,7 +109,7 @@ work can add a reflection-triggered evaluation path that calls the same
 ### GoalOutcomeRecorder (replaces GoalFailureRecorder)
 
 `runtime/internal/routing/`, `@ApplicationScoped`. Replaces
-`GoalFailureRecorder` with purpose-built `GoalSignalStore` integration.
+`GoalOutcomeRecorder` with purpose-built `GoalSignalStore` integration.
 
 **Changes:**
 1. Replace `Instance<BehavioralSignalStore>` with `Instance<GoalSignalStore>`
@@ -142,7 +142,7 @@ logic is unchanged.
 **Method:** `record(CaseInstance, String workerName, String capabilityName,
 WorkerOutcome<?>)`
 
-**workerName -> agentId resolution:** Same path as `GoalFailureRecorder` —
+**workerName -> agentId resolution:** Same path as `GoalOutcomeRecorder` —
 `CaseDefinitionRegistry.getCaseDefinition()` then
 `definition.agentDescriptorFor(workerName)`. Early return when no descriptor
 or no goals.

@@ -645,10 +645,10 @@ BehavioralSignalStore to GoalSignalStore, add SUCCESS recording, null
 capability guard. Update WorkflowExecutionCompletedHandler call sites.
 
 **Files:**
-- Rename: `GoalFailureRecorder` -> `GoalOutcomeRecorder` (use `ide_refactor_rename`)
+- Rename: `GoalOutcomeRecorder` -> `GoalOutcomeRecorder` (use `ide_refactor_rename`)
 - Modify: `runtime/src/main/java/io/casehub/engine/internal/routing/GoalOutcomeRecorder.java`
 - Modify: `runtime/src/main/java/io/casehub/engine/internal/engine/handler/WorkflowExecutionCompletedHandler.java`
-- Rename: `GoalFailureRecorderTest` -> `GoalOutcomeRecorderTest` (use `ide_refactor_rename`)
+- Rename: `GoalOutcomeRecorderTest` -> `GoalOutcomeRecorderTest` (use `ide_refactor_rename`)
 - Modify: `runtime/src/test/java/io/casehub/engine/internal/routing/GoalOutcomeRecorderTest.java`
 
 **Interfaces:**
