@@ -2,18 +2,17 @@
 
 ## Last Session
 
-Implemented #806 (goal revision) — 6 of 8 tasks complete. Created eidos-api implementations (InMemoryGoalSignalStore, DefaultGoalEvolution, AgentGoal.toBuilder()), engine-api SPI types (GoalRevisionStrategy, GoalRevisionContext, GoalRevisionProposal, GOAL_REVISED event), replaced GoalFailureRecorder with GoalOutcomeRecorder using GoalSignalStore, evolved GoalAbandonmentEvaluator to GoalSignalStore, built GoalRevisionEvaluator + LlmGoalRevisionStrategy, wired into WorkflowExecutionCompletedHandler. Design spec went through brainstorming, light 3-dimension review (27 findings), two major revisions (GoalLifecycleStore alignment, then discovery of existing eidos SPIs).
+Completed #806 (goal revision) — wrote GoalRevisionIntegrationTest, ran full runtime suite (1238 tests, 0 failures). Advanced plan to #805. Brainstormed #805+#808 (merged into single design — goal formation + memory-based discovery). Wrote design spec and implementation plan. Implemented 4 of 5 tasks: SPI types (GoalFormationStrategy, GoalFormationContext, GoalFormationProposal), GoalFormationEvaluator with cooldown/validation/approval gate, LlmGoalFormationStrategy, and AgentExperienceRecorder wiring.
 
 ## Immediate Next Step
 
-Two tasks remain: (1) `GoalRevisionIntegrationTest` — full `@QuarkusTest` flow verifying the pipeline end-to-end, (2) run the full runtime test suite to verify no regressions from the GoalOutcomeRecorder rename and handler wiring changes. Then advance to #805 via `work next`.
+One task remains for #805: (1) `GoalFormationIntegrationTest` — full `@QuarkusTest` following the GoalRevisionIntegrationTest pattern (needs TestGoalSignalStore, TestGoalEvolution, TestAgentRegistry inner beans, mock ReflectionOrchestrator + ChatModelProvider), (2) run full runtime suite for regressions, (3) add Goal Formation section to CLAUDE.md. Then advance to #808 — but #808 is merged into #805's design, so just close both issues and advance to the next plan item.
 
 ## References
 
 | Doc | Path |
 |-----|------|
+| Design spec (#805/#808) | `specs/issue-805-goal-formation/2026-08-10-goal-formation-design.md` |
+| Implementation plan (#805) | `plans/2026-08-10-goal-formation.md` |
 | Design spec (#806) | `specs/issue-806-goal-revision/2026-08-10-goal-revision-design.md` |
-| Implementation plan (#806) | `plans/2026-08-10-goal-revision.md` |
 | Design spec (#803) | `specs/issue-803-plan-adaptation/2026-08-08-plan-adaptation-design.md` |
-| Design spec (#802) | `specs/issue-802-hierarchical-planning/2026-08-07-hierarchical-planning-design.md` |
-| eidos commit | `c9f534f` on eidos main — GoalSignalStore/GoalEvolution impls |
