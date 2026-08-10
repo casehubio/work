@@ -1,22 +1,9 @@
-# HANDOFF — 2026-08-07
+# HANDOFF — 2026-08-10
 
 ## Last Session
 
-Implemented #802 hierarchical planning — GoalDecomposer SPI + LlmDecompositionStrategy + CaseStartedEventHandler wiring. Design reviewed (light, 4 dimensions, 6 findings addressed). Key discovery: runtime doesn't depend on planning — used SPI-in-common pattern. Filed #877 platform-wide example gap analysis. Published 6 blog entries to both personal and casehub sites.
+Fixed three issues: #888 (actor identity race — cross-repo fix in ledger, `tokenise()` catch-and-retry), #889 (TrustSignalProvider Hibernate session race — `@Transactional(REQUIRES_NEW)` on `doEvaluate()`), #890 (add `name` field to `DecompositionMethod` record — XS backward-compatible change). Created slot 94 for #800 Sub-epics B+C (#803-#808). CI green after #888 fix. Filed #877 platform-wide example gap analysis.
 
 ## Immediate Next Step
 
-Continue #800 Sub-epic B with #803 (plan adaptation — revise active plans based on new observations). Run `/work` to start.
-
-## Cross-Module
-
-**Enabled** (we delivered, downstream work unblocked):
-- neocortex — ExperienceRecorder + ReflectionOrchestrator SPIs (from prior session, gates engine tasks) · S · Low
-
-## References
-
-| Doc | Path |
-|-----|------|
-| Design spec | `specs/issue-802-hierarchical-planning/2026-08-07-hierarchical-planning-design.md` |
-| Implementation plan | `plans/2026-08-07-hierarchical-planning.md` |
-| Gap analysis issue | engine#877 |
+Pick next issue from the open backlog. Slot 94 (#800 Sub-epics B+C) is active in a separate session at `/Users/mdproctor/claude/casehub/slots/94/engine`. #877 (example gap) is parked for future epic planning.
