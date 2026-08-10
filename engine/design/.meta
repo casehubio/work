@@ -1,0 +1,10 @@
+branch: issue-800-agent-learning-subepics-bc
+state: active
+project-sha: slot-creation
+date: 2026-08-08
+issue: 800
+issue-repo: casehubio/engine
+covers: 803,806,805,808
+flyway-next-v: unknown
+design-repo: project
+design-section-hashes: 
