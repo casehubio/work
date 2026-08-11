@@ -35,7 +35,7 @@ import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.PolicyDecision;
 import io.casehub.work.api.SelectionContext;
 import io.casehub.work.api.WorkerCandidate;
-import io.casehub.work.core.strategy.WorkBroker;
+
 import io.casehub.work.runtime.event.SlaBreachEvent;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.model.AuditEntry;
@@ -208,7 +208,6 @@ class ExpiryLifecycleServiceTest {
                 assignmentResolver, WorkItemServiceTest.testConfig(),
                 group -> java.util.List.of(),
                 id -> 0,
-                new WorkBroker(),
                 (userId, excluded) -> PolicyDecision.ALLOW);
         service.timerService = mock(WorkItemTimerService.class);
     }
@@ -365,7 +364,6 @@ class ExpiryLifecycleServiceTest {
                 capturingResolver, WorkItemServiceTest.testConfig(),
                 group -> java.util.List.of(WorkerCandidate.of("escalation-worker")),
                 id -> 0,
-                new WorkBroker(),
                 (userId, excluded) -> PolicyDecision.ALLOW);
 
         policy.willReturn(BreachDecision.EscalateTo.to("senior-reviewers"));
@@ -547,7 +545,6 @@ class ExpiryLifecycleServiceTest {
                 capturingResolver, WorkItemServiceTest.testConfig(),
                 group -> java.util.List.of(WorkerCandidate.of("escalation-worker")),
                 id -> 0,
-                new WorkBroker(),
                 (userId, excluded) -> PolicyDecision.ALLOW);
 
         policy.willReturn(BreachDecision.EscalateTo.to("senior-reviewers"));

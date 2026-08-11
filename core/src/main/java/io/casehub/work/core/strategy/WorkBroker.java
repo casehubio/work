@@ -2,7 +2,7 @@ package io.casehub.work.core.strategy;
 
 import java.util.List;
 
-import jakarta.enterprise.context.ApplicationScoped;
+
 
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.AssignmentTrigger;
@@ -20,7 +20,6 @@ import io.casehub.work.api.spi.WorkerSelectionStrategy;
  *
  * <p>CaseHub replaces its {@code TaskBroker} by delegating to this bean.
  */
-@ApplicationScoped
 public class WorkBroker {
 
     /**

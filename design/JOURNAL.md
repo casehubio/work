@@ -1,1 +1,1 @@
-# Design Journal — issue-346-v2-label-schema-conflict
+# Design Journal — issue-345-remove-unnecessary-cdi

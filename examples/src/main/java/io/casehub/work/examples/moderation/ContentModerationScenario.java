@@ -73,8 +73,7 @@ public class ContentModerationScenario {
     @Inject
     AuditEntryStore auditStore;
 
-    @Inject
-    MockAIClassifier classifier;
+    final MockAIClassifier classifier = new MockAIClassifier();
 
     /**
      * Run the content moderation scenario from end to end and return the full ledger and audit trail.

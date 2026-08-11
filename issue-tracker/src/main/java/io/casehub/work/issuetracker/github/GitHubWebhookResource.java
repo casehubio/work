@@ -48,8 +48,7 @@ public class GitHubWebhookResource {
     @Inject
     GitHubIssueTrackerConfig config;
 
-    @Inject
-    GitHubWebhookParser parser;
+    final GitHubWebhookParser parser = new GitHubWebhookParser();
 
     @Inject
     WebhookEventHandler handler;

@@ -3,7 +3,7 @@ package io.casehub.work.issuetracker.jira;
 import java.util.Map;
 import java.util.Set;
 
-import jakarta.enterprise.context.ApplicationScoped;
+
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,7 +26,6 @@ import io.casehub.work.api.WorkItemPriority;
  * <p>Returns {@code null} for non-{@code jira:issue_updated} events or payloads
  * with no handled changelog items.
  */
-@ApplicationScoped
 public class JiraWebhookParser {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

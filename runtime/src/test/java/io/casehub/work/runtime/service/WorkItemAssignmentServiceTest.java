@@ -23,7 +23,7 @@ import io.casehub.work.api.spi.WorkerRegistry;
 import io.casehub.work.api.spi.WorkerSelectionStrategy;
 import io.casehub.work.api.spi.WorkloadProvider;
 import io.casehub.work.core.strategy.LeastLoadedStrategy;
-import io.casehub.work.core.strategy.WorkBroker;
+
 import io.casehub.work.runtime.model.*;
 
 /**
@@ -38,12 +38,10 @@ class WorkItemAssignmentServiceTest {
     @Mock
     WorkerRegistry workerRegistry;
 
-    private WorkBroker workBroker;
     private WorkItemAssignmentService service;
 
     @BeforeEach
     void setUp() {
-        workBroker = new WorkBroker();
         lenient().when(workerRegistry.resolveGroup(anyString())).thenReturn(List.of());
         lenient().when(workloadProvider.getActiveWorkCount(anyString())).thenReturn(0);
         service = serviceWith(new LeastLoadedStrategy());
@@ -53,7 +51,7 @@ class WorkItemAssignmentServiceTest {
         final StrategyResolver resolver = mock(StrategyResolver.class);
         lenient().when(resolver.resolve(eq(WorkerSelectionStrategy.class), anyString())).thenReturn(strategy);
         return new WorkItemAssignmentService(resolver, WorkItemServiceTest.testConfig(),
-                workerRegistry, workloadProvider, workBroker,
+                workerRegistry, workloadProvider,
                 (userId, excluded) -> PolicyDecision.ALLOW);
     }
 

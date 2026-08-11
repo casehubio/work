@@ -3,7 +3,7 @@ package io.casehub.work.issuetracker.github;
 import java.util.Map;
 import java.util.Set;
 
-import jakarta.enterprise.context.ApplicationScoped;
+
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,7 +20,6 @@ import io.casehub.work.api.WorkItemPriority;
  * <p>Managed labels ({@code priority:*}, {@code status:*}, {@code category:*}) are filtered
  * on inbound label events — they are owned by the outbound sync and must not echo back.
  */
-@ApplicationScoped
 public class GitHubWebhookParser {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

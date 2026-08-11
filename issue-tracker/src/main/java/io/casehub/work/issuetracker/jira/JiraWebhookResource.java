@@ -45,8 +45,7 @@ public class JiraWebhookResource {
     @Inject
     JiraIssueTrackerConfig config;
 
-    @Inject
-    JiraWebhookParser parser;
+    final JiraWebhookParser parser = new JiraWebhookParser();
 
     @Inject
     WebhookEventHandler handler;

@@ -13,7 +13,7 @@ import io.casehub.work.api.WorkItemLabelRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.core.strategy.CapabilityValidator;
-import io.casehub.work.core.strategy.WorkBroker;
+
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.model.AuditEntry;
@@ -277,7 +277,6 @@ class WorkItemServiceTest {
                 new WorkItemAssignmentService(assignmentResolver, testConfig(),
                         group -> List.of(),
                         workerId -> 0,
-                        new WorkBroker(),
                         (userId, excluded) -> PolicyDecision.ALLOW),
                 claimResolver,
                 (userId, excluded) -> PolicyDecision.ALLOW,
@@ -1351,7 +1350,6 @@ class WorkItemServiceTest {
                 new WorkItemAssignmentService(noClaimResolver, noClaimConfig,
                         group -> List.of(),
                         workerId -> 0,
-                        new WorkBroker(),
                         (userId, excluded) -> PolicyDecision.ALLOW),
                 noClaimPolicyResolver,
                 (userId, excluded) -> PolicyDecision.ALLOW,

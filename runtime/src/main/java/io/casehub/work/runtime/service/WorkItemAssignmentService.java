@@ -46,7 +46,7 @@ public class WorkItemAssignmentService {
     private final WorkItemsConfig config;
     private final WorkerRegistry workerRegistry;
     private final WorkloadProvider workloadProvider;
-    private final WorkBroker workBroker;
+    private final WorkBroker workBroker = new WorkBroker();
     private final ExclusionPolicy exclusionPolicy;
 
     @Inject
@@ -55,13 +55,11 @@ public class WorkItemAssignmentService {
             final WorkItemsConfig config,
             final WorkerRegistry workerRegistry,
             final WorkloadProvider workloadProvider,
-            final WorkBroker workBroker,
             final ExclusionPolicy exclusionPolicy) {
         this.strategyResolver = strategyResolver;
         this.config = config;
         this.workerRegistry = workerRegistry;
         this.workloadProvider = workloadProvider;
-        this.workBroker = workBroker;
         this.exclusionPolicy = exclusionPolicy;
     }
 
