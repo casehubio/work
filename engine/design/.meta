@@ -1,0 +1,10 @@
+branch: issue-110-goal-decomposition-binding-bridge
+state: scaffolded
+project-sha: d77f0ee952b1fe2d9a5f8742b831b12be9b13cd7
+date: 2026-08-12
+issue: 110
+issue-repo: casehubio/engine
+covers: 110
+flyway-next-v: none
+design-repo: project
+design-section-hashes: 

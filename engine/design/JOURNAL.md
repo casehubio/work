@@ -1,1 +1,1 @@
-# Design Journal — issue-800-agent-learning-subepics-bc
+# Design Journal — issue-110-goal-decomposition-binding-bridge
