@@ -6,6 +6,7 @@ import java.util.List;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.POST;
@@ -19,7 +20,6 @@ import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.service.WorkItemService;
@@ -118,20 +118,20 @@ public class FormSchemaScenario {
                 .createdBy(ACTOR_ADMIN)
                 .build();
         final WorkItem wi1 = templateService.createFromTemplate(request1);
-        steps.add(new StepLog(2, description2, wi1.id));
+        steps.add(new StepLog(2, description2, wi1.id()));
 
         // Step 3: legal-reviewer claims and starts the first WorkItem
         final String description3 = "legal-reviewer claims and starts the first WorkItem";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 3, total, description3);
-        workItemService.claim(wi1.id, ACTOR_REVIEWER);
-        workItemService.start(wi1.id, ACTOR_REVIEWER);
-        steps.add(new StepLog(3, description3, wi1.id));
+        workItemService.claim(wi1.id(), ACTOR_REVIEWER);
+        workItemService.start(wi1.id(), ACTOR_REVIEWER);
+        steps.add(new StepLog(3, description3, wi1.id()));
 
         // Step 4: complete with a valid resolution — succeeds
         final String description4 = "legal-reviewer completes with valid resolution {\"decision\":\"approved\"} — succeeds";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 4, total, description4);
-        workItemService.complete(wi1.id, ACTOR_REVIEWER, "{\"decision\": \"approved\"}", null);
-        steps.add(new StepLog(4, description4, wi1.id));
+        workItemService.complete(wi1.id(), ACTOR_REVIEWER, "{\"decision\": \"approved\"}", null);
+        steps.add(new StepLog(4, description4, wi1.id()));
 
         // Step 5: instantiate the template again → second WorkItem for the invalid-resolution path
         final String description5 = "Instantiate template → second WorkItem for invalid-resolution path";
@@ -142,21 +142,21 @@ public class FormSchemaScenario {
                 .createdBy(ACTOR_ADMIN)
                 .build();
         final WorkItem wi2 = templateService.createFromTemplate(request2);
-        steps.add(new StepLog(5, description5, wi2.id));
+        steps.add(new StepLog(5, description5, wi2.id()));
 
         // Step 6: claim and start the second WorkItem
         final String description6 = "legal-reviewer claims and starts the second WorkItem";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 6, total, description6);
-        workItemService.claim(wi2.id, ACTOR_REVIEWER);
-        workItemService.start(wi2.id, ACTOR_REVIEWER);
-        steps.add(new StepLog(6, description6, wi2.id));
+        workItemService.claim(wi2.id(), ACTOR_REVIEWER);
+        workItemService.start(wi2.id(), ACTOR_REVIEWER);
+        steps.add(new StepLog(6, description6, wi2.id()));
 
         // Step 7: attempt to complete with an invalid resolution — expect rejection
         final String description7 = "Attempt to complete with invalid resolution {\"wrong_field\":\"value\"} — expect rejection";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 7, total, description7);
         boolean invalidRejected = false;
         try {
-            workItemService.complete(wi2.id, ACTOR_REVIEWER, "{\"wrong_field\": \"value\"}", null);
+            workItemService.complete(wi2.id(), ACTOR_REVIEWER, "{\"wrong_field\": \"value\"}", null);
         } catch (final IllegalArgumentException e) {
             invalidRejected = true;
             LOG.infof("[SCENARIO] Step %d/%d: invalid resolution correctly rejected — %s", 7, total, e.getMessage());
@@ -164,12 +164,12 @@ public class FormSchemaScenario {
         if (!invalidRejected) {
             throw new IllegalStateException("Invalid resolution was not rejected — outputDataSchema enforcement failed");
         }
-        steps.add(new StepLog(7, description7 + " — rejected=" + invalidRejected, wi2.id));
+        steps.add(new StepLog(7, description7 + " — rejected=" + invalidRejected, wi2.id()));
 
         // Step 8: collect audit trail for the successfully completed WorkItem
         final String description8 = "Collect audit trail for the successfully completed WorkItem";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 8, total, description8);
-        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi1.id);
+        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi1.id());
         final List<AuditEntryResponse> auditTrail = auditEntries.stream()
                 .map(a -> new AuditEntryResponse(a.id, a.event, a.actor, a.detail, a.occurredAt))
                 .toList();
@@ -180,7 +180,7 @@ public class FormSchemaScenario {
                 steps,
                 template.id,
                 template.name,
-                wi1.id,
+                wi1.id(),
                 invalidRejected,
                 auditTrail);
     }

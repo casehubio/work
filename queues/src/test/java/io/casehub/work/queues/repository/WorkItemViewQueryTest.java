@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemLabel;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -15,9 +17,8 @@ import io.casehub.platform.api.view.SubjectViewSpec;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLabel;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import java.util.List;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -40,7 +41,7 @@ class WorkItemViewQueryTest {
                 null, Instant.now());
 
         var results = viewQuery.findByView(spec);
-        assertThat(results).extracting(w -> w.id).contains(wi.id);
+        assertThat(results).extracting(w -> w.id()).contains(wi.id());
     }
 
     @Test
@@ -53,7 +54,7 @@ class WorkItemViewQueryTest {
                 "vq-tenant-2", "legal/**", null, null, null, null, Instant.now());
 
         var results = viewQuery.findByView(spec);
-        assertThat(results).extracting(w -> w.id).doesNotContain(wi.id);
+        assertThat(results).extracting(w -> w.id()).doesNotContain(wi.id());
     }
 
     @Test
@@ -66,7 +67,7 @@ class WorkItemViewQueryTest {
                 "vq-tenant-b", "legal/**", null, null, null, null, Instant.now());
 
         var results = viewQuery.findByView(spec);
-        assertThat(results).extracting(w -> w.id).doesNotContain(wi.id);
+        assertThat(results).extracting(w -> w.id()).doesNotContain(wi.id());
     }
 
     @Test
@@ -111,7 +112,7 @@ class WorkItemViewQueryTest {
                 "vq-exact-tenant", "legal", null, null, null, null, Instant.now());
 
         var results = viewQuery.findByView(spec);
-        assertThat(results).extracting(w -> w.id).contains(wi.id);
+        assertThat(results).extracting(w -> w.id()).contains(wi.id());
     }
 
     @Test
@@ -126,20 +127,20 @@ class WorkItemViewQueryTest {
                 "vq-wild-tenant", "legal/*", null, null, null, null, Instant.now());
 
         var results = viewQuery.findByView(spec);
-        assertThat(results).extracting(w -> w.id).contains(wi1.id);
-        assertThat(results).extracting(w -> w.id).doesNotContain(wi2.id);
+        assertThat(results).extracting(w -> w.id()).contains(wi1.id());
+        assertThat(results).extracting(w -> w.id()).doesNotContain(wi2.id());
     }
 
     private WorkItem createWorkItem(String labelPath, String tenancyId) {
-        var wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.tenancyId = tenancyId;
-        wi.title = "Test item " + labelPath;
-        wi.status = WorkItemStatus.PENDING;
-        wi.priority = WorkItemPriority.MEDIUM;
-        wi.candidateGroups = "test-group";
-        wi.createdAt = Instant.now();
-        wi.labels.add(new WorkItemLabel(labelPath, LabelPersistence.MANUAL, "test"));
-        return wi;
+        return WorkItem.builder()
+                .id(UUID.randomUUID())
+                .tenancyId(tenancyId)
+                .title("Test item " + labelPath)
+                .status(WorkItemStatus.PENDING)
+                .priority(WorkItemPriority.MEDIUM)
+                .candidateGroups("test-group")
+                .createdAt(Instant.now())
+                .labels(List.of(new WorkItemLabel(labelPath, LabelPersistence.MANUAL, "test")))
+                .build();
     }
 }

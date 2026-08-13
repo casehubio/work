@@ -1,28 +1,24 @@
 package io.casehub.work.mongodb;
 
+import com.mongodb.client.result.UpdateResult;
+import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.api.spi.WorkItemStore;
+import io.casehub.work.api.WorkItem;
+import jakarta.annotation.Priority;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Alternative;
+import jakarta.inject.Inject;
+import jakarta.persistence.OptimisticLockException;
+import org.bson.Document;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
-import com.mongodb.client.result.UpdateResult;
-
-import jakarta.annotation.Priority;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Alternative;
-import jakarta.inject.Inject;
-import jakarta.persistence.OptimisticLockException;
-
-import org.bson.Document;
-
-import io.casehub.platform.api.identity.CurrentPrincipal;
-
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
 
 /**
  * MongoDB implementation of {@link WorkItemStore}.
@@ -48,36 +44,38 @@ public class MongoWorkItemStore implements WorkItemStore {
     CurrentPrincipal currentPrincipal;
 
     @Override
-    public WorkItem put(final WorkItem workItem) {
-        if (workItem.id == null) {
-            workItem.id = UUID.randomUUID();
+    public io.casehub.work.api.WorkItem put(final io.casehub.work.api.WorkItem workItem) {
+        io.casehub.work.api.WorkItem stored = workItem;
+        if (stored.id() == null) {
+            stored = stored.toBuilder().id(UUID.randomUUID()).build();
         }
-        if (workItem.tenancyId == null) {
-            workItem.tenancyId = currentPrincipal.tenancyId();
+        if (stored.tenancyId() == null) {
+            stored = stored.toBuilder().tenancyId(currentPrincipal.tenancyId()).build();
         }
         final Instant now = Instant.now();
-        if (workItem.createdAt == null) {
-            workItem.createdAt = now;
+        if (stored.createdAt() == null) {
+            stored = stored.toBuilder().createdAt(now).build();
         }
-        workItem.updatedAt = now;
+        stored = stored.toBuilder().updatedAt(now).build();
 
-        final String idStr = workItem.id.toString();
+        final String idStr = stored.id().toString();
 
         final boolean exists = MongoWorkItemDocument.find(
                 new Document("_id", idStr)).firstResult() != null;
 
         if (!exists) {
-            // New document — plain persist with version 0
-            workItem.version = 0L;
-            MongoWorkItemDocument.from(workItem).persist();
+            final MongoWorkItemDocument doc = MongoWorkItemDocument.from(stored);
+            doc.version = 0L;
+            doc.persist();
         } else {
-            // Existing document — replaceOne with version check (OCC)
-            final MongoWorkItemDocument doc = MongoWorkItemDocument.from(workItem);
-            final long currentVersion = workItem.version != null ? workItem.version : 0L;
+            final MongoWorkItemDocument existing = MongoWorkItemDocument.find(
+                    new Document("_id", idStr)).firstResult();
+            final long                  currentVersion = existing != null && existing.version != null ? existing.version : 0L;
+            final MongoWorkItemDocument doc            = MongoWorkItemDocument.from(stored);
             doc.version = currentVersion + 1;
 
             final Document filter = new Document("_id", idStr)
-                    .append("version", workItem.version);
+                                            .append("version", currentVersion);
 
             final UpdateResult result =
                     MongoWorkItemDocument.mongoCollection().replaceOne(filter, doc);
@@ -85,12 +83,10 @@ public class MongoWorkItemStore implements WorkItemStore {
             if (result.getModifiedCount() == 0) {
                 throw new OptimisticLockException(
                         "Version conflict on WorkItem " + idStr
-                                + " (expected version " + workItem.version + ")");
+                        + " (expected version " + currentVersion + ")");
             }
-
-            workItem.version = doc.version;
         }
-        return workItem;
+        return stored;
     }
 
     @Override
@@ -141,7 +137,7 @@ public class MongoWorkItemStore implements WorkItemStore {
 
     @Override
     public List<WorkItem> findByParentIdExcludingStatuses(final UUID parentId,
-            final List<WorkItemStatus> excludeStatuses) {
+                                                                final List<WorkItemStatus> excludeStatuses) {
         final Document filter = new Document("parentId", parentId.toString())
                 .append("tenancyId", currentPrincipal.tenancyId())
                 .append("status", new Document("$nin",
@@ -152,7 +148,7 @@ public class MongoWorkItemStore implements WorkItemStore {
 
     @Override
     public List<WorkItem> findByParentIdWithStatuses(final UUID parentId,
-            final List<WorkItemStatus> statuses) {
+                                                           final List<WorkItemStatus> statuses) {
         final Document filter = new Document("parentId", parentId.toString())
                 .append("tenancyId", currentPrincipal.tenancyId())
                 .append("status", new Document("$in",

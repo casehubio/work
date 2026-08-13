@@ -17,7 +17,7 @@ import io.casehub.work.queues.event.WorkItemQueueEvent;
 import io.casehub.work.runtime.event.WorkItemContextBuilder;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.filter.LabelRuleEngine;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 
 @ApplicationScoped
 public class FilterEvaluationObserver {
@@ -40,13 +40,15 @@ public class FilterEvaluationObserver {
             final String              eventType = mapEventType(event.eventType());
             final Map<String, Object> context   = WorkItemContextBuilder.toMap(wi);
 
-            labelRuleEngine.evaluate(wi, context, eventType);
-            workItemStore.put(wi);
+            final io.casehub.work.runtime.model.WorkItemEntity entity = io.casehub.work.runtime.repository.WorkItemEntityMapper.toEntity(wi);
+            labelRuleEngine.evaluate(entity, context, eventType);
+            final io.casehub.work.api.WorkItem updated = io.casehub.work.runtime.repository.WorkItemEntityMapper.toDomain(entity);
+            workItemStore.put(updated);
 
-            final Set<String> labelPaths = wi.labels == null ? Set.of()
-                                                             : wi.labels.stream().map(l -> l.path).collect(Collectors.toSet());
+            final Set<String> labelPaths = updated.labels() == null ? Set.of()
+                                                             : updated.labels().stream().map(l -> l.path()).collect(Collectors.toSet());
 
-            views.evaluateAndTrack(wi.id, wi.tenancyId, labelPaths)
+            views.evaluateAndTrack(updated.id(), updated.tenancyId(), labelPaths)
                  .forEach(ve -> queueEventBus.fire(
                          new WorkItemQueueEvent(ve.subjectId(), ve.viewId(),
                                                 ve.viewName(),

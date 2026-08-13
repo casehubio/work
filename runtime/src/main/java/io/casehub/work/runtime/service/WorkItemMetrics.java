@@ -1,22 +1,20 @@
 package io.casehub.work.runtime.service;
 
-import java.time.Instant;
-import java.util.List;
-
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.api.spi.WorkItemStore;
+import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.Gauge;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemStore;
-import io.quarkus.runtime.Startup;
+import java.time.Instant;
+import java.util.List;
 
 /**
  * Registers Micrometer meters for WorkItem operational observability.
@@ -121,31 +119,27 @@ public class WorkItemMetrics {
 
     // ── Pure static helpers — unit-testable without CDI or DB ────────────────
 
-    /** Count all non-terminal WorkItems. */
-    public static long countNonTerminal(final List<WorkItem> items) {
+    public static long countNonTerminal(final List<io.casehub.work.api.WorkItem> items) {
         return items.stream()
-                .filter(wi -> wi.status != null && !wi.status.isTerminal())
-                .count();
+                    .filter(wi -> wi.status() != null && !wi.status().isTerminal())
+                    .count();
     }
 
-    /** Count WorkItems in a specific status. */
-    public static long countByStatus(final List<WorkItem> items, final WorkItemStatus status) {
-        return items.stream().filter(wi -> status == wi.status).count();
+    public static long countByStatus(final List<io.casehub.work.api.WorkItem> items, final WorkItemStatus status) {
+        return items.stream().filter(wi -> status == wi.status()).count();
     }
 
-    /** Count non-terminal WorkItems past their {@code expiresAt}. */
-    public static long countOverdue(final List<WorkItem> items, final Instant now) {
+    public static long countOverdue(final List<io.casehub.work.api.WorkItem> items, final Instant now) {
         return items.stream()
-                .filter(wi -> wi.status != null && !wi.status.isTerminal())
-                .filter(wi -> wi.expiresAt != null && wi.expiresAt.isBefore(now))
-                .count();
+                    .filter(wi -> wi.status() != null && !wi.status().isTerminal())
+                    .filter(wi -> wi.expiresAt() != null && wi.expiresAt().isBefore(now))
+                    .count();
     }
 
-    /** Count PENDING WorkItems past their {@code claimDeadline}. */
-    public static long countClaimDeadlineBreached(final List<WorkItem> items, final Instant now) {
+    public static long countClaimDeadlineBreached(final List<io.casehub.work.api.WorkItem> items, final Instant now) {
         return items.stream()
-                .filter(wi -> wi.status == WorkItemStatus.PENDING)
-                .filter(wi -> wi.claimDeadline != null && wi.claimDeadline.isBefore(now))
-                .count();
+                    .filter(wi -> wi.status() == WorkItemStatus.PENDING)
+                    .filter(wi -> wi.claimDeadline() != null && wi.claimDeadline().isBefore(now))
+                    .count();
     }
 }

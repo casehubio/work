@@ -28,9 +28,9 @@ import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.memory.InMemoryWorkItemStore;
 import io.casehub.work.memory.InMemoryWorkItemTemplateStore;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.runtime.model.WorkItemTemplate;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.repository.WorkItemTemplateStore;
 import io.quarkus.test.junit.QuarkusTest;
 import io.vertx.mutiny.core.eventbus.EventBus;
@@ -161,12 +161,12 @@ class HumanTaskScheduleHandlerTest {
 
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> expectedCallerRef.equals(w.callerRef))
+            .filter(w -> expectedCallerRef.equals(w.callerRef()))
             .findFirst()
             .orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.status).isEqualTo(WorkItemStatus.PENDING);
-    assertThat(created.title).isEqualTo("IRB Ethics Review");
+    assertThat(created.status()).isEqualTo(WorkItemStatus.PENDING);
+    assertThat(created.title()).isEqualTo("IRB Ethics Review");
     assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DELEGATED);
     assertThat(planItemStore.findByCaseId(caseId, "test-tenant"))
         .anyMatch(
@@ -205,13 +205,13 @@ class HumanTaskScheduleHandlerTest {
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> expectedCallerRef.equals(w.callerRef))
+            .filter(w -> expectedCallerRef.equals(w.callerRef()))
             .findFirst()
             .orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.status).isEqualTo(WorkItemStatus.PENDING);
-    assertThat(created.title).isEqualTo("IRB Ethics Review Template");
-    assertThat(created.assigneeId).isNull(); // callerRef must not be passed as assigneeIdOverride
+    assertThat(created.status()).isEqualTo(WorkItemStatus.PENDING);
+    assertThat(created.title()).isEqualTo("IRB Ethics Review Template");
+    assertThat(created.assigneeId()).isNull(); // callerRef must not be passed as assigneeIdOverride
     assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DELEGATED);
     assertThat(planItemStore.findByCaseId(caseId, "test-tenant"))
         .anyMatch(
@@ -247,8 +247,8 @@ class HumanTaskScheduleHandlerTest {
 
     WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.payload).contains("trialId").contains("T-99");
-    assertThat(created.payload).contains("\"type\":\"default\"");
+    assertThat(created.payload()).contains("trialId").contains("T-99");
+    assertThat(created.payload()).contains("\"type\":\"default\"");
     assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DELEGATED);
     assertThat(planItemStore.findByCaseId(caseId, "test-tenant"))
         .anyMatch(
@@ -284,7 +284,7 @@ class HumanTaskScheduleHandlerTest {
 
     WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.payload).isEqualTo("{\"type\":\"loan\"}");
+    assertThat(created.payload()).isEqualTo("{\"type\":\"loan\"}");
     assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DELEGATED);
     assertThat(planItemStore.findByCaseId(caseId, "test-tenant"))
         .anyMatch(
@@ -381,8 +381,8 @@ class HumanTaskScheduleHandlerTest {
 
     WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.expiresAt).isNotNull();
-    assertThat(created.expiresAt).isBeforeOrEqualTo(budgetDeadline.plusSeconds(1));
+    assertThat(created.expiresAt()).isNotNull();
+    assertThat(created.expiresAt()).isBeforeOrEqualTo(budgetDeadline.plusSeconds(1));
   }
 
   @Test
@@ -417,8 +417,8 @@ class HumanTaskScheduleHandlerTest {
 
     WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.expiresAt).isNotNull();
-    assertThat(created.expiresAt).isBefore(budgetDeadline);
+    assertThat(created.expiresAt()).isNotNull();
+    assertThat(created.expiresAt()).isBefore(budgetDeadline);
   }
 
   @Test
@@ -481,10 +481,10 @@ class HumanTaskScheduleHandlerTest {
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> expectedCallerRef.equals(w.callerRef))
+            .filter(w -> expectedCallerRef.equals(w.callerRef()))
             .findFirst()
             .orElseThrow();
-    assertThat(created.expiresAt).isEqualTo(deadline);
+    assertThat(created.expiresAt()).isEqualTo(deadline);
   }
 
   @Test
@@ -520,10 +520,10 @@ class HumanTaskScheduleHandlerTest {
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> expectedCallerRef.equals(w.callerRef))
+            .filter(w -> expectedCallerRef.equals(w.callerRef()))
             .findFirst()
             .orElseThrow();
-    assertThat(created.expiresAt).isEqualTo(absoluteDeadline);
+    assertThat(created.expiresAt()).isEqualTo(absoluteDeadline);
   }
 
   @Test
@@ -556,10 +556,10 @@ class HumanTaskScheduleHandlerTest {
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> expectedCallerRef.equals(w.callerRef))
+            .filter(w -> expectedCallerRef.equals(w.callerRef()))
             .findFirst()
             .orElseThrow();
-    assertThat(created.expiresAt).isEqualTo(budgetDeadline);
+    assertThat(created.expiresAt()).isEqualTo(budgetDeadline);
   }
 
   @Test
@@ -593,10 +593,10 @@ class HumanTaskScheduleHandlerTest {
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> expectedCallerRef.equals(w.callerRef))
+            .filter(w -> expectedCallerRef.equals(w.callerRef()))
             .findFirst()
             .orElseThrow();
-    assertThat(created.expiresAt).isBetween(before, after);
+    assertThat(created.expiresAt()).isBetween(before, after);
   }
 
   // ── Edge cases ────────────────────────────────────────────────────────────
@@ -688,10 +688,10 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    io.casehub.work.runtime.model.WorkItem created =
+    WorkItem created =
         workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.scope).isEqualTo("casehubio/clinical/adverse-event");
+    assertThat(created.scope()).isEqualTo("casehubio/clinical/adverse-event");
   }
 
   @Test
@@ -719,10 +719,10 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    io.casehub.work.runtime.model.WorkItem created =
+    WorkItem created =
         workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.scope).isNull();
+    assertThat(created.scope()).isNull();
   }
 
   @Test
@@ -755,10 +755,10 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    io.casehub.work.runtime.model.WorkItem created =
+    WorkItem created =
         workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.scope).isEqualTo("casehubio/clinical/adverse-event");
+    assertThat(created.scope()).isEqualTo("casehubio/clinical/adverse-event");
   }
 
   @Test
@@ -788,10 +788,10 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    io.casehub.work.runtime.model.WorkItem created =
+    WorkItem created =
         workItemStore.scanAll().stream().findFirst().orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.scope).isNull();
+    assertThat(created.scope()).isNull();
   }
 // ── resolvedScope overrides static scope ─────────────────────────────────
 
@@ -811,7 +811,7 @@ class HumanTaskScheduleHandlerTest {
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
-        assertThat(created.scope).isEqualTo("dynamic-scope");
+        assertThat(created.scope()).isEqualTo("dynamic-scope");
     }
 
     @Test
@@ -830,7 +830,7 @@ class HumanTaskScheduleHandlerTest {
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
-        assertThat(created.scope).isEqualTo("static-scope");
+        assertThat(created.scope()).isEqualTo("static-scope");
     }
 
     @Test
@@ -850,7 +850,7 @@ class HumanTaskScheduleHandlerTest {
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
-        assertThat(created.scope).isEqualTo("dynamic-scope");
+        assertThat(created.scope()).isEqualTo("dynamic-scope");
     }
 
 // ── resolvedTitle overrides static title ────────────────────────────────
@@ -870,7 +870,7 @@ class HumanTaskScheduleHandlerTest {
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
-        assertThat(created.title).isEqualTo("Dynamic Title");
+        assertThat(created.title()).isEqualTo("Dynamic Title");
     }
 
     @Test
@@ -888,7 +888,7 @@ class HumanTaskScheduleHandlerTest {
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
-        assertThat(created.title).isEqualTo("Static Title");
+        assertThat(created.title()).isEqualTo("Static Title");
     }
 
     @Test
@@ -908,7 +908,7 @@ class HumanTaskScheduleHandlerTest {
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
-        assertThat(created.title).isEqualTo("Dynamic Title");
+        assertThat(created.title()).isEqualTo("Dynamic Title");
     }
 
 
@@ -942,11 +942,11 @@ class HumanTaskScheduleHandlerTest {
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> expectedCallerRef.equals(w.callerRef))
+            .filter(w -> expectedCallerRef.equals(w.callerRef()))
             .findFirst()
             .orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.candidateGroups).isEqualTo("irb-committee");
+    assertThat(created.candidateGroups()).isEqualTo("irb-committee");
   }
 
   @Test
@@ -977,11 +977,11 @@ class HumanTaskScheduleHandlerTest {
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> expectedCallerRef.equals(w.callerRef))
+            .filter(w -> expectedCallerRef.equals(w.callerRef()))
             .findFirst()
             .orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.candidateGroups).isNull();
+    assertThat(created.candidateGroups()).isNull();
   }
 
   // ── Dynamic candidateGroups — template mode ───────────────────────────────
@@ -1013,11 +1013,11 @@ class HumanTaskScheduleHandlerTest {
 
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> w.callerRef != null && w.callerRef.startsWith("case:"))
+            .filter(w -> w.callerRef() != null && w.callerRef().startsWith("case:"))
             .findFirst()
             .orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.candidateGroups.split(","))
+    assertThat(created.candidateGroups().split(","))
         .containsExactlyInAnyOrder("committee-a", "committee-b");
   }
 
@@ -1049,12 +1049,12 @@ class HumanTaskScheduleHandlerTest {
 
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> w.callerRef != null && w.callerRef.startsWith("case:"))
+            .filter(w -> w.callerRef() != null && w.callerRef().startsWith("case:"))
             .findFirst()
             .orElse(null);
     assertThat(created).isNotNull();
     // Template has no candidateGroups set (persistTemplate doesn't set them) — stays null
-    assertThat(created.candidateGroups).isNull();
+    assertThat(created.candidateGroups()).isNull();
   }
 
   // ── Dynamic candidateUsers — inline mode ──────────────────────────────────
@@ -1087,11 +1087,11 @@ class HumanTaskScheduleHandlerTest {
     String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> expectedCallerRef.equals(w.callerRef))
+            .filter(w -> expectedCallerRef.equals(w.callerRef()))
             .findFirst()
             .orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.candidateUsers).isEqualTo("user-a");
+    assertThat(created.candidateUsers()).isEqualTo("user-a");
   }
 
   // ── Dynamic candidateUsers — template mode ────────────────────────────────
@@ -1123,11 +1123,11 @@ class HumanTaskScheduleHandlerTest {
 
     WorkItem created =
         workItemStore.scanAll().stream()
-            .filter(w -> w.callerRef != null && w.callerRef.startsWith("case:"))
+            .filter(w -> w.callerRef() != null && w.callerRef().startsWith("case:"))
             .findFirst()
             .orElse(null);
     assertThat(created).isNotNull();
-    assertThat(created.candidateUsers.split(",")).containsExactlyInAnyOrder("user-x", "user-y");
+    assertThat(created.candidateUsers().split(",")).containsExactlyInAnyOrder("user-x", "user-y");
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -1186,13 +1186,13 @@ class HumanTaskScheduleHandlerTest {
 
         String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
         WorkItem created = workItemStore.scanAll().stream()
-                                        .filter(w -> expectedCallerRef.equals(w.callerRef))
-                                        .findFirst().orElseThrow();
-        assertThat(created.candidateScores).isNotNull();
-        assertThat(created.candidateScores).contains("alice").contains("0.85");
-        assertThat(created.candidateScores).contains("bob").contains("0.72");
-        assertThat(created.routingExperiences).isNotNull();
-        assertThat(created.routingExperiences).contains("similar case").contains("applied plan A");
+                                              .filter(w -> expectedCallerRef.equals(w.callerRef()))
+                                              .findFirst().orElseThrow();
+        assertThat(created.candidateScores()).isNotNull();
+        assertThat(created.candidateScores()).contains("alice").contains("0.85");
+        assertThat(created.candidateScores()).contains("bob").contains("0.72");
+        assertThat(created.routingExperiences()).isNotNull();
+        assertThat(created.routingExperiences()).contains("similar case").contains("applied plan A");
     }
 
     @Test
@@ -1206,8 +1206,8 @@ class HumanTaskScheduleHandlerTest {
                         null, null, null));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElseThrow();
-        assertThat(created.candidateScores).isNull();
-        assertThat(created.routingExperiences).isNull();
+        assertThat(created.candidateScores()).isNull();
+        assertThat(created.routingExperiences()).isNull();
     }
 
     @Test
@@ -1227,8 +1227,8 @@ class HumanTaskScheduleHandlerTest {
                         experiences, scores, null));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElseThrow();
-        assertThat(created.candidateScores).contains("charlie").contains("0.95");
-        assertThat(created.routingExperiences).contains("past case").contains("used plan B");
+        assertThat(created.candidateScores()).contains("charlie").contains("0.95");
+        assertThat(created.routingExperiences()).contains("past case").contains("used plan B");
     }
 
     WorkItemTemplate persistTemplate(final String name) {

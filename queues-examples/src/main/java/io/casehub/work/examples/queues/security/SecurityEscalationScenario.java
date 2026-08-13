@@ -13,9 +13,9 @@ import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
 import io.casehub.platform.api.label.LabelAction;
 import io.casehub.work.runtime.filter.LabelRuleEntity;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -27,7 +27,6 @@ import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Scenario: Multi-Label Security Escalation.
@@ -139,41 +138,41 @@ public class SecurityEscalationScenario {
 
         LOG.info("[SECURITY] Step 1/3: HIGH security incident — security/incident only (not URGENT)");
         final WorkItem highIncident = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Suspicious login attempts — automated bot detected")
-                .description("Rate limiter flagged 2,400 failed login attempts from a single IP range over 10 minutes.")
-                .types(List.of("security"))
-                .formKey("login-anomaly")
-                .priority(WorkItemPriority.HIGH)
-                .candidateGroups("security-team")
-                .createdBy("siem-system")
-                .payload("{\"source_ip_range\": \"185.220.x.x\", \"attempts\": 2400, \"period_minutes\": 10}")
-                .build());
+                                                                                        .title("Suspicious login attempts — automated bot detected")
+                                                                                        .description("Rate limiter flagged 2,400 failed login attempts from a single IP range over 10 minutes.")
+                                                                                        .types(List.of("security"))
+                                                                                        .formKey("login-anomaly")
+                                                                                        .priority(WorkItemPriority.HIGH)
+                                                                                        .candidateGroups("security-team")
+                                                                                        .createdBy("siem-system")
+                                                                                        .payload("{\"source_ip_range\": \"185.220.x.x\", \"attempts\": 2400, \"period_minutes\": 10}")
+                                                                                        .build());
         steps.add(new QueueScenarioStep(1,
                 "HIGH security anomaly — filter A fires: security/incident; filter B (URGENT) does not match; filter C (cascade) cannot fire without priority/critical",
-                highIncident.id, inferredPaths(highIncident), manualPaths(highIncident),
+                highIncident.id(), inferredPaths(highIncident), manualPaths(highIncident),
                 formatEvents(eventLog.drain())));
 
         LOG.info("[SECURITY] Step 2/3: URGENT security breach — all 3 labels via cascade");
         final WorkItem criticalBreach = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Data breach confirmed — customer PII exfiltrated")
-                .description("Forensic analysis confirms unauthorised exfiltration of 340,000 customer records.")
-                .types(List.of("security"))
-                .formKey("data-breach")
-                .priority(WorkItemPriority.URGENT)
-                .candidateGroups("security-team,legal-team,executive-team")
-                .createdBy("forensics-system")
-                .payload("{\"records_affected\": 340000, \"data_types\": [\"name\", \"email\", \"password_hash\"], " +
+                                                                                          .title("Data breach confirmed — customer PII exfiltrated")
+                                                                                          .description("Forensic analysis confirms unauthorised exfiltration of 340,000 customer records.")
+                                                                                          .types(List.of("security"))
+                                                                                          .formKey("data-breach")
+                                                                                          .priority(WorkItemPriority.URGENT)
+                                                                                          .candidateGroups("security-team,legal-team,executive-team")
+                                                                                          .createdBy("forensics-system")
+                                                                                          .payload("{\"records_affected\": 340000, \"data_types\": [\"name\", \"email\", \"password_hash\"], " +
                         "\"gdpr_window_hours\": 72, \"incident_id\": \"SEC-BREACH-2026-001\"}")
-                .build());
+                                                                                          .build());
         steps.add(new QueueScenarioStep(2,
                 "URGENT data breach — filter A: security/incident, filter B: priority/critical, filter C cascades: security/exec-escalate — 3 queue ADDED events",
-                criticalBreach.id, inferredPaths(criticalBreach), manualPaths(criticalBreach),
+                criticalBreach.id(), inferredPaths(criticalBreach), manualPaths(criticalBreach),
                 formatEvents(eventLog.drain())));
 
         LOG.info("[SECURITY] Step 3/3: security/exec-escalate queue — URGENT incident only");
         final List<UUID> execEscalateQueue = workItemStore
                 .scan(WorkItemQuery.byLabelPattern("security/exec-escalate"))
-                .stream().map(w -> w.id).toList();
+                .stream().map(w -> w.id()).toList();
         steps.add(new QueueScenarioStep(3,
                 "security/exec-escalate queue — URGENT breach present; HIGH anomaly absent (did not meet cascade threshold)",
                 null,
@@ -187,13 +186,13 @@ public class SecurityEscalationScenario {
     }
 
     private List<String> inferredPaths(final WorkItem wi) {
-        return wi.labels.stream().filter(l -> l.persistence == LabelPersistence.INFERRED)
-                .map(l -> l.path).toList();
+        return wi.labels().stream().filter(l -> l.persistence() == LabelPersistence.INFERRED)
+                .map(l -> l.path()).toList();
     }
 
     private List<String> manualPaths(final WorkItem wi) {
-        return wi.labels.stream().filter(l -> l.persistence == LabelPersistence.MANUAL)
-                .map(l -> l.path).toList();
+        return wi.labels().stream().filter(l -> l.persistence() == LabelPersistence.MANUAL)
+                .map(l -> l.path()).toList();
     }
 
     private List<String> formatEvents(final List<QueueEventLog.Entry> entries) {

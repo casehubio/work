@@ -9,19 +9,21 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.runtime.repository.WorkItemEntityMapper;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.runtime.repository.CrossTenant;
-import io.casehub.work.runtime.repository.CrossTenantWorkItemStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.CrossTenantWorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.test.MutableCurrentPrincipal;
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -54,17 +56,17 @@ class CrossTenantWorkItemStoreTest {
     @Test
     void findActiveWithDeadlines_returns_items_from_all_tenants() {
         principal.setTenancyId("tenant-a");
-        WorkItem itemA = inTx(() -> tenantStore.put(createItemWithExpiresAt("tenant-a")));
+        WorkItem itemA = inTx(() -> tenantStore.put(WorkItemEntityMapper.toDomain(createItemWithExpiresAt("tenant-a"))));
 
         principal.setTenancyId("tenant-b");
-        WorkItem itemB = inTx(() -> tenantStore.put(createItemWithClaimDeadline("tenant-b")));
+        WorkItem itemB = inTx(() -> tenantStore.put(WorkItemEntityMapper.toDomain(createItemWithClaimDeadline("tenant-b"))));
 
         var all = crossTenantStore.findActiveWithDeadlines();
         var created = all.stream()
-            .filter(wi -> wi.id.equals(itemA.id) || wi.id.equals(itemB.id))
+            .filter(wi -> wi.id().equals(itemA.id()) || wi.id().equals(itemB.id()))
             .toList();
         assertThat(created).hasSize(2);
-        assertThat(created.stream().map(wi -> wi.tenancyId).distinct().toList())
+        assertThat(created.stream().map(wi -> wi.tenancyId()).distinct().toList())
             .containsExactlyInAnyOrder("tenant-a", "tenant-b");
     }
 
@@ -72,26 +74,26 @@ class CrossTenantWorkItemStoreTest {
     void findActiveWithDeadlines_excludesAllTerminalStatuses() {
         principal.setTenancyId("tenant-a");
 
-        WorkItem active = createItemWithExpiresAt("tenant-a");
-        active.status = WorkItemStatus.IN_PROGRESS;
-        inTx(() -> tenantStore.put(active));
+        WorkItemEntity activeEntity = createItemWithExpiresAt("tenant-a");
+        activeEntity.status = WorkItemStatus.IN_PROGRESS;
+        WorkItem active = inTx(() -> tenantStore.put(WorkItemEntityMapper.toDomain(activeEntity)));
 
         List<UUID> terminalIds = new ArrayList<>();
         for (WorkItemStatus status : WorkItemStatus.values()) {
             if (status.isTerminal()) {
-                WorkItem terminal = createItemWithExpiresAt("tenant-a");
+                WorkItemEntity terminal = createItemWithExpiresAt("tenant-a");
                 terminal.status = status;
-                inTx(() -> tenantStore.put(terminal));
-                terminalIds.add(terminal.id);
+                WorkItem saved = inTx(() -> tenantStore.put(WorkItemEntityMapper.toDomain(terminal)));
+                terminalIds.add(saved.id());
             }
         }
 
         var results = crossTenantStore.findActiveWithDeadlines();
-        assertThat(results.stream().anyMatch(wi -> wi.id.equals(active.id)))
+        assertThat(results.stream().anyMatch(wi -> wi.id().equals(active.id())))
                 .as("Active item with deadline should be returned")
                 .isTrue();
         for (UUID terminalId : terminalIds) {
-            assertThat(results.stream().noneMatch(wi -> wi.id.equals(terminalId)))
+            assertThat(results.stream().noneMatch(wi -> wi.id().equals(terminalId)))
                     .as("Terminal item %s should be excluded", terminalId)
                     .isTrue();
         }
@@ -101,45 +103,45 @@ class CrossTenantWorkItemStoreTest {
     void findActiveWithDeadlines_excludes_items_without_deadlines() {
         principal.setTenancyId("tenant-a");
 
-        WorkItem withDeadline = createItemWithExpiresAt("tenant-a");
-        inTx(() -> tenantStore.put(withDeadline));
+        WorkItemEntity withDeadlineEntity = createItemWithExpiresAt("tenant-a");
+        WorkItem withDeadline = inTx(() -> tenantStore.put(WorkItemEntityMapper.toDomain(withDeadlineEntity)));
 
-        WorkItem withoutDeadline = new WorkItem();
-        withoutDeadline.id = UUID.randomUUID();
-        withoutDeadline.tenancyId = "tenant-a";
-        withoutDeadline.title = "No deadline";
-        withoutDeadline.status = WorkItemStatus.PENDING;
-        withoutDeadline.priority = WorkItemPriority.MEDIUM;
-        withoutDeadline.expiresAt = null;
-        withoutDeadline.claimDeadline = null;
-        inTx(() -> tenantStore.put(withoutDeadline));
+        WorkItemEntity withoutDeadlineEntity = new WorkItemEntity();
+        withoutDeadlineEntity.id = UUID.randomUUID();
+        withoutDeadlineEntity.tenancyId = "tenant-a";
+        withoutDeadlineEntity.title = "No deadline";
+        withoutDeadlineEntity.status = WorkItemStatus.PENDING;
+        withoutDeadlineEntity.priority = WorkItemPriority.MEDIUM;
+        withoutDeadlineEntity.expiresAt = null;
+        withoutDeadlineEntity.claimDeadline = null;
+        WorkItem withoutDeadline = inTx(() -> tenantStore.put(WorkItemEntityMapper.toDomain(withoutDeadlineEntity)));
 
         var results = crossTenantStore.findActiveWithDeadlines();
-        assertThat(results.stream().anyMatch(wi -> wi.id.equals(withDeadline.id))).isTrue();
-        assertThat(results.stream().noneMatch(wi -> wi.id.equals(withoutDeadline.id))).isTrue();
+        assertThat(results.stream().anyMatch(wi -> wi.id().equals(withDeadline.id()))).isTrue();
+        assertThat(results.stream().noneMatch(wi -> wi.id().equals(withoutDeadline.id()))).isTrue();
     }
 
     @Test
     @Transactional
     void tenantScopedStore_never_returns_cross_tenant_data() {
         principal.setTenancyId("tenant-a");
-        WorkItem itemA = createItemWithExpiresAt("tenant-a");
-        tenantStore.put(itemA);
+        WorkItemEntity itemA = createItemWithExpiresAt("tenant-a");
+        tenantStore.put(WorkItemEntityMapper.toDomain(itemA));
 
         principal.setTenancyId("tenant-b");
-        WorkItem itemB = createItemWithExpiresAt("tenant-b");
-        tenantStore.put(itemB);
+        WorkItemEntity itemB = createItemWithExpiresAt("tenant-b");
+        tenantStore.put(WorkItemEntityMapper.toDomain(itemB));
 
         principal.setCrossTenantAdmin(true);
         principal.setTenancyId("tenant-a");
         var results = tenantStore.scan(WorkItemQuery.all());
         assertThat(results).hasSize(1);
-        assertThat(results).allSatisfy(wi -> assertThat(wi.tenancyId).isEqualTo("tenant-a"));
+        assertThat(results).allSatisfy(wi -> assertThat(wi.tenancyId()).isEqualTo("tenant-a"));
 
         principal.setTenancyId("tenant-b");
         results = tenantStore.scan(WorkItemQuery.all());
         assertThat(results).hasSize(1);
-        assertThat(results).allSatisfy(wi -> assertThat(wi.tenancyId).isEqualTo("tenant-b"));
+        assertThat(results).allSatisfy(wi -> assertThat(wi.tenancyId()).isEqualTo("tenant-b"));
     }
 
     @Transactional
@@ -152,8 +154,8 @@ class CrossTenantWorkItemStoreTest {
         r.run();
     }
 
-    private WorkItem createItemWithExpiresAt(String tenancyId) {
-        WorkItem item = new WorkItem();
+    private WorkItemEntity createItemWithExpiresAt(String tenancyId) {
+        WorkItemEntity item = new WorkItemEntity();
         item.id = UUID.randomUUID();
         item.tenancyId = tenancyId;
         item.title = "Item with expiresAt";
@@ -163,8 +165,8 @@ class CrossTenantWorkItemStoreTest {
         return item;
     }
 
-    private WorkItem createItemWithClaimDeadline(String tenancyId) {
-        WorkItem item = new WorkItem();
+    private WorkItemEntity createItemWithClaimDeadline(String tenancyId) {
+        WorkItemEntity item = new WorkItemEntity();
         item.id = UUID.randomUUID();
         item.tenancyId = tenancyId;
         item.title = "Item with claimDeadline";

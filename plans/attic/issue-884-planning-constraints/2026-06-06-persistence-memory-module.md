@@ -868,7 +868,7 @@ git commit -m "refactor: consumer migration — casehub-work-testing → persist
 Update the tier ladder documentation in each SPI interface.
 
 **Files:**
-- Modify: `runtime/src/main/java/io/casehub/work/runtime/repository/WorkItemStore.java`
+- Modify: `../../../api/src/main/java/io/casehub/work/api/spi/WorkItemStore.java`
 - Modify: `runtime/src/main/java/io/casehub/work/runtime/repository/AuditEntryStore.java`
 - Modify: `runtime/src/main/java/io/casehub/work/runtime/repository/WorkItemNoteStore.java`
 - Modify: `issue-tracker/src/main/java/io/casehub/work/issuetracker/repository/IssueLinkStore.java`

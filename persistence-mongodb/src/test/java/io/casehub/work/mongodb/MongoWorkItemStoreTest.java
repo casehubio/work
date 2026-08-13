@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemLabel;
 import jakarta.inject.Inject;
 import jakarta.persistence.OptimisticLockException;
 
@@ -17,12 +19,10 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLabel;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -44,47 +44,48 @@ class MongoWorkItemStoreTest {
 
     @Test
     void put_assignsId_whenAbsent() {
-        final WorkItem wi = pending("alice", "Assign ID test");
-        assertThat(wi.id).isNull();
+        WorkItem wi = pending("alice", "Assign ID test");
+        assertThat(wi.id()).isNull();
 
-        store.put(wi);
+        wi = store.put(wi);
 
-        assertThat(wi.id).isNotNull();
+        assertThat(wi.id()).isNotNull();
     }
 
     @Test
     void put_setsTimestamps() {
-        final WorkItem wi = pending("alice", "Timestamps test");
-        final Instant before = Instant.now().minusSeconds(1);
+        WorkItem wi     = pending("alice", "Timestamps test");
+        final Instant  before = Instant.now().minusSeconds(1);
 
-        store.put(wi);
+        wi = store.put(wi);
 
-        assertThat(wi.createdAt).isAfter(before);
-        assertThat(wi.updatedAt).isAfterOrEqualTo(wi.createdAt);
+        assertThat(wi.createdAt()).isAfter(before);
+        assertThat(wi.updatedAt()).isAfterOrEqualTo(wi.createdAt());
     }
 
     @Test
     void put_and_get_roundtrip() {
-        final WorkItem wi = pending("alice", "Roundtrip test");
-        wi.description = "Do something important";
-        wi.types.add(new io.casehub.work.runtime.model.WorkItemType("review"));
-        wi.priority = WorkItemPriority.HIGH;
-        wi.formKey = "review-form";
-        wi.payload = "{\"ref\":\"PROJ-42\"}";
+        WorkItem wi = pending("alice", "Roundtrip test").toBuilder()
+                .description("Do something important")
+                .types(java.util.Set.of("review"))
+                .priority(WorkItemPriority.HIGH)
+                .formKey("review-form")
+                .payload("{\"ref\":\"PROJ-42\"}")
+                .build();
 
-        store.put(wi);
-        final Optional<WorkItem> found = store.get(wi.id);
+        wi = store.put(wi);
+        final Optional<WorkItem> found = store.get(wi.id());
 
         assertThat(found).isPresent();
         final WorkItem loaded = found.get();
-        assertThat(loaded.title).isEqualTo("Roundtrip test");
-        assertThat(loaded.description).isEqualTo("Do something important");
-        assertThat(loaded.types).extracting(t -> t.path).containsExactly("review");
-        assertThat(loaded.priority).isEqualTo(WorkItemPriority.HIGH);
-        assertThat(loaded.formKey).isEqualTo("review-form");
-        assertThat(loaded.payload).isEqualTo("{\"ref\":\"PROJ-42\"}");
-        assertThat(loaded.status).isEqualTo(WorkItemStatus.PENDING);
-        assertThat(loaded.createdBy).isEqualTo("alice");
+        assertThat(loaded.title()).isEqualTo("Roundtrip test");
+        assertThat(loaded.description()).isEqualTo("Do something important");
+        assertThat(loaded.types()).containsExactly("review");
+        assertThat(loaded.priority()).isEqualTo(WorkItemPriority.HIGH);
+        assertThat(loaded.formKey()).isEqualTo("review-form");
+        assertThat(loaded.payload()).isEqualTo("{\"ref\":\"PROJ-42\"}");
+        assertThat(loaded.status()).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(loaded.createdBy()).isEqualTo("alice");
     }
 
     @Test
@@ -94,16 +95,14 @@ class MongoWorkItemStoreTest {
 
     @Test
     void put_updatesExisting_onSecondCall() {
-        final WorkItem wi = pending("alice", "Update test");
+        WorkItem wi = store.put(pending("alice", "Update test"));
+
+        wi = wi.toBuilder().status(WorkItemStatus.ASSIGNED).assigneeId("bob").build();
         store.put(wi);
 
-        wi.status = WorkItemStatus.ASSIGNED;
-        wi.assigneeId = "bob";
-        store.put(wi);
-
-        final WorkItem loaded = store.get(wi.id).orElseThrow();
-        assertThat(loaded.status).isEqualTo(WorkItemStatus.ASSIGNED);
-        assertThat(loaded.assigneeId).isEqualTo("bob");
+        final WorkItem loaded = store.get(wi.id()).orElseThrow();
+        assertThat(loaded.status()).isEqualTo(WorkItemStatus.ASSIGNED);
+        assertThat(loaded.assigneeId()).isEqualTo("bob");
         assertThat(MongoWorkItemDocument.count()).isEqualTo(1);
     }
 
@@ -122,21 +121,19 @@ class MongoWorkItemStoreTest {
 
     @Test
     void scan_inbox_byAssigneeId() {
-        final WorkItem wi = pending("alice", "Direct assignee");
-        wi.assigneeId = "alice";
+        final WorkItem wi = pending("alice", "Direct assignee").toBuilder().assigneeId("alice").build();
         store.put(wi);
         store.put(pending("bob", "Other item"));
 
         final List<WorkItem> results = store.scan(WorkItemQuery.inbox("alice", null, null));
 
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).title).isEqualTo("Direct assignee");
+        assertThat(results.get(0).title()).isEqualTo("Direct assignee");
     }
 
     @Test
     void scan_inbox_byCandidateGroup() {
-        final WorkItem wi = pending("system", "Group item");
-        wi.candidateGroups = "finance-team,hr-team";
+        final WorkItem wi = pending("system", "Group item").toBuilder().candidateGroups("finance-team,hr-team").build();
         store.put(wi);
         store.put(pending("system", "Other item"));
 
@@ -144,27 +141,25 @@ class MongoWorkItemStoreTest {
                 WorkItemQuery.inbox(null, List.of("finance-team"), null));
 
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).title).isEqualTo("Group item");
+        assertThat(results.get(0).title()).isEqualTo("Group item");
     }
 
     @Test
     void scan_inbox_byCandidateUsers() {
-        final WorkItem wi = pending("system", "Candidate user item");
-        wi.candidateUsers = "alice,bob";
+        final WorkItem wi = pending("system", "Candidate user item").toBuilder().candidateUsers("alice,bob").build();
         store.put(wi);
         store.put(pending("system", "Other"));
 
         final List<WorkItem> results = store.scan(WorkItemQuery.inbox(null, null, "alice"));
 
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).title).isEqualTo("Candidate user item");
+        assertThat(results.get(0).title()).isEqualTo("Candidate user item");
     }
 
     @Test
     void scan_inbox_orLogic_matchesAnyDimension() {
-        final WorkItem wi = pending("system", "Multi-candidate item");
-        wi.candidateGroups = "legal-team";
-        wi.candidateUsers = "dave";
+        final WorkItem wi = pending("system", "Multi-candidate item").toBuilder()
+                .candidateGroups("legal-team").candidateUsers("dave").build();
         store.put(wi);
 
         // alice is in legal-team → matches via group
@@ -193,32 +188,29 @@ class MongoWorkItemStoreTest {
         store.put(withStatus("alice", "Completed", WorkItemStatus.COMPLETED));
 
         final List<WorkItem> results = store.scan(WorkItemQuery.builder()
-                .statusIn(List.of(WorkItemStatus.PENDING, WorkItemStatus.IN_PROGRESS))
-                .build());
+                                                                     .statusIn(List.of(WorkItemStatus.PENDING, WorkItemStatus.IN_PROGRESS))
+                                                                     .build());
 
         assertThat(results).hasSize(2)
-                .extracting(w -> w.title)
+                .extracting(w -> w.title())
                 .containsExactlyInAnyOrder("Pending", "InProgress");
     }
 
     @Test
     void scan_byPriority() {
-        final WorkItem hi = pending("alice", "High prio");
-        hi.priority = WorkItemPriority.HIGH;
+        final WorkItem hi = pending("alice", "High prio").toBuilder().priority(WorkItemPriority.HIGH).build();
         store.put(hi);
 
-        final WorkItem lo = pending("alice", "Low prio");
-        lo.priority = WorkItemPriority.LOW;
+        final WorkItem lo = pending("alice", "Low prio").toBuilder().priority(WorkItemPriority.LOW).build();
         store.put(lo);
 
         assertThat(store.scan(WorkItemQuery.builder().priority(WorkItemPriority.HIGH).build()))
-                .hasSize(1).first().extracting(w -> w.title).isEqualTo("High prio");
+                .hasSize(1).first().extracting(w -> w.title()).isEqualTo("High prio");
     }
 
     @Test
     void scan_byType() {
-        final WorkItem wi = pending("alice", "Finance item");
-        wi.types.add(new io.casehub.work.runtime.model.WorkItemType("finance"));
+        final WorkItem wi = pending("alice", "Finance item").toBuilder().types(java.util.Set.of("finance")).build();
         store.put(wi);
         store.put(pending("alice", "No type"));
 
@@ -233,12 +225,10 @@ class MongoWorkItemStoreTest {
         final Instant past = Instant.now().minus(1, ChronoUnit.HOURS);
         final Instant future = Instant.now().plus(1, ChronoUnit.HOURS);
 
-        final WorkItem expired = withStatus("alice", "Expired", WorkItemStatus.PENDING);
-        expired.expiresAt = past;
+        final WorkItem expired = withStatus("alice", "Expired", WorkItemStatus.PENDING).toBuilder().expiresAt(past).build();
         store.put(expired);
 
-        final WorkItem active = withStatus("alice", "Active", WorkItemStatus.PENDING);
-        active.expiresAt = future;
+        final WorkItem active = withStatus("alice", "Active", WorkItemStatus.PENDING).toBuilder().expiresAt(future).build();
         store.put(active);
 
         final WorkItem noDeadline = withStatus("alice", "No deadline", WorkItemStatus.PENDING);
@@ -246,15 +236,14 @@ class MongoWorkItemStoreTest {
 
         final List<WorkItem> results = store.scan(WorkItemQuery.expired(Instant.now()));
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).title).isEqualTo("Expired");
+        assertThat(results.get(0).title()).isEqualTo("Expired");
     }
 
     @Test
     void scan_expired_excludesTerminalStatuses() {
         final Instant past = Instant.now().minus(1, ChronoUnit.HOURS);
 
-        final WorkItem completed = withStatus("alice", "Completed past deadline", WorkItemStatus.COMPLETED);
-        completed.expiresAt = past;
+        final WorkItem completed = withStatus("alice", "Completed past deadline", WorkItemStatus.COMPLETED).toBuilder().expiresAt(past).build();
         store.put(completed);
 
         assertThat(store.scan(WorkItemQuery.expired(Instant.now()))).hasSize(0);
@@ -264,17 +253,15 @@ class MongoWorkItemStoreTest {
     void scan_claimExpired_returnsPendingPastClaimDeadline() {
         final Instant past = Instant.now().minus(1, ChronoUnit.HOURS);
 
-        final WorkItem claimExpired = withStatus("alice", "Claim expired", WorkItemStatus.PENDING);
-        claimExpired.claimDeadline = past;
+        final WorkItem claimExpired = withStatus("alice", "Claim expired", WorkItemStatus.PENDING).toBuilder().claimDeadline(past).build();
         store.put(claimExpired);
 
-        final WorkItem assigned = withStatus("alice", "Assigned", WorkItemStatus.ASSIGNED);
-        assigned.claimDeadline = past;
+        final WorkItem assigned = withStatus("alice", "Assigned", WorkItemStatus.ASSIGNED).toBuilder().claimDeadline(past).build();
         store.put(assigned);
 
         final List<WorkItem> results = store.scan(WorkItemQuery.claimExpired(Instant.now()));
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).title).isEqualTo("Claim expired");
+        assertThat(results.get(0).title()).isEqualTo("Claim expired");
     }
 
     // ── Label pattern ─────────────────────────────────────────────────────────
@@ -296,7 +283,7 @@ class MongoWorkItemStoreTest {
 
         final List<WorkItem> results = store.scan(WorkItemQuery.byLabelPattern("legal/*"));
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).title).isEqualTo("Direct child");
+        assertThat(results.get(0).title()).isEqualTo("Direct child");
     }
 
     @Test
@@ -313,29 +300,27 @@ class MongoWorkItemStoreTest {
 
     @Test
     void labels_roundtrip_preservesAllFields() {
-        final WorkItem wi = pending("alice", "Label roundtrip");
-        final WorkItemLabel label = new WorkItemLabel("legal/contracts", LabelPersistence.MANUAL, "alice");
-        wi.labels = List.of(label);
+        final WorkItem wi = pending("alice", "Label roundtrip").toBuilder()
+                .labels(List.of(new WorkItemLabel("legal/contracts", LabelPersistence.MANUAL, "alice")))
+                .build();
 
         store.put(wi);
-        final WorkItem loaded = store.get(wi.id).orElseThrow();
+        final WorkItem loaded = store.get(wi.id()).orElseThrow();
 
-        assertThat(loaded.labels).hasSize(1);
-        assertThat(loaded.labels.get(0).path).isEqualTo("legal/contracts");
-        assertThat(loaded.labels.get(0).persistence).isEqualTo(LabelPersistence.MANUAL);
-        assertThat(loaded.labels.get(0).appliedBy).isEqualTo("alice");
+        assertThat(loaded.labels()).hasSize(1);
+        assertThat(loaded.labels().get(0).path()).isEqualTo("legal/contracts");
+        assertThat(loaded.labels().get(0).persistence()).isEqualTo(LabelPersistence.MANUAL);
+        assertThat(loaded.labels().get(0).appliedBy()).isEqualTo("alice");
     }
 
     @Test
     void scan_byOutcome_filtersCorrectly() {
-        final WorkItem approved = pending("alice", "Approved item");
-        approved.status = WorkItemStatus.COMPLETED;
-        approved.outcome = "approved";
+        final WorkItem approved = pending("alice", "Approved item").toBuilder()
+                .status(WorkItemStatus.COMPLETED).outcome("approved").build();
         store.put(approved);
 
-        final WorkItem rejected = pending("alice", "Rejected item");
-        rejected.status = WorkItemStatus.REJECTED;
-        rejected.outcome = "rejected";
+        final WorkItem rejected = pending("alice", "Rejected item").toBuilder()
+                .status(WorkItemStatus.REJECTED).outcome("rejected").build();
         store.put(rejected);
 
         final WorkItem noOutcome = pending("alice", "No outcome");
@@ -345,39 +330,37 @@ class MongoWorkItemStoreTest {
                 WorkItemQuery.builder().outcome("approved").build());
 
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).title).isEqualTo("Approved item");
+        assertThat(results.get(0).title()).isEqualTo("Approved item");
     }
 
     @Test
     void candidateGroups_roundtrip_commaSeparatedPreserved() {
-        final WorkItem wi = pending("system", "Group routing");
-        wi.candidateGroups = "finance-team,hr-team";
+        final WorkItem wi = pending("system", "Group routing").toBuilder()
+                .candidateGroups("finance-team,hr-team").build();
 
         store.put(wi);
-        final WorkItem loaded = store.get(wi.id).orElseThrow();
+        final WorkItem loaded = store.get(wi.id()).orElseThrow();
 
-        assertThat(loaded.candidateGroups).isEqualTo("finance-team,hr-team");
+        assertThat(loaded.candidateGroups()).isEqualTo("finance-team,hr-team");
     }
 
     // ── Query method overrides ───────────────────────────────────────────────
 
     @Test
     void findByCallerRef_returnsMatching() {
-        final WorkItem wi = pending("alice", "CallerRef match");
-        wi.callerRef = "case:abc-123/pi:step-7";
+        final WorkItem wi = pending("alice", "CallerRef match").toBuilder().callerRef("case:abc-123/pi:step-7").build();
         store.put(wi);
 
         store.put(pending("bob", "No callerRef"));
 
         final java.util.Optional<WorkItem> result = store.findByCallerRef("case:abc-123/pi:step-7");
         assertThat(result).isPresent();
-        assertThat(result.get().title).isEqualTo("CallerRef match");
+        assertThat(result.get().title()).isEqualTo("CallerRef match");
     }
 
     @Test
     void findByCallerRef_returnsEmpty_whenNotFound() {
-        final WorkItem wi = pending("alice", "CallerRef item");
-        wi.callerRef = "case:abc-123/pi:step-7";
+        final WorkItem wi = pending("alice", "CallerRef item").toBuilder().callerRef("case:abc-123/pi:step-7").build();
         store.put(wi);
 
         assertThat(store.findByCallerRef("case:nonexistent/pi:nope")).isEmpty();
@@ -387,19 +370,17 @@ class MongoWorkItemStoreTest {
     void findByParentId_returnsChildren() {
         final UUID parentId = UUID.randomUUID();
 
-        final WorkItem child1 = pending("alice", "Child 1");
-        child1.parentId = parentId;
+        final WorkItem child1 = pending("alice", "Child 1").toBuilder().parentId(parentId).build();
         store.put(child1);
 
-        final WorkItem child2 = pending("alice", "Child 2");
-        child2.parentId = parentId;
+        final WorkItem child2 = pending("alice", "Child 2").toBuilder().parentId(parentId).build();
         store.put(child2);
 
         store.put(pending("alice", "Standalone"));
 
         final List<WorkItem> children = store.findByParentId(parentId);
         assertThat(children).hasSize(2)
-                .extracting(w -> w.title)
+                .extracting(w -> w.title())
                 .containsExactlyInAnyOrder("Child 1", "Child 2");
     }
 
@@ -407,44 +388,38 @@ class MongoWorkItemStoreTest {
     void findByParentIdExcludingStatuses_excludesTerminal() {
         final UUID parentId = UUID.randomUUID();
 
-        final WorkItem active = pending("alice", "Active child");
-        active.parentId = parentId;
+        final WorkItem active = pending("alice", "Active child").toBuilder().parentId(parentId).build();
         store.put(active);
 
-        final WorkItem completed = withStatus("alice", "Completed child", WorkItemStatus.COMPLETED);
-        completed.parentId = parentId;
+        final WorkItem completed = withStatus("alice", "Completed child", WorkItemStatus.COMPLETED).toBuilder().parentId(parentId).build();
         store.put(completed);
 
-        final WorkItem faulted = withStatus("alice", "Faulted child", WorkItemStatus.FAULTED);
-        faulted.parentId = parentId;
+        final WorkItem faulted = withStatus("alice", "Faulted child", WorkItemStatus.FAULTED).toBuilder().parentId(parentId).build();
         store.put(faulted);
 
         final List<WorkItem> results = store.findByParentIdExcludingStatuses(parentId,
-                List.of(WorkItemStatus.COMPLETED, WorkItemStatus.FAULTED));
+                                                                                   List.of(WorkItemStatus.COMPLETED, WorkItemStatus.FAULTED));
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).title).isEqualTo("Active child");
+        assertThat(results.get(0).title()).isEqualTo("Active child");
     }
 
     @Test
     void findByParentIdWithStatuses_filtersToGivenStatuses() {
         final UUID parentId = UUID.randomUUID();
 
-        final WorkItem pending = pending("alice", "Pending child");
-        pending.parentId = parentId;
-        store.put(pending);
+        final WorkItem pendingItem = pending("alice", "Pending child").toBuilder().parentId(parentId).build();
+        store.put(pendingItem);
 
-        final WorkItem assigned = withStatus("alice", "Assigned child", WorkItemStatus.ASSIGNED);
-        assigned.parentId = parentId;
+        final WorkItem assigned = withStatus("alice", "Assigned child", WorkItemStatus.ASSIGNED).toBuilder().parentId(parentId).build();
         store.put(assigned);
 
-        final WorkItem completed = withStatus("alice", "Completed child", WorkItemStatus.COMPLETED);
-        completed.parentId = parentId;
+        final WorkItem completed = withStatus("alice", "Completed child", WorkItemStatus.COMPLETED).toBuilder().parentId(parentId).build();
         store.put(completed);
 
         final List<WorkItem> results = store.findByParentIdWithStatuses(parentId,
-                List.of(WorkItemStatus.PENDING, WorkItemStatus.ASSIGNED));
+                                                                              List.of(WorkItemStatus.PENDING, WorkItemStatus.ASSIGNED));
         assertThat(results).hasSize(2)
-                .extracting(w -> w.title)
+                .extracting(w -> w.title())
                 .containsExactlyInAnyOrder("Pending child", "Assigned child");
     }
 
@@ -452,23 +427,20 @@ class MongoWorkItemStoreTest {
     void countByParentAndAssignee_excludesSelf() {
         final UUID parentId = UUID.randomUUID();
 
-        final WorkItem child1 = withStatus("alice", "Child 1", WorkItemStatus.ASSIGNED);
-        child1.parentId = parentId;
-        child1.assigneeId = "bob";
-        store.put(child1);
+        WorkItem child1 = withStatus("alice", "Child 1", WorkItemStatus.ASSIGNED).toBuilder()
+                .parentId(parentId).assigneeId("bob").build();
+        child1 = store.put(child1);
 
-        final WorkItem child2 = withStatus("alice", "Child 2", WorkItemStatus.IN_PROGRESS);
-        child2.parentId = parentId;
-        child2.assigneeId = "bob";
+        final WorkItem child2 = withStatus("alice", "Child 2", WorkItemStatus.IN_PROGRESS).toBuilder()
+                .parentId(parentId).assigneeId("bob").build();
         store.put(child2);
 
-        final WorkItem completedChild = withStatus("alice", "Completed", WorkItemStatus.COMPLETED);
-        completedChild.parentId = parentId;
-        completedChild.assigneeId = "bob";
+        final WorkItem completedChild = withStatus("alice", "Completed", WorkItemStatus.COMPLETED).toBuilder()
+                .parentId(parentId).assigneeId("bob").build();
         store.put(completedChild);
 
         // Count bob's non-terminal instances excluding child1
-        final long count = store.countByParentAndAssignee(parentId, "bob", child1.id);
+        final long count = store.countByParentAndAssignee(parentId, "bob", child1.id());
         assertThat(count).isEqualTo(1L); // only child2 — child1 excluded, completedChild is terminal
     }
 
@@ -479,10 +451,8 @@ class MongoWorkItemStoreTest {
         principal.setTenancyId("tenant-a");
         final UUID parentId = UUID.randomUUID();
 
-        final WorkItem wiA = pending("alice", "Tenant A item");
-        wiA.callerRef = "case:shared-ref/pi:step-1";
-        wiA.parentId = parentId;
-        wiA.assigneeId = "bob";
+        final WorkItem wiA = pending("alice", "Tenant A item").toBuilder()
+                .callerRef("case:shared-ref/pi:step-1").parentId(parentId).assigneeId("bob").build();
         store.put(wiA);
 
         // Switch to tenant B — should not see tenant A's data
@@ -500,123 +470,117 @@ class MongoWorkItemStoreTest {
 
     @Test
     void put_and_get_roundtrip_previouslyMissingFields() {
-        final WorkItem wi = pending("alice", "Full roundtrip");
-        wi.description = "Full field coverage";
-        wi.types.add(new io.casehub.work.runtime.model.WorkItemType("review"));
-        wi.priority = WorkItemPriority.HIGH;
-        wi.formKey = "review-form";
-        wi.payload = "{\"ref\":\"PROJ-42\"}";
-        wi.resolution = "done";
-        wi.owner = "team-lead";
-        wi.candidateGroups = "finance-team,hr-team";
-        wi.candidateUsers = "bob,carol";
-        wi.requiredCapabilities = "java,review";
-        wi.delegationChain = "alice>bob";
-        wi.delegationDeclineTarget = DeclineTarget.POOL;
-        wi.priorStatus = WorkItemStatus.ASSIGNED;
-        wi.claimDeadline = Instant.parse("2026-07-01T12:00:00Z");
-        wi.expiresAt = Instant.parse("2026-07-15T12:00:00Z");
-        wi.followUpDate = Instant.parse("2026-07-05T12:00:00Z");
-        wi.assignedAt = Instant.parse("2026-06-20T10:00:00Z");
-        wi.startedAt = Instant.parse("2026-06-20T11:00:00Z");
-        wi.suspendedAt = Instant.parse("2026-06-20T15:00:00Z");
+        WorkItem wi = pending("alice", "Full roundtrip").toBuilder()
+                .description("Full field coverage")
+                .types(java.util.Set.of("review"))
+                .priority(WorkItemPriority.HIGH)
+                .formKey("review-form")
+                .payload("{\"ref\":\"PROJ-42\"}")
+                .resolution("done")
+                .owner("team-lead")
+                .candidateGroups("finance-team,hr-team")
+                .candidateUsers("bob,carol")
+                .requiredCapabilities("java,review")
+                .delegationChain("alice>bob")
+                .delegationDeclineTarget(DeclineTarget.POOL)
+                .priorStatus(WorkItemStatus.ASSIGNED)
+                .claimDeadline(Instant.parse("2026-07-01T12:00:00Z"))
+                .expiresAt(Instant.parse("2026-07-15T12:00:00Z"))
+                .followUpDate(Instant.parse("2026-07-05T12:00:00Z"))
+                .assignedAt(Instant.parse("2026-06-20T10:00:00Z"))
+                .startedAt(Instant.parse("2026-06-20T11:00:00Z"))
+                .suspendedAt(Instant.parse("2026-06-20T15:00:00Z"))
+                // The 13 previously-missing fields
+                .accumulatedUnclaimedSeconds(3600L)
+                .lastReturnedToPoolAt(Instant.parse("2026-06-20T09:00:00Z"))
+                .confidenceScore(0.85)
+                .callerRef("case:abc-123/pi:step-7")
+                .parentId(UUID.randomUUID())
+                .scope("casehubio/devtown/pr-review")
+                .templateId(UUID.randomUUID())
+                .permittedOutcomes("[\"approved\",\"rejected\",\"needs-revision\"]")
+                .excludedUsers("dave,eve")
+                .outcome("approved")
+                .inputDataSchema("{\"type\":\"object\"}")
+                .outputDataSchema("{\"type\":\"string\"}")
+                .build();
 
-        // The 13 previously-missing fields
-        wi.accumulatedUnclaimedSeconds = 3600L;
-        wi.lastReturnedToPoolAt = Instant.parse("2026-06-20T09:00:00Z");
-        wi.confidenceScore = 0.85;
-        wi.callerRef = "case:abc-123/pi:step-7";
-        wi.parentId = UUID.randomUUID();
-        wi.scope = "casehubio/devtown/pr-review";
-        wi.templateId = UUID.randomUUID();
-        wi.permittedOutcomes = "[\"approved\",\"rejected\",\"needs-revision\"]";
-        wi.excludedUsers = "dave,eve";
-        wi.outcome = "approved";
-        wi.inputDataSchema = "{\"type\":\"object\"}";
-        wi.outputDataSchema = "{\"type\":\"string\"}";
-
-        store.put(wi);
-        final WorkItem loaded = store.get(wi.id).orElseThrow();
+        wi = store.put(wi);
+        final WorkItem loaded = store.get(wi.id()).orElseThrow();
 
         // Original fields
-        assertThat(loaded.description).isEqualTo("Full field coverage");
-        assertThat(loaded.types).extracting(t -> t.path).containsExactly("review");
-        assertThat(loaded.priority).isEqualTo(WorkItemPriority.HIGH);
-        assertThat(loaded.formKey).isEqualTo("review-form");
-        assertThat(loaded.payload).isEqualTo("{\"ref\":\"PROJ-42\"}");
-        assertThat(loaded.resolution).isEqualTo("done");
-        assertThat(loaded.owner).isEqualTo("team-lead");
-        assertThat(loaded.candidateGroups).isEqualTo("finance-team,hr-team");
-        assertThat(loaded.candidateUsers).isEqualTo("bob,carol");
-        assertThat(loaded.delegationDeclineTarget).isEqualTo(DeclineTarget.POOL);
-        assertThat(loaded.priorStatus).isEqualTo(WorkItemStatus.ASSIGNED);
+        assertThat(loaded.description()).isEqualTo("Full field coverage");
+        assertThat(loaded.types()).containsExactly("review");
+        assertThat(loaded.priority()).isEqualTo(WorkItemPriority.HIGH);
+        assertThat(loaded.formKey()).isEqualTo("review-form");
+        assertThat(loaded.payload()).isEqualTo("{\"ref\":\"PROJ-42\"}");
+        assertThat(loaded.resolution()).isEqualTo("done");
+        assertThat(loaded.owner()).isEqualTo("team-lead");
+        assertThat(loaded.candidateGroups()).isEqualTo("finance-team,hr-team");
+        assertThat(loaded.candidateUsers()).isEqualTo("bob,carol");
+        assertThat(loaded.delegationDeclineTarget()).isEqualTo(DeclineTarget.POOL);
+        assertThat(loaded.priorStatus()).isEqualTo(WorkItemStatus.ASSIGNED);
 
         // The 13 previously-missing fields
-        assertThat(loaded.accumulatedUnclaimedSeconds).isEqualTo(3600L);
-        assertThat(loaded.lastReturnedToPoolAt).isEqualTo(Instant.parse("2026-06-20T09:00:00Z"));
-        assertThat(loaded.confidenceScore).isEqualTo(0.85);
-        assertThat(loaded.callerRef).isEqualTo("case:abc-123/pi:step-7");
-        assertThat(loaded.parentId).isEqualTo(wi.parentId);
-        assertThat(loaded.scope).isEqualTo("casehubio/devtown/pr-review");
-        assertThat(loaded.templateId).isEqualTo(wi.templateId);
-        assertThat(loaded.permittedOutcomes).isEqualTo("[\"approved\",\"rejected\",\"needs-revision\"]");
-        assertThat(loaded.excludedUsers).isEqualTo("dave,eve");
-        assertThat(loaded.outcome).isEqualTo("approved");
-        assertThat(loaded.inputDataSchema).isEqualTo("{\"type\":\"object\"}");
-        assertThat(loaded.outputDataSchema).isEqualTo("{\"type\":\"string\"}");
+        assertThat(loaded.accumulatedUnclaimedSeconds()).isEqualTo(3600L);
+        assertThat(loaded.lastReturnedToPoolAt()).isEqualTo(Instant.parse("2026-06-20T09:00:00Z"));
+        assertThat(loaded.confidenceScore()).isEqualTo(0.85);
+        assertThat(loaded.callerRef()).isEqualTo("case:abc-123/pi:step-7");
+        assertThat(loaded.parentId()).isEqualTo(wi.parentId());
+        assertThat(loaded.scope()).isEqualTo("casehubio/devtown/pr-review");
+        assertThat(loaded.templateId()).isEqualTo(wi.templateId());
+        assertThat(loaded.permittedOutcomes()).isEqualTo("[\"approved\",\"rejected\",\"needs-revision\"]");
+        assertThat(loaded.excludedUsers()).isEqualTo("dave,eve");
+        assertThat(loaded.outcome()).isEqualTo("approved");
+        assertThat(loaded.inputDataSchema()).isEqualTo("{\"type\":\"object\"}");
+        assertThat(loaded.outputDataSchema()).isEqualTo("{\"type\":\"string\"}");
     }
 
     // ── OCC (Optimistic Concurrency Control) ─────────────────────────────────
 
     @Test
     void put_setsVersionToZero_onInsert() {
-        final WorkItem wi = pending("alice", "Version insert test");
-        store.put(wi);
+        WorkItem wi = pending("alice", "Version insert test");
+        wi = store.put(wi);
 
-        assertThat(wi.version).isEqualTo(0L);
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(0L);
 
-        final WorkItem loaded = store.get(wi.id).orElseThrow();
-        assertThat(loaded.version).isEqualTo(0L);
+        store.get(wi.id()).orElseThrow();
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(0L);
     }
 
     @Test
     void put_incrementsVersion_onUpdate() {
-        final WorkItem wi = pending("alice", "Version update test");
-        store.put(wi);
-        assertThat(wi.version).isEqualTo(0L);
+        WorkItem wi = store.put(pending("alice", "Version update test"));
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(0L);
 
-        wi.status = WorkItemStatus.ASSIGNED;
-        wi.assigneeId = "bob";
-        store.put(wi);
-        assertThat(wi.version).isEqualTo(1L);
+        wi = wi.toBuilder().status(WorkItemStatus.ASSIGNED).assigneeId("bob").build();
+        wi = store.put(wi);
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(1L);
 
-        final WorkItem loaded = store.get(wi.id).orElseThrow();
-        assertThat(loaded.version).isEqualTo(1L);
-        assertThat(loaded.status).isEqualTo(WorkItemStatus.ASSIGNED);
+        store.get(wi.id()).orElseThrow();
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(1L);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
     @Test
     void put_throwsOptimisticLockException_onStaleVersion() {
-        final WorkItem wi = pending("alice", "OCC test");
-        store.put(wi);
+        WorkItem wi = store.put(pending("alice", "OCC test"));
 
         // Two readers get the same version
-        final WorkItem reader1 = store.get(wi.id).orElseThrow();
-        final WorkItem reader2 = store.get(wi.id).orElseThrow();
+        final WorkItem reader1 = store.get(wi.id()).orElseThrow();
+        final WorkItem reader2 = store.get(wi.id()).orElseThrow();
 
-        assertThat(reader1.version).isEqualTo(0L);
-        assertThat(reader2.version).isEqualTo(0L);
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(0L);
 
         // Reader 1 updates successfully
-        reader1.status = WorkItemStatus.ASSIGNED;
-        reader1.assigneeId = "bob";
-        store.put(reader1);
-        assertThat(reader1.version).isEqualTo(1L);
+        WorkItem updated1 = reader1.toBuilder().status(WorkItemStatus.ASSIGNED).assigneeId("bob").build();
+        updated1 = store.put(updated1);
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(1L);
 
         // Reader 2 attempts to update with stale version — should fail
-        reader2.status = WorkItemStatus.ASSIGNED;
-        reader2.assigneeId = "carol";
-        assertThatThrownBy(() -> store.put(reader2))
+        final WorkItem stale2 = reader2.toBuilder().status(WorkItemStatus.ASSIGNED).assigneeId("carol").build();
+        assertThatThrownBy(() -> store.put(stale2))
                 .isInstanceOf(OptimisticLockException.class)
                 .hasMessageContaining("Version conflict");
     }
@@ -624,23 +588,20 @@ class MongoWorkItemStoreTest {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private WorkItem pending(final String createdBy, final String title) {
-        final WorkItem wi = new WorkItem();
-        wi.title = title;
-        wi.createdBy = createdBy;
-        wi.status = WorkItemStatus.PENDING;
-        return wi;
+        return WorkItem.builder()
+                .title(title)
+                .createdBy(createdBy)
+                .status(WorkItemStatus.PENDING)
+                .build();
     }
 
     private WorkItem withStatus(final String createdBy, final String title, final WorkItemStatus status) {
-        final WorkItem wi = pending(createdBy, title);
-        wi.status = status;
-        return wi;
+        return pending(createdBy, title).toBuilder().status(status).build();
     }
 
     private WorkItem withLabel(final String createdBy, final String title, final String labelPath) {
-        final WorkItem wi = pending(createdBy, title);
-        wi.labels = new java.util.ArrayList<>();
-        wi.labels.add(new WorkItemLabel(labelPath, LabelPersistence.MANUAL, createdBy));
-        return wi;
+        return pending(createdBy, title).toBuilder()
+                .labels(java.util.List.of(new WorkItemLabel(labelPath, LabelPersistence.MANUAL, createdBy)))
+                .build();
     }
 }

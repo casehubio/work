@@ -13,6 +13,7 @@ All responses are `application/json`. All request bodies require `Content-Type: 
 | `casehub-work-notifications` | `/workitem-notification-rules` | Webhook and Slack notification rules |
 | `casehub-work-reports` | `/workitems/reports/*` | SLA, actor, throughput, and queue health reports |
 | `casehub-work-issue-tracker` | `/workitems/{id}/issues`, `/workitems/github-webhook`, `/workitems/jira-webhook` | External issue tracker integration |
+| `casehub-work-progress` | `/progress` | Structured progress tracking with state machines, step sequences, rollback, and tree hierarchies |
 
 ---
 
@@ -1690,6 +1691,326 @@ SSE stream for a specific WorkItem.
 **Produces:** `text/event-stream`
 
 Same event schema as above.
+
+---
+
+## Progress
+
+Structured progress tracking with state machines, step sequences, rollback, and tree hierarchies.
+
+### POST /progress
+
+Create a progress instance.
+
+**Request body:** `CreateProgressRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `tenancyId` | string | no | Tenant context |
+| `scopeType` | string | no | Scope classifier (e.g. `workItem`, `case`) |
+| `scopeId` | string | no | Scope instance ID |
+| `shapeType` | string | no | Shape type (`percentage`, `count`, `step`, `custom`) |
+| `state` | JSON | no | Initial state |
+| `parentProgressId` | UUID | no | Parent for tree attachment |
+| `rollupStrategyId` | string | no | CDI bean name for rollup strategy |
+| `definition` | JSON | no | Step definitions, schema, or custom shape config |
+| `rollbackPolicy` | string | no | Rollback policy (`none`, `one-step`, `unrestricted`) |
+| `visualisationMode` | string | no | Display hint (`linear`, `gauge`, `checklist`, `tree`) |
+
+**Response:** `201 Created` — `ProgressInstance`
+
+```bash
+curl -X POST http://localhost:8080/progress \
+  -H 'Content-Type: application/json' \
+  -d '{"scopeType":"workItem","scopeId":"abc-123","shapeType":"step","definition":{"steps":["validate","review","approve"]}}'
+```
+
+---
+
+### GET /progress/{id}
+
+Get a progress instance by ID.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK` — `ProgressInstance`
+**Error:** `404` — not found
+
+---
+
+### GET /progress
+
+Find progress instances by scope.
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `scopeType` | string | no | Scope classifier |
+| `scopeId` | string | no | Scope instance ID |
+
+**Response:** `200 OK` — `ProgressInstance[]`
+
+```bash
+curl "http://localhost:8080/progress?scopeType=workItem&scopeId=abc-123"
+```
+
+---
+
+### GET /progress/{id}/tree
+
+Get a progress instance with all descendants.
+
+**Path parameter:** `id` — UUID (root)
+
+**Response:** `200 OK` — `TreeResponse`
+**Error:** `404` — root not found
+
+```json
+{
+  "root": { ... },
+  "descendants": [ ... ]
+}
+```
+
+---
+
+### POST /progress/{id}/children
+
+Attach a child progress instance to a parent.
+
+**Path parameter:** `id` — UUID (parent)
+**Request body:** `CreateProgressRequest` (same as POST /progress; `parentProgressId` is set automatically)
+
+**Response:** `201 Created` — `ProgressInstance`
+
+---
+
+### PUT /progress/{id}/state
+
+Update the state of a progress instance.
+
+**Path parameter:** `id` — UUID
+**Request body:** `UpdateStateRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `state` | JSON | yes | New state value |
+
+**Response:** `200 OK` — `ProgressInstance`
+
+---
+
+### POST /progress/{id}/complete
+
+Mark a progress instance as complete.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK` — `ProgressInstance`
+
+---
+
+### POST /progress/{id}/fail
+
+Mark a progress instance as failed.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK` — `ProgressInstance`
+
+---
+
+### POST /progress/{id}/reactivate
+
+Reactivate a terminal progress instance.
+
+**Path parameter:** `id` — UUID
+
+**Response:** `200 OK` — `ProgressInstance`
+
+---
+
+### POST /progress/{id}/rollback
+
+Undo the last state change, or roll back to a specific event.
+
+**Path parameter:** `id` — UUID
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `toEvent` | UUID | no | Target event ID for targeted rollback; omit for undo-last |
+
+**Response:** `200 OK` — `ProgressInstance`
+
+---
+
+### GET /progress/{id}/snapshots
+
+State history projection.
+
+**Path parameter:** `id` — UUID
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `limit` | integer | no | Max results (default 100, max 1000) |
+
+**Response:** `200 OK` — `ProgressSnapshot[]`
+
+---
+
+### POST /progress/{id}/steps/{stepName}/start
+
+Start a named step.
+
+**Path parameters:** `id` — UUID, `stepName` — string
+
+**Response:** `200 OK` — `ProgressInstance`
+
+---
+
+### POST /progress/{id}/steps/{stepName}/complete
+
+Complete a named step.
+
+**Path parameters:** `id` — UUID, `stepName` — string
+
+**Response:** `200 OK` — `ProgressInstance`
+
+---
+
+### POST /progress/{id}/steps/{stepName}/skip
+
+Skip a named step.
+
+**Path parameters:** `id` — UUID, `stepName` — string
+
+**Response:** `200 OK` — `ProgressInstance`
+
+---
+
+### POST /progress/{id}/steps/{stepName}/fail
+
+Fail a named step.
+
+**Path parameters:** `id` — UUID, `stepName` — string
+
+**Response:** `200 OK` — `ProgressInstance`
+
+---
+
+### PUT /progress/{id}/steps/{stepName}/state
+
+Update step-specific data.
+
+**Path parameters:** `id` — UUID, `stepName` — string
+**Request body:** `UpdateStepDataRequest`
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `data` | JSON | yes | Step data payload |
+
+**Response:** `200 OK` — `ProgressInstance`
+
+---
+
+### GET /progress/{id}/events
+
+Event history for a progress instance.
+
+**Path parameter:** `id` — UUID
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `since` | ISO-8601 instant | no | Return events after this timestamp |
+
+**Response:** `200 OK` — `ProgressUpdatedEvent[]`
+
+---
+
+### GET /progress/{id}/stream
+
+SSE stream for a progress instance. Emits events for the instance and all descendants.
+
+**Path parameter:** `id` — UUID
+**Produces:** `text/event-stream`
+
+**Query parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `tenancyId` | string | no | Tenant filter |
+
+**Body:** `ProgressUpdatedEvent` per event
+
+```bash
+curl -N "http://localhost:8080/progress/{id}/stream"
+```
+
+---
+
+### Response Types
+
+#### ProgressInstance
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | |
+| `tenancyId` | string | |
+| `scopeType` | string | |
+| `scopeId` | string | |
+| `parentProgressId` | UUID (nullable) | |
+| `rootProgressId` | UUID | |
+| `shapeType` | string | |
+| `definition` | JSON (nullable) | |
+| `state` | JSON (nullable) | |
+| `status` | ProgressStatus | `ACTIVE`, `COMPLETED`, `FAILED` |
+| `rollupStrategyId` | string (nullable) | |
+| `rollbackPolicy` | string (nullable) | |
+| `visualisationMode` | string (nullable) | |
+| `createdAt` | instant | |
+| `updatedAt` | instant | |
+
+#### ProgressSnapshot
+
+| Field | Type | Description |
+|---|---|---|
+| `eventId` | UUID | |
+| `state` | JSON | State at this point |
+| `status` | ProgressStatus | |
+| `changeType` | ProgressChangeType | |
+| `timestamp` | instant | |
+
+#### ProgressUpdatedEvent
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | Event ID |
+| `progressId` | UUID | |
+| `tenancyId` | string | |
+| `scopeType` | string | |
+| `scopeId` | string | |
+| `parentProgressId` | UUID (nullable) | |
+| `rootProgressId` | UUID | |
+| `shapeType` | string | |
+| `previousState` | JSON (nullable) | |
+| `currentState` | JSON (nullable) | |
+| `status` | ProgressStatus | |
+| `changeType` | ProgressChangeType | |
+| `timestamp` | instant | |
+
+#### TreeResponse
+
+| Field | Type | Description |
+|---|---|---|
+| `root` | ProgressInstance | |
+| `descendants` | ProgressInstance[] | All descendants (recursive) |
 
 ---
 

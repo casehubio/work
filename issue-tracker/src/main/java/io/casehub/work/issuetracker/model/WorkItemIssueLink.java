@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.runtime.model.WorkItemEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -14,7 +15,7 @@ import jakarta.persistence.UniqueConstraint;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
- * Persistent link between a {@link io.casehub.work.runtime.model.WorkItem}
+ * Persistent link between a {@link WorkItemEntity}
  * and an issue in an external issue tracker.
  *
  * <h2>externalRef format</h2>

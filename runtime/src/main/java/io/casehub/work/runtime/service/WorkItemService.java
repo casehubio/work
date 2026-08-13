@@ -12,24 +12,22 @@ import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.PolicyDecision;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.spi.BusinessCalendar;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
 import io.casehub.work.api.spi.ExclusionPolicy;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.core.strategy.CapabilityValidator;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLabel;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemRelationStore;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -102,125 +100,133 @@ public class WorkItemService {
     }
 
     @Transactional
-    public WorkItem create(final WorkItemCreateRequest request) {
+    public io.casehub.work.api.WorkItem create(final WorkItemCreateRequest request) {
         capabilityValidator.validate(CapabilityParser.parse(request.requiredCapabilities));
-        final WorkItem item = new WorkItem();
-        item.status = WorkItemStatus.PENDING;
-        item.title = request.title;
-        item.description = request.description;
+
+        final java.util.Set<String> types = new java.util.LinkedHashSet<>();
         if (request.types != null) {
             for (final String typePath : request.types) {
                 Path.parse(typePath);
-                item.types.add(new io.casehub.work.runtime.model.WorkItemType(typePath));
+                types.add(typePath);
             }
         }
-        item.formKey = request.formKey;
-        item.priority = request.priority != null ? request.priority : WorkItemPriority.MEDIUM;
-        item.assigneeId = request.assigneeId;
-        item.candidateGroups = request.candidateGroups;
-        item.candidateUsers = request.candidateUsers;
-        item.requiredCapabilities = request.requiredCapabilities;
-        item.createdBy = request.createdBy;
-        item.payload = request.payload;
-        item.confidenceScore = request.confidenceScore;
-        item.callerRef = request.callerRef;
-        item.followUpDate = request.followUpDate;
-        item.templateId = request.templateId;
-        item.templateVersion = request.templateVersion;
-        item.permittedOutcomes = WorkItemTemplateService.encodeOutcomes(request.permittedOutcomes);
-        item.inputDataSchema = request.inputDataSchema;
-        item.outputDataSchema = request.outputDataSchema;
-        item.excludedUsers = request.excludedUsers;
-        item.scope = request.scope;
-        item.tenancyId = request.tenancyId;
-        item.payloadTypeName = request.payloadTypeName;
-        item.resolutionTypeName = request.resolutionTypeName;
-        item.candidateScores = request.candidateScores;
-        item.routingExperiences = request.routingExperiences;
 
         final Instant now = Instant.now();
-        item.createdAt = now;
-        item.updatedAt = now;
 
         // expiresAt: absolute > business hours > config default (wall-clock)
+        final Instant expiresAt;
         if (request.expiresAt != null) {
-            item.expiresAt = request.expiresAt;
+            expiresAt = request.expiresAt;
         } else if (request.expiresAtBusinessHours != null) {
-            item.expiresAt = resolveBusinessHours(now, request.expiresAtBusinessHours);
+            expiresAt = resolveBusinessHours(now, request.expiresAtBusinessHours);
         } else {
-            item.expiresAt = now.plus(config.defaultExpiryHours(), ChronoUnit.HOURS);
+            expiresAt = now.plus(config.defaultExpiryHours(), java.time.temporal.ChronoUnit.HOURS);
         }
 
         // claimDeadline: absolute > business hours > config default (wall-clock)
+        final Instant claimDeadline;
         if (request.claimDeadline != null) {
-            item.claimDeadline = request.claimDeadline;
+            claimDeadline = request.claimDeadline;
         } else if (request.claimDeadlineBusinessHours != null) {
-            item.claimDeadline = resolveBusinessHours(now, request.claimDeadlineBusinessHours);
+            claimDeadline = resolveBusinessHours(now, request.claimDeadlineBusinessHours);
         } else if (config.defaultClaimHours() > 0) {
-            item.claimDeadline = now.plus(config.defaultClaimHours(), ChronoUnit.HOURS);
+            claimDeadline = now.plus(config.defaultClaimHours(), java.time.temporal.ChronoUnit.HOURS);
+        } else {
+            claimDeadline = null;
         }
 
-        // Claim SLA tracking — item enters pool at creation time
-        item.accumulatedUnclaimedSeconds = 0L;
-        item.lastReturnedToPoolAt = now;
-
         // Labels: only MANUAL labels accepted at creation time
+        final List<io.casehub.work.api.WorkItemLabel> labels = new java.util.ArrayList<>();
         if (request.labels != null) {
             for (var labelReq : request.labels) {
                 if (labelReq.persistence() == LabelPersistence.INFERRED) {
                     throw new IllegalArgumentException(
                             "INFERRED labels cannot be submitted at creation time — they are managed by the filter engine");
                 }
-                item.labels.add(new WorkItemLabel(labelReq.path(), labelReq.persistence(), labelReq.appliedBy()));
+                labels.add(new io.casehub.work.api.WorkItemLabel(labelReq.path(), labelReq.persistence(), labelReq.appliedBy()));
             }
         }
 
-        if (item.inputDataSchema != null) {
-            final List<String> violations = schemaValidator.validate(item.inputDataSchema, item.payload);
+        if (request.inputDataSchema != null) {
+            final List<String> violations = schemaValidator.validate(request.inputDataSchema, request.payload);
             if (!violations.isEmpty()) {
                 throw new IllegalArgumentException("payload violates inputDataSchema: " + violations);
             }
         }
 
-        // Pre-generate ID so CREATE_DENIED audit can reference it even if the WorkItem is never persisted.
-        // @PrePersist guards with if (id == null) so this is safe.
-        item.id = UUID.randomUUID();
+        final UUID id = UUID.randomUUID();
 
         if (request.assigneeId != null) {
-            final PolicyDecision createDecision = exclusionPolicy.check(request.assigneeId, item.excludedUsers);
+            final PolicyDecision createDecision = exclusionPolicy.check(request.assigneeId, request.excludedUsers);
             if (createDecision.denied()) {
-                blockedAuditService.record(item.id, "CREATE_DENIED", request.createdBy, createDecision.reason());
+                blockedAuditService.record(id, "CREATE_DENIED", request.createdBy, createDecision.reason());
                 throw new IllegalArgumentException(createDecision.reason());
             }
         }
-        assignmentService.assign(item, AssignmentTrigger.CREATED);
-        final WorkItem saved = workItemStore.put(item);
-        if (saved.expiresAt != null) {
-            timerService.scheduleExpiry(saved.id, saved.tenancyId, saved.expiresAt);
+
+        io.casehub.work.api.WorkItem item = io.casehub.work.api.WorkItem.builder()
+                                                                        .id(id)
+                                                                        .status(WorkItemStatus.PENDING)
+                                                                        .title(request.title)
+                                                                        .description(request.description)
+                                                                        .types(types)
+                                                                        .formKey(request.formKey)
+                                                                        .priority(request.priority != null ? request.priority : WorkItemPriority.MEDIUM)
+                                                                        .assigneeId(request.assigneeId)
+                                                                        .candidateGroups(request.candidateGroups)
+                                                                        .candidateUsers(request.candidateUsers)
+                                                                        .requiredCapabilities(request.requiredCapabilities)
+                                                                        .createdBy(request.createdBy)
+                                                                        .payload(request.payload)
+                                                                        .confidenceScore(request.confidenceScore)
+                                                                        .callerRef(request.callerRef)
+                                                                        .followUpDate(request.followUpDate)
+                                                                        .templateId(request.templateId)
+                                                                        .templateVersion(request.templateVersion)
+                                                                        .permittedOutcomes(WorkItemTemplateService.encodeOutcomes(request.permittedOutcomes))
+                                                                        .inputDataSchema(request.inputDataSchema)
+                                                                        .outputDataSchema(request.outputDataSchema)
+                                                                        .excludedUsers(request.excludedUsers)
+                                                                        .scope(request.scope)
+                                                                        .tenancyId(request.tenancyId)
+                                                                        .payloadTypeName(request.payloadTypeName)
+                                                                        .resolutionTypeName(request.resolutionTypeName)
+                                                                        .candidateScores(request.candidateScores)
+                                                                        .routingExperiences(request.routingExperiences)
+                                                                        .createdAt(now)
+                                                                        .updatedAt(now)
+                                                                        .expiresAt(expiresAt)
+                                                                        .claimDeadline(claimDeadline)
+                                                                        .accumulatedUnclaimedSeconds(0L)
+                                                                        .lastReturnedToPoolAt(now)
+                                                                        .labels(labels)
+                                                                        .build();
+
+        item = assignmentService.assign(item, AssignmentTrigger.CREATED);
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(item);
+        if (saved.expiresAt() != null) {
+            timerService.scheduleExpiry(saved.id(), saved.tenancyId(), saved.expiresAt());
         }
-        if (saved.claimDeadline != null) {
-            timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
+        if (saved.claimDeadline() != null) {
+            timerService.scheduleClaimDeadline(saved.id(), saved.tenancyId(), saved.claimDeadline());
         }
-        audit(saved.id, "CREATED", request.createdBy, request.auditDetail);
+        audit(saved.id(), "CREATED", request.createdBy, request.auditDetail);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("CREATED", saved, request.createdBy, null));
         return saved;
     }
 
     @Transactional
-    public WorkItem claim(final UUID id, final String claimantId) {
+    public io.casehub.work.api.WorkItem claim(final UUID id, final String claimantId) {
         if (claimantId == null || claimantId.isBlank()) {
             throw new IllegalArgumentException("claimantId is required");
         }
-        final WorkItem item = requireWorkItem(id);
-        // Multi-instance claim guard — read allowSameAssignee then detach: the spawn group
-        // has @Version and would otherwise participate in persistAndFlush(), racing with
-        // the async MultiInstanceCoordinator updating the same version column.
-        if (item.parentId != null) {
-            final WorkItemSpawnGroup group = spawnGroupStore.findMultiInstanceByParentId(item.parentId).orElse(null);
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.parentId() != null) {
+            final WorkItemSpawnGroup group = spawnGroupStore.findMultiInstanceByParentId(item.parentId()).orElse(null);
             if (group != null) {
                 em.detach(group);
                 if (!group.allowSameAssignee) {
-                    final long alreadyHeld = workItemStore.countByParentAndAssignee(item.parentId, claimantId, id);
+                    final long alreadyHeld = workItemStore.countByParentAndAssignee(item.parentId(), claimantId, id);
                     if (alreadyHeld > 0) {
                         throw new IllegalStateException(
                                 "Claimant '" + claimantId + "' already hold another instance in this group");
@@ -228,454 +234,442 @@ public class WorkItemService {
                 }
             }
         }
-        if (item.status != WorkItemStatus.PENDING) {
-            throw new IllegalStateException("Cannot claim WorkItem in status: " + item.status);
+        if (item.status() != WorkItemStatus.PENDING) {
+            throw new IllegalStateException("Cannot claim WorkItem in status: " + item.status());
         }
-        final PolicyDecision claimDecision = exclusionPolicy.check(claimantId, item.excludedUsers);
+        final PolicyDecision claimDecision = exclusionPolicy.check(claimantId, item.excludedUsers());
         if (claimDecision.denied()) {
-            blockedAuditService.record(item.id, "CLAIM_DENIED", claimantId, claimDecision.reason());
+            blockedAuditService.record(item.id(), "CLAIM_DENIED", claimantId, claimDecision.reason());
             throw new IllegalStateException(claimDecision.reason());
         }
-        final Instant now = Instant.now();
-        // Accumulate time spent in the unclaimed pool for this phase
-        if (item.lastReturnedToPoolAt != null) {
-            item.accumulatedUnclaimedSeconds += Duration.between(item.lastReturnedToPoolAt, now).toSeconds();
-            item.lastReturnedToPoolAt = null;
+        final Instant now     = Instant.now();
+        var           builder = item.toBuilder();
+        if (item.lastReturnedToPoolAt() != null) {
+            builder.accumulatedUnclaimedSeconds(item.accumulatedUnclaimedSeconds() + Duration.between(item.lastReturnedToPoolAt(), now).toSeconds());
+            builder.lastReturnedToPoolAt(null);
         }
-        item.status = WorkItemStatus.ASSIGNED;
-        item.assigneeId = claimantId;
-        item.assignedAt = now;
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "ASSIGNED", claimantId, null);
+        builder.status(WorkItemStatus.ASSIGNED).assigneeId(claimantId).assignedAt(now);
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(builder.build());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "ASSIGNED", claimantId, null);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("ASSIGNED", saved, claimantId, null));
         return saved;
     }
 
     @Transactional
-    public WorkItem start(final UUID id, final String actorId) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.ASSIGNED) {
-            throw new IllegalStateException("Cannot start WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem start(final UUID id, final String actorId) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status() != WorkItemStatus.ASSIGNED) {
+            throw new IllegalStateException("Cannot start WorkItem in status: " + item.status());
         }
-        item.status = WorkItemStatus.IN_PROGRESS;
-        item.startedAt = Instant.now();
-        final WorkItem saved = workItemStore.put(item);
-        audit(saved.id, "STARTED", actorId, null);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.IN_PROGRESS)
+                                                         .startedAt(Instant.now())
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        audit(saved.id(), "STARTED", actorId, null);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("STARTED", saved, actorId, null));
         return saved;
     }
 
-    /**
-     * Complete a WorkItem from a system actor, accepting any non-terminal status.
-     * Used by the multi-instance coordinator when group policy triggers parent completion.
-     * Schema validation (inputDataSchema/outputDataSchema) is intentionally bypassed for system completions.
-     */
     @Transactional
-    public WorkItem completeFromSystem(final UUID id, final String actorId, final String resolution) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status.isTerminal())
-            return item;
-        item.status = WorkItemStatus.COMPLETED;
-        item.completedAt = Instant.now();
-        item.resolution = resolution;
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "COMPLETED", actorId, null);
+    public io.casehub.work.api.WorkItem completeFromSystem(final UUID id, final String actorId, final String resolution) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status().isTerminal()) {return item;}
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.COMPLETED)
+                                                         .completedAt(Instant.now())
+                                                         .resolution(resolution)
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "COMPLETED", actorId, null);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("COMPLETED", saved, actorId, resolution));
         return saved;
     }
 
-    /**
-     * Reject a WorkItem from a system actor, accepting any non-terminal status.
-     * Used by the multi-instance coordinator when group policy triggers parent rejection.
-     */
     @Transactional
-    public WorkItem rejectFromSystem(final UUID id, final String actorId, final String reason) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status.isTerminal())
-            return item;
-        item.status = WorkItemStatus.REJECTED;
-        item.completedAt = Instant.now();
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "REJECTED", actorId, reason);
+    public io.casehub.work.api.WorkItem rejectFromSystem(final UUID id, final String actorId, final String reason) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status().isTerminal()) {return item;}
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.REJECTED)
+                                                         .completedAt(Instant.now())
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "REJECTED", actorId, reason);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("REJECTED", saved, actorId, reason));
         return saved;
     }
 
     @Transactional
-    public WorkItem complete(final UUID id, final String actorId, final String resolution,
-            final String outcome) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Cannot complete WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem complete(final UUID id, final String actorId, final String resolution,
+                                                 final String outcome) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status() != WorkItemStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Cannot complete WorkItem in status: " + item.status());
         }
         outcomeValidator.validate(item, outcome, resolution, null, actorId);
-        if (item.outputDataSchema != null) {
-            final List<String> violations = schemaValidator.validate(item.outputDataSchema, resolution);
+        if (item.outputDataSchema() != null) {
+            final List<String> violations = schemaValidator.validate(item.outputDataSchema(), resolution);
             if (!violations.isEmpty()) {
                 throw new IllegalArgumentException("resolution violates outputDataSchema: " + violations);
             }
         }
-        item.status = WorkItemStatus.COMPLETED;
-        item.completedAt = Instant.now();
-        item.resolution = resolution;
-        item.outcome = outcome;
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "COMPLETED", actorId, null);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.COMPLETED)
+                                                         .completedAt(Instant.now())
+                                                         .resolution(resolution)
+                                                         .outcome(outcome)
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "COMPLETED", actorId, null);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("COMPLETED", saved, actorId, resolution));
         return saved;
     }
 
     @Transactional
-    public WorkItem reject(final UUID id, final String actorId, final String reason, final String outcome) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.ASSIGNED && item.status != WorkItemStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Cannot reject WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem reject(final UUID id, final String actorId, final String reason, final String outcome) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status() != WorkItemStatus.ASSIGNED && item.status() != WorkItemStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Cannot reject WorkItem in status: " + item.status());
         }
         outcomeValidator.validate(item, outcome, null, reason, actorId);
-        item.status = WorkItemStatus.REJECTED;
-        item.completedAt = Instant.now();
-        item.outcome = outcome;
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "REJECTED", actorId, reason);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.REJECTED)
+                                                         .completedAt(Instant.now())
+                                                         .outcome(outcome)
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "REJECTED", actorId, reason);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("REJECTED", saved, actorId, reason));
         return saved;
     }
 
-    /**
-     * Complete a WorkItem with an explicit rationale and policy reference for ledger capture.
-     *
-     * @param id the WorkItem UUID
-     * @param actorId who completed it
-     * @param resolution the resolution payload
-     * @param outcome the named outcome (validated against permittedOutcomes if set)
-     * @param rationale the actor's stated basis for the decision (GDPR Art. 22 compliance)
-     * @param planRef the policy/procedure version that governed this decision
-     */
     @Transactional
-    public WorkItem complete(final UUID id, final String actorId, final String resolution,
-            final String outcome, final String rationale, final String planRef) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Cannot complete WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem complete(final UUID id, final String actorId, final String resolution,
+                                                 final String outcome, final String rationale, final String planRef) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status() != WorkItemStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Cannot complete WorkItem in status: " + item.status());
         }
         outcomeValidator.validate(item, outcome, resolution, null, actorId);
-        if (item.outputDataSchema != null) {
-            final List<String> violations = schemaValidator.validate(item.outputDataSchema, resolution);
+        if (item.outputDataSchema() != null) {
+            final List<String> violations = schemaValidator.validate(item.outputDataSchema(), resolution);
             if (!violations.isEmpty()) {
                 throw new IllegalArgumentException("resolution violates outputDataSchema: " + violations);
             }
         }
-        item.status = WorkItemStatus.COMPLETED;
-        item.completedAt = Instant.now();
-        item.resolution = resolution;
-        item.outcome = outcome;
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "COMPLETED", actorId, null);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.COMPLETED)
+                                                         .completedAt(Instant.now())
+                                                         .resolution(resolution)
+                                                         .outcome(outcome)
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "COMPLETED", actorId, null);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of(
                 "COMPLETED", saved, actorId, resolution, rationale, planRef));
         return saved;
     }
 
-    /**
-     * Reject a WorkItem with an explicit rationale and named outcome for ledger capture.
-     *
-     * @param id the WorkItem UUID
-     * @param actorId who rejected it
-     * @param reason the rejection reason (stored as event detail)
-     * @param rationale the actor's formal stated basis (stored as ledger rationale)
-     * @param outcome the named outcome (validated against permittedOutcomes if set)
-     */
     @Transactional
-    public WorkItem reject(final UUID id, final String actorId, final String reason,
-            final String outcome, final String rationale) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.ASSIGNED && item.status != WorkItemStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Cannot reject WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem reject(final UUID id, final String actorId, final String reason,
+                                               final String outcome, final String rationale) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status() != WorkItemStatus.ASSIGNED && item.status() != WorkItemStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Cannot reject WorkItem in status: " + item.status());
         }
         outcomeValidator.validate(item, outcome, null, reason, actorId);
-        item.status = WorkItemStatus.REJECTED;
-        item.completedAt = Instant.now();
-        item.outcome = outcome;
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "REJECTED", actorId, reason);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.REJECTED)
+                                                         .completedAt(Instant.now())
+                                                         .outcome(outcome)
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "REJECTED", actorId, reason);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of(
                 "REJECTED", saved, actorId, reason, rationale, null));
         return saved;
     }
 
     @Transactional
-    public WorkItem delegate(final UUID id, final String actorId, final String toAssigneeId,
-            final DeclineTarget declineTarget) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.ASSIGNED && item.status != WorkItemStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Cannot delegate WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem delegate(final UUID id, final String actorId, final String toAssigneeId,
+                                                 final DeclineTarget declineTarget) {
+        io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status() != WorkItemStatus.ASSIGNED && item.status() != WorkItemStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Cannot delegate WorkItem in status: " + item.status());
         }
-        final PolicyDecision delegateDecision = exclusionPolicy.check(toAssigneeId, item.excludedUsers);
+        final PolicyDecision delegateDecision = exclusionPolicy.check(toAssigneeId, item.excludedUsers());
         if (delegateDecision.denied()) {
-            blockedAuditService.record(item.id, "DELEGATE_DENIED", actorId,
-                    "target:" + toAssigneeId + "; reason:" + delegateDecision.reason());
+            blockedAuditService.record(item.id(), "DELEGATE_DENIED", actorId,
+                                       "target:" + toAssigneeId + "; reason:" + delegateDecision.reason());
             throw new IllegalArgumentException(delegateDecision.reason());
         }
-        if (item.owner == null) {
-            item.owner = actorId;
+        var builder = item.toBuilder();
+        if (item.owner() == null) {
+            builder.owner(actorId);
         }
-        item.delegationChain = item.delegationChain == null
-                ? actorId
-                : item.delegationChain + "," + actorId;
-        // Fire strategy while item is still in its current state so countActive
-        // sees the correct load before reassignment.
-        assignmentService.assign(item, AssignmentTrigger.DELEGATED);
-        // If strategy did not select a candidate, fall back to explicit 'to' param.
-        if (item.assigneeId == null || item.assigneeId.equals(actorId)) {
-            item.assigneeId = toAssigneeId;
+        builder.delegationChain(item.delegationChain() == null
+                                ? actorId
+                                : item.delegationChain() + "," + actorId);
+        item    = builder.build();
+        item    = assignmentService.assign(item, AssignmentTrigger.DELEGATED);
+        builder = item.toBuilder();
+        if (item.assigneeId() == null || item.assigneeId().equals(actorId)) {
+            builder.assigneeId(toAssigneeId);
         }
-        // DELEGATED unconditionally — overrides any ASSIGNED set by strategy.
-        // DELEGATED is directly addressed; pool SLA tracking does not apply.
-        item.status = WorkItemStatus.DELEGATED;
-        item.claimDeadline = null;
-        item.lastReturnedToPoolAt = null;
-        item.delegationDeclineTarget = declineTarget;
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "DELEGATED", actorId, "to:" + saved.assigneeId);
+        builder.status(WorkItemStatus.DELEGATED)
+               .claimDeadline(null)
+               .lastReturnedToPoolAt(null)
+               .delegationDeclineTarget(declineTarget);
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(builder.build());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "DELEGATED", actorId, "to:" + saved.assigneeId());
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("DELEGATED", saved, actorId, "to:" + toAssigneeId));
         return saved;
     }
 
     @Transactional
-    public WorkItem acceptDelegation(final UUID id, final String claimantId) {
+    public io.casehub.work.api.WorkItem acceptDelegation(final UUID id, final String claimantId) {
         if (claimantId == null || claimantId.isBlank()) {
             throw new IllegalArgumentException("claimantId is required");
         }
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.DELEGATED) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status() != WorkItemStatus.DELEGATED) {
             throw new IllegalStateException(
-                    "Cannot accept delegation for WorkItem in status: " + item.status);
+                    "Cannot accept delegation for WorkItem in status: " + item.status());
         }
-        if (!claimantId.equals(item.assigneeId)) {
+        if (!claimantId.equals(item.assigneeId())) {
             throw new IllegalStateException(
                     "Actor '" + claimantId + "' is not the designated delegatee for WorkItem " + id);
         }
-        item.status = WorkItemStatus.ASSIGNED;
-        item.assignedAt = Instant.now();
-        item.delegationDeclineTarget = null;
-        final WorkItem saved = workItemStore.put(item);
-        audit(saved.id, "DELEGATION_ACCEPTED", claimantId, null);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.ASSIGNED)
+                                                         .assignedAt(Instant.now())
+                                                         .delegationDeclineTarget(null)
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        audit(saved.id(), "DELEGATION_ACCEPTED", claimantId, null);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("DELEGATION_ACCEPTED", saved, claimantId, null));
         return saved;
     }
 
     @Transactional
-    public WorkItem declineDelegation(final UUID id, final String actorId) {
+    public io.casehub.work.api.WorkItem declineDelegation(final UUID id, final String actorId) {
         if (actorId == null || actorId.isBlank()) {
             throw new IllegalArgumentException("actorId is required");
         }
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.DELEGATED) {
+        io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status() != WorkItemStatus.DELEGATED) {
             throw new IllegalStateException(
-                    "Cannot decline delegation for WorkItem in status: " + item.status);
+                    "Cannot decline delegation for WorkItem in status: " + item.status());
         }
-        if (!actorId.equals(item.assigneeId)) {
+        if (!actorId.equals(item.assigneeId())) {
             throw new IllegalStateException(
                     "Actor '" + actorId + "' is not the designated delegatee for WorkItem " + id);
         }
-        final DeclineTarget target = resolveDeclineTarget(item);
-        item.delegationDeclineTarget = null;
+        final DeclineTarget target  = resolveDeclineTarget(item);
+        var                 builder = item.toBuilder().delegationDeclineTarget(null);
 
-        if (target == DeclineTarget.DELEGATOR && item.delegationChain != null) {
-            final String[] chain = item.delegationChain.split(",");
-            final String prevActor = chain[chain.length - 1].trim();
-            // Restore to previous actor — no exclusion check: prevActor was a verified holder.
-            item.assigneeId = prevActor;
-            item.status = WorkItemStatus.ASSIGNED;
-            item.assignedAt = Instant.now();
+        if (target == DeclineTarget.DELEGATOR && item.delegationChain() != null) {
+            final String[] chain     = item.delegationChain().split(",");
+            final String   prevActor = chain[chain.length - 1].trim();
+            builder.assigneeId(prevActor)
+                   .status(WorkItemStatus.ASSIGNED)
+                   .assignedAt(Instant.now());
         } else {
-            // POOL path
-            item.assigneeId = null;
-            item.status = WorkItemStatus.PENDING;
+            builder.assigneeId(null).status(WorkItemStatus.PENDING);
             final Instant now = Instant.now();
-            item.lastReturnedToPoolAt = now;
-            item.claimDeadline = claimSlaPolicy.computePoolDeadline(buildClaimSlaContext(item, now));
-            assignmentService.assign(item, AssignmentTrigger.DELEGATION_DECLINED);
+            builder.lastReturnedToPoolAt(now);
+            item    = builder.build();
+            builder = item.toBuilder();
+            builder.claimDeadline(claimSlaPolicy.computePoolDeadline(buildClaimSlaContext(item, now)));
+            item    = builder.build();
+            item    = assignmentService.assign(item, AssignmentTrigger.DELEGATION_DECLINED);
+            builder = item.toBuilder();
         }
 
-        final WorkItem saved = workItemStore.put(item);
-        if (saved.claimDeadline != null) {
-            timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(builder.build());
+        if (saved.claimDeadline() != null) {
+            timerService.scheduleClaimDeadline(saved.id(), saved.tenancyId(), saved.claimDeadline());
         }
-        audit(saved.id, "DELEGATION_DECLINED", actorId, null);
+        audit(saved.id(), "DELEGATION_DECLINED", actorId, null);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("DELEGATION_DECLINED", saved, actorId, null));
         return saved;
     }
 
-    private DeclineTarget resolveDeclineTarget(final WorkItem item) {
-        if (item.delegationDeclineTarget != null) {
-            return item.delegationDeclineTarget;
+    private DeclineTarget resolveDeclineTarget(final io.casehub.work.api.WorkItem item) {
+        if (item.delegationDeclineTarget() != null) {
+            return item.delegationDeclineTarget();
         }
-        final Path scopePath = item.scope != null ? Path.parse(item.scope) : Path.root();
-        final Preferences prefs = preferenceProvider.resolve(new SettingsScope(item.tenancyId, scopePath, Instant.now()));
+        final Path        scopePath = item.scope() != null ? Path.parse(item.scope()) : Path.root();
+        final Preferences prefs     = preferenceProvider.resolve(new SettingsScope(item.tenancyId(), scopePath, Instant.now()));
         return prefs.getOrDefault(DeclineTarget.KEY);
     }
 
-    public Optional<WorkItem> findById(final UUID id) {
+    public Optional<io.casehub.work.api.WorkItem> findById(final UUID id) {
         return workItemStore.get(id);
     }
 
-    /**
-     * Scan WorkItems matching the given query criteria.
-     *
-     * <p>
-     * Tenant isolation is enforced by the store: if {@link WorkItemQuery#tenancyId()}
-     * is set, it is used as the filter; otherwise the current principal's tenant applies.
-     *
-     * @param query the query criteria; must not be {@code null}
-     * @return list of matching work items; may be empty, never null
-     */
-    public List<WorkItem> scan(final WorkItemQuery query) {
+    public List<io.casehub.work.api.WorkItem> scan(final WorkItemQuery query) {
         return workItemStore.scan(query);
     }
 
     @Transactional
-    public WorkItem release(final UUID id, final String actorId) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.ASSIGNED) {
-            throw new IllegalStateException("Cannot release WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem release(final UUID id, final String actorId) {
+        io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status() != WorkItemStatus.ASSIGNED) {
+            throw new IllegalStateException("Cannot release WorkItem in status: " + item.status());
         }
         final Instant now = Instant.now();
-        item.status = WorkItemStatus.PENDING;
-        item.assigneeId = null;
-        item.lastReturnedToPoolAt = now;
-        item.claimDeadline = claimSlaPolicy.computePoolDeadline(buildClaimSlaContext(item, now));
-        assignmentService.assign(item, AssignmentTrigger.RELEASED);
-        final WorkItem saved = workItemStore.put(item);
-        if (saved.claimDeadline != null) {
-            timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
+        item = item.toBuilder()
+                   .status(WorkItemStatus.PENDING)
+                   .assigneeId(null)
+                   .lastReturnedToPoolAt(now)
+                   .build();
+        item = item.toBuilder()
+                   .claimDeadline(claimSlaPolicy.computePoolDeadline(buildClaimSlaContext(item, now)))
+                   .build();
+        item = assignmentService.assign(item, AssignmentTrigger.RELEASED);
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(item);
+        if (saved.claimDeadline() != null) {
+            timerService.scheduleClaimDeadline(saved.id(), saved.tenancyId(), saved.claimDeadline());
         }
-        audit(saved.id, "RELEASED", actorId, null);
+        audit(saved.id(), "RELEASED", actorId, null);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("RELEASED", saved, actorId, null));
         return saved;
     }
 
     @Transactional
-    public WorkItem suspend(final UUID id, final String actorId, final String reason) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.ASSIGNED && item.status != WorkItemStatus.IN_PROGRESS) {
-            throw new IllegalStateException("Cannot suspend WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem suspend(final UUID id, final String actorId, final String reason) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status() != WorkItemStatus.ASSIGNED && item.status() != WorkItemStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Cannot suspend WorkItem in status: " + item.status());
         }
-        item.priorStatus = item.status;
-        item.status = WorkItemStatus.SUSPENDED;
-        item.suspendedAt = Instant.now();
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "SUSPENDED", actorId, reason);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .priorStatus(item.status())
+                                                         .status(WorkItemStatus.SUSPENDED)
+                                                         .suspendedAt(Instant.now())
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "SUSPENDED", actorId, reason);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("SUSPENDED", saved, actorId, reason));
         return saved;
     }
 
     @Transactional
-    public WorkItem resume(final UUID id, final String actorId) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status != WorkItemStatus.SUSPENDED) {
-            throw new IllegalStateException("Cannot resume WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem resume(final UUID id, final String actorId) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status() != WorkItemStatus.SUSPENDED) {
+            throw new IllegalStateException("Cannot resume WorkItem in status: " + item.status());
         }
-        item.status = item.priorStatus;
-        item.priorStatus = null;
-        item.suspendedAt = null;
-        final WorkItem saved = workItemStore.put(item);
-        if (saved.expiresAt != null) {
-            timerService.scheduleExpiry(saved.id, saved.tenancyId, saved.expiresAt);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(item.priorStatus())
+                                                         .priorStatus(null)
+                                                         .suspendedAt(null)
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        if (saved.expiresAt() != null) {
+            timerService.scheduleExpiry(saved.id(), saved.tenancyId(), saved.expiresAt());
         }
-        if (saved.claimDeadline != null) {
-            timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
+        if (saved.claimDeadline() != null) {
+            timerService.scheduleClaimDeadline(saved.id(), saved.tenancyId(), saved.claimDeadline());
         }
-        audit(saved.id, "RESUMED", actorId, null);
+        audit(saved.id(), "RESUMED", actorId, null);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("RESUMED", saved, actorId, null));
         return saved;
     }
 
     @Transactional
-    public WorkItem cancel(final UUID id, final String actorId, final String reason) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status.isTerminal()) {
-            throw new IllegalStateException("Cannot cancel WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem cancel(final UUID id, final String actorId, final String reason) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status().isTerminal()) {
+            throw new IllegalStateException("Cannot cancel WorkItem in status: " + item.status());
         }
-        item.status = WorkItemStatus.CANCELLED;
-        item.completedAt = Instant.now();
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "CANCELLED", actorId, reason);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.CANCELLED)
+                                                         .completedAt(Instant.now())
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "CANCELLED", actorId, reason);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("CANCELLED", saved, actorId, reason));
         return saved;
     }
 
     @Transactional
-    public WorkItem fault(final UUID id, final String systemActorId, final String errorDetail) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status.isTerminal()) {
-            throw new IllegalStateException("Cannot fault WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem fault(final UUID id, final String systemActorId, final String errorDetail) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status().isTerminal()) {
+            throw new IllegalStateException("Cannot fault WorkItem in status: " + item.status());
         }
-        item.status = WorkItemStatus.FAULTED;
-        item.completedAt = Instant.now();
-        item.resolution = errorDetail;
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "FAULTED", systemActorId, errorDetail);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.FAULTED)
+                                                         .completedAt(Instant.now())
+                                                         .resolution(errorDetail)
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "FAULTED", systemActorId, errorDetail);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("FAULTED", saved, systemActorId, errorDetail));
         return saved;
     }
 
     @Transactional
-    public WorkItem faultFromSystem(final UUID id, final String actorId, final String errorDetail) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status.isTerminal())
-            return item;
-        item.status = WorkItemStatus.FAULTED;
-        item.completedAt = Instant.now();
-        item.resolution = errorDetail;
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "FAULTED", actorId, errorDetail);
+    public io.casehub.work.api.WorkItem faultFromSystem(final UUID id, final String actorId, final String errorDetail) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status().isTerminal()) {return item;}
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.FAULTED)
+                                                         .completedAt(Instant.now())
+                                                         .resolution(errorDetail)
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "FAULTED", actorId, errorDetail);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("FAULTED", saved, actorId, errorDetail));
         return saved;
     }
 
     @Transactional
-    public WorkItem obsolete(final UUID id, final String triggeredBy, final String reason) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status.isTerminal()) {
-            throw new IllegalStateException("Cannot obsolete WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem obsolete(final UUID id, final String triggeredBy, final String reason) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status().isTerminal()) {
+            throw new IllegalStateException("Cannot obsolete WorkItem in status: " + item.status());
         }
-        item.status      = WorkItemStatus.OBSOLETE;
-        item.completedAt = Instant.now();
-        item.resolution  = reason;
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "OBSOLETE", triggeredBy, reason);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.OBSOLETE)
+                                                         .completedAt(Instant.now())
+                                                         .resolution(reason)
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "OBSOLETE", triggeredBy, reason);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("OBSOLETE", saved, triggeredBy, reason));
-        cascadeObsoleteToSpawnGroup(saved.id, triggeredBy);
+        cascadeObsoleteToSpawnGroup(saved.id(), triggeredBy);
         return saved;
     }
 
     private void cascadeObsoleteToSpawnGroup(final UUID parentId, final String triggeredBy) {
-        if (spawnGroupStore == null || relationStore == null) return;
+        if (spawnGroupStore == null || relationStore == null) {return;}
         spawnGroupStore.findMultiInstanceByParentId(parentId).ifPresent(group -> {
             if (group.policyTriggered) {return;}
             group.policyTriggered = true;
@@ -683,123 +677,135 @@ public class WorkItemService {
 
             relationStore.findByTargetAndType(parentId, WorkItemRelationType.PART_OF)
                          .forEach(rel -> workItemStore.get(rel.sourceId).ifPresent(child -> {
-                             if (!child.status.isTerminal()) {
-                                 child.status      = WorkItemStatus.CANCELLED;
-                                 child.completedAt = Instant.now();
-                                 child.resolution  = "Parent gate obsoleted";
-                                 workItemStore.put(child);
-                                 timerService.cancelExpiry(child.id);
-                                 timerService.cancelClaimDeadline(child.id);
-                                 audit(child.id, "CANCELLED", triggeredBy,
+                             if (!child.status().isTerminal()) {
+                                 final io.casehub.work.api.WorkItem cancelled = child.toBuilder()
+                                                                                     .status(WorkItemStatus.CANCELLED)
+                                                                                     .completedAt(Instant.now())
+                                                                                     .resolution("Parent gate obsoleted")
+                                                                                     .build();
+                                 workItemStore.put(cancelled);
+                                 timerService.cancelExpiry(child.id());
+                                 timerService.cancelClaimDeadline(child.id());
+                                 audit(child.id(), "CANCELLED", triggeredBy,
                                        "Cascade from parent gate obsolete");
                                  lifecycleEmitter.emit(WorkItemLifecycleEvent.of(
-                                         "CANCELLED", child, triggeredBy,
+                                         "CANCELLED", cancelled, triggeredBy,
                                          "Cascade from parent gate obsolete"));
                              }
                          }));
         });
     }
 
-    public List<WorkItem> findChildrenByParentId(final UUID parentId) {
+    public List<io.casehub.work.api.WorkItem> findChildrenByParentId(final UUID parentId) {
         return workItemStore.findByParentId(parentId);
     }
 
 
     @Transactional
-    public WorkItem obsoleteFromSystem(final UUID id, final String triggeredBy, final String reason) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status.isTerminal())
-            return item;
-        item.status = WorkItemStatus.OBSOLETE;
-        item.completedAt = Instant.now();
-        item.resolution = reason;
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "OBSOLETE", triggeredBy, reason);
+    public io.casehub.work.api.WorkItem obsoleteFromSystem(final UUID id, final String triggeredBy, final String reason) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status().isTerminal()) {return item;}
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.OBSOLETE)
+                                                         .completedAt(Instant.now())
+                                                         .resolution(reason)
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "OBSOLETE", triggeredBy, reason);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("OBSOLETE", saved, triggeredBy, reason));
         return saved;
     }
 
     @Transactional
-    public WorkItem escalate(final UUID id, final String actor,
-                             final String targetGroup, final String reason) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status.isTerminal()) {
-            throw new IllegalStateException("Cannot escalate WorkItem in status: " + item.status);
+    public io.casehub.work.api.WorkItem escalate(final UUID id, final String actor,
+                                                 final String targetGroup, final String reason) {
+        io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status().isTerminal()) {
+            throw new IllegalStateException("Cannot escalate WorkItem in status: " + item.status());
         }
-        item.candidateGroups = targetGroup;
-        item.assigneeId = null;
-        item.status = WorkItemStatus.PENDING;
         final Instant now = Instant.now();
-        item.lastReturnedToPoolAt = now;
-        item.claimDeadline = claimSlaPolicy.computePoolDeadline(buildClaimSlaContext(item, now));
-        assignmentService.assign(item, AssignmentTrigger.SLA_ESCALATED);
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelClaimDeadline(saved.id);
-        if (saved.claimDeadline != null) {
-            timerService.scheduleClaimDeadline(saved.id, saved.tenancyId, saved.claimDeadline);
+        item = item.toBuilder()
+                   .candidateGroups(targetGroup)
+                   .assigneeId(null)
+                   .status(WorkItemStatus.PENDING)
+                   .lastReturnedToPoolAt(now)
+                   .build();
+        item = item.toBuilder()
+                   .claimDeadline(claimSlaPolicy.computePoolDeadline(buildClaimSlaContext(item, now)))
+                   .build();
+        item = assignmentService.assign(item, AssignmentTrigger.SLA_ESCALATED);
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(item);
+        timerService.cancelClaimDeadline(saved.id());
+        if (saved.claimDeadline() != null) {
+            timerService.scheduleClaimDeadline(saved.id(), saved.tenancyId(), saved.claimDeadline());
         }
-        if (saved.expiresAt != null) {
-            timerService.rescheduleExpiry(saved.id, saved.expiresAt);
+        if (saved.expiresAt() != null) {
+            timerService.rescheduleExpiry(saved.id(), saved.expiresAt());
         }
-        audit(saved.id, "MANUALLY_ESCALATED", actor, reason);
+        audit(saved.id(), "MANUALLY_ESCALATED", actor, reason);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("MANUALLY_ESCALATED", saved, actor, reason));
         return saved;
     }
 
     @Transactional
-    public WorkItem cancelFromSystem(final UUID id, final String actorId, final String reason) {
-        final WorkItem item = requireWorkItem(id);
-        if (item.status.isTerminal())
-            return item;
-        item.status = WorkItemStatus.CANCELLED;
-        item.completedAt = Instant.now();
-        final WorkItem saved = workItemStore.put(item);
-        timerService.cancelExpiry(saved.id);
-        timerService.cancelClaimDeadline(saved.id);
-        audit(saved.id, "CANCELLED", actorId, reason);
+    public io.casehub.work.api.WorkItem cancelFromSystem(final UUID id, final String actorId, final String reason) {
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status().isTerminal()) {return item;}
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .status(WorkItemStatus.CANCELLED)
+                                                         .completedAt(Instant.now())
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.cancelExpiry(saved.id());
+        timerService.cancelClaimDeadline(saved.id());
+        audit(saved.id(), "CANCELLED", actorId, reason);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("CANCELLED", saved, actorId, reason));
         return saved;
     }
 
     @Transactional
-    public WorkItem extend(final UUID id, final Instant newExpiresAt, final String actorId) {
+    public io.casehub.work.api.WorkItem extend(final UUID id, final Instant newExpiresAt, final String actorId) {
         if (newExpiresAt == null) {
             throw new IllegalArgumentException("newExpiresAt is required");
         }
-        final WorkItem item = requireWorkItem(id);
-        if (item.status.isTerminal()) {
-            throw new IllegalStateException("Cannot extend WorkItem in status: " + item.status);
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status().isTerminal()) {
+            throw new IllegalStateException("Cannot extend WorkItem in status: " + item.status());
         }
-        if (item.expiresAt != null && !newExpiresAt.isAfter(item.expiresAt)) {
+        if (item.expiresAt() != null && !newExpiresAt.isAfter(item.expiresAt())) {
             throw new IllegalArgumentException(
-                    "newExpiresAt must be after current expiresAt (" + item.expiresAt + ")");
+                    "newExpiresAt must be after current expiresAt (" + item.expiresAt() + ")");
         }
-        item.expiresAt = newExpiresAt;
-        item.updatedAt = Instant.now();
-        final WorkItem saved = workItemStore.put(item);
-        timerService.rescheduleExpiry(saved.id, newExpiresAt);
-        audit(saved.id, "DEADLINE_EXTENDED", actorId, null);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .expiresAt(newExpiresAt)
+                                                         .updatedAt(Instant.now())
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.rescheduleExpiry(saved.id(), newExpiresAt);
+        audit(saved.id(), "DEADLINE_EXTENDED", actorId, null);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("DEADLINE_EXTENDED", saved, actorId, null));
         return saved;
     }
 
     @Transactional
-    public WorkItem updateDeadline(final UUID id, final Instant newDeadline, final String actorId) {
+    public io.casehub.work.api.WorkItem updateDeadline(final UUID id, final Instant newDeadline, final String actorId) {
         if (newDeadline == null) {
             throw new IllegalArgumentException("newDeadline is required");
         }
-        final WorkItem item = requireWorkItem(id);
-        if (item.status.isTerminal()) {
-            throw new IllegalStateException("Cannot update deadline on WorkItem in status: " + item.status);
+        final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        if (item.status().isTerminal()) {
+            throw new IllegalStateException("Cannot update deadline on WorkItem in status: " + item.status());
         }
-        final Instant oldDeadline = item.expiresAt;
-        item.expiresAt = newDeadline;
-        item.updatedAt = Instant.now();
-        final WorkItem saved = workItemStore.put(item);
-        timerService.rescheduleExpiry(saved.id, newDeadline);
-        audit(saved.id, "DEADLINE_UPDATED", actorId,
+        final Instant oldDeadline = item.expiresAt();
+        final io.casehub.work.api.WorkItem updated = item.toBuilder()
+                                                         .expiresAt(newDeadline)
+                                                         .updatedAt(Instant.now())
+                                                         .build();
+        final io.casehub.work.api.WorkItem saved = workItemStore.put(updated);
+        timerService.rescheduleExpiry(saved.id(), newDeadline);
+        audit(saved.id(), "DEADLINE_UPDATED", actorId,
               "old=" + oldDeadline + ", new=" + newDeadline);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("DEADLINE_UPDATED", saved, actorId, null));
         return saved;
@@ -807,117 +813,91 @@ public class WorkItemService {
 
 
     @Transactional
-    public WorkItem addLabel(final UUID workItemId, final String path, final String appliedBy) {
-        final WorkItem item = workItemStore.get(workItemId)
-                .orElseThrow(() -> new WorkItemNotFoundException(workItemId));
-        item.labels.add(new WorkItemLabel(path, LabelPersistence.MANUAL, appliedBy));
-        final WorkItem saved = workItemStore.put(item);
+    public io.casehub.work.api.WorkItem addLabel(final UUID workItemId, final String path, final String appliedBy) {
+        final io.casehub.work.api.WorkItem item = workItemStore.get(workItemId)
+                                                               .orElseThrow(() -> new WorkItemNotFoundException(workItemId));
+        final java.util.List<io.casehub.work.api.WorkItemLabel> labels = new java.util.ArrayList<>(item.labels());
+        labels.add(new io.casehub.work.api.WorkItemLabel(path, LabelPersistence.MANUAL, appliedBy));
+        final io.casehub.work.api.WorkItem updated = item.toBuilder().labels(labels).build();
+        final io.casehub.work.api.WorkItem saved   = workItemStore.put(updated);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("LABEL_ADDED", saved, appliedBy, null));
         return saved;
     }
 
     @Transactional
-    public WorkItem removeLabel(final UUID workItemId, final String path) {
-        final WorkItem item = workItemStore.get(workItemId)
-                .orElseThrow(() -> new WorkItemNotFoundException(workItemId));
-        final boolean removed = item.labels.removeIf(
-                l -> l.path.equals(path) && l.persistence == LabelPersistence.MANUAL);
+    public io.casehub.work.api.WorkItem removeLabel(final UUID workItemId, final String path) {
+        final io.casehub.work.api.WorkItem item = workItemStore.get(workItemId)
+                                                               .orElseThrow(() -> new WorkItemNotFoundException(workItemId));
+        final java.util.List<io.casehub.work.api.WorkItemLabel> labels = new java.util.ArrayList<>(item.labels());
+        final boolean removed = labels.removeIf(
+                l -> l.path().equals(path) && l.persistence() == LabelPersistence.MANUAL);
         if (!removed) {
             throw new LabelNotFoundException(workItemId, path);
         }
-        final WorkItem saved = workItemStore.put(item);
+        final io.casehub.work.api.WorkItem updated = item.toBuilder().labels(labels).build();
+        final io.casehub.work.api.WorkItem saved   = workItemStore.put(updated);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("LABEL_REMOVED", saved, "system", path));
         return saved;
     }
 
-    /**
-     * Clone a WorkItem — creates a new PENDING WorkItem copying operational fields from the source.
-     *
-     * <p>
-     * <strong>Copied:</strong> title (optionally overridden), description, types, formKey, priority,
-     * candidateGroups, candidateUsers, requiredCapabilities, payload, MANUAL labels.
-     *
-     * <p>
-     * <strong>Not copied:</strong> id, status (always PENDING), assigneeId, owner, delegationState,
-     * delegationChain, priorStatus, resolution, all timestamps, INFERRED labels (the filter engine
-     * re-applies them on the first lifecycle event).
-     *
-     * @param sourceId the WorkItem to clone
-     * @param titleOverride if non-null and non-blank, used as the clone's title; otherwise appends " (copy)"
-     * @param createdBy the actor creating the clone
-     * @return the newly created PENDING WorkItem
-     * @throws WorkItemNotFoundException if the source WorkItem does not exist
-     */
     @Transactional
-    public WorkItem clone(final UUID sourceId, final String titleOverride, final String createdBy) {
-        final WorkItem source = workItemStore.get(sourceId)
-                .orElseThrow(() -> new WorkItemNotFoundException(sourceId));
+    public io.casehub.work.api.WorkItem clone(final UUID sourceId, final String titleOverride, final String createdBy) {
+        final io.casehub.work.api.WorkItem source = workItemStore.get(sourceId)
+                                                                 .orElseThrow(() -> new WorkItemNotFoundException(sourceId));
 
         final String title = (titleOverride != null && !titleOverride.isBlank())
-                ? titleOverride
-                : source.title + " (copy)";
+                             ? titleOverride
+                             : source.title() + " (copy)";
 
-        final java.util.List<WorkItemLabel> manualLabels = source.labels == null
-                ? java.util.List.of()
-                : source.labels.stream()
-                        .filter(l -> l.persistence == LabelPersistence.MANUAL)
-                        .toList();
+        final java.util.List<io.casehub.work.api.WorkItemLabel> manualLabels = source.labels() == null
+                                                                               ? java.util.List.of()
+                                                                               : source.labels().stream()
+                                                                                       .filter(l -> l.persistence() == LabelPersistence.MANUAL)
+                                                                                       .toList();
 
         final WorkItemCreateRequest req = WorkItemCreateRequest.builder()
-                .title(title)
-                .description(source.description)
-                .types(source.types.stream().map(t -> t.path).toList())
-                .formKey(source.formKey)
-                .priority(source.priority)
-                .candidateGroups(source.candidateGroups)
-                .candidateUsers(source.candidateUsers)
-                .requiredCapabilities(source.requiredCapabilities)
-                .createdBy(createdBy)
-                .payload(source.payload)
-                .excludedUsers(source.excludedUsers)
-                .build();
+                                                               .title(title)
+                                                               .description(source.description())
+                                                               .types(source.types() != null ? java.util.List.copyOf(source.types()) : null)
+                                                               .formKey(source.formKey())
+                                                               .priority(source.priority())
+                                                               .candidateGroups(source.candidateGroups())
+                                                               .candidateUsers(source.candidateUsers())
+                                                               .requiredCapabilities(source.requiredCapabilities())
+                                                               .createdBy(createdBy)
+                                                               .payload(source.payload())
+                                                               .excludedUsers(source.excludedUsers())
+                                                               .build();
 
-        WorkItem clone = create(req);
+        io.casehub.work.api.WorkItem cloned = create(req);
 
-        for (final WorkItemLabel label : manualLabels) {
-            clone = addLabel(clone.id, label.path, label.appliedBy);
+        for (final io.casehub.work.api.WorkItemLabel label : manualLabels) {
+            cloned = addLabel(cloned.id(), label.path(), label.appliedBy());
         }
 
-        return clone;
+        return cloned;
     }
 
-    /**
-     * Finds a WorkItem by its callerRef.
-     *
-     * @param callerRef the callerRef to match
-     * @return an Optional containing the WorkItem if found
-     */
-    public Optional<WorkItem> findByCallerRef(final String callerRef) {
+    public Optional<io.casehub.work.api.WorkItem> findByCallerRef(final String callerRef) {
         return workItemStore.findByCallerRef(callerRef);
     }
 
-    /**
-     * Find an active WorkItem by caller reference, delegating to the store.
-     *
-     * @param callerRef the caller reference to look up; must not be {@code null}
-     * @return an {@link Optional} containing the matching active WorkItem, or empty if not found
-     */
-    public Optional<WorkItem> findActiveByCallerRef(final String callerRef) {
+    public Optional<io.casehub.work.api.WorkItem> findActiveByCallerRef(final String callerRef) {
         return workItemStore.findActiveByCallerRef(callerRef);
     }
 
-    private ClaimSlaContext buildClaimSlaContext(final WorkItem item, final Instant now) {
+    private ClaimSlaContext buildClaimSlaContext(final io.casehub.work.api.WorkItem item, final Instant now) {
         final Duration totalPoolSla = config.defaultClaimHours() > 0
-                ? Duration.ofHours(config.defaultClaimHours())
-                : Duration.ofHours(24);
-        final Duration accumulated = Duration.ofSeconds(item.accumulatedUnclaimedSeconds);
-        final Instant submitted = item.createdAt != null ? item.createdAt : now;
+                                      ? Duration.ofHours(config.defaultClaimHours())
+                                      : Duration.ofHours(24);
+        final Duration accumulated = Duration.ofSeconds(item.accumulatedUnclaimedSeconds());
+        final Instant  submitted   = item.createdAt() != null ? item.createdAt() : now;
         return new ClaimSlaContext(submitted, totalPoolSla, accumulated, now);
     }
 
-    private WorkItem requireWorkItem(final UUID id) {
+    private io.casehub.work.api.WorkItem requireWorkItem(final UUID id) {
         return workItemStore.get(id)
-                .orElseThrow(() -> new WorkItemNotFoundException(id));
+                            .orElseThrow(() -> new WorkItemNotFoundException(id));
     }
 
     private void audit(final UUID workItemId, final String event, final String actor, final String detail) {

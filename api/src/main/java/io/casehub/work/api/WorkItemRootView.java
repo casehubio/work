@@ -1,6 +1,4 @@
-package io.casehub.work.runtime.model;
-
-import io.casehub.work.api.GroupStatus;
+package io.casehub.work.api;
 
 /**
  * Projection of a root WorkItem (parentId IS NULL) enriched with

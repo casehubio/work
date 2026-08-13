@@ -150,7 +150,7 @@ history before being useful, and trust-routing changes WorkItem routing behaviou
 ### 2. Decision Context Snapshot
 
 When `decision-context.enabled=true`, `LedgerEventCapture` loads the full
-`WorkItem` from `WorkItemRepository` at observation time (synchronous, same
+`WorkItemEntity` from `WorkItemRepository` at observation time (synchronous, same
 transaction as the CDI event delivery) and snapshots its state as JSON into
 `decisionContext`. This is the point-in-time record required by GDPR Article 22
 and EU AI Act Article 12.

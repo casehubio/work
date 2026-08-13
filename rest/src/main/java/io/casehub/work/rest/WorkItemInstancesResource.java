@@ -3,6 +3,7 @@ package io.casehub.work.rest;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -12,10 +13,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import io.casehub.work.api.GroupStatus;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 
 /**
  * REST endpoint for accessing the parallel instances of a multi-instance WorkItem.
@@ -78,7 +78,7 @@ public class WorkItemInstancesResource {
         }
 
         final List<WorkItem> children = workItemStore.findByParentId(parentId);
-        final GroupStatus status = group.groupStatus != null ? group.groupStatus : GroupStatus.IN_PROGRESS;
+        final GroupStatus          status   = group.groupStatus != null ? group.groupStatus : GroupStatus.IN_PROGRESS;
 
         return Response.ok(new InstancesResponse(
                 parentId,

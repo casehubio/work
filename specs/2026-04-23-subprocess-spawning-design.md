@@ -17,7 +17,7 @@ See `docs/architecture/LAYERING.md` for the full boundary definition.
 
 ### 1. `callerRef` on WorkItem
 
-A nullable opaque string field added to `WorkItem`:
+A nullable opaque string field added to `WorkItemEntity`:
 
 ```java
 @Column(name = "caller_ref", length = 512, nullable = true)
@@ -299,7 +299,7 @@ This mapping lives in `quarkus-work-casehub` (future adapter module), not in qua
 
 | Artifact | Change |
 |---|---|
-| `WorkItem` | Add `caller_ref VARCHAR(512)` (nullable) |
+| `WorkItemEntity` | Add `caller_ref VARCHAR(512)` (nullable) |
 | `WorkItemCreateRequest` | Add `callerRef` field (optional) |
 | `WorkItemLifecycleEvent` | `callerRef` accessible via source WorkItem |
 | `WorkEventType` | Add `SPAWNED` |

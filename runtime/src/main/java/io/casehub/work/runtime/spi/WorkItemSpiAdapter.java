@@ -5,7 +5,6 @@ import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.api.spi.WorkItemCreator;
 import io.casehub.work.api.spi.WorkItemLifecycle;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -38,7 +37,7 @@ public class WorkItemSpiAdapter implements WorkItemCreator, WorkItemLifecycle {
 
     @Override
     public WorkItemRef create(final WorkItemCreateRequest request) {
-        final WorkItem item;
+        final io.casehub.work.api.WorkItem item;
         if (request.templateId != null) {
             item = workItemTemplateService.createFromTemplate(request);
         } else {
@@ -82,9 +81,9 @@ public class WorkItemSpiAdapter implements WorkItemCreator, WorkItemLifecycle {
     public void obsoleteByCallerRef(final String callerRef) {
         workItemService.findByCallerRef(callerRef).ifPresent(wi -> {
             try {
-                workItemService.obsolete(wi.id, "system", "Consumed by caller");
+                workItemService.obsolete(wi.id(), "system", "Consumed by caller");
             } catch (final IllegalStateException e) {
-                if (isTerminal(wi.id)) return;
+                if (isTerminal(wi.id())) {return;}
                 throw e;
             }
         });
@@ -102,15 +101,15 @@ public class WorkItemSpiAdapter implements WorkItemCreator, WorkItemLifecycle {
                 return existing.get();
             }
         }
-        final WorkItem parent = multiInstanceSpawnService.createGroupFromRequest(parentRequest, config);
+        final io.casehub.work.api.WorkItem parent = multiInstanceSpawnService.createGroupFromRequest(parentRequest, config);
         return toRef(parent);
     }
 
     @Override
     public java.util.List<String> findChildApprovers(final java.util.UUID parentId) {
         return workItemService.findChildrenByParentId(parentId).stream()
-                              .filter(child -> child.status == io.casehub.work.api.WorkItemStatus.COMPLETED)
-                              .map(child -> child.assigneeId)
+                              .filter(child -> child.status() == io.casehub.work.api.WorkItemStatus.COMPLETED)
+                              .map(child -> child.assigneeId())
                               .filter(java.util.Objects::nonNull)
                               .distinct()
                               .sorted()
@@ -120,14 +119,14 @@ public class WorkItemSpiAdapter implements WorkItemCreator, WorkItemLifecycle {
 
     private boolean isTerminal(final UUID id) {
         return workItemService.findById(id)
-                .map(wi -> wi.status != null && wi.status.isTerminal())
+                .map(wi -> wi.status() != null && wi.status().isTerminal())
                 .orElse(false);
     }
 
-    static WorkItemRef toRef(final WorkItem wi) {
+    static WorkItemRef toRef(final io.casehub.work.api.WorkItem wi) {
         return new WorkItemRef(
-                wi.id, wi.status, wi.callerRef, wi.assigneeId,
-                wi.resolution, wi.candidateGroups, wi.outcome, wi.tenancyId,
-                wi.payload, wi.payloadTypeName, wi.resolutionTypeName);
+                wi.id(), wi.status(), wi.callerRef(), wi.assigneeId(),
+                wi.resolution(), wi.candidateGroups(), wi.outcome(), wi.tenancyId(),
+                wi.payload(), wi.payloadTypeName(), wi.resolutionTypeName());
     }
 }

@@ -7,7 +7,7 @@ import io.casehub.platform.api.identity.GroupMember;
 import io.casehub.platform.api.identity.GroupMembershipProvider;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -16,7 +16,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import java.util.HashMap;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -149,8 +149,8 @@ class WorkItemTemplateServiceResolutionTest {
         final var workItem = templateService.createFromTemplate(request);
 
         assertThat(workItem).isNotNull();
-        assertThat(workItem.payload).contains("\"type\":\"default\"");
-        assertThat(workItem.payload).contains("\"trialId\":\"T-99\"");
+        assertThat(workItem.payload()).contains("\"type\":\"default\"");
+        assertThat(workItem.payload()).contains("\"trialId\":\"T-99\"");
     }
 
     @Test
@@ -167,7 +167,7 @@ class WorkItemTemplateServiceResolutionTest {
         final var workItem = templateService.createFromTemplate(request);
 
         assertThat(workItem).isNotNull();
-        assertThat(workItem.payload).isEqualTo("{\"type\":\"aml\"}");
+        assertThat(workItem.payload()).isEqualTo("{\"type\":\"aml\"}");
     }
 
     // ── excludedGroups expansion ─────────────────────────────────────────────
@@ -185,9 +185,9 @@ class WorkItemTemplateServiceResolutionTest {
                 .templateId(t.id)
                 .createdBy("system")
                 .build();
-        final WorkItem workItem = templateService.createFromTemplate(request);
+        final io.casehub.work.api.WorkItem workItem = templateService.createFromTemplate(request);
 
-        assertThat(workItem.excludedUsers).contains("alice");
+        assertThat(workItem.excludedUsers()).contains("alice");
     }
 
     @Test
@@ -204,10 +204,10 @@ class WorkItemTemplateServiceResolutionTest {
                 .templateId(t.id)
                 .createdBy("system")
                 .build();
-        final WorkItem workItem = templateService.createFromTemplate(request);
+        final io.casehub.work.api.WorkItem workItem = templateService.createFromTemplate(request);
 
-        assertThat(workItem.excludedUsers).contains("carol");
-        assertThat(workItem.excludedUsers).contains("bob");
+        assertThat(workItem.excludedUsers()).contains("carol");
+        assertThat(workItem.excludedUsers()).contains("bob");
     }
 
     @Test
@@ -221,9 +221,9 @@ class WorkItemTemplateServiceResolutionTest {
                 .templateId(t.id)
                 .createdBy("system")
                 .build();
-        final WorkItem workItem = templateService.createFromTemplate(request);
+        final io.casehub.work.api.WorkItem workItem = templateService.createFromTemplate(request);
 
-        assertThat(workItem.excludedUsers).isNull();
+        assertThat(workItem.excludedUsers()).isNull();
     }
 
     @Test
@@ -239,13 +239,13 @@ class WorkItemTemplateServiceResolutionTest {
                 .templateId(t.id)
                 .createdBy("system")
                 .build();
-        final WorkItem workItem = templateService.createFromTemplate(request);
+        final io.casehub.work.api.WorkItem workItem = templateService.createFromTemplate(request);
 
-        assertThat(workItem.excludedUsers).contains("user-x");
-        assertThat(workItem.excludedUsers).contains("user-y");
+        assertThat(workItem.excludedUsers()).contains("user-x");
+        assertThat(workItem.excludedUsers()).contains("user-y");
 
         // Verify audit entry contains expansion detail
-        final java.util.List<AuditEntry> auditEntries = auditStore.findByWorkItemId(workItem.id);
+        final java.util.List<AuditEntry> auditEntries = auditStore.findByWorkItemId(workItem.id());
         assertThat(auditEntries).hasSizeGreaterThanOrEqualTo(1);
         final AuditEntry createdEvent = auditEntries.stream()
                 .filter(e -> e.event.equals("CREATED"))

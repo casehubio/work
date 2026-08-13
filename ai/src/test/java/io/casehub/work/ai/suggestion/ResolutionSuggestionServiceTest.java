@@ -10,11 +10,11 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import dev.langchain4j.model.chat.ChatModel;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.memory.InMemoryWorkItemStore;
 
@@ -44,7 +44,7 @@ class ResolutionSuggestionServiceTest {
 
     @Test
     void suggest_noModel_returnsNull() {
-        final var s = new ResolutionSuggestionService(store, null, 5);
+        final var            s  = new ResolutionSuggestionService(store, null, 5);
         final WorkItem wi = workItem("legal", WorkItemStatus.IN_PROGRESS, null);
         assertThat(s.suggest(wi)).isNull();
         verify(mockModel, never()).chat(anyString());
@@ -66,7 +66,7 @@ class ResolutionSuggestionServiceTest {
         when(mockModel.chat(anyString())).thenReturn("{\"decision\":\"APPROVED\"}");
 
         final WorkItem current = workItem("legal", WorkItemStatus.IN_PROGRESS, null);
-        final String result = service.suggest(current);
+        final String         result  = service.suggest(current);
 
         assertThat(result).isEqualTo("{\"decision\":\"APPROVED\"}");
         verify(mockModel).chat(anyString());
@@ -80,7 +80,7 @@ class ResolutionSuggestionServiceTest {
 
         // Current item has a different category
         final WorkItem current = workItem("legal", WorkItemStatus.IN_PROGRESS, null);
-        final String result = service.suggest(current);
+        final String         result  = service.suggest(current);
 
         // Falls back to all completed — finds the finance example
         assertThat(result).isEqualTo("{\"approved\":true}");
@@ -128,7 +128,6 @@ class ResolutionSuggestionServiceTest {
     void suggest_completedWithNullResolution_notIncludedInExamples() {
         // Completed but no resolution — should not be used as example
         final WorkItem noResolution = completed("legal", null);
-        noResolution.resolution = null;
         store.put(noResolution);
         when(mockModel.chat(anyString())).thenReturn("{}");
 
@@ -140,24 +139,21 @@ class ResolutionSuggestionServiceTest {
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private WorkItem workItem(final String category, final WorkItemStatus status,
-            final String resolution) {
-        final WorkItem wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.title = "Test work item";
-        if (category != null) {
-            wi.types.add(new io.casehub.work.runtime.model.WorkItemType(category));
-        }
-        wi.status = status;
-        wi.resolution = resolution;
-        wi.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
-        wi.createdAt = Instant.now();
-        wi.updatedAt = Instant.now();
-        return wi;
+                              final String resolution) {
+        return WorkItem.builder()
+                .id(UUID.randomUUID())
+                .title("Test work item")
+                .types(category != null ? java.util.Set.of(category) : java.util.Set.of())
+                .status(status)
+                .resolution(resolution)
+                .tenancyId(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
     }
 
     private WorkItem completed(final String category, final String resolution) {
-        final WorkItem wi = workItem(category, WorkItemStatus.COMPLETED, resolution);
-        wi.completedAt = Instant.now();
-        return wi;
+        return workItem(category, WorkItemStatus.COMPLETED, resolution)
+                .toBuilder().completedAt(Instant.now()).build();
     }
 }

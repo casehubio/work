@@ -6,28 +6,26 @@ import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.memory.InMemoryWorkItemStore;
 
 class ResolutionHistorySkillProfileProviderTest {
 
     private WorkItem completedItem(final String assignee, final String category,
-            final Instant completedAt) {
-        final var wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.assigneeId = assignee;
-        if (category != null) {
-            wi.types.add(new io.casehub.work.runtime.model.WorkItemType(category));
-        }
-        wi.status = WorkItemStatus.COMPLETED;
-        wi.completedAt = completedAt;
-        wi.title = "T";
-        wi.createdBy = "test";
-        wi.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
-        return wi;
+                                    final Instant completedAt) {
+        return WorkItem.builder()
+                .id(UUID.randomUUID())
+                .assigneeId(assignee)
+                .types(category != null ? Set.of(category) : Set.of())
+                .status(WorkItemStatus.COMPLETED)
+                .completedAt(completedAt)
+                .title("T")
+                .createdBy("test")
+                .tenancyId(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID)
+                .build();
     }
 
     @Test

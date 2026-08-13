@@ -1,18 +1,16 @@
 package io.casehub.work.runtime.service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
 import io.casehub.platform.api.expression.ExpressionEngineRegistry;
 import io.casehub.work.api.Outcome;
 import io.casehub.work.runtime.event.WorkItemContextBuilder;
 import io.casehub.work.runtime.model.OutcomeCodecs;
-import io.casehub.work.runtime.model.WorkItem;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @ApplicationScoped
 public class OutcomeValidator {
@@ -21,9 +19,9 @@ public class OutcomeValidator {
     ExpressionEngineRegistry expressionRegistry;
 
     @SuppressWarnings("unchecked")
-    public void validate(final WorkItem item, final String outcome,
+    public void validate(final io.casehub.work.api.WorkItem item, final String outcome,
                          final String resolution, final String reason, final String actorId) {
-        if (item.permittedOutcomes == null) {
+        if (item.permittedOutcomes() == null) {
             return;
         }
         if (outcome == null || outcome.isBlank()) {
@@ -34,10 +32,10 @@ public class OutcomeValidator {
             throw new IllegalArgumentException("outcome exceeds maximum length of 255 characters");
         }
 
-        final List<Outcome> definitions = OutcomeCodecs.decodePermittedOutcomes(item.permittedOutcomes);
+        final List<Outcome> definitions = OutcomeCodecs.decodePermittedOutcomes(item.permittedOutcomes());
         if (definitions == null) {
             throw new IllegalStateException(
-                    "permittedOutcomes on WorkItem " + item.id + " is non-null but failed to decode — data integrity error");
+                    "permittedOutcomes on WorkItem " + item.id() + " is non-null but failed to decode — data integrity error");
         }
 
         final Optional<Outcome> match = definitions.stream()

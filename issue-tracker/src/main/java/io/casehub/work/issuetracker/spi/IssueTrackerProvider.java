@@ -3,7 +3,7 @@ package io.casehub.work.issuetracker.spi;
 import java.util.Optional;
 import java.util.UUID;
 
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 
 /**
  * SPI for integrating WorkItems with an external issue tracker.
@@ -104,7 +104,7 @@ public interface IssueTrackerProvider {
      * @param externalRef the tracker-specific issue reference
      * @param workItem the WorkItem in its post-transition state
      */
-    default void syncToIssue(String externalRef, WorkItem workItem) {
+    default void syncToIssue(String externalRef, io.casehub.work.api.WorkItem workItem) {
         // no-op by default
     }
 

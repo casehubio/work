@@ -8,6 +8,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItemSummaryBuilder;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -16,9 +17,9 @@ import org.junit.jupiter.api.Test;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.WorkItemSummary;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -57,15 +58,16 @@ class SummaryParityTest {
     }
 
     private WorkItem createWi(String assignee, WorkItemStatus status,
-            WorkItemPriority priority, Instant expiresAt, Instant claimDeadline) {
-        final WorkItem wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.status = status;
-        wi.priority = priority;
-        wi.expiresAt = expiresAt;
-        wi.claimDeadline = claimDeadline;
-        wi.assigneeId = assignee;
-        wi.title = "parity test";
+                              WorkItemPriority priority, Instant expiresAt, Instant claimDeadline) {
+        final WorkItem wi = WorkItem.builder()
+                .id(UUID.randomUUID())
+                .status(status)
+                .priority(priority)
+                .expiresAt(expiresAt)
+                .claimDeadline(claimDeadline)
+                .assigneeId(assignee)
+                .title("parity test")
+                .build();
         return workItemStore.put(wi);
     }
 }

@@ -1,21 +1,20 @@
 package io.casehub.work.memory;
 
-import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-
+import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
 
-import io.casehub.platform.api.identity.CurrentPrincipal;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * In-memory implementation of {@link WorkItemStore} for ephemeral deployments
@@ -54,61 +53,36 @@ public class InMemoryWorkItemStore implements WorkItemStore {
         store.clear();
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>
-     * If {@code workItem.id} is {@code null} a fresh {@link UUID} is assigned before
-     * the item is stored. If {@code workItem.tenancyId} is {@code null}, stamps it
-     * from {@code CurrentPrincipal.tenancyId()}.
-     */
     @Override
     public WorkItem put(final WorkItem workItem) {
-        if (workItem.id == null) {
-            workItem.id = UUID.randomUUID();
+        WorkItem stored = workItem;
+        if (stored.id() == null) {
+            stored = stored.toBuilder().id(UUID.randomUUID()).build();
         }
-        if (workItem.tenancyId == null) {
-            workItem.tenancyId = currentPrincipal.tenancyId();
+        if (stored.tenancyId() == null) {
+            stored = stored.toBuilder().tenancyId(currentPrincipal.tenancyId()).build();
         }
-        store.put(workItem.id, workItem);
-        return workItem;
+        store.put(stored.id(), stored);
+        return stored;
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>
-     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
-     */
     @Override
     public Optional<WorkItem> get(final UUID id) {
         final WorkItem item = store.get(id);
-        if (item != null && currentPrincipal.tenancyId().equals(item.tenancyId)) {
+        if (item != null && currentPrincipal.tenancyId().equals(item.tenancyId())) {
             return Optional.of(item);
         }
         return Optional.empty();
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p>
-     * Assignment visibility is evaluated with OR logic across the three assignment
-     * dimensions: {@code assigneeId}, {@code candidateGroups}, and
-     * {@code candidateUsers}. Each additional filter (status, priority, category,
-     * followUpBefore, etc.) is then applied with AND logic.
-     *
-     * <p>
-     * Scoped to the current tenant via {@code CurrentPrincipal.tenancyId()}.
-     */
     @Override
     public List<WorkItem> scan(final WorkItemQuery query) {
         final String tenancyId = query.tenancyId() != null ? query.tenancyId() : currentPrincipal.tenancyId();
         return store.values().stream()
-                .filter(wi -> tenancyId.equals(wi.tenancyId))
-                .filter(wi -> matchesAssignment(wi, query))
-                .filter(wi -> matchesFilters(wi, query))
-                .toList();
+                    .filter(wi -> tenancyId.equals(wi.tenancyId()))
+                    .filter(wi -> matchesAssignment(wi, query))
+                    .filter(wi -> matchesFilters(wi, query))
+                    .toList();
     }
 
     /** Returns a copy of all stored items, for test inspection and administrative use. */
@@ -120,33 +94,27 @@ public class InMemoryWorkItemStore implements WorkItemStore {
     // Private helpers
     // -------------------------------------------------------------------------
 
-    /**
-     * Returns {@code true} if the work item is visible under the assignment criteria
-     * in the query, using OR logic. If no assignment criteria are set, all items match.
-     */
     private boolean matchesAssignment(final WorkItem wi, final WorkItemQuery q) {
-        // If no assignment criteria — no assignment constraint
         if (q.assigneeId() == null && (q.candidateGroups() == null || q.candidateGroups().isEmpty())
-                && q.candidateUserId() == null) {
+            && q.candidateUserId() == null) {
             return true;
         }
-        // OR logic across assignment dimensions
-        if (q.assigneeId() != null && q.assigneeId().equals(wi.assigneeId)) {
+        if (q.assigneeId() != null && q.assigneeId().equals(wi.assigneeId())) {
             return true;
         }
-        if (q.candidateUserId() != null && q.candidateUserId().equals(wi.assigneeId)) {
+        if (q.candidateUserId() != null && q.candidateUserId().equals(wi.assigneeId())) {
             return true;
         }
-        if (q.assigneeId() != null && wi.candidateUsers != null && containsToken(wi.candidateUsers, q.assigneeId())) {
+        if (q.assigneeId() != null && wi.candidateUsers() != null && containsToken(wi.candidateUsers(), q.assigneeId())) {
             return true;
         }
-        if (q.candidateUserId() != null && wi.candidateUsers != null
-                && containsToken(wi.candidateUsers, q.candidateUserId())) {
+        if (q.candidateUserId() != null && wi.candidateUsers() != null
+            && containsToken(wi.candidateUsers(), q.candidateUserId())) {
             return true;
         }
-        if (q.candidateGroups() != null && wi.candidateGroups != null) {
+        if (q.candidateGroups() != null && wi.candidateGroups() != null) {
             for (final String g : q.candidateGroups()) {
-                if (containsToken(wi.candidateGroups, g)) {
+                if (containsToken(wi.candidateGroups(), g)) {
                     return true;
                 }
             }
@@ -154,44 +122,41 @@ public class InMemoryWorkItemStore implements WorkItemStore {
         return false;
     }
 
-    /**
-     * Returns {@code true} if the work item passes all non-null AND filters in the query.
-     */
     private boolean matchesFilters(final WorkItem wi, final WorkItemQuery q) {
-        if (q.status() != null && wi.status != q.status()) {
+        if (q.status() != null && wi.status() != q.status()) {
             return false;
         }
-        if (q.statusIn() != null && !q.statusIn().contains(wi.status)) {
+        if (q.statusIn() != null && !q.statusIn().contains(wi.status())) {
             return false;
         }
-        if (q.priority() != null && wi.priority != q.priority()) {
+        if (q.priority() != null && wi.priority() != q.priority()) {
             return false;
         }
         if (q.type() != null) {
             final io.casehub.platform.api.path.Path queryPath = io.casehub.platform.api.path.Path.parse(q.type());
-            boolean matched = wi.types.stream().anyMatch(t -> {
-                final io.casehub.platform.api.path.Path typePath = io.casehub.platform.api.path.Path.parse(t.path);
+            boolean matched = wi.types().stream().anyMatch(t -> {
+                final io.casehub.platform.api.path.Path typePath = io.casehub.platform.api.path.Path.parse(t);
                 return typePath.equals(queryPath) || queryPath.isAncestorOf(typePath);
             });
-            if (!matched) return false;
+            if (!matched) {return false;}
         }
-        if (q.outcome() != null && !q.outcome().equals(wi.outcome)) {
+        if (q.outcome() != null && !q.outcome().equals(wi.outcome())) {
             return false;
         }
-        if (q.followUpBefore() != null && (wi.followUpDate == null || wi.followUpDate.isAfter(q.followUpBefore()))) {
+        if (q.followUpBefore() != null && (wi.followUpDate() == null || wi.followUpDate().isAfter(q.followUpBefore()))) {
             return false;
         }
-        if (q.expiresAtOrBefore() != null && (wi.expiresAt == null || wi.expiresAt.isAfter(q.expiresAtOrBefore()))) {
+        if (q.expiresAtOrBefore() != null && (wi.expiresAt() == null || wi.expiresAt().isAfter(q.expiresAtOrBefore()))) {
             return false;
         }
         if (q.claimDeadlineOrBefore() != null
-                && (wi.claimDeadline == null || wi.claimDeadline.isAfter(q.claimDeadlineOrBefore()))) {
+            && (wi.claimDeadline() == null || wi.claimDeadline().isAfter(q.claimDeadlineOrBefore()))) {
             return false;
         }
         if (q.labelPattern() != null) {
-            final boolean matchesLabel = wi.labels != null && wi.labels.stream()
-                    .anyMatch(l -> io.casehub.work.runtime.service.LabelVocabularyService
-                            .matchesPattern(q.labelPattern(), l.path));
+            final boolean matchesLabel = wi.labels() != null && wi.labels().stream()
+                                                                  .anyMatch(l -> io.casehub.work.api.LabelPatternMatcher
+                                                                                         .matchesPattern(q.labelPattern(), l.path()));
             if (!matchesLabel) {
                 return false;
             }

@@ -7,11 +7,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.casehub.work.runtime.model.WorkItemEntity;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.jpa.TenantAwareStore;
@@ -52,7 +52,7 @@ public class ReportService extends TenantAwareStore {
         }
         jpql.append(" ORDER BY w.expiresAt DESC");
 
-        final TypedQuery<WorkItem> q = em.createQuery(jpql.toString(), WorkItem.class);
+        final TypedQuery<WorkItemEntity> q = em.createQuery(jpql.toString(), WorkItemEntity.class);
         q.setHint("jakarta.persistence.query.timeout", 30_000);
         q.setParameter("tenancyId", currentPrincipal.tenancyId());
         q.setParameter("now", now);
@@ -73,13 +73,13 @@ public class ReportService extends TenantAwareStore {
             q.setParameter("priority", priority);
         }
 
-        final List<WorkItem> breached = q.getResultList();
+        final List<WorkItemEntity> breached = q.getResultList();
 
         final List<SlaBreachItem> items = new ArrayList<>();
         final Map<String, Long> byType = new LinkedHashMap<>();
         long totalMinutes = 0;
 
-        for (final WorkItem wi : breached) {
+        for (final WorkItemEntity wi : breached) {
             final Instant end = wi.completedAt != null ? wi.completedAt : now;
             final long mins = Math.max(0, ChronoUnit.MINUTES.between(wi.expiresAt, end));
             final String typesString = wi.types.stream()
@@ -333,7 +333,7 @@ public class ReportService extends TenantAwareStore {
     private List<Object[]> queryDayBuckets(final String field, final Instant from,
             final Instant to, final WorkItemStatus status) {
         final String jpql = "SELECT CAST(date_trunc('day', w." + field + ") AS LocalDate), COUNT(w)"
-                + " FROM WorkItem w"
+                + " FROM WorkItemEntity w"
                 + " WHERE w.tenancyId = :tenancyId"
                 + " AND w." + field + " >= :from AND w." + field + " <= :to"
                 + (status != null ? " AND w.status = :status" : "")
@@ -353,7 +353,7 @@ public class ReportService extends TenantAwareStore {
 
     private List<Object[]> queryDayBucketsCompleted(final Instant from, final Instant to) {
         final String jpql = "SELECT CAST(date_trunc('day', w.completedAt) AS LocalDate), COUNT(w)"
-                + " FROM WorkItem w"
+                + " FROM WorkItemEntity w"
                 + " WHERE w.tenancyId = :tenancyId"
                 + " AND w.completedAt >= :from AND w.completedAt <= :to"
                 + " AND w.status IN :terminalStatuses"

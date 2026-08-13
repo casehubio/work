@@ -4,8 +4,8 @@ import io.casehub.platform.api.expression.ExpressionEngineRegistry;
 import io.casehub.platform.api.label.LabelAction;
 import io.casehub.platform.api.label.LabelRule;
 import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLabel;
+import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.runtime.model.WorkItemLabelEntity;
 import io.casehub.work.runtime.repository.LabelRuleStore;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
@@ -45,7 +45,7 @@ public class LabelRuleEngine {
         this.testRules = testRules;
     }
 
-    public void evaluate(final WorkItem workItem, final Map<String, Object> context,
+    public void evaluate(final WorkItemEntity workItem, final Map<String, Object> context,
                          final String event) {
         if (Boolean.TRUE.equals(RUNNING.get())) {
             return;
@@ -60,7 +60,7 @@ public class LabelRuleEngine {
             workItem.labels.removeIf(l -> l.persistence == LabelPersistence.INFERRED);
 
             List<LabelRule>     allRules       = collectRules();
-            Map<String, Object> currentContext = io.casehub.work.runtime.event.WorkItemContextBuilder.toMap(workItem);
+            Map<String, Object> currentContext = io.casehub.work.runtime.event.WorkItemContextBuilder.toMap(io.casehub.work.runtime.repository.WorkItemEntityMapper.toDomain(workItem));
             int                 maxPasses      = 5;
             for (int pass = 0; pass < maxPasses; pass++) {
                 List<RuleAction> matched    = evaluateRules(allRules, currentContext, event);
@@ -69,7 +69,7 @@ public class LabelRuleEngine {
                 if (workItem.labels.size() == beforeSize) {
                     break;
                 }
-                currentContext = io.casehub.work.runtime.event.WorkItemContextBuilder.toMap(workItem);
+                currentContext = io.casehub.work.runtime.event.WorkItemContextBuilder.toMap(io.casehub.work.runtime.repository.WorkItemEntityMapper.toDomain(workItem));
             }
 
             Set<String> after = workItem.labels.stream()
@@ -137,13 +137,13 @@ public class LabelRuleEngine {
         return result;
     }
 
-    private void applyActions(final WorkItem workItem, final List<RuleAction> ruleActions) {
+    private void applyActions(final WorkItemEntity workItem, final List<RuleAction> ruleActions) {
         for (RuleAction ra : ruleActions) {
             if (ra.action instanceof LabelAction.Add add) {
                 boolean exists = workItem.labels.stream()
                         .anyMatch(l -> add.label().equals(l.path) && l.persistence == LabelPersistence.INFERRED);
                 if (!exists) {
-                    workItem.labels.add(new WorkItemLabel(add.label(), LabelPersistence.INFERRED, ra.ruleName));
+                    workItem.labels.add(new WorkItemLabelEntity(add.label(), LabelPersistence.INFERRED, ra.ruleName));
                 }
             } else if (ra.action instanceof LabelAction.Remove remove) {
                 workItem.labels.removeIf(l ->

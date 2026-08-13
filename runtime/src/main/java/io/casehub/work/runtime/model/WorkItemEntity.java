@@ -38,7 +38,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity
 @Table(name = "work_item")
-public class WorkItem extends PanacheEntityBase {
+public class WorkItemEntity extends PanacheEntityBase {
 
     /** Primary key — UUID assigned on first persist. */
     @Id
@@ -237,7 +237,7 @@ public class WorkItem extends PanacheEntityBase {
      */
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "work_item_label", joinColumns = @JoinColumn(name = "work_item_id"))
-    public List<WorkItemLabel> labels = new ArrayList<>();
+    public List<WorkItemLabelEntity> labels = new ArrayList<>();
 
     /**
      * Types attached to this WorkItem.

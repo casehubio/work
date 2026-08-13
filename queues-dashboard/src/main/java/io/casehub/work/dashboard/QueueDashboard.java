@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
@@ -29,9 +30,8 @@ import dev.tamboui.widgets.table.Row;
 import dev.tamboui.widgets.table.Table;
 import dev.tamboui.widgets.table.TableState;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.TenantContextRunner;
 import io.quarkus.narayana.jta.QuarkusTransaction;
 
@@ -69,7 +69,7 @@ public class QueueDashboard {
     TenantContextRunner tenantContextRunner;
 
     private final AtomicReference<List<WorkItem>> latestItems = new AtomicReference<>(List.of());
-    private final AtomicReference<Deque<String>> logLines = new AtomicReference<>(new ArrayDeque<>());
+    private final AtomicReference<Deque<String>>        logLines    = new AtomicReference<>(new ArrayDeque<>());
 
     /**
      * Called by Quarkus CDI when a WorkItem lifecycle transition occurs.
@@ -78,7 +78,7 @@ public class QueueDashboard {
     @Transactional
     public void onLifecycleEvent(@ObservesAsync final WorkItemLifecycleEvent event) {
         final WorkItem workItem = event.workItem();
-        tenantContextRunner.runInTenantContext(workItem.tenancyId, () -> {
+        tenantContextRunner.runInTenantContext(workItem.tenancyId(), () -> {
             final List<WorkItem> items = workItemStore.scan(WorkItemQuery.all());
             latestItems.set(List.copyOf(items));
             addLog("Event: " + event.type() + " — " + event.workItemId());
@@ -163,7 +163,7 @@ public class QueueDashboard {
                 io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID, () -> {
             try {
                 final List<WorkItem> items = QuarkusTransaction.requiringNew()
-                        .call(() -> workItemStore.scan(WorkItemQuery.all()));
+                                                                     .call(() -> workItemStore.scan(WorkItemQuery.all()));
                 latestItems.set(List.copyOf(items));
             } catch (final Exception e) {
                 addLog("Refresh error: " + e.getMessage());
@@ -174,7 +174,7 @@ public class QueueDashboard {
     /** Package-private so Pilot tests can pass this as Renderer to TuiTestRunner. */
     void renderBoard(final dev.tamboui.terminal.Frame frame) {
         final List<WorkItem> items = latestItems.get();
-        final Rect area = frame.area();
+        final Rect                 area  = frame.area();
 
         // Build the queue grid: tier -> state -> list of titles
         final Map<String, Map<String, List<String>>> grid = QueueBoardBuilder.build(items);

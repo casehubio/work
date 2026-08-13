@@ -7,16 +7,18 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.runtime.repository.WorkItemEntityMapper;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
@@ -49,8 +51,8 @@ class JpaWorkItemStoreTenancyTest {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private WorkItem newWorkItem(String title) {
-        WorkItem wi = new WorkItem();
+    private WorkItemEntity newWorkItem(String title) {
+        WorkItemEntity wi = new WorkItemEntity();
         wi.title = title;
         wi.status = WorkItemStatus.PENDING;
         wi.priority = WorkItemPriority.MEDIUM;
@@ -67,25 +69,25 @@ class JpaWorkItemStoreTenancyTest {
     void put_stampsTeancyId_whenNull() {
         principal.setTenancyId(TENANT_A);
 
-        WorkItem wi = newWorkItem("stamp-test");
+        WorkItemEntity wi = newWorkItem("stamp-test");
         assertThat(wi.tenancyId).isNull();
 
-        store.put(wi);
+        WorkItem result = store.put(WorkItemEntityMapper.toDomain(wi));
 
-        assertThat(wi.tenancyId).isEqualTo(TENANT_A);
+        assertThat(result.tenancyId()).isEqualTo(TENANT_A);
     }
 
     @Test
     void put_preservesTenancyId_whenAlreadySet() {
         principal.setTenancyId(TENANT_B);
 
-        WorkItem wi = newWorkItem("preserve-test");
+        WorkItemEntity wi = newWorkItem("preserve-test");
         wi.tenancyId = TENANT_A; // explicitly set to A
 
-        store.put(wi);
+        WorkItem result = store.put(WorkItemEntityMapper.toDomain(wi));
 
         // Should keep A, not overwrite with B
-        assertThat(wi.tenancyId).isEqualTo(TENANT_A);
+        assertThat(result.tenancyId()).isEqualTo(TENANT_A);
     }
 
     // -------------------------------------------------------------------------
@@ -96,9 +98,9 @@ class JpaWorkItemStoreTenancyTest {
     void get_returnsEmpty_forAnotherTenantItem() {
         // Create item as tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItem wi = newWorkItem("get-isolation");
-        store.put(wi);
-        UUID id = wi.id;
+        WorkItemEntity wi = newWorkItem("get-isolation");
+        WorkItem result = store.put(WorkItemEntityMapper.toDomain(wi));
+        UUID id = result.id();
 
         // Switch to tenant B — should not see A's item
         principal.setTenancyId(TENANT_B);
@@ -119,9 +121,9 @@ class JpaWorkItemStoreTenancyTest {
 
         // Create item as tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItem wi = newWorkItem("callerref-isolation");
+        WorkItemEntity wi = newWorkItem("callerref-isolation");
         wi.callerRef = callerRef;
-        store.put(wi);
+        store.put(WorkItemEntityMapper.toDomain(wi));
 
         // Switch to tenant B — should not find by callerRef
         principal.setTenancyId(TENANT_B);
@@ -140,27 +142,27 @@ class JpaWorkItemStoreTenancyTest {
     void scan_returnsOnlyCurrentTenantItems() {
         // Create items for tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItem wiA = newWorkItem("scan-tenant-a");
+        WorkItemEntity wiA = newWorkItem("scan-tenant-a");
         wiA.assigneeId = "alice";
-        store.put(wiA);
+        store.put(WorkItemEntityMapper.toDomain(wiA));
 
         // Create items for tenant B
         principal.setTenancyId(TENANT_B);
-        WorkItem wiB = newWorkItem("scan-tenant-b");
+        WorkItemEntity wiB = newWorkItem("scan-tenant-b");
         wiB.assigneeId = "alice";
-        store.put(wiB);
+        store.put(WorkItemEntityMapper.toDomain(wiB));
 
         // Scan as tenant A — should only see A's item
         principal.setTenancyId(TENANT_A);
         List<WorkItem> resultA = store.scan(WorkItemQuery.inbox("alice", null, null));
-        assertThat(resultA).extracting(w -> w.id).contains(wiA.id);
-        assertThat(resultA).extracting(w -> w.id).doesNotContain(wiB.id);
+        assertThat(resultA).extracting(w -> w.id()).contains(wiA.id);
+        assertThat(resultA).extracting(w -> w.id()).doesNotContain(wiB.id);
 
         // Scan as tenant B — should only see B's item
         principal.setTenancyId(TENANT_B);
         List<WorkItem> resultB = store.scan(WorkItemQuery.inbox("alice", null, null));
-        assertThat(resultB).extracting(w -> w.id).contains(wiB.id);
-        assertThat(resultB).extracting(w -> w.id).doesNotContain(wiA.id);
+        assertThat(resultB).extracting(w -> w.id()).contains(wiB.id);
+        assertThat(resultB).extracting(w -> w.id()).doesNotContain(wiA.id);
     }
 
     // -------------------------------------------------------------------------
@@ -171,25 +173,25 @@ class JpaWorkItemStoreTenancyTest {
     void scanAll_returnsOnlyCurrentTenantItems() {
         // Create items for tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItem wiA = newWorkItem("scanall-tenant-a");
-        store.put(wiA);
+        WorkItemEntity wiA = newWorkItem("scanall-tenant-a");
+        store.put(WorkItemEntityMapper.toDomain(wiA));
 
         // Create items for tenant B
         principal.setTenancyId(TENANT_B);
-        WorkItem wiB = newWorkItem("scanall-tenant-b");
-        store.put(wiB);
+        WorkItemEntity wiB = newWorkItem("scanall-tenant-b");
+        store.put(WorkItemEntityMapper.toDomain(wiB));
 
         // scanAll as tenant A — should only see A's item
         principal.setTenancyId(TENANT_A);
         List<WorkItem> resultA = store.scanAll();
-        assertThat(resultA).extracting(w -> w.id).contains(wiA.id);
-        assertThat(resultA).extracting(w -> w.id).doesNotContain(wiB.id);
+        assertThat(resultA).extracting(w -> w.id()).contains(wiA.id);
+        assertThat(resultA).extracting(w -> w.id()).doesNotContain(wiB.id);
 
         // scanAll as tenant B — should only see B's item
         principal.setTenancyId(TENANT_B);
         List<WorkItem> resultB = store.scanAll();
-        assertThat(resultB).extracting(w -> w.id).contains(wiB.id);
-        assertThat(resultB).extracting(w -> w.id).doesNotContain(wiA.id);
+        assertThat(resultB).extracting(w -> w.id()).contains(wiB.id);
+        assertThat(resultB).extracting(w -> w.id()).doesNotContain(wiA.id);
     }
 
     // -------------------------------------------------------------------------
@@ -200,27 +202,27 @@ class JpaWorkItemStoreTenancyTest {
     void countByParentAndAssignee_excludesAllTerminalStatuses() {
         principal.setTenancyId(TENANT_A);
 
-        WorkItem parent = newWorkItem("Parent");
-        store.put(parent);
+        WorkItemEntity parent = newWorkItem("Parent");
+        store.put(WorkItemEntityMapper.toDomain(parent));
         final UUID parentId = parent.id;
 
         // One active child as the baseline count
-        WorkItem activeChild = newWorkItem("Active child");
+        WorkItemEntity activeChild = newWorkItem("Active child");
         activeChild.parentId = parentId;
         activeChild.assigneeId = "bob";
         activeChild.status = WorkItemStatus.IN_PROGRESS;
-        store.put(activeChild);
+        store.put(WorkItemEntityMapper.toDomain(activeChild));
 
         // One child in each terminal status — none should be counted
         List<WorkItemStatus> terminalStatuses = Arrays.stream(WorkItemStatus.values())
                 .filter(WorkItemStatus::isTerminal)
                 .toList();
         for (WorkItemStatus status : terminalStatuses) {
-            WorkItem terminalChild = newWorkItem("Terminal-" + status);
+            WorkItemEntity terminalChild = newWorkItem("Terminal-" + status);
             terminalChild.parentId = parentId;
             terminalChild.assigneeId = "bob";
             terminalChild.status = status;
-            store.put(terminalChild);
+            store.put(WorkItemEntityMapper.toDomain(terminalChild));
         }
 
         long count = store.countByParentAndAssignee(parentId, "bob", UUID.randomUUID());

@@ -6,8 +6,8 @@ import io.casehub.platform.api.label.LabelAction;
 import io.casehub.platform.api.label.LabelRule;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLabel;
+import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.runtime.model.WorkItemLabelEntity;
 import jakarta.enterprise.event.Event;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +39,7 @@ class LabelRuleEngineTest {
                 }),
                 List.of(new LabelAction.Add("priority/high"))));
 
-        var wi = new WorkItem();
+        var wi = new WorkItemEntity();
         wi.priority = WorkItemPriority.HIGH;
 
         engine.evaluate(wi, Map.of("priority", wi.priority), "ADD");
@@ -55,7 +55,7 @@ class LabelRuleEngineTest {
                 new LambdaExpression<>(ctx -> false),
                 List.of(new LabelAction.Add("priority/high"))));
 
-        var wi = new WorkItem();
+        var wi = new WorkItemEntity();
         engine.evaluate(wi, Map.of(), "ADD");
 
         assertThat(wi.labels).extracting(l -> l.path).doesNotContain("priority/high");
@@ -63,9 +63,9 @@ class LabelRuleEngineTest {
 
     @Test
     void stripsInferredLabels_beforeEvaluation() {
-        var wi = new WorkItem();
-        wi.labels.add(new WorkItemLabel("old/inferred", LabelPersistence.INFERRED, "old-rule"));
-        wi.labels.add(new WorkItemLabel("manual/keep", LabelPersistence.MANUAL, "alice"));
+        var wi = new WorkItemEntity();
+        wi.labels.add(new WorkItemLabelEntity("old/inferred", LabelPersistence.INFERRED, "old-rule"));
+        wi.labels.add(new WorkItemLabelEntity("manual/keep", LabelPersistence.MANUAL, "alice"));
 
         engine.evaluate(wi, Map.of(), "ADD");
 
@@ -79,8 +79,8 @@ class LabelRuleEngineTest {
                 new LambdaExpression<>(ctx -> true),
                 List.of(new LabelAction.Remove("shared-label"))));
 
-        var wi = new WorkItem();
-        wi.labels.add(new WorkItemLabel("shared-label", LabelPersistence.MANUAL, "alice"));
+        var wi = new WorkItemEntity();
+        wi.labels.add(new WorkItemLabelEntity("shared-label", LabelPersistence.MANUAL, "alice"));
 
         engine.evaluate(wi, Map.of(), "ADD");
 
@@ -96,7 +96,7 @@ class LabelRuleEngineTest {
                 new LambdaExpression<>(ctx -> true),
                 List.of(new LabelAction.Add("x"))));
 
-        var wi = new WorkItem();
+        var wi = new WorkItemEntity();
         engine.evaluate(wi, Map.of(), "ADD");
 
         long count = wi.labels.stream().filter(l -> l.path.equals("x")).count();
@@ -110,7 +110,7 @@ class LabelRuleEngineTest {
                 List.of(new LabelAction.Add("on-add")),
                 Set.of("ADD")));
 
-        var wi = new WorkItem();
+        var wi = new WorkItemEntity();
         engine.evaluate(wi, Map.of(), "REMOVE");
 
         assertThat(wi.labels).extracting(l -> l.path).doesNotContain("on-add");
@@ -122,7 +122,7 @@ class LabelRuleEngineTest {
                 new LambdaExpression<>(ctx -> true),
                 List.of(new LabelAction.Add("always"))));
 
-        var wi = new WorkItem();
+        var wi = new WorkItemEntity();
         engine.evaluate(wi, Map.of(), "REMOVE");
 
         assertThat(wi.labels).extracting(l -> l.path).contains("always");
@@ -139,7 +139,7 @@ class LabelRuleEngineTest {
                 new LambdaExpression<>(ctx -> true),
                 List.of(new LabelAction.Add("good"))));
 
-        var wi = new WorkItem();
+        var wi = new WorkItemEntity();
         engine.evaluate(wi, Map.of(), "ADD");
 
         assertThat(wi.labels).extracting(l -> l.path).doesNotContain("bad");
@@ -152,7 +152,7 @@ class LabelRuleEngineTest {
                 new LambdaExpression<>(ctx -> true),
                 List.of(new LabelAction.Add("tagged"))));
 
-        var wi = new WorkItem();
+        var wi = new WorkItemEntity();
         engine.evaluate(wi, Map.of(), "ADD");
 
         assertThat(wi.labels).filteredOn(l -> l.path.equals("tagged"))
@@ -165,7 +165,7 @@ class LabelRuleEngineTest {
                 new LambdaExpression<>(ctx -> true),
                 List.of(new LabelAction.Add("first"))));
 
-        var wi = new WorkItem();
+        var wi = new WorkItemEntity();
         engine.evaluate(wi, Map.of(), "ADD");
 
         assertThat(wi.labels).extracting(l -> l.path).contains("first");
@@ -178,7 +178,7 @@ class LabelRuleEngineTest {
                 List.of(new LabelAction.Add("tier/urgent"),
                         new LabelAction.Add("tier/urgent/unassigned"))));
 
-        var wi = new WorkItem();
+        var wi = new WorkItemEntity();
         engine.evaluate(wi, Map.of(), "ADD");
 
         assertThat(wi.labels).extracting(l -> l.path)
@@ -197,7 +197,7 @@ class LabelRuleEngineTest {
         var firedEvents = new ArrayList<LabelChangeEvent>();
         injectLabelChangeEvent(engine, firedEvents::add);
 
-        var wi = new WorkItem();
+        var wi = new WorkItemEntity();
         engine.evaluate(wi, Map.of(), "ADD");
 
         assertThat(firedEvents).hasSize(1);
@@ -217,7 +217,7 @@ class LabelRuleEngineTest {
         var firedEvents = new ArrayList<LabelChangeEvent>();
         injectLabelChangeEvent(engine, firedEvents::add);
 
-        engine.evaluate(new WorkItem(), Map.of(), "ADD");
+        engine.evaluate(new WorkItemEntity(), Map.of(), "ADD");
 
         assertThat(firedEvents).isEmpty();
     }
@@ -227,8 +227,8 @@ class LabelRuleEngineTest {
         var firedEvents = new ArrayList<LabelChangeEvent>();
         injectLabelChangeEvent(engine, firedEvents::add);
 
-        var wi = new WorkItem();
-        wi.labels.add(new WorkItemLabel("stale", LabelPersistence.INFERRED, "old-rule"));
+        var wi = new WorkItemEntity();
+        wi.labels.add(new WorkItemLabelEntity("stale", LabelPersistence.INFERRED, "old-rule"));
         engine.evaluate(wi, Map.of(), "UPDATE");
 
         assertThat(firedEvents).hasSize(1);

@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
@@ -15,7 +16,6 @@ import jakarta.enterprise.inject.Alternative;
 import io.casehub.work.issuetracker.spi.ExternalIssueRef;
 import io.casehub.work.issuetracker.spi.IssueTrackerException;
 import io.casehub.work.issuetracker.spi.IssueTrackerProvider;
-import io.casehub.work.runtime.model.WorkItem;
 
 /**
  * Test-only stub that replaces the real GitHub provider with an in-memory implementation.

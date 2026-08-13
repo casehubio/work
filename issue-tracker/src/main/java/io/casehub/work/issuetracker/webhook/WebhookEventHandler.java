@@ -1,20 +1,18 @@
 package io.casehub.work.issuetracker.webhook;
 
-import java.util.ArrayList;
-import java.util.UUID;
-
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.api.spi.WorkItemStore;
+import io.casehub.work.issuetracker.repository.IssueLinkStore;
+import io.casehub.work.runtime.model.WorkItemLabelEntity;
+import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-
 import org.jboss.logging.Logger;
 
-import io.casehub.work.issuetracker.repository.IssueLinkStore;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLabel;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemStore;
-import io.casehub.work.runtime.service.WorkItemService;
+import java.util.ArrayList;
+import java.util.UUID;
 
 /**
  * Applies normalised {@link WebhookEvent} records to WorkItem state.
@@ -69,32 +67,30 @@ public class WebhookEventHandler {
         }
     }
 
-    /** Package-private for unit testing. */
-    void handle(final UUID workItemId, final WorkItem workItem, final WebhookEvent event) {
-        if (workItem.status != null && workItem.status.isTerminal()) {
+    void handle(final UUID workItemId, final io.casehub.work.api.WorkItem workItem, final WebhookEvent event) {
+        if (workItem.status() != null && workItem.status().isTerminal()) {
             LOG.debugf("WorkItem %s is terminal (%s) — skipping %s event",
-                    workItemId, workItem.status, event.eventKind());
+                       workItemId, workItem.status(), event.eventKind());
             return;
         }
         try {
             applyTransition(workItemId, workItem, event);
         } catch (final Exception e) {
             LOG.warnf("Failed to apply %s event to WorkItem %s: %s",
-                    event.eventKind(), workItemId, e.getMessage());
+                      event.eventKind(), workItemId, e.getMessage());
         }
     }
 
-    /** Package-private for unit testing. */
-    void applyTransition(final UUID workItemId, final WorkItem workItem, final WebhookEvent event) {
+    void applyTransition(final UUID workItemId, final io.casehub.work.api.WorkItem workItem, final WebhookEvent event) {
         switch (event.eventKind()) {
             case CLOSED -> applyClosed(workItemId, event);
             case ASSIGNED -> applyAssigned(workItemId, workItem, event);
             case UNASSIGNED -> workItemService.release(workItemId, event.actor());
-            case TITLE_CHANGED -> workItem.title = event.newTitle();
-            case DESCRIPTION_CHANGED -> workItem.description = stripFooter(event.newDescription());
-            case PRIORITY_CHANGED -> workItem.priority = event.newPriority();
-            case LABEL_ADDED -> addLabel(workItem, event.labelValue());
-            case LABEL_REMOVED -> removeLabel(workItem, event.labelValue());
+            case TITLE_CHANGED -> workItemStore.put(workItem.toBuilder().title(event.newTitle()).build());
+            case DESCRIPTION_CHANGED -> workItemStore.put(workItem.toBuilder().description(stripFooter(event.newDescription())).build());
+            case PRIORITY_CHANGED -> workItemStore.put(workItem.toBuilder().priority(event.newPriority()).build());
+            case LABEL_ADDED -> workItemService.addLabel(workItemId, event.labelValue(), "webhook");
+            case LABEL_REMOVED -> workItemService.removeLabel(workItemId, event.labelValue());
         }
     }
 
@@ -106,11 +102,11 @@ public class WebhookEventHandler {
         }
     }
 
-    private void applyAssigned(final UUID workItemId, final WorkItem workItem, final WebhookEvent event) {
-        if (workItem.status == WorkItemStatus.PENDING) {
+    private void applyAssigned(final UUID workItemId, final io.casehub.work.api.WorkItem workItem, final WebhookEvent event) {
+        if (workItem.status() == WorkItemStatus.PENDING) {
             workItemService.claim(workItemId, event.newAssignee());
         } else {
-            workItem.assigneeId = event.newAssignee();
+            workItemStore.put(workItem.toBuilder().assigneeId(event.newAssignee()).build());
         }
     }
 
@@ -120,19 +116,4 @@ public class WebhookEventHandler {
         return idx >= 0 ? description.substring(0, idx) : description;
     }
 
-    private void addLabel(final WorkItem workItem, final String path) {
-        if (workItem.labels == null) workItem.labels = new ArrayList<>();
-        final boolean exists = workItem.labels.stream().anyMatch(l -> path.equals(l.path));
-        if (!exists) {
-            final WorkItemLabel label = new WorkItemLabel();
-            label.path = path;
-            workItem.labels.add(label);
-        }
-    }
-
-    private void removeLabel(final WorkItem workItem, final String path) {
-        if (workItem.labels != null) {
-            workItem.labels.removeIf(l -> path.equals(l.path));
-        }
-    }
 }

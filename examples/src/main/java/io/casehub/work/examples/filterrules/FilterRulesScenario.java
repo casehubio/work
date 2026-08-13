@@ -3,6 +3,7 @@ package io.casehub.work.examples.filterrules;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.POST;
@@ -17,7 +18,6 @@ import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.runtime.filter.LabelRuleEntity;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.repository.AuditEntryStore;
@@ -108,7 +108,7 @@ public class FilterRulesScenario {
                 .build();
 
         final WorkItem highPriorityWi = workItemService.create(highPriorityRequest);
-        steps.add(new StepLog(2, description2, highPriorityWi.id));
+        steps.add(new StepLog(2, description2, highPriorityWi.id()));
 
         // Step 3: create a MEDIUM-priority WorkItem — filter should NOT apply "urgent" label
         final String description3 = "procurement-system creates MEDIUM-priority WorkItem: Routine office supplies order";
@@ -125,16 +125,16 @@ public class FilterRulesScenario {
                 .build();
 
         final WorkItem normalPriorityWi = workItemService.create(normalPriorityRequest);
-        steps.add(new StepLog(3, description3, normalPriorityWi.id));
+        steps.add(new StepLog(3, description3, normalPriorityWi.id()));
 
         // Step 4: verify labels
         final String description4 = "Verify: HIGH-priority item has 'urgent' label; MEDIUM-priority item does not";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 4, total, description4);
 
-        final boolean urgentOnHigh = highPriorityWi.labels != null &&
-                highPriorityWi.labels.stream().anyMatch(l -> LABEL_URGENT.equals(l.path));
-        final boolean noUrgentOnNormal = normalPriorityWi.labels == null ||
-                normalPriorityWi.labels.stream().noneMatch(l -> LABEL_URGENT.equals(l.path));
+        final boolean urgentOnHigh = highPriorityWi.labels() != null &&
+                highPriorityWi.labels().stream().anyMatch(l -> LABEL_URGENT.equals(l.path()));
+        final boolean noUrgentOnNormal = normalPriorityWi.labels() == null ||
+                normalPriorityWi.labels().stream().noneMatch(l -> LABEL_URGENT.equals(l.path()));
 
         steps.add(new StepLog(4, description4, null));
 
@@ -147,7 +147,7 @@ public class FilterRulesScenario {
         // Collect audit trail across both WorkItems
         final List<AuditEntryResponse> auditTrail = new ArrayList<>();
         for (final WorkItem wi : List.of(highPriorityWi, normalPriorityWi)) {
-            final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id);
+            final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id());
             auditEntries.stream()
                     .map(a -> new AuditEntryResponse(a.id, a.event, a.actor, a.detail, a.occurredAt))
                     .forEach(auditTrail::add);
@@ -156,8 +156,8 @@ public class FilterRulesScenario {
         return new FilterRulesResponse(
                 SCENARIO_ID,
                 steps,
-                highPriorityWi.id,
-                normalPriorityWi.id,
+                highPriorityWi.id(),
+                normalPriorityWi.id(),
                 urgentOnHigh,
                 noUrgentOnNormal,
                 auditTrail);

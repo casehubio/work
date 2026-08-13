@@ -6,18 +6,20 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.runtime.repository.WorkItemEntityMapper;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.AuditQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
@@ -53,8 +55,8 @@ class JpaAuditEntryStoreTenancyTest {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private WorkItem newWorkItem(String title) {
-        WorkItem wi = new WorkItem();
+    private WorkItemEntity newWorkItem(String title) {
+        WorkItemEntity wi = new WorkItemEntity();
         wi.title = title;
         wi.status = WorkItemStatus.PENDING;
         wi.priority = WorkItemPriority.MEDIUM;
@@ -81,10 +83,10 @@ class JpaAuditEntryStoreTenancyTest {
         principal.setTenancyId(TENANT_A);
 
         // Create work item first
-        WorkItem wi = newWorkItem("test-workitem");
-        workItemStore.put(wi);
+        WorkItemEntity wi = newWorkItem("test-workitem");
+        WorkItem saved = workItemStore.put(WorkItemEntityMapper.toDomain(wi));
 
-        AuditEntry entry = newAuditEntry(wi.id, "CREATED");
+        AuditEntry entry = newAuditEntry(saved.id(), "CREATED");
         assertThat(entry.tenancyId).isNull();
 
         store.append(entry);
@@ -97,10 +99,10 @@ class JpaAuditEntryStoreTenancyTest {
         principal.setTenancyId(TENANT_B);
 
         // Create work item first
-        WorkItem wi = newWorkItem("test-workitem");
-        workItemStore.put(wi);
+        WorkItemEntity wi = newWorkItem("test-workitem");
+        WorkItem saved = workItemStore.put(WorkItemEntityMapper.toDomain(wi));
 
-        AuditEntry entry = newAuditEntry(wi.id, "CREATED");
+        AuditEntry entry = newAuditEntry(saved.id(), "CREATED");
         entry.tenancyId = TENANT_A; // explicitly set to A
 
         store.append(entry);
@@ -117,37 +119,37 @@ class JpaAuditEntryStoreTenancyTest {
     void findByWorkItemId_returnsEmpty_forAnotherTenantAuditEntry() {
         // Create work item as tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItem wiA = newWorkItem("tenant-a-workitem");
-        workItemStore.put(wiA);
+        WorkItemEntity wiAEntity = newWorkItem("tenant-a-workitem");
+        WorkItem wiA = workItemStore.put(WorkItemEntityMapper.toDomain(wiAEntity));
 
         // Create audit entry as tenant A
-        AuditEntry entryA = newAuditEntry(wiA.id, "CREATED");
+        AuditEntry entryA = newAuditEntry(wiA.id(), "CREATED");
         store.append(entryA);
 
         // Create work item as tenant B (different work item)
         principal.setTenancyId(TENANT_B);
-        WorkItem wiB = newWorkItem("tenant-b-workitem");
-        workItemStore.put(wiB);
+        WorkItemEntity wiBEntity = newWorkItem("tenant-b-workitem");
+        WorkItem wiB = workItemStore.put(WorkItemEntityMapper.toDomain(wiBEntity));
 
         // Create audit entry as tenant B
-        AuditEntry entryB = newAuditEntry(wiB.id, "ASSIGNED");
+        AuditEntry entryB = newAuditEntry(wiB.id(), "ASSIGNED");
         store.append(entryB);
 
         // As tenant A — should only see A's entry
         principal.setTenancyId(TENANT_A);
-        List<AuditEntry> resultA = store.findByWorkItemId(wiA.id);
+        List<AuditEntry> resultA = store.findByWorkItemId(wiA.id());
         assertThat(resultA).hasSize(1);
         assertThat(resultA.get(0).id).isEqualTo(entryA.id);
 
         // As tenant B — should only see B's entry
         principal.setTenancyId(TENANT_B);
-        List<AuditEntry> resultB = store.findByWorkItemId(wiB.id);
+        List<AuditEntry> resultB = store.findByWorkItemId(wiB.id());
         assertThat(resultB).hasSize(1);
         assertThat(resultB.get(0).id).isEqualTo(entryB.id);
 
         // As tenant A trying to see B's audit — should be empty
         principal.setTenancyId(TENANT_A);
-        List<AuditEntry> resultA2 = store.findByWorkItemId(wiB.id);
+        List<AuditEntry> resultA2 = store.findByWorkItemId(wiB.id());
         assertThat(resultA2).isEmpty();
     }
 
@@ -159,21 +161,21 @@ class JpaAuditEntryStoreTenancyTest {
     void query_returnsOnlyCurrentTenantEntries() {
         // Create work item for tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItem wiA = newWorkItem("tenant-a-workitem");
-        workItemStore.put(wiA);
+        WorkItemEntity wiAEntity = newWorkItem("tenant-a-workitem");
+        WorkItem wiA = workItemStore.put(WorkItemEntityMapper.toDomain(wiAEntity));
 
         // Create audit entries for tenant A
-        AuditEntry entryA1 = newAuditEntry(wiA.id, "CREATED");
+        AuditEntry entryA1 = newAuditEntry(wiA.id(), "CREATED");
         entryA1.actor = "alice";
         store.append(entryA1);
 
         // Create work item for tenant B
         principal.setTenancyId(TENANT_B);
-        WorkItem wiB = newWorkItem("tenant-b-workitem");
-        workItemStore.put(wiB);
+        WorkItemEntity wiBEntity = newWorkItem("tenant-b-workitem");
+        WorkItem wiB = workItemStore.put(WorkItemEntityMapper.toDomain(wiBEntity));
 
         // Create audit entries for tenant B
-        AuditEntry entryB1 = newAuditEntry(wiB.id, "CREATED");
+        AuditEntry entryB1 = newAuditEntry(wiB.id(), "CREATED");
         entryB1.actor = "bob";
         store.append(entryB1);
 
@@ -208,25 +210,25 @@ class JpaAuditEntryStoreTenancyTest {
     void count_returnsOnlyCurrentTenantEntries() {
         // Create work item for tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItem wiA = newWorkItem("tenant-a-workitem");
-        workItemStore.put(wiA);
+        WorkItemEntity wiAEntity = newWorkItem("tenant-a-workitem");
+        WorkItem wiA = workItemStore.put(WorkItemEntityMapper.toDomain(wiAEntity));
 
         // Create audit entries for tenant A
-        AuditEntry entryA1 = newAuditEntry(wiA.id, "CREATED");
+        AuditEntry entryA1 = newAuditEntry(wiA.id(), "CREATED");
         entryA1.actor = "alice";
         store.append(entryA1);
 
-        AuditEntry entryA2 = newAuditEntry(wiA.id, "ASSIGNED");
+        AuditEntry entryA2 = newAuditEntry(wiA.id(), "ASSIGNED");
         entryA2.actor = "alice";
         store.append(entryA2);
 
         // Create work item for tenant B
         principal.setTenancyId(TENANT_B);
-        WorkItem wiB = newWorkItem("tenant-b-workitem");
-        workItemStore.put(wiB);
+        WorkItemEntity wiBEntity = newWorkItem("tenant-b-workitem");
+        WorkItem wiB = workItemStore.put(WorkItemEntityMapper.toDomain(wiBEntity));
 
         // Create audit entry for tenant B
-        AuditEntry entryB1 = newAuditEntry(wiB.id, "CREATED");
+        AuditEntry entryB1 = newAuditEntry(wiB.id(), "CREATED");
         entryB1.actor = "bob";
         store.append(entryB1);
 

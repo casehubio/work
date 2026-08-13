@@ -3,6 +3,7 @@ package io.casehub.work.examples.semantic;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.POST;
@@ -16,7 +17,6 @@ import io.casehub.work.ai.skill.WorkerSkillProfile;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
@@ -106,43 +106,43 @@ public class NdaReviewScenario {
                 .build();
 
         final WorkItem wi = workItemService.create(request);
-        steps.add(new StepLog(2, description2, wi.id));
+        steps.add(new StepLog(2, description2, wi.id()));
 
         // Step 3: verify routing — legal-specialist should be pre-assigned
         final String description3 = String.format(
                 "Semantic routing selected '%s' (keyword match: NDA, legal, compliance, review)",
-                wi.assigneeId);
+                wi.assigneeId());
         LOG.infof("[SCENARIO] Step %d/%d: %s", 3, total, description3);
-        if (wi.status != WorkItemStatus.ASSIGNED || !ACTOR_LEGAL.equals(wi.assigneeId)) {
+        if (wi.status() != WorkItemStatus.ASSIGNED || !ACTOR_LEGAL.equals(wi.assigneeId())) {
             throw new IllegalStateException(
                     "Expected semantic routing to assign legal-specialist but got: assigneeId="
-                            + wi.assigneeId + ", status=" + wi.status);
+                            + wi.assigneeId() + ", status=" + wi.status());
         }
-        steps.add(new StepLog(3, description3, wi.id));
+        steps.add(new StepLog(3, description3, wi.id()));
 
         // Step 4: legal-specialist starts the WorkItem (already ASSIGNED — no claim needed)
         final String description4 = "legal-specialist starts the NDA review";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 4, total, description4);
-        workItemService.start(wi.id, ACTOR_LEGAL);
-        steps.add(new StepLog(4, description4, wi.id));
+        workItemService.start(wi.id(), ACTOR_LEGAL);
+        steps.add(new StepLog(4, description4, wi.id()));
 
         // Step 5: legal-specialist completes with resolution
         final String description5 = "legal-specialist completes NDA review — standard terms accepted";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 5, total, description5);
         workItemService.complete(
-                wi.id,
+                wi.id(),
                 ACTOR_LEGAL,
                 "{\"outcome\": \"APPROVED\", \"notes\": \"Standard NDA terms; no amendments required\"}", null,
                 "NDA reviewed against IP protection checklist — all clauses compliant",
                 "LEGAL-NDA-POLICY-v3.0");
-        steps.add(new StepLog(5, description5, wi.id));
+        steps.add(new StepLog(5, description5, wi.id()));
 
-        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id);
+        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id());
         final List<AuditEntryResponse> auditTrail = auditEntries.stream()
                 .map(a -> new AuditEntryResponse(a.id, a.event, a.actor, a.detail, a.occurredAt))
                 .toList();
 
-        return new SemanticRoutingResponse(SCENARIO_ID, steps, wi.id, wi.assigneeId, ACTOR_LEGAL, auditTrail);
+        return new SemanticRoutingResponse(SCENARIO_ID, steps, wi.id(), wi.assigneeId(), ACTOR_LEGAL, auditTrail);
     }
 
     private void upsertProfile(final String workerId, final String narrative) {

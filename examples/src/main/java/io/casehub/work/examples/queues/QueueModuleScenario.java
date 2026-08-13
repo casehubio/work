@@ -12,10 +12,10 @@ import io.casehub.work.examples.StepLog;
 import io.casehub.work.queues.model.WorkItemQueueState;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
@@ -107,51 +107,51 @@ public class QueueModuleScenario {
         LOG.infof("[SCENARIO] Step %d/%d: %s", 1, total, description1);
 
         final WorkItem wiA = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Review NDA with TechPartner Inc")
-                .description("Non-disclosure agreement for technology partnership — standard NDA, review for compliance with IP policy")
-                .types(List.of("legal"))
-                .priority(WorkItemPriority.MEDIUM)
-                .candidateGroups("legal-team")
-                .requiredCapabilities("contract-review,nda")
-                .createdBy(ACTOR_CREATOR)
-                .payload("{\"contractRef\": \"TECHPARTNER-NDA-2026-Q2\"}")
-                .labels(List.of(new WorkItemLabelRequest("contract-review/nda", LabelPersistence.MANUAL, ACTOR_CREATOR)))
-                .build());
-        steps.add(new StepLog(1, description1, wiA.id));
+                                                                               .title("Review NDA with TechPartner Inc")
+                                                                               .description("Non-disclosure agreement for technology partnership — standard NDA, review for compliance with IP policy")
+                                                                               .types(List.of("legal"))
+                                                                               .priority(WorkItemPriority.MEDIUM)
+                                                                               .candidateGroups("legal-team")
+                                                                               .requiredCapabilities("contract-review,nda")
+                                                                               .createdBy(ACTOR_CREATOR)
+                                                                               .payload("{\"contractRef\": \"TECHPARTNER-NDA-2026-Q2\"}")
+                                                                               .labels(List.of(new WorkItemLabelRequest("contract-review/nda", LabelPersistence.MANUAL, ACTOR_CREATOR)))
+                                                                               .build());
+        steps.add(new StepLog(1, description1, wiA.id()));
 
         // Step 2: create WorkItem B — compliance/gdpr
         final String description2 = "legal-system creates WorkItem B with label compliance/gdpr";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 2, total, description2);
 
         final WorkItem wiB = workItemService.create(WorkItemCreateRequest.builder()
-                .title("GDPR data processing agreement — EU vendor")
-                .description("Data Processing Agreement required for new EU-based data analytics vendor")
-                .types(List.of("legal"))
-                .priority(WorkItemPriority.HIGH)
-                .candidateGroups("legal-team")
-                .requiredCapabilities("compliance,gdpr")
-                .createdBy(ACTOR_CREATOR)
-                .payload("{\"contractRef\": \"EU-DPA-2026-0031\"}")
-                .labels(List.of(new WorkItemLabelRequest("compliance/gdpr", LabelPersistence.MANUAL, ACTOR_CREATOR)))
-                .build());
-        steps.add(new StepLog(2, description2, wiB.id));
+                                                                               .title("GDPR data processing agreement — EU vendor")
+                                                                               .description("Data Processing Agreement required for new EU-based data analytics vendor")
+                                                                               .types(List.of("legal"))
+                                                                               .priority(WorkItemPriority.HIGH)
+                                                                               .candidateGroups("legal-team")
+                                                                               .requiredCapabilities("compliance,gdpr")
+                                                                               .createdBy(ACTOR_CREATOR)
+                                                                               .payload("{\"contractRef\": \"EU-DPA-2026-0031\"}")
+                                                                               .labels(List.of(new WorkItemLabelRequest("compliance/gdpr", LabelPersistence.MANUAL, ACTOR_CREATOR)))
+                                                                               .build());
+        steps.add(new StepLog(2, description2, wiB.id()));
 
         // Step 3: create WorkItem C — contract-review/ip
         final String description3 = "legal-system creates WorkItem C with label contract-review/ip";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 3, total, description3);
 
         final WorkItem wiC = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Review IP licensing agreement — ResearchCo")
-                .description("Intellectual property licensing agreement covering patent and know-how transfer")
-                .types(List.of("legal"))
-                .priority(WorkItemPriority.HIGH)
-                .candidateGroups("legal-team")
-                .requiredCapabilities("contract-review,ip-licensing")
-                .createdBy(ACTOR_CREATOR)
-                .payload("{\"contractRef\": \"RESEARCHCO-IP-2026-Q2\"}")
-                .labels(List.of(new WorkItemLabelRequest("contract-review/ip", LabelPersistence.MANUAL, ACTOR_CREATOR)))
-                .build());
-        steps.add(new StepLog(3, description3, wiC.id));
+                                                                               .title("Review IP licensing agreement — ResearchCo")
+                                                                               .description("Intellectual property licensing agreement covering patent and know-how transfer")
+                                                                               .types(List.of("legal"))
+                                                                               .priority(WorkItemPriority.HIGH)
+                                                                               .candidateGroups("legal-team")
+                                                                               .requiredCapabilities("contract-review,ip-licensing")
+                                                                               .createdBy(ACTOR_CREATOR)
+                                                                               .payload("{\"contractRef\": \"RESEARCHCO-IP-2026-Q2\"}")
+                                                                               .labels(List.of(new WorkItemLabelRequest("contract-review/ip", LabelPersistence.MANUAL, ACTOR_CREATOR)))
+                                                                               .build());
+        steps.add(new StepLog(3, description3, wiC.id()));
 
         // Step 4: create the contract-review queue view
         final String description4 = "Create queue view for contract-review/* pattern";
@@ -169,53 +169,55 @@ public class QueueModuleScenario {
         LOG.infof("[SCENARIO] Step %d/%d: %s", 5, total, description5);
 
         final List<WorkItem> queueContents = workItemStore.scan(WorkItemQuery.byLabelPattern(QUEUE_PATTERN));
-        final int queueSize = queueContents.size();
+        final int                  queueSize     = queueContents.size();
         steps.add(new StepLog(5, String.format("%s — found %d items", description5, queueSize), null));
 
         // Step 6: contract-specialist picks up WorkItem A (standard claim from PENDING)
         final String description6 = "contract-specialist picks up WorkItem A from the contract-review queue";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 6, total, description6);
-        workItemService.claim(wiA.id, ACTOR_CONTRACT);
-        steps.add(new StepLog(6, description6, wiA.id));
+        workItemService.claim(wiA.id(), ACTOR_CONTRACT);
+        steps.add(new StepLog(6, description6, wiA.id()));
 
         // Step 7: contract-specialist marks WorkItem A as relinquishable (handoff signal)
         final String description7 = "contract-specialist marks WorkItem A as relinquishable — needs senior review";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 7, total, description7);
-        final WorkItemQueueState state = WorkItemQueueState.findOrCreate(wiA.id);
+        final WorkItemQueueState state = WorkItemQueueState.findOrCreate(wiA.id());
         state.relinquishable = true;
-        steps.add(new StepLog(7, description7, wiA.id));
+        steps.add(new StepLog(7, description7, wiA.id()));
 
         // Step 8: senior-specialist picks up WorkItem A via soft takeover
         final String description8 = "senior-specialist picks up relinquishable WorkItem A (ownership transfer)";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 8, total, description8);
-        final WorkItem wiARefreshed = workItemStore.get(wiA.id)
-                .orElseThrow(() -> new IllegalStateException("WorkItem A not found: " + wiA.id));
-        wiARefreshed.assigneeId = ACTOR_SENIOR;
-        wiARefreshed.assignedAt = Instant.now();
-        final WorkItem wiASaved = workItemStore.put(wiARefreshed);
+        final WorkItem wiARefreshed = workItemStore.get(wiA.id())
+                                                         .orElseThrow(() -> new IllegalStateException("WorkItem A not found: " + wiA.id()));
+        final WorkItem wiAReassigned = wiARefreshed.toBuilder()
+                .assigneeId(ACTOR_SENIOR)
+                .assignedAt(Instant.now())
+                .build();
+        final WorkItem wiASaved = workItemStore.put(wiAReassigned);
         // Clear relinquishable flag — signal consumed
         state.relinquishable = false;
         lifecycleEvent.fire(WorkItemLifecycleEvent.of("ASSIGNED", wiASaved, ACTOR_SENIOR,
                 "Queue pickup (relinquishable takeover)"));
-        steps.add(new StepLog(8, description8, wiA.id));
+        steps.add(new StepLog(8, description8, wiA.id()));
 
         // Step 9: senior-specialist starts and completes WorkItem A
         final String description9 = "senior-specialist starts and completes WorkItem A";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 9, total, description9);
-        workItemService.start(wiA.id, ACTOR_SENIOR);
-        workItemService.complete(wiA.id, ACTOR_SENIOR,
+        workItemService.start(wiA.id(), ACTOR_SENIOR);
+        workItemService.complete(wiA.id(), ACTOR_SENIOR,
                 "{\"outcome\": \"APPROVED\", \"notes\": \"NDA reviewed by senior specialist — standard terms confirmed\"}", null);
-        steps.add(new StepLog(9, description9, wiA.id));
+        steps.add(new StepLog(9, description9, wiA.id()));
 
         // Collect audit trail for WorkItem A (the focus of the handoff story)
-        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wiA.id);
+        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wiA.id());
         final List<AuditEntryResponse> auditTrail = auditEntries.stream()
                 .map(a -> new AuditEntryResponse(a.id, a.event, a.actor, a.detail, a.occurredAt))
                 .toList();
 
         // Determine final assignee from the refreshed WorkItem
-        final String finalAssignee = workItemStore.get(wiA.id)
-                .map(wi -> wi.assigneeId)
+        final String finalAssignee = workItemStore.get(wiA.id())
+                .map(wi -> wi.assigneeId())
                 .orElse(ACTOR_SENIOR);
 
         return new QueueModuleResponse(
@@ -223,7 +225,7 @@ public class QueueModuleScenario {
                 steps,
                 queueId,
                 queueSize,
-                wiA.id,
+                wiA.id(),
                 finalAssignee,
                 auditTrail);
     }

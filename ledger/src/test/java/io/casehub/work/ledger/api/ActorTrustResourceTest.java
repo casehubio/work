@@ -12,7 +12,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.ledger.runtime.service.TrustScoreJob;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.service.WorkItemService;
@@ -60,10 +60,10 @@ class ActorTrustResourceTest {
                 .createdBy("system")
                 .build();
         final WorkItem wi = workItemService.create(req);
-        workItemService.claim(wi.id, actor);
-        workItemService.start(wi.id, actor);
-        workItemService.complete(wi.id, actor, "{\"approved\":true}", null);
-        return wi.id;
+        workItemService.claim(wi.id(), actor);
+        workItemService.start(wi.id(), actor);
+        workItemService.complete(wi.id(), actor, "{\"approved\":true}", null);
+        return wi.id();
     }
 
     // -------------------------------------------------------------------------

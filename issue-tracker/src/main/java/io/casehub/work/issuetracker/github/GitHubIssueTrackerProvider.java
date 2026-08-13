@@ -1,5 +1,18 @@
 package io.casehub.work.issuetracker.github;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.issuetracker.spi.ExternalIssueRef;
+import io.casehub.work.issuetracker.spi.IssueTrackerException;
+import io.casehub.work.issuetracker.spi.IssueTrackerProvider;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -7,25 +20,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Optional;
 import java.util.UUID;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
-import org.jboss.logging.Logger;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLabel;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.api.WorkItemStatus;
-
-import io.casehub.work.issuetracker.spi.ExternalIssueRef;
-import io.casehub.work.issuetracker.spi.IssueTrackerException;
-import io.casehub.work.issuetracker.spi.IssueTrackerProvider;
 
 /**
  * Default {@link IssueTrackerProvider} for GitHub Issues.
@@ -301,7 +295,7 @@ public class GitHubIssueTrackerProvider implements IssueTrackerProvider {
      * {@code open} for all others.
      */
     @Override
-    public void syncToIssue(final String externalRef, final WorkItem workItem) {
+    public void syncToIssue(final String externalRef, final io.casehub.work.api.WorkItem workItem) {
         final ParsedRef ref = parse(externalRef);
         final String issueUrl = API_BASE + "/repos/" + ref.repo() + "/issues/" + ref.number();
 
@@ -336,7 +330,7 @@ public class GitHubIssueTrackerProvider implements IssueTrackerProvider {
             finalLabels.addAll(managedLabels);
 
             // PATCH: labels + state
-            final boolean terminal = workItem.status != null && workItem.status.isTerminal();
+            final boolean terminal = workItem.status() != null && workItem.status().isTerminal();
             final ObjectNode patch = MAPPER.createObjectNode();
             patch.put("state", terminal ? "closed" : "open");
             final ArrayNode labelsArray = patch.putArray("labels");
@@ -360,30 +354,26 @@ public class GitHubIssueTrackerProvider implements IssueTrackerProvider {
 
     // ── Label helpers ─────────────────────────────────────────────────────────
 
-    java.util.List<String> buildManagedLabels(final WorkItem workItem) {
+    java.util.List<String> buildManagedLabels(final io.casehub.work.api.WorkItem workItem) {
         final java.util.List<String> labels = new java.util.ArrayList<>();
 
-        // Priority
-        labels.add(priorityLabel(workItem.priority));
+        labels.add(priorityLabel(workItem.priority()));
 
-        // Types
-        for (final io.casehub.work.runtime.model.WorkItemType type : workItem.types) {
-            if (type.path != null && !type.path.isBlank()) {
-                labels.add("type:" + type.path.toLowerCase());
+        for (final String typePath : workItem.types()) {
+            if (typePath != null && !typePath.isBlank()) {
+                labels.add("type:" + typePath.toLowerCase());
             }
         }
 
-        // Status (omitted for terminal — issue state handles that)
-        final String statusLabel = statusLabel(workItem.status);
+        final String statusLabel = statusLabel(workItem.status());
         if (statusLabel != null) {
             labels.add(statusLabel);
         }
 
-        // WorkItem labels (path used as GitHub label name)
-        if (workItem.labels != null) {
-            for (final WorkItemLabel label : workItem.labels) {
-                if (label.path != null && !label.path.isBlank()) {
-                    labels.add(label.path);
+        if (workItem.labels() != null) {
+            for (final io.casehub.work.api.WorkItemLabel label : workItem.labels()) {
+                if (label.path() != null && !label.path().isBlank()) {
+                    labels.add(label.path());
                 }
             }
         }

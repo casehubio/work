@@ -8,10 +8,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 
 /**
@@ -191,10 +191,11 @@ class WorkItemEventBroadcasterTest {
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private WorkItemLifecycleEvent event(final String name, final UUID workItemId) {
-        final WorkItem wi = new WorkItem();
-        wi.id = workItemId;
-        wi.status = WorkItemStatus.PENDING;
-        wi.tenancyId = "test-tenant";
+        final WorkItem wi = WorkItem.builder()
+                .id(workItemId)
+                .status(WorkItemStatus.PENDING)
+                .tenancyId("test-tenant")
+                .build();
         return WorkItemLifecycleEvent.of(name, wi, "test", null);
     }
 }

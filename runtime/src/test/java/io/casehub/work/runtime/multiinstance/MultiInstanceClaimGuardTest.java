@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+import io.casehub.work.runtime.model.WorkItemEntity;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -15,7 +16,6 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
@@ -51,14 +51,14 @@ class MultiInstanceClaimGuardTest {
                     .templateId(t.id)
                     .createdBy("test")
                     .build();
-            return templateService.createFromTemplate(request).id;
+            return templateService.createFromTemplate(request).id();
         });
     }
 
     @Test
     void guardEnforced_sameAssigneeCannotClaimTwoInstances() {
         UUID parentId = createGroupAndGetParentId(false);
-        List<UUID> childIds = inTx(() -> WorkItem.<WorkItem> list("parentId", parentId).stream().map(w -> w.id).toList());
+        List<UUID> childIds = inTx(() -> WorkItemEntity.<WorkItemEntity> list("parentId", parentId).stream().map(w -> w.id).toList());
 
         // Claim first instance successfully
         inTx(() -> workItemService.claim(childIds.get(0), "alice"));
@@ -71,7 +71,7 @@ class MultiInstanceClaimGuardTest {
     @Test
     void guardDisabled_sameAssigneeCanClaimMultipleInstances() {
         UUID parentId = createGroupAndGetParentId(true);
-        List<UUID> childIds = inTx(() -> WorkItem.<WorkItem> list("parentId", parentId).stream().map(w -> w.id).toList());
+        List<UUID> childIds = inTx(() -> WorkItemEntity.<WorkItemEntity> list("parentId", parentId).stream().map(w -> w.id).toList());
 
         inTx(() -> workItemService.claim(childIds.get(0), "alice"));
         assertThatCode(() -> inTx(() -> workItemService.claim(childIds.get(1), "alice")))
@@ -81,7 +81,7 @@ class MultiInstanceClaimGuardTest {
     @Test
     void differentAssigneesCanAlwaysClaim() {
         UUID parentId = createGroupAndGetParentId(false);
-        List<UUID> childIds = inTx(() -> WorkItem.<WorkItem> list("parentId", parentId).stream().map(w -> w.id).toList());
+        List<UUID> childIds = inTx(() -> WorkItemEntity.<WorkItemEntity> list("parentId", parentId).stream().map(w -> w.id).toList());
 
         inTx(() -> workItemService.claim(childIds.get(0), "alice"));
         assertThatCode(() -> inTx(() -> workItemService.claim(childIds.get(1), "bob")))

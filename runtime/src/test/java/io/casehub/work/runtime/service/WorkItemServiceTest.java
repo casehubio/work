@@ -8,6 +8,7 @@ import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.PolicyDecision;
 import io.casehub.work.api.ValidationMode;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemLabelRequest;
 import io.casehub.work.api.WorkItemPriority;
@@ -17,10 +18,9 @@ import io.casehub.work.core.strategy.CapabilityValidator;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -49,11 +49,12 @@ class WorkItemServiceTest {
 
         @Override
         public WorkItem put(WorkItem workItem) {
-            if (workItem.id == null) {
-                workItem.id = UUID.randomUUID();
+            WorkItem toStore = workItem;
+            if (toStore.id() == null) {
+                toStore = toStore.toBuilder().id(UUID.randomUUID()).build();
             }
-            store.put(workItem.id, workItem);
-            return workItem;
+            store.put(toStore.id(), toStore);
+            return toStore;
         }
 
         @Override
@@ -64,7 +65,7 @@ class WorkItemServiceTest {
         @Override
         public List<WorkItem> scan(WorkItemQuery query) {
             return store.values().stream()
-                    .filter(wi -> query.tenancyId() == null || query.tenancyId().equals(wi.tenancyId))
+                    .filter(wi -> query.tenancyId() == null || query.tenancyId().equals(wi.tenancyId()))
                     .filter(wi -> matchesAssignment(wi, query))
                     .filter(wi -> matchesFilters(wi, query))
                     .toList();
@@ -75,15 +76,15 @@ class WorkItemServiceTest {
                     && q.candidateUserId() == null) {
                 return true;
             }
-            if (q.assigneeId() != null && q.assigneeId().equals(wi.assigneeId)) {
+            if (q.assigneeId() != null && q.assigneeId().equals(wi.assigneeId())) {
                 return true;
             }
-            if (q.assigneeId() != null && wi.candidateUsers != null && wi.candidateUsers.contains(q.assigneeId())) {
+            if (q.assigneeId() != null && wi.candidateUsers() != null && wi.candidateUsers().contains(q.assigneeId())) {
                 return true;
             }
-            if (q.candidateGroups() != null && !q.candidateGroups().isEmpty() && wi.candidateGroups != null) {
+            if (q.candidateGroups() != null && !q.candidateGroups().isEmpty() && wi.candidateGroups() != null) {
                 for (String g : q.candidateGroups()) {
-                    if (wi.candidateGroups.contains(g)) {
+                    if (wi.candidateGroups().contains(g)) {
                         return true;
                     }
                 }
@@ -92,36 +93,36 @@ class WorkItemServiceTest {
         }
 
         private boolean matchesFilters(WorkItem wi, WorkItemQuery q) {
-            if (q.status() != null && wi.status != q.status()) {
+            if (q.status() != null && wi.status() != q.status()) {
                 return false;
             }
-            if (q.statusIn() != null && !q.statusIn().contains(wi.status)) {
+            if (q.statusIn() != null && !q.statusIn().contains(wi.status())) {
                 return false;
             }
-            if (q.priority() != null && wi.priority != q.priority()) {
+            if (q.priority() != null && wi.priority() != q.priority()) {
                 return false;
             }
             if (q.type() != null) {
-                boolean matched = wi.types != null && wi.types.stream()
-                        .anyMatch(t -> t.path.equals(q.type()) || t.path.startsWith(q.type() + "/"));
+                boolean matched = wi.types() != null && wi.types().stream()
+                        .anyMatch(t -> t.equals(q.type()) || t.startsWith(q.type() + "/"));
                 if (!matched) return false;
             }
             if (q.followUpBefore() != null
-                    && (wi.followUpDate == null || wi.followUpDate.isAfter(q.followUpBefore()))) {
+                    && (wi.followUpDate() == null || wi.followUpDate().isAfter(q.followUpBefore()))) {
                 return false;
             }
             if (q.expiresAtOrBefore() != null
-                    && (wi.expiresAt == null || wi.expiresAt.isAfter(q.expiresAtOrBefore()))) {
+                    && (wi.expiresAt() == null || wi.expiresAt().isAfter(q.expiresAtOrBefore()))) {
                 return false;
             }
             if (q.claimDeadlineOrBefore() != null
-                    && (wi.claimDeadline == null || wi.claimDeadline.isAfter(q.claimDeadlineOrBefore()))) {
+                    && (wi.claimDeadline() == null || wi.claimDeadline().isAfter(q.claimDeadlineOrBefore()))) {
                 return false;
             }
             if (q.labelPattern() != null) {
-                boolean matchesLabel = wi.labels != null && wi.labels.stream()
+                boolean matchesLabel = wi.labels() != null && wi.labels().stream()
                         .anyMatch(l -> io.casehub.work.runtime.service.LabelVocabularyService
-                                .matchesPattern(q.labelPattern(), l.path));
+                                .matchesPattern(q.labelPattern(), l.path()));
                 if (!matchesLabel) {
                     return false;
                 }
@@ -312,36 +313,36 @@ class WorkItemServiceTest {
     @Test
     void create_setsStatusPending() {
         WorkItem wi = service.create(basicRequest());
-        assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.PENDING);
     }
 
     @Test
     void create_setsCreatedAt() {
         WorkItem wi = service.create(basicRequest());
-        assertThat(wi.createdAt).isNotNull();
+        assertThat(wi.createdAt()).isNotNull();
     }
 
     @Test
     void create_setsExpiresAtFromConfigDefault() {
         WorkItem wi = service.create(basicRequest());
-        assertThat(wi.expiresAt).isNotNull();
+        assertThat(wi.expiresAt()).isNotNull();
         // expiresAt should be approximately now + 24 h
         Instant expectedApprox = Instant.now().plus(24, ChronoUnit.HOURS);
-        assertThat(wi.expiresAt).isAfter(expectedApprox.minus(5, ChronoUnit.MINUTES));
-        assertThat(wi.expiresAt).isBefore(expectedApprox.plus(5, ChronoUnit.MINUTES));
+        assertThat(wi.expiresAt()).isAfter(expectedApprox.minus(5, ChronoUnit.MINUTES));
+        assertThat(wi.expiresAt()).isBefore(expectedApprox.plus(5, ChronoUnit.MINUTES));
     }
 
     @Test
     void create_storesTitleAndDescription() {
         WorkItem wi = service.create(basicRequest());
-        assertThat(wi.title).isEqualTo("Test item");
-        assertThat(wi.description).isEqualTo("Do something");
+        assertThat(wi.title()).isEqualTo("Test item");
+        assertThat(wi.description()).isEqualTo("Do something");
     }
 
     @Test
     void create_writesCreatedAuditEntry() {
-        WorkItem wi = service.create(basicRequest());
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        WorkItem   wi    = service.create(basicRequest());
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail).hasSize(1);
         assertThat(trail.get(0).event).isEqualTo("CREATED");
     }
@@ -356,7 +357,7 @@ class WorkItemServiceTest {
                 .expiresAt(explicit)
                 .build();
         WorkItem wi = service.create(req);
-        assertThat(wi.expiresAt).isEqualTo(explicit);
+        assertThat(wi.expiresAt()).isEqualTo(explicit);
     }
 
     @Test
@@ -368,7 +369,7 @@ class WorkItemServiceTest {
                 .createdBy("system")
                 .build();
         WorkItem wi = service.create(req);
-        assertThat(wi.candidateGroups).isEqualTo("team-a,team-b");
+        assertThat(wi.candidateGroups()).isEqualTo("team-a,team-b");
     }
 
     @Test
@@ -379,13 +380,13 @@ class WorkItemServiceTest {
                 .scope("casehubio/devtown/pr-review")
                 .build();
         WorkItem wi = service.create(req);
-        assertThat(wi.scope).isEqualTo("casehubio/devtown/pr-review");
+        assertThat(wi.scope()).isEqualTo("casehubio/devtown/pr-review");
     }
 
     @Test
     void create_withNullScope_workItemScopeIsNull() {
         WorkItem wi = service.create(basicRequest());
-        assertThat(wi.scope).isNull();
+        assertThat(wi.scope()).isNull();
     }
 
     // -------------------------------------------------------------------------
@@ -395,23 +396,23 @@ class WorkItemServiceTest {
     @Test
     void claim_transitionsPendingToAssigned() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.claim(wi.id, "alice");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.ASSIGNED);
+        wi = service.claim(wi.id(), "alice");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
     @Test
     void claim_setsAssignedAtAndAssigneeId() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.claim(wi.id, "alice");
-        assertThat(wi.assignedAt).isNotNull();
-        assertThat(wi.assigneeId).isEqualTo("alice");
+        wi = service.claim(wi.id(), "alice");
+        assertThat(wi.assignedAt()).isNotNull();
+        assertThat(wi.assigneeId()).isEqualTo("alice");
     }
 
     @Test
     void claim_writesAssignedAuditEntry() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        service.claim(wi.id(), "alice");
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail).hasSize(2);
         assertThat(trail.get(1).event).isEqualTo("ASSIGNED");
         assertThat(trail.get(1).actor).isEqualTo("alice");
@@ -424,25 +425,25 @@ class WorkItemServiceTest {
     @Test
     void start_transitionsAssignedToInProgress() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.claim(wi.id, "alice");
-        wi = service.start(wi.id, "alice");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.IN_PROGRESS);
+        wi = service.claim(wi.id(), "alice");
+        wi = service.start(wi.id(), "alice");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.IN_PROGRESS);
     }
 
     @Test
     void start_setsStartedAt() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.start(wi.id, "alice");
-        assertThat(wi.startedAt).isNotNull();
+        service.claim(wi.id(), "alice");
+        wi = service.start(wi.id(), "alice");
+        assertThat(wi.startedAt()).isNotNull();
     }
 
     @Test
     void start_writesStartedAuditEntry() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail.get(trail.size() - 1).event).isEqualTo("STARTED");
     }
 
@@ -453,29 +454,29 @@ class WorkItemServiceTest {
     @Test
     void complete_transitionsInProgressToCompleted() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        wi = service.complete(wi.id, "alice", "Done", null);
-        assertThat(wi.status).isEqualTo(WorkItemStatus.COMPLETED);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        wi = service.complete(wi.id(), "alice", "Done", null);
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.COMPLETED);
     }
 
     @Test
     void complete_setsCompletedAtAndResolution() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        wi = service.complete(wi.id, "alice", "Resolved successfully", null);
-        assertThat(wi.completedAt).isNotNull();
-        assertThat(wi.resolution).isEqualTo("Resolved successfully");
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        wi = service.complete(wi.id(), "alice", "Resolved successfully", null);
+        assertThat(wi.completedAt()).isNotNull();
+        assertThat(wi.resolution()).isEqualTo("Resolved successfully");
     }
 
     @Test
     void complete_writesCompletedAuditEntry() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "Done", null);
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "Done", null);
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail.get(trail.size() - 1).event).isEqualTo("COMPLETED");
     }
 
@@ -486,35 +487,35 @@ class WorkItemServiceTest {
     @Test
     void reject_fromInProgress_transitionsToRejected() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        wi = service.reject(wi.id, "alice", "Not my responsibility", null);
-        assertThat(wi.status).isEqualTo(WorkItemStatus.REJECTED);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        wi = service.reject(wi.id(), "alice", "Not my responsibility", null);
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.REJECTED);
     }
 
     @Test
     void reject_fromInProgress_setsCompletedAt() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        wi = service.reject(wi.id, "alice", "Out of scope", null);
-        assertThat(wi.completedAt).isNotNull();
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        wi = service.reject(wi.id(), "alice", "Out of scope", null);
+        assertThat(wi.completedAt()).isNotNull();
     }
 
     @Test
     void reject_fromAssigned_isValid() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.reject(wi.id, "alice", "Wrong team", null);
-        assertThat(wi.status).isEqualTo(WorkItemStatus.REJECTED);
+        service.claim(wi.id(), "alice");
+        wi = service.reject(wi.id(), "alice", "Wrong team", null);
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.REJECTED);
     }
 
     @Test
     void reject_writesRejectedAuditEntry() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.reject(wi.id, "alice", "Not applicable", null);
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        service.claim(wi.id(), "alice");
+        service.reject(wi.id(), "alice", "Not applicable", null);
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail.get(trail.size() - 1).event).isEqualTo("REJECTED");
     }
 
@@ -525,50 +526,50 @@ class WorkItemServiceTest {
     @Test
     void delegate_firstTime_setsOwnerToActor() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", null);
-        assertThat(wi.owner).isEqualTo("alice");
+        service.claim(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", null);
+        assertThat(wi.owner()).isEqualTo("alice");
     }
 
     @Test
     void delegate_setsNewAssigneeAndStatusDelegated() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", null);
-        assertThat(wi.assigneeId).isEqualTo("bob");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.DELEGATED);
+        service.claim(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", null);
+        assertThat(wi.assigneeId()).isEqualTo("bob");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.DELEGATED);
     }
 
     @Test
     void delegate_clearsClaimDeadline() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", null);
-        assertThat(wi.claimDeadline).isNull();
+        service.claim(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", null);
+        assertThat(wi.claimDeadline()).isNull();
     }
 
     @Test
     void delegate_clearsLastReturnedToPoolAt() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", null);
-        assertThat(wi.lastReturnedToPoolAt).isNull();
+        service.claim(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", null);
+        assertThat(wi.lastReturnedToPoolAt()).isNull();
     }
 
     @Test
     void delegate_withDeclineTargetDelegator_storesDeclineTarget() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", DeclineTarget.DELEGATOR);
-        assertThat(wi.delegationDeclineTarget).isEqualTo(DeclineTarget.DELEGATOR);
+        service.claim(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", DeclineTarget.DELEGATOR);
+        assertThat(wi.delegationDeclineTarget()).isEqualTo(DeclineTarget.DELEGATOR);
     }
 
     @Test
     void delegate_withNullDeclineTarget_leavesDeclineTargetNull() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", null);
-        assertThat(wi.delegationDeclineTarget).isNull();
+        service.claim(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", null);
+        assertThat(wi.delegationDeclineTarget()).isNull();
     }
 
     // delegate_setsDelegationStatePending removed — DelegationState dropped in #245;
@@ -577,41 +578,41 @@ class WorkItemServiceTest {
     @Test
     void delegate_addsDelegatorToDelegationChain() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", null);
-        assertThat(wi.delegationChain).contains("alice");
+        service.claim(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", null);
+        assertThat(wi.delegationChain()).contains("alice");
     }
 
     @Test
     void delegate_writesDelegatedAuditEntry() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", null);
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", null);
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail.get(trail.size() - 1).event).isEqualTo("DELEGATED");
     }
 
     @Test
     void delegate_secondTime_doesNotOverwriteOwner() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", null);
+        service.claim(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", null);
         // bob accepts then re-delegates
-        service.acceptDelegation(wi.id, "bob");
-        wi = service.delegate(wi.id, "bob", "carol", null);
-        assertThat(wi.owner).isEqualTo("alice");
+        service.acceptDelegation(wi.id(), "bob");
+        wi = service.delegate(wi.id(), "bob", "carol", null);
+        assertThat(wi.owner()).isEqualTo("alice");
     }
 
     @Test
     void delegate_secondTime_delegationChainGrows() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", null);
+        service.claim(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", null);
         // bob must accept the delegation before they can re-delegate
-        service.acceptDelegation(wi.id, "bob");
-        wi = service.delegate(wi.id, "bob", "carol", null);
-        assertThat(wi.delegationChain).contains("alice");
-        assertThat(wi.delegationChain).contains("bob");
+        service.acceptDelegation(wi.id(), "bob");
+        wi = service.delegate(wi.id(), "bob", "carol", null);
+        assertThat(wi.delegationChain()).contains("alice");
+        assertThat(wi.delegationChain()).contains("bob");
     }
 
     // -------------------------------------------------------------------------
@@ -621,37 +622,37 @@ class WorkItemServiceTest {
     @Test
     void acceptDelegation_transitionsToAssigned() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", null);
-        wi = service.acceptDelegation(wi.id, "bob");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.ASSIGNED);
-        assertThat(wi.assigneeId).isEqualTo("bob");
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", null);
+        wi = service.acceptDelegation(wi.id(), "bob");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.ASSIGNED);
+        assertThat(wi.assigneeId()).isEqualTo("bob");
     }
 
     @Test
     void acceptDelegation_setsAssignedAt() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", null);
-        wi = service.acceptDelegation(wi.id, "bob");
-        assertThat(wi.assignedAt).isNotNull();
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", null);
+        wi = service.acceptDelegation(wi.id(), "bob");
+        assertThat(wi.assignedAt()).isNotNull();
     }
 
     @Test
     void acceptDelegation_clearsDeclineTarget() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", DeclineTarget.DELEGATOR);
-        wi = service.acceptDelegation(wi.id, "bob");
-        assertThat(wi.delegationDeclineTarget).isNull();
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", DeclineTarget.DELEGATOR);
+        wi = service.acceptDelegation(wi.id(), "bob");
+        assertThat(wi.delegationDeclineTarget()).isNull();
     }
 
     @Test
     void acceptDelegation_wrongActor_throws() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", null);
-        final UUID id = wi.id;
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", null);
+        final UUID id = wi.id();
         assertThatThrownBy(() -> service.acceptDelegation(id, "charlie"))
                 .isInstanceOf(IllegalStateException.class);
     }
@@ -659,8 +660,8 @@ class WorkItemServiceTest {
     @Test
     void acceptDelegation_notDelegated_throws() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        final UUID id = wi.id;
+        service.claim(wi.id(), "alice");
+        final UUID id = wi.id();
         assertThatThrownBy(() -> service.acceptDelegation(id, "alice"))
                 .isInstanceOf(IllegalStateException.class);
     }
@@ -672,38 +673,38 @@ class WorkItemServiceTest {
     @Test
     void declineDelegation_poolPath_transitionsToPending() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", DeclineTarget.POOL);
-        wi = service.declineDelegation(wi.id, "bob");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING);
-        assertThat(wi.assigneeId).isNull();
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", DeclineTarget.POOL);
+        wi = service.declineDelegation(wi.id(), "bob");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(wi.assigneeId()).isNull();
     }
 
     @Test
     void declineDelegation_poolPath_setsLastReturnedToPoolAt() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", DeclineTarget.POOL);
-        wi = service.declineDelegation(wi.id, "bob");
-        assertThat(wi.lastReturnedToPoolAt).isNotNull();
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", DeclineTarget.POOL);
+        wi = service.declineDelegation(wi.id(), "bob");
+        assertThat(wi.lastReturnedToPoolAt()).isNotNull();
     }
 
     @Test
     void declineDelegation_poolPath_recomputesClaimDeadline() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", DeclineTarget.POOL);
-        wi = service.declineDelegation(wi.id, "bob");
-        assertThat(wi.claimDeadline).isNotNull();
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", DeclineTarget.POOL);
+        wi = service.declineDelegation(wi.id(), "bob");
+        assertThat(wi.claimDeadline()).isNotNull();
     }
 
     @Test
     void declineDelegation_poolPath_clearsDeclineTarget() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", DeclineTarget.POOL);
-        wi = service.declineDelegation(wi.id, "bob");
-        assertThat(wi.delegationDeclineTarget).isNull();
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", DeclineTarget.POOL);
+        wi = service.declineDelegation(wi.id(), "bob");
+        assertThat(wi.delegationDeclineTarget()).isNull();
     }
 
     // -------------------------------------------------------------------------
@@ -713,11 +714,11 @@ class WorkItemServiceTest {
     @Test
     void declineDelegation_delegatorPath_returnsToOriginalActor() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", DeclineTarget.DELEGATOR);
-        wi = service.declineDelegation(wi.id, "bob");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.ASSIGNED);
-        assertThat(wi.assigneeId).isEqualTo("alice");
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", DeclineTarget.DELEGATOR);
+        wi = service.declineDelegation(wi.id(), "bob");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.ASSIGNED);
+        assertThat(wi.assigneeId()).isEqualTo("alice");
     }
 
     @Test
@@ -725,24 +726,24 @@ class WorkItemServiceTest {
         // If DELEGATOR is requested but delegationChain is null, falls back to POOL.
         // Prevents NPE if a WorkItem reaches DELEGATED status through an unusual path.
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", DeclineTarget.DELEGATOR);
+        service.claim(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", DeclineTarget.DELEGATOR);
         // Clear chain to simulate unusual state
-        wi.delegationChain = null;
+        wi = wi.toBuilder().delegationChain(null).build();
         repo.put(wi);
-        wi = service.declineDelegation(wi.id, "bob");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING); // POOL fallback
-        assertThat(wi.assigneeId).isNull();
+        wi = service.declineDelegation(wi.id(), "bob");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.PENDING); // POOL fallback
+        assertThat(wi.assigneeId()).isNull();
     }
 
     @Test
     void declineDelegation_usesPreferenceDefaultWhenNoInstanceOverride() {
         // setUp wires empty preferences → POOL default
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", null); // no instance override
-        wi = service.declineDelegation(wi.id, "bob");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING); // POOL behaviour
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", null); // no instance override
+        wi = service.declineDelegation(wi.id(), "bob");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.PENDING); // POOL behaviour
     }
 
     // -------------------------------------------------------------------------
@@ -752,9 +753,9 @@ class WorkItemServiceTest {
     @Test
     void declineDelegation_wrongActor_throws() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", null);
-        final UUID id = wi.id;
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", null);
+        final UUID id = wi.id();
         assertThatThrownBy(() -> service.declineDelegation(id, "charlie"))
                 .isInstanceOf(IllegalStateException.class);
     }
@@ -762,8 +763,8 @@ class WorkItemServiceTest {
     @Test
     void declineDelegation_notDelegated_throws() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        final UUID id = wi.id;
+        service.claim(wi.id(), "alice");
+        final UUID id = wi.id();
         assertThatThrownBy(() -> service.declineDelegation(id, "alice"))
                 .isInstanceOf(IllegalStateException.class);
     }
@@ -775,25 +776,25 @@ class WorkItemServiceTest {
     @Test
     void release_transitionsAssignedToPending() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.release(wi.id, "alice");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING);
+        service.claim(wi.id(), "alice");
+        wi = service.release(wi.id(), "alice");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.PENDING);
     }
 
     @Test
     void release_clearsAssigneeId() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.release(wi.id, "alice");
-        assertThat(wi.assigneeId).isNull();
+        service.claim(wi.id(), "alice");
+        wi = service.release(wi.id(), "alice");
+        assertThat(wi.assigneeId()).isNull();
     }
 
     @Test
     void release_writesReleasedAuditEntry() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.release(wi.id, "alice");
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        service.claim(wi.id(), "alice");
+        service.release(wi.id(), "alice");
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail.get(trail.size() - 1).event).isEqualTo("RELEASED");
     }
 
@@ -804,36 +805,36 @@ class WorkItemServiceTest {
     @Test
     void suspend_fromAssigned_transitionsToSuspended() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.suspend(wi.id, "alice", "waiting for input");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.SUSPENDED);
+        service.claim(wi.id(), "alice");
+        wi = service.suspend(wi.id(), "alice", "waiting for input");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.SUSPENDED);
     }
 
     @Test
     void suspend_fromAssigned_setsSuspendedAtAndPriorStatus() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.suspend(wi.id, "alice", "blocked");
-        assertThat(wi.suspendedAt).isNotNull();
-        assertThat(wi.priorStatus).isEqualTo(WorkItemStatus.ASSIGNED);
+        service.claim(wi.id(), "alice");
+        wi = service.suspend(wi.id(), "alice", "blocked");
+        assertThat(wi.suspendedAt()).isNotNull();
+        assertThat(wi.priorStatus()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
     @Test
     void suspend_fromInProgress_setsPriorStatusInProgress() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        wi = service.suspend(wi.id, "alice", "waiting");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.SUSPENDED);
-        assertThat(wi.priorStatus).isEqualTo(WorkItemStatus.IN_PROGRESS);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        wi = service.suspend(wi.id(), "alice", "waiting");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.SUSPENDED);
+        assertThat(wi.priorStatus()).isEqualTo(WorkItemStatus.IN_PROGRESS);
     }
 
     @Test
     void suspend_writesSuspendedAuditEntry() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.suspend(wi.id, "alice", "blocked");
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        service.claim(wi.id(), "alice");
+        service.suspend(wi.id(), "alice", "blocked");
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail.get(trail.size() - 1).event).isEqualTo("SUSPENDED");
     }
 
@@ -844,39 +845,39 @@ class WorkItemServiceTest {
     @Test
     void resume_afterAssignedSuspend_returnsToAssigned() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.suspend(wi.id, "alice", "wait");
-        wi = service.resume(wi.id, "alice");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.ASSIGNED);
+        service.claim(wi.id(), "alice");
+        service.suspend(wi.id(), "alice", "wait");
+        wi = service.resume(wi.id(), "alice");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
     @Test
     void resume_clearsSuspendedAt() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.suspend(wi.id, "alice", "wait");
-        wi = service.resume(wi.id, "alice");
-        assertThat(wi.suspendedAt).isNull();
+        service.claim(wi.id(), "alice");
+        service.suspend(wi.id(), "alice", "wait");
+        wi = service.resume(wi.id(), "alice");
+        assertThat(wi.suspendedAt()).isNull();
     }
 
     @Test
     void resume_writesResumedAuditEntry() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.suspend(wi.id, "alice", "wait");
-        service.resume(wi.id, "alice");
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        service.claim(wi.id(), "alice");
+        service.suspend(wi.id(), "alice", "wait");
+        service.resume(wi.id(), "alice");
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail.get(trail.size() - 1).event).isEqualTo("RESUMED");
     }
 
     @Test
     void resume_afterInProgressSuspend_returnsToInProgress() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.suspend(wi.id, "alice", "wait");
-        wi = service.resume(wi.id, "alice");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.IN_PROGRESS);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.suspend(wi.id(), "alice", "wait");
+        wi = service.resume(wi.id(), "alice");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.IN_PROGRESS);
     }
 
     // -------------------------------------------------------------------------
@@ -886,49 +887,49 @@ class WorkItemServiceTest {
     @Test
     void cancel_fromPending_transitionsToCancelled() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.cancel(wi.id, "admin", "no longer needed");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.CANCELLED);
+        wi = service.cancel(wi.id(), "admin", "no longer needed");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.CANCELLED);
     }
 
     @Test
     void cancel_fromPending_setsCompletedAt() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.cancel(wi.id, "admin", "obsolete");
-        assertThat(wi.completedAt).isNotNull();
+        wi = service.cancel(wi.id(), "admin", "obsolete");
+        assertThat(wi.completedAt()).isNotNull();
     }
 
     @Test
     void cancel_writesCancelledAuditEntry() {
         WorkItem wi = service.create(basicRequest());
-        service.cancel(wi.id, "admin", "no longer needed");
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        service.cancel(wi.id(), "admin", "no longer needed");
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail.get(trail.size() - 1).event).isEqualTo("CANCELLED");
     }
 
     @Test
     void cancel_fromAssigned_transitionsToCancelled() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.cancel(wi.id, "admin", "revoked");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.CANCELLED);
+        service.claim(wi.id(), "alice");
+        wi = service.cancel(wi.id(), "admin", "revoked");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.CANCELLED);
     }
 
     @Test
     void cancel_fromInProgress_transitionsToCancelled() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        wi = service.cancel(wi.id, "admin", "project cancelled");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.CANCELLED);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        wi = service.cancel(wi.id(), "admin", "project cancelled");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.CANCELLED);
     }
 
     @Test
     void cancel_fromSuspended_transitionsToCancelled() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.suspend(wi.id, "alice", "blocked");
-        wi = service.cancel(wi.id, "admin", "giving up");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.CANCELLED);
+        service.claim(wi.id(), "alice");
+        service.suspend(wi.id(), "alice", "blocked");
+        wi = service.cancel(wi.id(), "admin", "giving up");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.CANCELLED);
     }
 
     // -------------------------------------------------------------------------
@@ -938,58 +939,58 @@ class WorkItemServiceTest {
     @Test
     void complete_pendingItem_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        assertThatThrownBy(() -> service.complete(wi.id, "alice", "done", null))
+        assertThatThrownBy(() -> service.complete(wi.id(), "alice", "done", null))
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void complete_completedItem_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
-        assertThatThrownBy(() -> service.complete(wi.id, "alice", "done again", null))
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
+        assertThatThrownBy(() -> service.complete(wi.id(), "alice", "done again", null))
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void start_pendingItem_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        assertThatThrownBy(() -> service.start(wi.id, "alice"))
+        assertThatThrownBy(() -> service.start(wi.id(), "alice"))
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void claim_assignedItem_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        assertThatThrownBy(() -> service.claim(wi.id, "bob"))
+        service.claim(wi.id(), "alice");
+        assertThatThrownBy(() -> service.claim(wi.id(), "bob"))
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void release_pendingItem_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        assertThatThrownBy(() -> service.release(wi.id, "alice"))
+        assertThatThrownBy(() -> service.release(wi.id(), "alice"))
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void suspend_completedItem_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
-        assertThatThrownBy(() -> service.suspend(wi.id, "alice", "wait"))
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
+        assertThatThrownBy(() -> service.suspend(wi.id(), "alice", "wait"))
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void resume_inProgressItem_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        assertThatThrownBy(() -> service.resume(wi.id, "alice"))
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        assertThatThrownBy(() -> service.resume(wi.id(), "alice"))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -1011,11 +1012,11 @@ class WorkItemServiceTest {
     @Test
     void auditTrail_afterFullHappyPath_hasFourEntriesInOrder() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
 
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail).hasSize(4);
         assertThat(trail.get(0).event).isEqualTo("CREATED");
         assertThat(trail.get(1).event).isEqualTo("ASSIGNED");
@@ -1026,9 +1027,9 @@ class WorkItemServiceTest {
     @Test
     void auditTrail_actorIsRecordedCorrectly() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
+        service.claim(wi.id(), "alice");
 
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         // CREATED actor comes from createdBy
         assertThat(trail.get(0).actor).isEqualTo("system");
         assertThat(trail.get(1).actor).isEqualTo("alice");
@@ -1041,11 +1042,11 @@ class WorkItemServiceTest {
     @Test
     void inbox_findsByAssignee() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
+        service.claim(wi.id(), "alice");
 
         List<WorkItem> inbox = repo.scan(
                 WorkItemQuery.inbox("alice", null, null).toBuilder().status(WorkItemStatus.ASSIGNED).build());
-        assertThat(inbox).extracting(w -> w.id).contains(wi.id);
+        assertThat(inbox).extracting(w -> w.id()).contains(wi.id());
     }
 
     @Test
@@ -1059,7 +1060,7 @@ class WorkItemServiceTest {
         WorkItem wi = service.create(req);
 
         List<WorkItem> inbox = repo.scan(WorkItemQuery.inbox(null, List.of("team-a"), null));
-        assertThat(inbox).extracting(w -> w.id).contains(wi.id);
+        assertThat(inbox).extracting(w -> w.id()).contains(wi.id());
     }
 
     @Test
@@ -1073,19 +1074,19 @@ class WorkItemServiceTest {
         WorkItem wi = service.create(req);
 
         List<WorkItem> inbox = repo.scan(WorkItemQuery.inbox("bob", null, null));
-        assertThat(inbox).extracting(w -> w.id).contains(wi.id);
+        assertThat(inbox).extracting(w -> w.id()).contains(wi.id());
     }
 
     @Test
     void inbox_completedItemNotReturnedWhenFilteringByPending() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
 
         List<WorkItem> inbox = repo.scan(
                 WorkItemQuery.inbox("alice", null, null).toBuilder().status(WorkItemStatus.PENDING).build());
-        assertThat(inbox).extracting(w -> w.id).doesNotContain(wi.id);
+        assertThat(inbox).extracting(w -> w.id()).doesNotContain(wi.id());
     }
 
     // -------------------------------------------------------------------------
@@ -1096,20 +1097,20 @@ class WorkItemServiceTest {
     @Test
     void delegate_fromInProgress_isValid() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", null);
-        assertThat(wi.status).isEqualTo(WorkItemStatus.DELEGATED);
-        assertThat(wi.assigneeId).isEqualTo("bob");
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", null);
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.DELEGATED);
+        assertThat(wi.assigneeId()).isEqualTo("bob");
     }
 
     // release from IN_PROGRESS is invalid
     @Test
     void release_fromInProgress_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        assertThatThrownBy(() -> service.release(wi.id, "alice"))
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        assertThatThrownBy(() -> service.release(wi.id(), "alice"))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -1117,7 +1118,7 @@ class WorkItemServiceTest {
     @Test
     void reject_fromPending_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        assertThatThrownBy(() -> service.reject(wi.id, "alice", "reason", null))
+        assertThatThrownBy(() -> service.reject(wi.id(), "alice", "reason", null))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -1125,9 +1126,9 @@ class WorkItemServiceTest {
     @Test
     void start_fromInProgress_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        assertThatThrownBy(() -> service.start(wi.id, "alice"))
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        assertThatThrownBy(() -> service.start(wi.id(), "alice"))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -1135,7 +1136,7 @@ class WorkItemServiceTest {
     @Test
     void suspend_fromPending_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        assertThatThrownBy(() -> service.suspend(wi.id, "alice", "reason"))
+        assertThatThrownBy(() -> service.suspend(wi.id(), "alice", "reason"))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -1143,9 +1144,9 @@ class WorkItemServiceTest {
     @Test
     void resume_fromInProgress_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        assertThatThrownBy(() -> service.resume(wi.id, "alice"))
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        assertThatThrownBy(() -> service.resume(wi.id(), "alice"))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -1153,10 +1154,10 @@ class WorkItemServiceTest {
     @Test
     void cancel_completedItem_throwsIllegalStateException() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
-        assertThatThrownBy(() -> service.cancel(wi.id, "admin", "reason"))
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
+        assertThatThrownBy(() -> service.cancel(wi.id(), "admin", "reason"))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -1164,10 +1165,10 @@ class WorkItemServiceTest {
     @Test
     void create_setsClaimDeadlineFromConfigDefault() {
         WorkItem wi = service.create(basicRequest());
-        assertThat(wi.claimDeadline).isNotNull();
+        assertThat(wi.claimDeadline()).isNotNull();
         Instant expectedApprox = Instant.now().plus(4, ChronoUnit.HOURS);
-        assertThat(wi.claimDeadline).isAfter(expectedApprox.minus(5, ChronoUnit.MINUTES));
-        assertThat(wi.claimDeadline).isBefore(expectedApprox.plus(5, ChronoUnit.MINUTES));
+        assertThat(wi.claimDeadline()).isAfter(expectedApprox.minus(5, ChronoUnit.MINUTES));
+        assertThat(wi.claimDeadline()).isBefore(expectedApprox.plus(5, ChronoUnit.MINUTES));
     }
 
     // -------------------------------------------------------------------------
@@ -1197,9 +1198,9 @@ class WorkItemServiceTest {
 
         var result = service.create(request);
 
-        assertThat(result.labels).hasSize(1);
-        assertThat(result.labels.get(0).path).isEqualTo("legal");
-        assertThat(result.labels.get(0).persistence).isEqualTo(LabelPersistence.MANUAL);
+        assertThat(result.labels()).hasSize(1);
+        assertThat(result.labels().get(0).path()).isEqualTo("legal");
+        assertThat(result.labels().get(0).persistence()).isEqualTo(LabelPersistence.MANUAL);
     }
 
     // -------------------------------------------------------------------------
@@ -1213,12 +1214,12 @@ class WorkItemServiceTest {
                 .createdBy("alice")
                 .build());
 
-        var updated = service.addLabel(created.id, "legal/contracts", "alice");
+        var updated = service.addLabel(created.id(), "legal/contracts", "alice");
 
-        assertThat(updated.labels).hasSize(1);
-        assertThat(updated.labels.get(0).path).isEqualTo("legal/contracts");
-        assertThat(updated.labels.get(0).persistence).isEqualTo(LabelPersistence.MANUAL);
-        assertThat(updated.labels.get(0).appliedBy).isEqualTo("alice");
+        assertThat(updated.labels()).hasSize(1);
+        assertThat(updated.labels().get(0).path()).isEqualTo("legal/contracts");
+        assertThat(updated.labels().get(0).persistence()).isEqualTo(LabelPersistence.MANUAL);
+        assertThat(updated.labels().get(0).appliedBy()).isEqualTo("alice");
     }
 
     @Test
@@ -1229,9 +1230,9 @@ class WorkItemServiceTest {
                 .labels(List.of(new WorkItemLabelRequest("legal/contracts", LabelPersistence.MANUAL, "alice")))
                 .build());
 
-        var updated = service.removeLabel(created.id, "legal/contracts");
+        var updated = service.removeLabel(created.id(), "legal/contracts");
 
-        assertThat(updated.labels).isEmpty();
+        assertThat(updated.labels()).isEmpty();
     }
 
     @Test
@@ -1241,7 +1242,7 @@ class WorkItemServiceTest {
                 .createdBy("alice")
                 .build());
 
-        assertThatThrownBy(() -> service.removeLabel(created.id, "nonexistent/label"))
+        assertThatThrownBy(() -> service.removeLabel(created.id(), "nonexistent/label"))
                 .isInstanceOf(LabelNotFoundException.class)
                 .hasMessageContaining("nonexistent/label");
     }
@@ -1358,7 +1359,7 @@ class WorkItemServiceTest {
                 mock(WorkItemTimerService.class));
         svc.lifecycleEmitter = mock(WorkItemLifecycleEmitter.class);
         WorkItem wi = svc.create(basicRequest());
-        assertThat(wi.claimDeadline).isNull();
+        assertThat(wi.claimDeadline()).isNull();
     }
 
     // -------------------------------------------------------------------------
@@ -1368,11 +1369,11 @@ class WorkItemServiceTest {
     @Test
     void findById_existingItem_returnsItem() {
         final WorkItem wi = service.create(basicRequest());
-        assertThat(service.findById(wi.id))
+        assertThat(service.findById(wi.id()))
                 .isPresent()
                 .get()
-                .extracting(w -> w.id)
-                .isEqualTo(wi.id);
+                .extracting(w -> w.id())
+                .isEqualTo(wi.id());
     }
 
     @Test
@@ -1387,66 +1388,66 @@ class WorkItemServiceTest {
     @Test
     void fault_fromPending_transitionsToFaulted() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.fault(wi.id, "system", "infrastructure failure");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+        wi = service.fault(wi.id(), "system", "infrastructure failure");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.FAULTED);
     }
 
     @Test
     void fault_fromAssigned_transitionsToFaulted() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.fault(wi.id, "system", "agent timeout");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+        service.claim(wi.id(), "alice");
+        wi = service.fault(wi.id(), "system", "agent timeout");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.FAULTED);
     }
 
     @Test
     void fault_fromInProgress_transitionsToFaulted() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        wi = service.fault(wi.id, "system", "context overflow");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        wi = service.fault(wi.id(), "system", "context overflow");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.FAULTED);
     }
 
     @Test
     void fault_fromSuspended_transitionsToFaulted() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.suspend(wi.id, "alice", "paused");
-        wi = service.fault(wi.id, "system", "host crashed");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+        service.claim(wi.id(), "alice");
+        service.suspend(wi.id(), "alice", "paused");
+        wi = service.fault(wi.id(), "system", "host crashed");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.FAULTED);
     }
 
     @Test
     void fault_fromDelegated_transitionsToFaulted() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", null);
-        wi = service.fault(wi.id, "system", "delegation target unreachable");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", null);
+        wi = service.fault(wi.id(), "system", "delegation target unreachable");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.FAULTED);
     }
 
     @Test
     void fault_setsCompletedAt() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.fault(wi.id, "system", "failure");
-        assertThat(wi.completedAt).isNotNull();
+        wi = service.fault(wi.id(), "system", "failure");
+        assertThat(wi.completedAt()).isNotNull();
     }
 
     @Test
     void fault_setsResolution() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.fault(wi.id, "system", "API timeout");
-        assertThat(wi.resolution).isEqualTo("API timeout");
+        wi = service.fault(wi.id(), "system", "API timeout");
+        assertThat(wi.resolution()).isEqualTo("API timeout");
     }
 
     @Test
     void fault_fromTerminal_throws() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
-        final UUID id = wi.id;
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
+        final UUID id = wi.id();
         assertThatThrownBy(() -> service.fault(id, "system", "too late"))
                 .isInstanceOf(IllegalStateException.class);
     }
@@ -1454,18 +1455,18 @@ class WorkItemServiceTest {
     @Test
     void faultFromSystem_fromPending_transitionsToFaulted() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.faultFromSystem(wi.id, "system", "infrastructure failure");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.FAULTED);
+        wi = service.faultFromSystem(wi.id(), "system", "infrastructure failure");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.FAULTED);
     }
 
     @Test
     void faultFromSystem_fromTerminal_returnsSilently() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
-        wi = service.faultFromSystem(wi.id, "system", "too late");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.COMPLETED);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
+        wi = service.faultFromSystem(wi.id(), "system", "too late");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.COMPLETED);
     }
 
     // -------------------------------------------------------------------------
@@ -1475,40 +1476,40 @@ class WorkItemServiceTest {
     @Test
     void obsolete_fromPending_transitionsToObsolete() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.obsolete(wi.id, "system", "case withdrawn");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.OBSOLETE);
+        wi = service.obsolete(wi.id(), "system", "case withdrawn");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.OBSOLETE);
     }
 
     @Test
     void obsolete_fromInProgress_transitionsToObsolete() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        wi = service.obsolete(wi.id, "system", "context changed");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.OBSOLETE);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        wi = service.obsolete(wi.id(), "system", "context changed");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.OBSOLETE);
     }
 
     @Test
     void obsolete_setsCompletedAt() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.obsolete(wi.id, "system", "superseded");
-        assertThat(wi.completedAt).isNotNull();
+        wi = service.obsolete(wi.id(), "system", "superseded");
+        assertThat(wi.completedAt()).isNotNull();
     }
 
     @Test
     void obsolete_setsResolution() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.obsolete(wi.id, "system", "trial withdrawn");
-        assertThat(wi.resolution).isEqualTo("trial withdrawn");
+        wi = service.obsolete(wi.id(), "system", "trial withdrawn");
+        assertThat(wi.resolution()).isEqualTo("trial withdrawn");
     }
 
     @Test
     void obsolete_fromTerminal_throws() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
-        final UUID id = wi.id;
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
+        final UUID id = wi.id();
         assertThatThrownBy(() -> service.obsolete(id, "system", "too late"))
                 .isInstanceOf(IllegalStateException.class);
     }
@@ -1516,18 +1517,18 @@ class WorkItemServiceTest {
     @Test
     void obsoleteFromSystem_fromPending_transitionsToObsolete() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.obsoleteFromSystem(wi.id, "system", "context changed");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.OBSOLETE);
+        wi = service.obsoleteFromSystem(wi.id(), "system", "context changed");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.OBSOLETE);
     }
 
     @Test
     void obsoleteFromSystem_fromTerminal_returnsSilently() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
-        wi = service.obsoleteFromSystem(wi.id, "system", "too late");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.COMPLETED);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
+        wi = service.obsoleteFromSystem(wi.id(), "system", "too late");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.COMPLETED);
     }
 
     // -------------------------------------------------------------------------
@@ -1537,18 +1538,18 @@ class WorkItemServiceTest {
     @Test
     void cancelFromSystem_fromPending_transitionsToCancelled() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.cancelFromSystem(wi.id, "system", "group policy");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.CANCELLED);
+        wi = service.cancelFromSystem(wi.id(), "system", "group policy");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.CANCELLED);
     }
 
     @Test
     void cancelFromSystem_fromTerminal_returnsSilently() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
-        wi = service.cancelFromSystem(wi.id, "system", "too late");
-        assertThat(wi.status).isEqualTo(WorkItemStatus.COMPLETED);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
+        wi = service.cancelFromSystem(wi.id(), "system", "too late");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.COMPLETED);
     }
 
     // -------------------------------------------------------------------------
@@ -1563,17 +1564,17 @@ class WorkItemServiceTest {
     void scan_byStatus_returnsMatchingItems() {
         service.create(basicRequest());
         WorkItem wi2 = service.create(basicRequest());
-        service.claim(wi2.id, "alice");
+        service.claim(wi2.id(), "alice");
 
         List<WorkItem> pending = service.scan(
                 WorkItemQuery.builder().status(WorkItemStatus.PENDING).build());
         assertThat(pending).hasSize(1);
-        assertThat(pending.get(0).status).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(pending.get(0).status()).isEqualTo(WorkItemStatus.PENDING);
 
         List<WorkItem> assigned = service.scan(
                 WorkItemQuery.builder().status(WorkItemStatus.ASSIGNED).build());
         assertThat(assigned).hasSize(1);
-        assertThat(assigned.get(0).id).isEqualTo(wi2.id);
+        assertThat(assigned.get(0).id()).isEqualTo(wi2.id());
     }
 
     @Test
@@ -1589,36 +1590,36 @@ class WorkItemServiceTest {
     @Test
     void scan_byTenancyId_filtersCorrectly() {
         WorkItem wi1 = service.create(basicRequest());
-        wi1.tenancyId = "tenant-A";
+        wi1 = wi1.toBuilder().tenancyId("tenant-A").build();
         repo.put(wi1);
 
         WorkItem wi2 = service.create(basicRequest());
-        wi2.tenancyId = "tenant-B";
+        wi2 = wi2.toBuilder().tenancyId("tenant-B").build();
         repo.put(wi2);
 
         List<WorkItem> tenantA = service.scan(
                 WorkItemQuery.builder().tenancyId("tenant-A").build());
         assertThat(tenantA).hasSize(1);
-        assertThat(tenantA.get(0).tenancyId).isEqualTo("tenant-A");
+        assertThat(tenantA.get(0).tenancyId()).isEqualTo("tenant-A");
 
         List<WorkItem> tenantB = service.scan(
                 WorkItemQuery.builder().tenancyId("tenant-B").build());
         assertThat(tenantB).hasSize(1);
-        assertThat(tenantB.get(0).tenancyId).isEqualTo("tenant-B");
+        assertThat(tenantB.get(0).tenancyId()).isEqualTo("tenant-B");
     }
 
     @Test
     void scan_byStatusAndType_combinesFilters() {
         WorkItem wi1 = service.create(WorkItemCreateRequest.builder()
-                .title("Legal review").types(List.of("legal")).createdBy("system").build());
+                                                                 .title("Legal review").types(List.of("legal")).createdBy("system").build());
         WorkItem wi2 = service.create(WorkItemCreateRequest.builder()
-                .title("Finance review").types(List.of("finance")).createdBy("system").build());
-        service.claim(wi2.id, "alice");
+                                                                 .title("Finance review").types(List.of("finance")).createdBy("system").build());
+        service.claim(wi2.id(), "alice");
 
         List<WorkItem> pendingLegal = service.scan(
                 WorkItemQuery.builder().status(WorkItemStatus.PENDING).type("legal").build());
         assertThat(pendingLegal).hasSize(1);
-        assertThat(pendingLegal.get(0).id).isEqualTo(wi1.id);
+        assertThat(pendingLegal.get(0).id()).isEqualTo(wi1.id());
     }
 
     @Test
@@ -1631,26 +1632,26 @@ class WorkItemServiceTest {
     @Test
     void updateDeadline_setsNewExpiresAt() {
         WorkItem wi          = service.create(basicRequest());
-        Instant  newDeadline = Instant.now().plus(48, ChronoUnit.HOURS);
-        WorkItem updated     = service.updateDeadline(wi.id, newDeadline, "admin");
-        assertThat(updated.expiresAt).isEqualTo(newDeadline);
+        Instant        newDeadline = Instant.now().plus(48, ChronoUnit.HOURS);
+        WorkItem updated     = service.updateDeadline(wi.id(), newDeadline, "admin");
+        assertThat(updated.expiresAt()).isEqualTo(newDeadline);
     }
 
     @Test
     void updateDeadline_allowsEarlierDeadline() {
         WorkItem wi      = service.create(basicRequest());
-        Instant  earlier = Instant.now().plus(1, ChronoUnit.HOURS);
-        WorkItem updated = service.updateDeadline(wi.id, earlier, "admin");
-        assertThat(updated.expiresAt).isEqualTo(earlier);
+        Instant        earlier = Instant.now().plus(1, ChronoUnit.HOURS);
+        WorkItem updated = service.updateDeadline(wi.id(), earlier, "admin");
+        assertThat(updated.expiresAt()).isEqualTo(earlier);
     }
 
     @Test
     void updateDeadline_writesAuditWithOldAndNew() {
         WorkItem wi          = service.create(basicRequest());
-        Instant  oldDeadline = wi.expiresAt;
+        Instant        oldDeadline = wi.expiresAt();
         Instant  newDeadline = Instant.now().plus(48, ChronoUnit.HOURS);
-        service.updateDeadline(wi.id, newDeadline, "admin");
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        service.updateDeadline(wi.id(), newDeadline, "admin");
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         AuditEntry deadlineEntry = trail.stream()
                                         .filter(a -> "DEADLINE_UPDATED".equals(a.event))
                                         .findFirst().orElseThrow();
@@ -1662,18 +1663,18 @@ class WorkItemServiceTest {
     @Test
     void updateDeadline_terminalStatus_throws() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "user1");
-        service.start(wi.id, "user1");
-        service.complete(wi.id, "user1", "done", null);
+        service.claim(wi.id(), "user1");
+        service.start(wi.id(), "user1");
+        service.complete(wi.id(), "user1", "done", null);
         Instant newDeadline = Instant.now().plus(48, ChronoUnit.HOURS);
-        assertThatThrownBy(() -> service.updateDeadline(wi.id, newDeadline, "admin"))
+        assertThatThrownBy(() -> service.updateDeadline(wi.id(), newDeadline, "admin"))
                 .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
     void updateDeadline_nullDeadline_throws() {
         WorkItem wi = service.create(basicRequest());
-        assertThatThrownBy(() -> service.updateDeadline(wi.id, null, "admin"))
+        assertThatThrownBy(() -> service.updateDeadline(wi.id(), null, "admin"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

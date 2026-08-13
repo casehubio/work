@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import io.casehub.work.runtime.model.WorkItemEntity;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -18,22 +19,21 @@ import io.casehub.platform.api.view.SubjectViewQuery;
 import io.casehub.platform.api.view.SubjectViewSpec;
 import io.casehub.platform.view.jpa.LabelPatternPredicates;
 import io.casehub.work.api.WorkItemSummary;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLabel;
+import io.casehub.work.runtime.model.WorkItemLabelEntity;
 import io.casehub.work.runtime.service.SummaryQueryBuilder;
 
 @ApplicationScoped
-public class WorkItemViewQuery implements SubjectViewQuery<WorkItem> {
+public class WorkItemViewQuery implements SubjectViewQuery<WorkItemEntity> {
 
     @Inject
     EntityManager em;
 
     @Override
-    public List<WorkItem> findByView(SubjectViewSpec view) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<WorkItem> cq = cb.createQuery(WorkItem.class);
-        Root<WorkItem> root = cq.from(WorkItem.class);
-        Join<WorkItem, WorkItemLabel> labelJoin = root.join("labels");
+    public List<WorkItemEntity> findByView(SubjectViewSpec view) {
+        CriteriaBuilder                     cb        = em.getCriteriaBuilder();
+        CriteriaQuery<WorkItemEntity>       cq        = cb.createQuery(WorkItemEntity.class);
+        Root<WorkItemEntity>                      root      = cq.from(WorkItemEntity.class);
+        Join<WorkItemEntity, WorkItemLabelEntity> labelJoin = root.join("labels");
 
         cq.where(cb.and(
                 LabelPatternPredicates.toPredicate(cb, labelJoin.get("path"), view.labelPattern()),
@@ -45,11 +45,11 @@ public class WorkItemViewQuery implements SubjectViewQuery<WorkItem> {
     }
 
     @Override
-    public List<WorkItem> findByView(SubjectViewSpec view, int offset, int limit) {
-        CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<WorkItem> cq = cb.createQuery(WorkItem.class);
-        Root<WorkItem> root = cq.from(WorkItem.class);
-        Join<WorkItem, WorkItemLabel> labelJoin = root.join("labels");
+    public List<WorkItemEntity> findByView(SubjectViewSpec view, int offset, int limit) {
+        CriteriaBuilder                     cb        = em.getCriteriaBuilder();
+        CriteriaQuery<WorkItemEntity>       cq        = cb.createQuery(WorkItemEntity.class);
+        Root<WorkItemEntity>                      root      = cq.from(WorkItemEntity.class);
+        Join<WorkItemEntity, WorkItemLabelEntity> labelJoin = root.join("labels");
 
         cq.where(cb.and(
                 LabelPatternPredicates.toPredicate(cb, labelJoin.get("path"), view.labelPattern()),
@@ -58,7 +58,7 @@ public class WorkItemViewQuery implements SubjectViewQuery<WorkItem> {
 
         applySorting(cb, cq, root, view);
 
-        TypedQuery<WorkItem> query = em.createQuery(cq);
+        TypedQuery<WorkItemEntity> query = em.createQuery(cq);
         query.setFirstResult(offset);
         query.setMaxResults(limit);
         return query.getResultList();
@@ -67,9 +67,9 @@ public class WorkItemViewQuery implements SubjectViewQuery<WorkItem> {
     @Override
     public long countByView(SubjectViewSpec view) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
-        CriteriaQuery<Long> cq = cb.createQuery(Long.class);
-        Root<WorkItem> root = cq.from(WorkItem.class);
-        Join<WorkItem, WorkItemLabel> labelJoin = root.join("labels");
+        CriteriaQuery<Long>                 cq        = cb.createQuery(Long.class);
+        Root<WorkItemEntity>                      root      = cq.from(WorkItemEntity.class);
+        Join<WorkItemEntity, WorkItemLabelEntity> labelJoin = root.join("labels");
 
         cq.select(cb.countDistinct(root));
         cq.where(cb.and(
@@ -105,8 +105,8 @@ public class WorkItemViewQuery implements SubjectViewQuery<WorkItem> {
         return "l.path = :labelPattern";
     }
 
-    private void applySorting(CriteriaBuilder cb, CriteriaQuery<WorkItem> cq,
-            Root<WorkItem> root, SubjectViewSpec view) {
+    private void applySorting(CriteriaBuilder cb, CriteriaQuery<WorkItemEntity> cq,
+                              Root<WorkItemEntity> root, SubjectViewSpec view) {
         if (view.sortField() != null) {
             cq.orderBy("DESC".equalsIgnoreCase(view.sortDirection())
                     ? cb.desc(root.get(view.sortField()))

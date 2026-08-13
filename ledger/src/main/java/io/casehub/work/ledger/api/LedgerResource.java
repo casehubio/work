@@ -26,7 +26,7 @@ import io.casehub.work.ledger.api.dto.LedgerEntryResponse;
 import io.casehub.work.ledger.api.dto.ProvenanceRequest;
 import io.casehub.work.ledger.model.WorkItemLedgerEntry;
 import io.casehub.work.ledger.repository.WorkItemLedgerEntryRepository;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemNotFoundException;
 
 /**

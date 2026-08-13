@@ -114,7 +114,7 @@ public interface EscalationPolicy {
     void escalate(WorkLifecycleEvent event);
 }
 ```
-Implementations stay in quarkus-work and downcast `event.source()` to `WorkItem`.
+Implementations stay in quarkus-work and downcast `event.source()` to `WorkItemEntity`.
 
 ---
 
@@ -183,16 +183,16 @@ Flyway migration `V3001__filter_rules.sql` moves from `quarkus-work-filter-regis
 Implements the three abstract methods:
 - `eventType()` — maps audit event string to `WorkEventType`
 - `context()` — calls `WorkItemContextBuilder.toMap(workItem)` and returns the result
-- `source()` — returns the `WorkItem` entity
+- `source()` — returns the `WorkItemEntity` entity
 
 **`WorkItemContextBuilder`** — new utility class in `quarkus-work`. Has the static
 `toMap(WorkItem)` method currently on `JexlConditionEvaluator` in filter-registry. This avoids a
-circular dependency: `JexlConditionEvaluator` in `quarkus-work-core` cannot reference `WorkItem`
+circular dependency: `JexlConditionEvaluator` in `quarkus-work-core` cannot reference `WorkItemEntity`
 (which lives in `quarkus-work`), so the map-building logic stays in `quarkus-work`.
 The drift-protection test (`toMap_containsAllPublicNonStaticWorkItemFields`) moves here too.
 
 **`JpaWorkloadProvider implements WorkloadProvider`** (`@ApplicationScoped`) — counts active
-(`ASSIGNED | IN_PROGRESS | SUSPENDED`) `WorkItem` entities from the JPA store for a given worker ID.
+(`ASSIGNED | IN_PROGRESS | SUSPENDED`) `WorkItemEntity` entities from the JPA store for a given worker ID.
 
 ### Modified types
 
@@ -211,12 +211,12 @@ assign(WorkItem, AssignmentTrigger):
 the interface from `quarkus-work-api`.
 
 **`NotifyEscalationPolicy`, `AutoRejectEscalationPolicy`, `ReassignEscalationPolicy`** — implement
-`EscalationPolicy.escalate(WorkLifecycleEvent)` and downcast `event.source()` to `WorkItem`.
+`EscalationPolicy.escalate(WorkLifecycleEvent)` and downcast `event.source()` to `WorkItemEntity`.
 
 ### Filter actions (stay in quarkus-work)
 
 `ApplyLabelAction`, `OverrideCandidateGroupsAction`, `SetPriorityAction` — implement
-`FilterAction` from `quarkus-work-core`, downcast `event.source()` to `WorkItem`.
+`FilterAction` from `quarkus-work-core`, downcast `event.source()` to `WorkItemEntity`.
 
 ### Dependency changes
 

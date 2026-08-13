@@ -17,7 +17,7 @@ import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.LabelDefinition;
 import io.casehub.work.runtime.model.LabelVocabulary;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.repository.AuditEntryStore;
@@ -135,19 +135,19 @@ public class VocabularyScenario {
                 .build();
 
         workItemService.create(sickLeaveRequest);
-        steps.add(new StepLog(3, description3, annualLeaveWi.id));
+        steps.add(new StepLog(3, description3, annualLeaveWi.id()));
 
         // Step 4: hr-manager claims and approves the annual leave request
         final String description4 = "hr-manager claims and approves the annual leave request";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 4, total, description4);
-        workItemService.claim(annualLeaveWi.id, ACTOR_MANAGER);
-        workItemService.start(annualLeaveWi.id, ACTOR_MANAGER);
-        workItemService.complete(annualLeaveWi.id, ACTOR_MANAGER,
+        workItemService.claim(annualLeaveWi.id(), ACTOR_MANAGER);
+        workItemService.start(annualLeaveWi.id(), ACTOR_MANAGER);
+        workItemService.complete(annualLeaveWi.id(), ACTOR_MANAGER,
                 "{\"approved\": true, \"comment\": \"Sufficient leave balance; no conflicts\"}", null);
-        steps.add(new StepLog(4, description4, annualLeaveWi.id));
+        steps.add(new StepLog(4, description4, annualLeaveWi.id()));
 
         // Collect audit trail for the annual leave WorkItem
-        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(annualLeaveWi.id);
+        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(annualLeaveWi.id());
         final List<AuditEntryResponse> auditTrail = auditEntries.stream()
                 .map(a -> new AuditEntryResponse(a.id, a.event, a.actor, a.detail, a.occurredAt))
                 .toList();
@@ -156,7 +156,7 @@ public class VocabularyScenario {
                 SCENARIO_ID,
                 steps,
                 registered.size(),
-                annualLeaveWi.id,
+                annualLeaveWi.id(),
                 auditTrail);
     }
 }

@@ -7,8 +7,8 @@ import jakarta.inject.Inject;
 
 import io.casehub.work.api.spi.WorkloadProvider;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 
 /**
  * WorkloadProvider backed by the JPA WorkItemStore.
@@ -42,7 +42,7 @@ public class JpaWorkloadProvider implements WorkloadProvider {
                 .statusIn(ACTIVE_STATUSES)
                 .build())
                 .stream()
-                .filter(wi -> workerId.equals(wi.assigneeId))
+                .filter(wi -> workerId.equals(wi.assigneeId()))
                 .count();
     }
 }

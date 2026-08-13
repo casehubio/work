@@ -8,7 +8,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
@@ -27,7 +27,7 @@ class WorkItemTemplateOutcomeTest {
     @Transactional
     void clearTemplates() {
         AuditEntry.deleteAll();
-        WorkItem.deleteAll();
+        WorkItemEntity.deleteAll();
         WorkItemTemplate.deleteAll();
     }
 

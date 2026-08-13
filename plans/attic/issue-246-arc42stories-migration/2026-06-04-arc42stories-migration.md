@@ -426,21 +426,28 @@ Write the pointer table referencing protocols. Then write the 4 anti-patterns in
 
 ### Anti-Patterns
 
-**Symptom:** Augmentation fails with `UnsatisfiedResolutionException` for `PreferenceProvider` while all `@QuarkusTest` tests pass.
-**Cause:** `casehub-platform` mock module added as `<scope>test</scope>` in a module that declares `<goal>build</goal>` in the quarkus-maven-plugin. Production augmentation validates CDI without the test classpath — `MockPreferenceProvider @DefaultBean` is invisible at augmentation time.
-**Fix:** Use `<scope>runtime</scope>` for `casehub-platform` in modules that run `quarkus:build`. Use `<scope>test</scope>` in library and extension modules that do not run `quarkus:build`.
+**Symptom:** Augmentation fails with `UnsatisfiedResolutionException` for `PreferenceProvider` while all `@QuarkusTest`
+tests pass. **Cause:** `casehub-platform` mock module added as `<scope>test</scope>` in a module that declares
+`<goal>build</goal>` in the quarkus-maven-plugin. Production augmentation validates CDI without the test classpath —
+`MockPreferenceProvider @DefaultBean` is invisible at augmentation time. **Fix:** Use `<scope>runtime</scope>` for
+`casehub-platform` in modules that run `quarkus:build`. Use `<scope>test</scope>` in library and extension modules that
+do not run `quarkus:build`.
 
 **Symptom:** After adding a new non-terminal WorkItem status, the expiry scheduler silently skips items in that status.
-**Cause:** `WorkItemQuery.expired()` and `WorkItemQuery.claimExpired()` filter on explicit status sets. A new active status not in those sets is invisible to `ExpiryCleanupJob`.
-**Fix:** Whenever adding a new non-terminal `WorkItemStatus` value, audit three places atomically: `WorkItemStatus.isActive()`, `WorkItemStatus.isTerminal()`, and the status predicates in `WorkItemQuery.expired()` / `WorkItemQuery.claimExpired()`.
+**Cause:** `WorkItemQuery.expired()` and `WorkItemQuery.claimExpired()` filter on explicit status sets. A new active
+status not in those sets is invisible to `ExpiryCleanupJob`. **Fix:** Whenever adding a new non-terminal
+`WorkItemStatus` value, audit three places atomically: `WorkItemStatus.isActive()`, `WorkItemStatus.isTerminal()`, and
+the status predicates in `WorkItemQuery.expired()` / `WorkItemQuery.claimExpired()`.
 
-**Symptom:** SSE clients receive events for WorkItems whose creating transaction rolled back.
-**Cause:** A `WorkItemEventBroadcaster` observer fires during the transaction (before commit). If the transaction rolls back the event was already dispatched.
-**Fix:** Use `@Observes(during = TransactionPhase.AFTER_SUCCESS)` in all broadcaster observers. Never dispatch from `@Observes` without `TransactionPhase.AFTER_SUCCESS`.
+**Symptom:** SSE clients receive events for WorkItems whose creating transaction rolled back. **Cause:** A
+`WorkItemEventBroadcaster` observer fires during the transaction (before commit). If the transaction rolls back the
+event was already dispatched. **Fix:** Use `@Observes(during = TransactionPhase.AFTER_SUCCESS)` in all broadcaster
+observers. Never dispatch from `@Observes` without `TransactionPhase.AFTER_SUCCESS`.
 
 **Symptom:** Two concurrent claim requests both succeed; the same WorkItem is assigned to two different actors.
-**Cause:** `WorkItemStore.put()` without optimistic locking allows concurrent writers on different cluster nodes to overwrite each other's state.
-**Fix:** `WorkItem` carries `@Version long version`. Concurrent claim produces `OptimisticLockException` → `WorkItemResource` catches it and returns HTTP 409 Conflict. The second claimer retries.
+**Cause:** `WorkItemStore.put()` without optimistic locking allows concurrent writers on different cluster nodes to
+overwrite each other's state. **Fix:** `WorkItemEntity` carries `@Version long version`. Concurrent claim produces
+`OptimisticLockException` → `WorkItemResource` catches it and returns HTTP 409 Conflict. The second claimer retries.
 ```
 
 - [ ] **Step 2: Commit**

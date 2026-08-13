@@ -2,7 +2,7 @@ package io.casehub.work.runtime.migration;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
@@ -31,7 +31,7 @@ class CloudEventIdempotencyIndexTest {
         assertThat(workItemService.findByCallerRef(callerRef)).isPresent();
 
         final long countBefore = workItemStore.scanAll().stream()
-                .filter(wi -> callerRef.equals(wi.callerRef))
+                .filter(wi -> callerRef.equals(wi.callerRef()))
                 .count();
         assertThat(countBefore).isEqualTo(1);
     }

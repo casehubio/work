@@ -9,7 +9,7 @@ import org.jboss.logging.Logger;
 import io.casehub.work.ai.repository.EscalationSummaryStore;
 import io.casehub.work.api.WorkEventType;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 
 /**
  * CDI observer that generates an LLM escalation summary when a WorkItem
@@ -44,7 +44,7 @@ public class EscalationSummaryObserver {
         try {
             final WorkItem wi = event.workItem();
             if (wi != null) {
-                summaryStore.put(summaryService.buildSummary(wi.id, type.name()));
+                summaryStore.put(summaryService.buildSummary(wi.id(), type.name()));
             }
         } catch (final Exception e) {
             LOG.warnf("Failed to generate escalation summary for event %s: %s",

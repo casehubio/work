@@ -319,7 +319,7 @@ C4Deployment
 
 **Symptom:** Two concurrent claim requests on different cluster nodes both succeed — the same WorkItem is assigned to two actors.
 **Cause:** `WorkItemStore.put()` without optimistic locking allows concurrent writers to overwrite each other's state.
-**Fix:** `WorkItem` carries `@Version long version`; concurrent claim produces `OptimisticLockException` which `WorkItemResource` maps to HTTP 409 Conflict. The second claimer must retry claim.
+**Fix:** `WorkItemEntity` carries `@Version long version`; concurrent claim produces `OptimisticLockException` which `WorkItemResource` maps to HTTP 409 Conflict. The second claimer must retry claim.
 
 ---
 
@@ -506,7 +506,7 @@ flowchart LR
 **Delivered:** 2026-04-14 | **Issues:** #92
 
 **What this delivers**
-Before this chapter, no human task primitive existed in the casehub-work codebase. After: the `WorkItem` entity with a 10-status lifecycle, `AuditEntry` persistence, `WorkItemStore` SPI, `WorkItemService` enforcing all valid transitions, and `InMemoryWorkItemStore` in the testing module are all in place. Any Quarkus application adding `casehub-work` gets a working task inbox backed by its configured datasource.
+Before this chapter, no human task primitive existed in the casehub-work codebase. After: the `WorkItemEntity` entity with a 10-status lifecycle, `AuditEntry` persistence, `WorkItemStore` SPI, `WorkItemService` enforcing all valid transitions, and `InMemoryWorkItemStore` in the testing module are all in place. Any Quarkus application adding `casehub-work` gets a working task inbox backed by its configured datasource.
 
 **Accountability gaps closed**
 - No structured task audit trail → `AuditEntry` appended on every status transition via `WorkItemService`
@@ -727,7 +727,7 @@ Before this chapter, audit entries were queryable only per WorkItem via its deta
 **Delivered:** 2026-04-24 | **Issues:** #92
 
 **What this delivers**
-Before this chapter, parent–child WorkItem relationships had no structured representation and batch creation had no idempotency guarantee. After: `SpawnPort` SPI in `casehub-work-api` and `WorkItemSpawnService` implement idempotent batch creation; `WorkItemSpawnGroup` tracks group status and `completedCount`; the `callerRef` field on `WorkItem` carries an opaque routing key (V17 migration) echoed on every lifecycle event, enabling engine restart recovery.
+Before this chapter, parent–child WorkItem relationships had no structured representation and batch creation had no idempotency guarantee. After: `SpawnPort` SPI in `casehub-work-api` and `WorkItemSpawnService` implement idempotent batch creation; `WorkItemSpawnGroup` tracks group status and `completedCount`; the `callerRef` field on `WorkItemEntity` carries an opaque routing key (V17 migration) echoed on every lifecycle event, enabling engine restart recovery.
 
 **Accountability gaps closed**
 - None (spawn infrastructure — callerRef is a routing key, not an accountability mechanism)
@@ -745,7 +745,7 @@ Before this chapter, parent–child WorkItem relationships had no structured rep
 **Delivered:** 2026-04-20 | **Issues:** #92
 
 **What this delivers**
-Before this chapter, concurrent claim attempts from different cluster nodes could race and produce duplicate assignments with no detection. After: `@Version long version` on `WorkItem` makes concurrent claim atomic; a second claimer receives `OptimisticLockException`, which `WorkItemResource` maps to HTTP 409 Conflict; `@Version` on `WorkItemSchedule` with `REQUIRES_NEW` prevents schedule double-fire across cluster nodes.
+Before this chapter, concurrent claim attempts from different cluster nodes could race and produce duplicate assignments with no detection. After: `@Version long version` on `WorkItemEntity` makes concurrent claim atomic; a second claimer receives `OptimisticLockException`, which `WorkItemResource` maps to HTTP 409 Conflict; `@Version` on `WorkItemSchedule` with `REQUIRES_NEW` prevents schedule double-fire across cluster nodes.
 
 **Accountability gaps closed**
 - Silent double-claim with no detection → `@Version` OCC produces 409 Conflict; second claimer retries transparently
@@ -1019,7 +1019,7 @@ Before this chapter, completion intent lived only in `WorkItem.resolution` JSON,
 **Delivered:** 2026-05-17 | **Issues:** Phase 22, #170
 
 **What this delivers**
-Before this chapter, JSON Schema lived in a standalone `WorkItemFormSchema` entity decoupled from the `WorkItem` — resolution validation required an external lookup. After: `WorkItemTemplate.inputDataSchema` and `outputDataSchema` (JSON Schema draft-07 TEXT) are validated at instantiation and completion by `FormSchemaValidationService`; both schemas snapshot onto `WorkItem` at creation so each item governs its own validation without external lookup. `WorkItemFormSchema` entity and its CRUD REST resource are deleted; schema discovery migrates to `GET /workitem-templates/{id}`. Migrations: V23 (schema columns on template), V24 (snapshot columns on `work_item`), V25 (drop `work_item_form_schema` table). This chapter supersedes C9.
+Before this chapter, JSON Schema lived in a standalone `WorkItemFormSchema` entity decoupled from the `WorkItemEntity` — resolution validation required an external lookup. After: `WorkItemTemplate.inputDataSchema` and `outputDataSchema` (JSON Schema draft-07 TEXT) are validated at instantiation and completion by `FormSchemaValidationService`; both schemas snapshot onto `WorkItemEntity` at creation so each item governs its own validation without external lookup. `WorkItemFormSchema` entity and its CRUD REST resource are deleted; schema discovery migrates to `GET /workitem-templates/{id}`. Migrations: V23 (schema columns on template), V24 (snapshot columns on `work_item`), V25 (drop `work_item_form_schema` table). This chapter supersedes C9.
 
 **Accountability gaps closed**
 - None — consolidation and correctness fix
@@ -1038,7 +1038,7 @@ Before this chapter, JSON Schema lived in a standalone `WorkItemFormSchema` enti
 **Delivered:** 2026-05-18 (extended through 2026-05-31) | **Issues:** Phase 23, #171, #186, #192, #220, ADR-0005
 
 **What this delivers**
-Before this chapter, excluded actors could claim or be assigned to WorkItems they had a conflict of interest in — no enforcement existed at any assignment path. After: `ExclusionPolicy` SPI in `casehub-work-api` exposes `check(userId, excludedUsers, excludedGroups)` returning `PolicyDecision` with a denial reason; `CommaSeparatedExclusionPolicy` ships as `@DefaultBean`; `excludedUsers` (TEXT CSV) on `WorkItemTemplate` and `WorkItem` carries direct exclusions; `excludedGroups` (TEXT CSV) on template is expanded to actor IDs via `GroupMembershipProvider` at instantiation (V33, ADR-0005); enforcement covers all five assignment paths: claim, create, assign, delegate, and auto-assignment. `BlockedAttemptAuditService` writes `CLAIM_DENIED`, `DELEGATE_DENIED`, `CREATE_DENIED` via `@Transactional(REQUIRES_NEW)` so the audit entry commits even when the outer transaction rolls back; V32 drops the FK to allow orphaned audit entries.
+Before this chapter, excluded actors could claim or be assigned to WorkItems they had a conflict of interest in — no enforcement existed at any assignment path. After: `ExclusionPolicy` SPI in `casehub-work-api` exposes `check(userId, excludedUsers, excludedGroups)` returning `PolicyDecision` with a denial reason; `CommaSeparatedExclusionPolicy` ships as `@DefaultBean`; `excludedUsers` (TEXT CSV) on `WorkItemTemplate` and `WorkItemEntity` carries direct exclusions; `excludedGroups` (TEXT CSV) on template is expanded to actor IDs via `GroupMembershipProvider` at instantiation (V33, ADR-0005); enforcement covers all five assignment paths: claim, create, assign, delegate, and auto-assignment. `BlockedAttemptAuditService` writes `CLAIM_DENIED`, `DELEGATE_DENIED`, `CREATE_DENIED` via `@Transactional(REQUIRES_NEW)` so the audit entry commits even when the outer transaction rolls back; V32 drops the FK to allow orphaned audit entries.
 
 **Accountability gaps closed**
 - No conflict-of-interest audit trail → `CLAIM_DENIED`/`DELEGATE_DENIED`/`CREATE_DENIED` written independently of the rejected transaction
@@ -1199,13 +1199,13 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 
 #### Key Files
 
-`runtime/src/main/java/io/casehub/work/runtime/model/WorkItem.java` — JPA entity representing a unit of work requiring human attention; holds lifecycle state, assignment, priority, expiry, and versioning fields.
+`runtime/src/main/java/io/casehub/work/runtime/model/WorkItemEntity.java` — JPA entity (renamed from `WorkItem`); holds lifecycle state, assignment, priority, expiry, and versioning fields. The SPI boundary type is `api/src/main/java/io/casehub/work/api/WorkItem.java` (immutable record with builder).
 
 `runtime/src/main/java/io/casehub/work/runtime/model/WorkItemStatus.java` — enum of all 10 lifecycle statuses; provides `isTerminal()` and `isActive()` predicates used by query filters and scheduler guards.
 
 `runtime/src/main/java/io/casehub/work/runtime/model/AuditEntry.java` — append-only JPA entity recording each lifecycle event with actor, event type, timestamp, and optional detail JSON; never updated after insert.
 
-`runtime/src/main/java/io/casehub/work/runtime/repository/WorkItemStore.java` — storage SPI interface defining `put`, `get`, `scan(WorkItemQuery)`, and default methods; no JPA types leak through the interface.
+`api/src/main/java/io/casehub/work/api/spi/WorkItemStore.java` — storage SPI interface defining `put`, `get`, `scan(WorkItemQuery)`, and default methods; no JPA types leak through the interface.
 
 `runtime/src/main/java/io/casehub/work/runtime/repository/jpa/JpaWorkItemStore.java` — `@ApplicationScoped` Panache-backed implementation of `WorkItemStore`; translates `WorkItemQuery` to JPQL and handles indexed callerRef lookup.
 
@@ -1215,7 +1215,7 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 
 `api/src/main/java/io/casehub/work/api/Outcome.java` — 3-field record `(name, displayName, condition)` where `condition` is a nullable JEXL expression; snapshotted onto `WorkItem.permittedOutcomes` at instantiation as full objects, not just name strings.
 
-`runtime/src/main/java/io/casehub/work/runtime/repository/WorkItemQuery.java` — composable value object carrying scan criteria; assignment fields combine with OR, all other fields combine with AND; backends translate to their native query language.
+`api/src/main/java/io/casehub/work/api/WorkItemQuery.java` — composable value object carrying scan criteria; assignment fields combine with OR, all other fields combine with AND; backends translate to their native query language.
 
 `api/src/main/java/io/casehub/work/api/Capability.java` — record type enforcing kebab-case format at construction; throws `MalformedCapabilityException` on violation so format errors fail fast at system boundaries.
 
@@ -1225,7 +1225,7 @@ Not closed here: REST surface (L2), lifecycle scheduling (L3), label routing (L4
 
 **`@PrePersist` UUID generation.** `WorkItem.id` is set in `@PrePersist` — not at construction time. This allows `BlockedAttemptAuditService` to pre-generate an ID before the exclusion check, recording `CREATE_DENIED` at a known ID even when the WorkItem never reaches the `work_item` table.
 
-**`@Version long version` on `WorkItem`.** Provides optimistic concurrency control — concurrent claim from two nodes produces `OptimisticLockException`, mapped to HTTP 409 Conflict by `WorkItemResource`. The second claimer must retry; no explicit locking is used.
+**`@Version long version` on `WorkItemEntity`.** Provides optimistic concurrency control — concurrent claim from two nodes produces `OptimisticLockException`, mapped to HTTP 409 Conflict by `WorkItemResource`. The second claimer must retry; no explicit locking is used.
 
 **Flyway at `classpath:db/work/migration/`.** All runtime module migrations (V1–V36) live at this path per PP-20260525-607b33. Consumers must set `quarkus.flyway.locations=classpath:db/work/migration` explicitly — Quarkus has no auto-registration mechanism for extension migrations.
 
@@ -1317,7 +1317,7 @@ Not closed here: SLA breach (L3), label routing (L4), ledger recording (L5).
 - `runtime/src/main/java/io/casehub/work/runtime/api/CreateWorkItemRequest.java` — record DTO for HTTP request body; flat string fields decoded by the resource before service call
 - `runtime/src/main/java/io/casehub/work/runtime/model/WorkItemCreateRequest.java` — enforced-builder domain request object; private constructor, all required fields explicit and named
 - `runtime/src/main/java/io/casehub/work/runtime/api/WorkItemResponse.java` — record DTO returned from every WorkItem read endpoint; maps domain fields to JSON-serialisable types
-- `runtime/src/main/java/io/casehub/work/runtime/api/WorkItemMapper.java` — stateless utility class; converts `WorkItem` domain objects to `WorkItemResponse` DTOs with no business logic
+- `runtime/src/main/java/io/casehub/work/runtime/api/WorkItemMapper.java` — stateless utility class; converts `WorkItemEntity` domain objects to `WorkItemResponse` DTOs with no business logic
 
 #### Key Wiring
 
@@ -1451,11 +1451,11 @@ Item-level exception isolation — exceptions from policy execution are caught p
 #### What it adds
 
 **Before:** WorkItems had no labelling, no vocabulary enforcement, and no named queue views.
-**After:** `casehub-work-runtime` carries `LabelVocabulary` + `LabelDefinition` (path-typed scope hierarchy via `io.casehub.platform.api.path.Path`) and `WorkItemLabel` (MANUAL/INFERRED persistence on WorkItem). `casehub-work-queues` adds `LabelRuleEntity` (single-pass evaluation — no cascade tracking needed), `QueueView` named label-pattern queries, `WorkItemQueueMembership` (persistent before-state for membership diffing), and `WorkItemQueueEvent` CDI events.
+**After:** `casehub-work-runtime` carries `LabelVocabulary` + `LabelDefinition` (path-typed scope hierarchy via `io.casehub.platform.api.path.Path`) and `WorkItemLabelEntity` (MANUAL/INFERRED persistence on WorkItem). `casehub-work-queues` adds `LabelRuleEntity` (single-pass evaluation — no cascade tracking needed), `QueueView` named label-pattern queries, `WorkItemQueueMembership` (persistent before-state for membership diffing), and `WorkItemQueueEvent` CDI events.
 
 What this layer adds:
 - **Vocabulary** — `LabelVocabulary` (runtime) + `LabelDefinition` (runtime, path typed as `io.casehub.platform.api.path.Path`, stored as VARCHAR via `PathAttributeConverter`) define valid label paths scoped by `Path` hierarchy (root = widest)
-- **Label persistence** — `WorkItemLabel` (runtime, `@Embeddable`) carries a `path` String, a `LabelPersistence` enum (MANUAL/INFERRED), and `appliedBy` (userId or labelRuleId)
+- **Label persistence** — `WorkItemLabelEntity` (runtime, `@Embeddable`) carries a `path` String, a `LabelPersistence` enum (MANUAL/INFERRED), and `appliedBy` (userId or labelRuleId)
 - **Label rule engine** — `LabelRuleEntity` (queues) stores conditions (JEXL/JQ/Lambda) and platform `LabelAction` lists; unified `LabelRuleEngine` re-evaluates INFERRED labels on every WorkItem mutation using internal dispatch to `JexlConditionEvaluator`, `JqConditionEvaluator`, or `LambdaLabelEvaluator`
 - **Label evaluation** — `LabelRuleEngine` (queues) uses single-pass evaluation; no cascade tracking or inverse index needed for rule deletion
 - **Queue views** — `QueueView` (queues) stores a `labelPattern` String (supports `*`/`**` wildcards) that resolves to `WorkItemStore.scan()` calls at request time
@@ -1478,7 +1478,7 @@ Not closed here: distribution of queue events across nodes (L6).
 | `runtime/src/main/java/io/casehub/work/runtime/model/LabelVocabulary.java` | Scoped container for LabelDefinition entries; `scope` uses `Path` from `casehub-platform-api` with `PathAttributeConverter` |
 | `runtime/src/main/java/io/casehub/work/runtime/model/LabelDefinition.java` | Declared label path within a vocabulary; `path` field uses `PathAttributeConverter` |
 | `runtime/src/main/java/io/casehub/work/runtime/model/PathAttributeConverter.java` | JPA converter: `Path.value()` on write, `Path.parse()` on read; `autoApply = false` |
-| `runtime/src/main/java/io/casehub/work/runtime/model/WorkItemLabel.java` | `@Embeddable`; carries `path` (String), `persistence` (MANUAL/INFERRED), `appliedBy` |
+| `runtime/src/main/java/io/casehub/work/runtime/model/WorkItemLabelEntity.java` | `@Embeddable` (renamed from `WorkItemLabel`); carries `path` (String), `persistence` (MANUAL/INFERRED), `appliedBy`. SPI equivalent: `api/.../WorkItemLabel` record |
 | `runtime/src/main/java/io/casehub/work/runtime/api/VocabularyResource.java` | REST resource for vocabulary CRUD; uses FQN `io.casehub.platform.api.path.Path` to avoid collision with `jakarta.ws.rs.Path` |
 | `queues/src/main/java/io/casehub/work/queues/model/LabelRuleEntity.java` | Label rule entity; stores `conditionLanguage`, `conditionExpression`, platform `LabelAction` list (serialised JSON), `Path` scope (management metadata — not an execution predicate) |
 | `queues/src/main/java/io/casehub/work/queues/service/LabelRuleEngine.java` | Single-pass label rule evaluation — no inverse index needed |
@@ -1533,7 +1533,7 @@ MANUAL/INFERRED label persistence — human-applied labels survive re-evaluation
 #### Pattern to Replicate
 
 1. Define a vocabulary entity (`LabelVocabulary` equivalent) with a scope enum (GLOBAL → narrowest) and optional owner; define a definition entity (`LabelDefinition` equivalent) with a `Path` field stored via an `AttributeConverter<Path, String>` (`autoApply = false`).
-2. Embed a label annotation type (`WorkItemLabel` equivalent) as `@Embeddable` on the domain entity; carry both the path (String at storage level) and a persistence enum (MANUAL/INFERRED) so the filter engine can distinguish human from system labels.
+2. Embed a label annotation type (`WorkItemLabelEntity` equivalent) as `@Embeddable` on the domain entity; carry both the path (String at storage level) and a persistence enum (MANUAL/INFERRED) so the filter engine can distinguish human from system labels.
 3. Implement label rule evaluator strategies behind a common interface (`WorkItemExpressionEvaluator`); register them via CDI `Instance<>` in the rule engine; delegate JQ evaluation to an external library injected via CDI — do not bundle a JQ runtime.
 4. Use single-pass evaluation for label rules; re-evaluate on entity mutation rather than maintaining an inverse index.
 5. Define named view entities (`QueueView` equivalent) that store a label pattern query with wildcard support; resolve them to store scan calls at request time rather than materialising the result set.

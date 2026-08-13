@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 
@@ -19,7 +20,6 @@ import io.casehub.ledger.runtime.service.LedgerMerkleTree;
 import io.casehub.work.ledger.model.WorkItemLedgerEntry;
 import io.casehub.work.ledger.repository.WorkItemLedgerEntryRepository;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemRelation;
@@ -73,7 +73,7 @@ class LedgerIntegrationTest {
     @Test
     void create_writesOneLedgerEntry() {
         final var item = workItemService.create(basicRequest("Create test"));
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
 
         assertThat(entries).hasSize(1);
         final WorkItemLedgerEntry e = entries.get(0);
@@ -81,15 +81,15 @@ class LedgerIntegrationTest {
         assertThat(e.eventType).isEqualTo("WorkItemCreated");
         assertThat(e.commandType).isEqualTo("CreateWorkItem");
         assertThat(e.actorId).isEqualTo("system");
-        assertThat(e.subjectId).isEqualTo(item.id);
+        assertThat(e.subjectId).isEqualTo(item.id());
     }
 
     @Test
     void claim_writesLedgerEntry() {
         final var item = workItemService.create(basicRequest("Claim test"));
-        workItemService.claim(item.id, "alice");
+        workItemService.claim(item.id(), "alice");
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(2);
 
         final WorkItemLedgerEntry claim = entries.get(1);
@@ -102,10 +102,10 @@ class LedgerIntegrationTest {
     @Test
     void start_writesLedgerEntry() {
         final var item = workItemService.create(basicRequest("Start test"));
-        workItemService.claim(item.id, "alice");
-        workItemService.start(item.id, "alice");
+        workItemService.claim(item.id(), "alice");
+        workItemService.start(item.id(), "alice");
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(3);
 
         final WorkItemLedgerEntry start = entries.get(2);
@@ -116,11 +116,11 @@ class LedgerIntegrationTest {
     @Test
     void complete_writesLedgerEntry() {
         final var item = workItemService.create(basicRequest("Complete test"));
-        workItemService.claim(item.id, "alice");
-        workItemService.start(item.id, "alice");
-        workItemService.complete(item.id, "alice", "All done", null);
+        workItemService.claim(item.id(), "alice");
+        workItemService.start(item.id(), "alice");
+        workItemService.complete(item.id(), "alice", "All done", null);
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(4);
 
         final WorkItemLedgerEntry complete = entries.get(3);
@@ -131,10 +131,10 @@ class LedgerIntegrationTest {
     @Test
     void reject_writesLedgerEntry() {
         final var item = workItemService.create(basicRequest("Reject test"));
-        workItemService.claim(item.id, "alice");
-        workItemService.reject(item.id, "alice", "Not my responsibility", null);
+        workItemService.claim(item.id(), "alice");
+        workItemService.reject(item.id(), "alice", "Not my responsibility", null);
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(3);
 
         final WorkItemLedgerEntry reject = entries.get(2);
@@ -145,10 +145,10 @@ class LedgerIntegrationTest {
     @Test
     void delegate_writesLedgerEntry() {
         final var item = workItemService.create(basicRequest("Delegate test"));
-        workItemService.claim(item.id, "alice");
-        workItemService.delegate(item.id, "alice", "bob", DeclineTarget.POOL);
+        workItemService.claim(item.id(), "alice");
+        workItemService.delegate(item.id(), "alice", "bob", DeclineTarget.POOL);
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(3);
 
         final WorkItemLedgerEntry delegate = entries.get(2);
@@ -159,9 +159,9 @@ class LedgerIntegrationTest {
     @Test
     void cancel_writesLedgerEntry() {
         final var item = workItemService.create(basicRequest("Cancel test"));
-        workItemService.cancel(item.id, "admin", "No longer needed");
+        workItemService.cancel(item.id(), "admin", "No longer needed");
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(2);
 
         final WorkItemLedgerEntry cancel = entries.get(1);
@@ -176,9 +176,9 @@ class LedgerIntegrationTest {
     void subjectId_equalsWorkItemId() {
         final var item = workItemService.create(basicRequest("SubjectId test"));
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(1);
-        assertThat(entries.get(0).subjectId).isEqualTo(item.id);
+        assertThat(entries.get(0).subjectId).isEqualTo(item.id());
     }
 
     // -------------------------------------------------------------------------
@@ -188,11 +188,11 @@ class LedgerIntegrationTest {
     @Test
     void sequenceNumber_incrementsPerWorkItem() {
         final var item = workItemService.create(basicRequest("Sequence test"));
-        workItemService.claim(item.id, "alice");
-        workItemService.start(item.id, "alice");
-        workItemService.complete(item.id, "alice", "Done", null);
+        workItemService.claim(item.id(), "alice");
+        workItemService.start(item.id(), "alice");
+        workItemService.complete(item.id(), "alice", "Done", null);
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(4);
         assertThat(entries.get(0).sequenceNumber).isEqualTo(1);
         assertThat(entries.get(1).sequenceNumber).isEqualTo(2);
@@ -205,8 +205,8 @@ class LedgerIntegrationTest {
         final var item1 = workItemService.create(basicRequest("Item 1"));
         final var item2 = workItemService.create(basicRequest("Item 2"));
 
-        final List<WorkItemLedgerEntry> entries1 = ledgerRepo.findByWorkItemId(item1.id);
-        final List<WorkItemLedgerEntry> entries2 = ledgerRepo.findByWorkItemId(item2.id);
+        final List<WorkItemLedgerEntry> entries1 = ledgerRepo.findByWorkItemId(item1.id());
+        final List<WorkItemLedgerEntry> entries2 = ledgerRepo.findByWorkItemId(item2.id());
 
         assertThat(entries1).hasSize(1);
         assertThat(entries2).hasSize(1);
@@ -222,7 +222,7 @@ class LedgerIntegrationTest {
     void hashChain_firstEntryHasNonNullDigest() {
         final var item = workItemService.create(basicRequest("Hash test 1"));
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(1);
         assertThat(entries.get(0).digest).isNotNull();
     }
@@ -230,9 +230,9 @@ class LedgerIntegrationTest {
     @Test
     void hashChain_bothEntriesHaveDistinctDigests() {
         final var item = workItemService.create(basicRequest("Hash test 2"));
-        workItemService.claim(item.id, "alice");
+        workItemService.claim(item.id(), "alice");
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(2);
         assertThat(entries.get(0).digest).isNotNull();
         assertThat(entries.get(1).digest).isNotNull();
@@ -242,11 +242,11 @@ class LedgerIntegrationTest {
     @Test
     void hashChain_fullPathDigestsMatchLeafHashes() {
         final var item = workItemService.create(basicRequest("Hash verify test"));
-        workItemService.claim(item.id, "alice");
-        workItemService.start(item.id, "alice");
-        workItemService.complete(item.id, "alice", "Verified", null);
+        workItemService.claim(item.id(), "alice");
+        workItemService.start(item.id(), "alice");
+        workItemService.complete(item.id(), "alice", "Verified", null);
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(4);
         // Each entry's stored digest must equal LedgerMerkleTree.leafHash(entry)
         final boolean allValid = entries.stream()
@@ -258,7 +258,7 @@ class LedgerIntegrationTest {
     void hashChainEnabled_digestIsNotNull() {
         final var item = workItemService.create(basicRequest("Digest non-null test"));
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(1);
         assertThat(entries.get(0).digest).isNotNull();
     }
@@ -271,7 +271,7 @@ class LedgerIntegrationTest {
     void decisionContext_capturedOnCreate() {
         final var item = workItemService.create(basicRequest("DecisionContext create test"));
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(1);
         assertThat(entries.get(0).compliance().map(c -> c.decisionContext).orElse(null)).isNotNull();
         assertThat(entries.get(0).compliance().map(c -> c.decisionContext).orElse(null)).containsIgnoringCase("PENDING");
@@ -280,11 +280,11 @@ class LedgerIntegrationTest {
     @Test
     void decisionContext_capturedOnComplete() {
         final var item = workItemService.create(basicRequest("DecisionContext complete test"));
-        workItemService.claim(item.id, "alice");
-        workItemService.start(item.id, "alice");
-        workItemService.complete(item.id, "alice", "Finished", null);
+        workItemService.claim(item.id(), "alice");
+        workItemService.start(item.id(), "alice");
+        workItemService.complete(item.id(), "alice", "Finished", null);
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(4);
         assertThat(entries.get(3).compliance().map(c -> c.decisionContext).orElse(null)).isNotNull();
         assertThat(entries.get(3).compliance().map(c -> c.decisionContext).orElse(null)).containsIgnoringCase("COMPLETED");
@@ -297,9 +297,9 @@ class LedgerIntegrationTest {
     @Test
     void commandAndEventType_matchExpectedMapping() {
         final var item = workItemService.create(basicRequest("Mapping test"));
-        workItemService.claim(item.id, "bob");
+        workItemService.claim(item.id(), "bob");
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(2);
 
         assertThat(entries.get(0).commandType).isEqualTo("CreateWorkItem");
@@ -315,13 +315,13 @@ class LedgerIntegrationTest {
     @Test
     void attestation_savedAndRetrievable() {
         final var item = workItemService.create(basicRequest("Attestation test"));
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(1);
         final UUID entryId = entries.get(0).id;
 
         final LedgerAttestation attestation = new io.casehub.ledger.runtime.model.LedgerAttestation();
         attestation.ledgerEntryId = entryId;
-        attestation.subjectId = item.id;
+        attestation.subjectId = item.id();
         attestation.attestorId = "alice";
         attestation.attestorType = ActorType.HUMAN;
         attestation.verdict = AttestationVerdict.SOUND;
@@ -337,18 +337,18 @@ class LedgerIntegrationTest {
         assertThat(saved.attestorType).isEqualTo(ActorType.HUMAN);
         assertThat(saved.verdict).isEqualTo(AttestationVerdict.SOUND);
         assertThat(saved.confidence).isEqualTo(0.9);
-        assertThat(saved.subjectId).isEqualTo(item.id);
+        assertThat(saved.subjectId).isEqualTo(item.id());
     }
 
     @Test
     void attestation_multipleAttestationsOnSameEntry() {
         final var item = workItemService.create(basicRequest("Multi-attestation test"));
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         final UUID entryId = entries.get(0).id;
 
         final LedgerAttestation a1 = new io.casehub.ledger.runtime.model.LedgerAttestation();
         a1.ledgerEntryId = entryId;
-        a1.subjectId = item.id;
+        a1.subjectId = item.id();
         a1.attestorId = "alice";
         a1.attestorType = ActorType.HUMAN;
         a1.verdict = AttestationVerdict.SOUND;
@@ -357,7 +357,7 @@ class LedgerIntegrationTest {
 
         final LedgerAttestation a2 = new io.casehub.ledger.runtime.model.LedgerAttestation();
         a2.ledgerEntryId = entryId;
-        a2.subjectId = item.id;
+        a2.subjectId = item.id();
         a2.attestorId = "audit-agent";
         a2.attestorType = ActorType.AGENT;
         a2.verdict = AttestationVerdict.ENDORSED;
@@ -381,16 +381,16 @@ class LedgerIntegrationTest {
                 .priority(WorkItemPriority.MEDIUM)
                 .createdBy("system")
                 .build());
-        workItemService.claim(item.id, "alice");
-        workItemService.start(item.id, "alice");
+        workItemService.claim(item.id(), "alice");
+        workItemService.start(item.id(), "alice");
 
-        workItemService.complete(item.id, "alice",
+        workItemService.complete(item.id(), "alice",
                 "{\"decision\":\"approved\"}",
                 null,
                 "Income verified against payslips",
                 "credit-policy-v2.1");
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         final WorkItemLedgerEntry completionEntry = entries.stream()
                 .filter(e -> "WorkItemCompleted".equals(e.eventType))
                 .findFirst().orElseThrow();
@@ -410,14 +410,14 @@ class LedgerIntegrationTest {
                 .priority(WorkItemPriority.MEDIUM)
                 .createdBy("system")
                 .build());
-        workItemService.claim(item.id, "alice");
+        workItemService.claim(item.id(), "alice");
 
-        workItemService.reject(item.id, "alice",
+        workItemService.reject(item.id(), "alice",
                 "Content violates guidelines",
                 null,
                 "Context review: satire, not hate speech");
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         final WorkItemLedgerEntry rejectionEntry = entries.stream()
                 .filter(e -> "WorkItemRejected".equals(e.eventType))
                 .findFirst().orElseThrow();
@@ -438,7 +438,7 @@ class LedgerIntegrationTest {
                 .createdBy("alice")
                 .build());
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(1);
         assertThat(entries.get(0).actorType).isEqualTo(ActorType.HUMAN);
     }
@@ -451,7 +451,7 @@ class LedgerIntegrationTest {
                 .createdBy("agent:content-ai")
                 .build());
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(1);
         assertThat(entries.get(0).actorType).isEqualTo(ActorType.AGENT);
     }
@@ -464,7 +464,7 @@ class LedgerIntegrationTest {
                 .createdBy("system:scheduler")
                 .build());
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(1);
         assertThat(entries.get(0).actorType).isEqualTo(ActorType.SYSTEM);
     }
@@ -480,16 +480,16 @@ class LedgerIntegrationTest {
 
         // Create child with callerRef, as WorkItemSpawnService would
         final WorkItem child = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Spawn child")
-                .priority(WorkItemPriority.MEDIUM)
-                .createdBy("system:spawn")
-                .callerRef("task-A")
-                .build());
+                                                                                 .title("Spawn child")
+                                                                                 .priority(WorkItemPriority.MEDIUM)
+                                                                                 .createdBy("system:spawn")
+                                                                                 .callerRef("task-A")
+                                                                                 .build());
 
         // Wire PART_OF relation: child → parent (mirrors WorkItemSpawnService.spawn)
         final WorkItemRelation rel = new WorkItemRelation();
-        rel.sourceId = child.id;
-        rel.targetId = parent.id;
+        rel.sourceId = child.id();
+        rel.targetId = parent.id();
         rel.relationType = WorkItemRelationType.PART_OF;
         rel.createdBy = "system:spawn";
         rel.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
@@ -500,8 +500,8 @@ class LedgerIntegrationTest {
                 "children:1"));
 
         // Fetch ledger entries
-        final List<WorkItemLedgerEntry> parentEntries = ledgerRepo.findByWorkItemId(parent.id);
-        final List<WorkItemLedgerEntry> childEntries = ledgerRepo.findByWorkItemId(child.id);
+        final List<WorkItemLedgerEntry> parentEntries = ledgerRepo.findByWorkItemId(parent.id());
+        final List<WorkItemLedgerEntry> childEntries = ledgerRepo.findByWorkItemId(child.id());
 
         // Parent should have CREATED + SPAWNED entries
         assertThat(parentEntries).hasSize(2);
@@ -534,9 +534,9 @@ class LedgerIntegrationTest {
                 .createdBy("system")
                 .callerRef(callerRef)
                 .build());
-        workItemService.claim(item.id, "alice");
+        workItemService.claim(item.id(), "alice");
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(2);
 
         // Creation entry: provenance supplement present with opaque callerRef
@@ -556,7 +556,7 @@ class LedgerIntegrationTest {
     void create_withoutCallerRef_noProvenanceSupplement() {
         final var item = workItemService.create(basicRequest("No provenance test"));
 
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(1);
         assertThat(entries.get(0).provenance()).isEmpty();
     }

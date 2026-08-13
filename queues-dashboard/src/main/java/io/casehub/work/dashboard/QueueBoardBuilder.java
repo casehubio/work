@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 
 /**
  * Pure static utility: converts a list of WorkItems into a 3×3 queue grid.
@@ -26,12 +26,12 @@ public final class QueueBoardBuilder {
      * or {@code null} if none.
      */
     public static String tier(final WorkItem wi) {
-        if (wi.labels == null) {
+        if (wi.labels() == null) {
             return null;
         }
-        return wi.labels.stream()
-                .filter(l -> l.persistence == LabelPersistence.INFERRED)
-                .map(l -> l.path)
+        return wi.labels().stream()
+                .filter(l -> l.persistence() == LabelPersistence.INFERRED)
+                .map(l -> l.path())
                 .filter(p -> p.equals("review/urgent") || p.equals("review/standard")
                         || p.equals("review/routine"))
                 .findFirst().orElse(null);
@@ -42,12 +42,12 @@ public final class QueueBoardBuilder {
      * INFERRED labels, or {@code null} if none.
      */
     public static String state(final WorkItem wi) {
-        if (wi.labels == null) {
+        if (wi.labels() == null) {
             return null;
         }
-        return wi.labels.stream()
-                .filter(l -> l.persistence == LabelPersistence.INFERRED)
-                .map(l -> l.path)
+        return wi.labels().stream()
+                .filter(l -> l.persistence() == LabelPersistence.INFERRED)
+                .map(l -> l.path())
                 .filter(p -> p.endsWith("/unassigned") || p.endsWith("/claimed") || p.endsWith("/active"))
                 .map(p -> p.substring(p.lastIndexOf('/') + 1))
                 .findFirst().orElse(null);
@@ -70,7 +70,7 @@ public final class QueueBoardBuilder {
             final String tier = tier(wi);
             final String state = state(wi);
             if (tier != null && state != null && grid.containsKey(tier) && grid.get(tier).containsKey(state)) {
-                grid.get(tier).get(state).add(wi.title != null ? wi.title : "(no title)");
+                grid.get(tier).get(state).add(wi.title() != null ? wi.title() : "(no title)");
             }
         }
         return grid;

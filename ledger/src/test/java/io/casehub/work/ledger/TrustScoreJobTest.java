@@ -19,7 +19,7 @@ import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
 import io.casehub.ledger.runtime.service.TrustScoreJob;
 import io.casehub.work.ledger.model.WorkItemLedgerEntry;
 import io.casehub.work.ledger.repository.WorkItemLedgerEntryRepository;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.service.WorkItemService;
@@ -60,10 +60,10 @@ class TrustScoreJobTest {
                 .createdBy("system")
                 .build();
         final WorkItem wi = workItemService.create(req);
-        workItemService.claim(wi.id, actor);
-        workItemService.start(wi.id, actor);
-        workItemService.complete(wi.id, actor, "{\"approved\":true}", null);
-        return wi.id;
+        workItemService.claim(wi.id(), actor);
+        workItemService.start(wi.id(), actor);
+        workItemService.complete(wi.id(), actor, "{\"approved\":true}", null);
+        return wi.id();
     }
 
     private void flagAllEntriesFor(final UUID workItemId, final String actor) {

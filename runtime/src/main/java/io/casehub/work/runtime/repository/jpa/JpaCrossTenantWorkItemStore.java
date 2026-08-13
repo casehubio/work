@@ -1,13 +1,14 @@
 package io.casehub.work.runtime.repository.jpa;
 
-import java.util.List;
-
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.api.spi.CrossTenantWorkItemStore;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.runtime.repository.WorkItemEntityMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.CrossTenantWorkItemStore;
+import java.util.List;
 
 /**
  * Cross-tenant JPA implementation of {@link CrossTenantWorkItemStore}.
@@ -23,9 +24,9 @@ public class JpaCrossTenantWorkItemStore extends TenantAwareStore implements Cro
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public List<WorkItem> findActiveWithDeadlines() {
         return withCrossTenantQuery(() ->
-            WorkItem.find(
-                "status NOT IN (?1) AND (expiresAt IS NOT NULL OR claimDeadline IS NOT NULL)",
-                WorkItemStatus.TERMINAL_STATUSES)
-                .list());
+                                            WorkItemEntity.<WorkItemEntity>find(
+                                                                  "status NOT IN (?1) AND (expiresAt IS NOT NULL OR claimDeadline IS NOT NULL)",
+                                                                  WorkItemStatus.TERMINAL_STATUSES)
+                                                          .list().stream().map(WorkItemEntityMapper::toDomain).toList());
     }
 }

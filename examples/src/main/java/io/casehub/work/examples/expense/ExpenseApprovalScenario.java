@@ -3,6 +3,7 @@ package io.casehub.work.examples.expense;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -19,7 +20,6 @@ import io.casehub.work.ledger.model.WorkItemLedgerEntry;
 import io.casehub.work.ledger.repository.WorkItemLedgerEntryRepository;
 import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.repository.AuditEntryStore;
@@ -84,44 +84,44 @@ public class ExpenseApprovalScenario {
                 .build();
 
         final WorkItem wi = workItemService.create(request);
-        steps.add(new StepLog(1, description1, wi.id));
+        steps.add(new StepLog(1, description1, wi.id()));
 
         // Step 2: alice claims the WorkItem
         final String description2 = "Alice claims the expense WorkItem";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 2, total, description2);
-        workItemService.claim(wi.id, ACTOR_ASSIGNEE);
-        steps.add(new StepLog(2, description2, wi.id));
+        workItemService.claim(wi.id(), ACTOR_ASSIGNEE);
+        steps.add(new StepLog(2, description2, wi.id()));
 
         // Step 3: alice starts the WorkItem
         final String description3 = "Alice starts reviewing the expense report";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 3, total, description3);
-        workItemService.start(wi.id, ACTOR_ASSIGNEE);
-        steps.add(new StepLog(3, description3, wi.id));
+        workItemService.start(wi.id(), ACTOR_ASSIGNEE);
+        steps.add(new StepLog(3, description3, wi.id()));
 
         // Step 4: alice completes (approves) the WorkItem
         final String description4 = "Alice completes and approves the expense claim";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 4, total, description4);
         workItemService.complete(
-                wi.id,
+                wi.id(),
                 ACTOR_ASSIGNEE,
                 "{\"approved\": true, \"amount\": 450.00, \"comment\": \"Within policy limits\"}", null,
                 "Expense is within the team policy limit of £500 per person per quarter",
                 "EXPENSE-POLICY-v2.1");
-        steps.add(new StepLog(4, description4, wi.id));
+        steps.add(new StepLog(4, description4, wi.id()));
 
         // Collect ledger entries
-        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(wi.id);
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(wi.id());
         entries.forEach(WorkItemLedgerEntry::syncSupplementsFromJpa);
         final List<LedgerEntryResponse> ledgerEntries = entries.stream()
                 .map(e -> LedgerMapper.toResponse(e, ledgerRepo.findAttestationsByEntryId(e.id)))
                 .toList();
 
         // Collect audit trail
-        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id);
+        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id());
         final List<AuditEntryResponse> auditTrail = auditEntries.stream()
                 .map(a -> new AuditEntryResponse(a.id, a.event, a.actor, a.detail, a.occurredAt))
                 .toList();
 
-        return new ScenarioResponse(SCENARIO_ID, steps, wi.id, ledgerEntries, auditTrail);
+        return new ScenarioResponse(SCENARIO_ID, steps, wi.id(), ledgerEntries, auditTrail);
     }
 }

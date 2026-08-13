@@ -3,6 +3,7 @@ package io.casehub.work.ledger.service;
 import java.util.Map;
 import java.util.Optional;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
@@ -24,10 +25,9 @@ import io.casehub.ledger.runtime.service.LedgerMerkleTree;
 import io.casehub.work.ledger.model.WorkItemLedgerEntry;
 import io.casehub.work.ledger.repository.WorkItemLedgerEntryRepository;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.quarkus.logging.Log;
 
 /**
@@ -127,9 +127,9 @@ public class LedgerEventCapture {
         // sourceEntitySystem provide the lookup context.
         if ("created".equals(suffix)) {
             workItemOpt.ifPresent(wi -> {
-                if (wi.callerRef != null && !wi.callerRef.isBlank()) {
+                if (wi.callerRef() != null && !wi.callerRef().isBlank()) {
                     final var prov = new JpaProvenanceSupplement();
-                    prov.sourceEntityId     = wi.callerRef;
+                    prov.sourceEntityId     = wi.callerRef();
                     prov.sourceEntityType   = "CaseHub:CaseInstance";
                     prov.sourceEntitySystem = "casehub-engine";
                     entry.attach(prov);
@@ -190,30 +190,30 @@ public class LedgerEventCapture {
      */
     private String buildDecisionContext(final WorkItem wi) {
         final ObjectNode node = MAPPER.createObjectNode();
-        if (wi.status != null) {
-            node.put("status", wi.status.name());
+        if (wi.status() != null) {
+            node.put("status", wi.status().name());
         } else {
             node.putNull("status");
         }
-        if (wi.priority != null) {
-            node.put("priority", wi.priority.name());
+        if (wi.priority() != null) {
+            node.put("priority", wi.priority().name());
         } else {
             node.putNull("priority");
         }
-        if (wi.assigneeId != null) {
-            node.put("assigneeId", wi.assigneeId);
+        if (wi.assigneeId() != null) {
+            node.put("assigneeId", wi.assigneeId());
         } else {
             node.putNull("assigneeId");
         }
-        if (wi.expiresAt != null) {
-            node.put("expiresAt", wi.expiresAt.toString());
+        if (wi.expiresAt() != null) {
+            node.put("expiresAt", wi.expiresAt().toString());
         } else {
             node.putNull("expiresAt");
         }
         try {
             return MAPPER.writeValueAsString(node);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Failed to serialize decision context for workItem " + wi.id, e);
+            throw new IllegalStateException("Failed to serialize decision context for workItem " + wi.id(), e);
         }
     }
 

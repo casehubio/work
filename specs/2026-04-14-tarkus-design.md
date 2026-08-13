@@ -28,7 +28,7 @@ Persists minutes to days. Has assignee, candidate groups, priority, deadlines, d
 follow-up date, category, form reference, and full audit trail. Any system creates one —
 Quarkus-Flow, CaseHub, Qhorus, or a plain REST call. A human resolves it.
 
-**The one-sentence rule:** A `Task` is controlled by a machine. A `WorkItem` waits for a human.
+**The one-sentence rule:** A `Task` is controlled by a machine. A `WorkItemEntity` waits for a human.
 
 ---
 
@@ -39,7 +39,7 @@ Quarkus WorkItems is a CaseHub platform module providing a **human task inbox** 
 It is **not** a workflow engine, a case manager, or an agent communication mesh. It is the layer that sits between those systems and the human who needs to make decisions.
 
 Any Quarkus application can embed WorkItems to get:
-- A `WorkItem` entity with full lifecycle management
+- A `WorkItemEntity` entity with full lifecycle management
 - A REST inbox API that any UI (Claudony dashboard, custom frontend) can consume
 - Expiry detection and pluggable escalation policies
 - Delegation chains with full audit trail
@@ -347,7 +347,7 @@ public interface EscalationPolicy {
 }
 ```
 
-Check `event.eventType()` to distinguish `WorkEventType.EXPIRED` (expiresAt breach, fired by `ExpiryCleanupJob`) from `WorkEventType.CLAIM_EXPIRED` (claim deadline breach, fired by `ClaimDeadlineJob`). Call `event.source()` to access the `WorkItem` entity.
+Check `event.eventType()` to distinguish `WorkEventType.EXPIRED` (expiresAt breach, fired by `ExpiryCleanupJob`) from `WorkEventType.CLAIM_EXPIRED` (claim deadline breach, fired by `ClaimDeadlineJob`). Call `event.source()` to access the `WorkItemEntity` entity.
 
 Custom implementations register as CDI beans with `@ApplicationScoped @Alternative @Priority(1)`.
 
@@ -423,14 +423,14 @@ Sources: WS-HumanTask (OASIS), BPMN 2.0, CMMN, Camunda 8, Flowable, Activiti.
 
 ### Multi-tenancy (`tenantId`)
 
-Add `tenantId: String` to `WorkItem` and `AuditEntry`. Required when a single Quarkus
+Add `tenantId: String` to `WorkItemEntity` and `AuditEntry`. Required when a single Quarkus
 application serves multiple tenants. All queries would include a tenant filter.
 Quarkus multi-tenancy infrastructure would need to be wired in. Deferred because the
 initial integration targets (Qhorus, CaseHub, Quarkus-Flow) are single-tenant.
 
 ### Subtasks (`parentWorkItemId`)
 
-A `WorkItem` could be a child of another `WorkItem`. Parent completes when all children
+A `WorkItemEntity` could be a child of another `WorkItemEntity`. Parent completes when all children
 complete. Modelled as a `parentWorkItemId: UUID` FK and a completion rollup in
 `WorkItemService`. Deferred because it adds significant lifecycle complexity and no
 integration target currently requires it. CaseHub integration may surface this need.
@@ -455,7 +455,7 @@ pending real use cases.
 ### `skipable` flag + skip operation
 
 WS-HumanTask allows tasks to be marked as skipable by a business administrator without the
-task being performed. Requires `skipable: boolean` on `WorkItem` and a `PUT /{id}/skip`
+task being performed. Requires `skipable: boolean` on `WorkItemEntity` and a `PUT /{id}/skip`
 endpoint with admin authorisation. Useful for workflow un-blocking scenarios. Deferred.
 
 ### Information-request state (`WAITING_FOR_INFO`)

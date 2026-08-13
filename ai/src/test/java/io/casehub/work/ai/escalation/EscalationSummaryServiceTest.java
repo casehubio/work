@@ -10,11 +10,11 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import dev.langchain4j.model.chat.ChatModel;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.memory.InMemoryAuditEntryStore;
 import io.casehub.work.ai.TestPrincipal;
@@ -47,9 +47,9 @@ class EscalationSummaryServiceTest {
         workItemStore.put(wi);
         final EscalationSummaryService svc = service(false);
 
-        final EscalationSummary result = svc.buildSummary(wi.id, "EXPIRED");
+        final EscalationSummary result = svc.buildSummary(wi.id(), "EXPIRED");
 
-        assertThat(result.workItemId).isEqualTo(wi.id);
+        assertThat(result.workItemId).isEqualTo(wi.id());
         assertThat(result.eventType).isEqualTo("EXPIRED");
         assertThat(result.summary).isNull();
         verify(mockModel, never()).chat(anyString());
@@ -60,7 +60,7 @@ class EscalationSummaryServiceTest {
         final WorkItem wi = workItem();
         workItemStore.put(wi);
 
-        final EscalationSummary result = serviceNoModel().buildSummary(wi.id, "CLAIM_EXPIRED");
+        final EscalationSummary result = serviceNoModel().buildSummary(wi.id(), "CLAIM_EXPIRED");
 
         assertThat(result.eventType).isEqualTo("CLAIM_EXPIRED");
         assertThat(result.summary).isNull();
@@ -81,10 +81,10 @@ class EscalationSummaryServiceTest {
         workItemStore.put(wi);
         when(mockModel.chat(anyString())).thenReturn("This work item expired without resolution.");
 
-        final EscalationSummary result = service(true).buildSummary(wi.id, "EXPIRED");
+        final EscalationSummary result = service(true).buildSummary(wi.id(), "EXPIRED");
 
         assertThat(result.summary).isEqualTo("This work item expired without resolution.");
-        assertThat(result.workItemId).isEqualTo(wi.id);
+        assertThat(result.workItemId).isEqualTo(wi.id());
         assertThat(result.eventType).isEqualTo("EXPIRED");
         verify(mockModel).chat(anyString());
     }
@@ -95,7 +95,7 @@ class EscalationSummaryServiceTest {
         workItemStore.put(wi);
         when(mockModel.chat(anyString())).thenThrow(new RuntimeException("model down"));
 
-        final EscalationSummary result = service(true).buildSummary(wi.id, "EXPIRED");
+        final EscalationSummary result = service(true).buildSummary(wi.id(), "EXPIRED");
 
         assertThat(result.summary).isNull();
     }
@@ -107,11 +107,11 @@ class EscalationSummaryServiceTest {
         when(mockModel.chat(anyString())).thenAnswer(inv -> {
             final String prompt = inv.getArgument(0, String.class);
             assertThat(prompt).contains("completion deadline");
-            assertThat(prompt).contains(wi.title);
+            assertThat(prompt).contains(wi.title());
             return "ok";
         });
 
-        service(true).buildSummary(wi.id, "EXPIRED");
+        service(true).buildSummary(wi.id(), "EXPIRED");
         verify(mockModel).chat(anyString());
     }
 
@@ -125,20 +125,20 @@ class EscalationSummaryServiceTest {
             return "ok";
         });
 
-        service(true).buildSummary(wi.id, "CLAIM_EXPIRED");
+        service(true).buildSummary(wi.id(), "CLAIM_EXPIRED");
         verify(mockModel).chat(anyString());
     }
 
     private WorkItem workItem() {
-        final WorkItem wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.title = "Review quarterly contracts";
-        wi.description = "Legal review of all Q2 contracts";
-        wi.types.add(new io.casehub.work.runtime.model.WorkItemType("legal"));
-        wi.status = WorkItemStatus.PENDING;
-        wi.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
-        wi.createdAt = Instant.now();
-        wi.updatedAt = Instant.now();
-        return wi;
+        return WorkItem.builder()
+                .id(UUID.randomUUID())
+                .title("Review quarterly contracts")
+                .description("Legal review of all Q2 contracts")
+                .types(java.util.Set.of("legal"))
+                .status(WorkItemStatus.PENDING)
+                .tenancyId(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
     }
 }

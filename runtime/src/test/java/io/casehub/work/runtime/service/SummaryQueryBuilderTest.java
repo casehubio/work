@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.runtime.model.WorkItemLabelEntity;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
@@ -16,7 +18,6 @@ import org.junit.jupiter.api.Test;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.WorkItemSummary;
-import io.casehub.work.runtime.model.WorkItem;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -93,10 +94,10 @@ class SummaryQueryBuilderTest {
         final Instant old = Instant.parse("2025-01-01T00:00:00Z");
         final Instant recent = Instant.parse("2026-06-01T00:00:00Z");
 
-        final WorkItem completed = createWi(tenancyId, WorkItemStatus.COMPLETED, WorkItemPriority.MEDIUM, null, null);
+        final WorkItemEntity completed = createWi(tenancyId, WorkItemStatus.COMPLETED, WorkItemPriority.MEDIUM, null, null);
         completed.createdAt = old;
 
-        final WorkItem pending = createWi(tenancyId, WorkItemStatus.PENDING, WorkItemPriority.MEDIUM, null, null);
+        final WorkItemEntity pending = createWi(tenancyId, WorkItemStatus.PENDING, WorkItemPriority.MEDIUM, null, null);
         pending.createdAt = recent;
 
         em.flush();
@@ -114,9 +115,9 @@ class SummaryQueryBuilderTest {
     void build_withDistinct_deduplicatesJoinResults() {
         final String tenancyId = "distinct-test-" + UUID.randomUUID();
 
-        final WorkItem wi = createWi(tenancyId, WorkItemStatus.PENDING, WorkItemPriority.HIGH, null, null);
-        wi.labels.add(new io.casehub.work.runtime.model.WorkItemLabel("test/a", io.casehub.work.api.LabelPersistence.MANUAL, null));
-        wi.labels.add(new io.casehub.work.runtime.model.WorkItemLabel("test/b", io.casehub.work.api.LabelPersistence.MANUAL, null));
+        final WorkItemEntity wi = createWi(tenancyId, WorkItemStatus.PENDING, WorkItemPriority.HIGH, null, null);
+        wi.labels.add(new WorkItemLabelEntity("test/a", io.casehub.work.api.LabelPersistence.MANUAL, null));
+        wi.labels.add(new WorkItemLabelEntity("test/b", io.casehub.work.api.LabelPersistence.MANUAL, null));
         em.flush();
 
         final Map<String, Object> params = new HashMap<>();
@@ -130,9 +131,9 @@ class SummaryQueryBuilderTest {
         assertThat(withDistinct.byStatus()).containsEntry("PENDING", 1L);
     }
 
-    private WorkItem createWi(String tenancyId, WorkItemStatus status,
-            WorkItemPriority priority, Instant expiresAt, Instant claimDeadline) {
-        final WorkItem wi = new WorkItem();
+    private WorkItemEntity createWi(String tenancyId, WorkItemStatus status,
+                                    WorkItemPriority priority, Instant expiresAt, Instant claimDeadline) {
+        final WorkItemEntity wi = new WorkItemEntity();
         wi.id = UUID.randomUUID();
         wi.tenancyId = tenancyId;
         wi.status = status;

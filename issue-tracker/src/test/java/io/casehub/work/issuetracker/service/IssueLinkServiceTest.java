@@ -7,7 +7,7 @@ import io.casehub.work.issuetracker.spi.ExternalIssueRef;
 import io.casehub.work.issuetracker.spi.IssueTrackerException;
 import io.casehub.work.issuetracker.spi.IssueTrackerProvider;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import jakarta.enterprise.inject.Instance;
@@ -304,11 +304,11 @@ class IssueLinkServiceTest {
     }
 
     private WorkItem workItem(final UUID id, final WorkItemStatus status, final WorkItemPriority priority) {
-        final WorkItem wi = new WorkItem();
-        wi.id = id;
-        wi.status = status;
-        wi.priority = priority;
-        wi.title = "Test WorkItem";
-        return wi;
+        return WorkItem.builder()
+                .id(id)
+                .status(status)
+                .priority(priority)
+                .title("Test WorkItem")
+                .build();
     }
 }

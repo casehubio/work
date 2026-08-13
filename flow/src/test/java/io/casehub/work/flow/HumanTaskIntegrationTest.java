@@ -7,11 +7,12 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
@@ -63,11 +64,11 @@ class HumanTaskIntegrationTest {
         Uni<String> result = bridge.requestApproval(
                 "Approve budget", null, "alice", WorkItemPriority.HIGH, null);
 
-        List<WorkItem> all = WorkItem.listAll();
-        WorkItem workItem = all.stream()
-                .filter(wi -> "Approve budget".equals(wi.title))
-                .findFirst()
-                .orElseThrow();
+        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        WorkItemEntity workItem = all.stream()
+                                     .filter(wi -> "Approve budget".equals(wi.title))
+                                     .findFirst()
+                                     .orElseThrow();
 
         // Claim → start → complete (CDI event fires, listener completes the underlying future)
         service.claim(workItem.id, "alice");
@@ -83,11 +84,11 @@ class HumanTaskIntegrationTest {
         Uni<String> result = bridge.requestApproval(
                 "Budget rejection test", null, "carol", WorkItemPriority.LOW, null);
 
-        List<WorkItem> all = WorkItem.listAll();
-        WorkItem workItem = all.stream()
-                .filter(wi -> "Budget rejection test".equals(wi.title))
-                .findFirst()
-                .orElseThrow();
+        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        WorkItemEntity workItem = all.stream()
+                                     .filter(wi -> "Budget rejection test".equals(wi.title))
+                                     .findFirst()
+                                     .orElseThrow();
 
         service.claim(workItem.id, "carol");
         service.reject(workItem.id, "carol", "out of budget", null);
@@ -102,11 +103,11 @@ class HumanTaskIntegrationTest {
         Uni<String> result = bridge.requestApproval(
                 "Cancel test", null, "dave", WorkItemPriority.MEDIUM, null);
 
-        List<WorkItem> all = WorkItem.listAll();
-        WorkItem workItem = all.stream()
-                .filter(wi -> "Cancel test".equals(wi.title))
-                .findFirst()
-                .orElseThrow();
+        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        WorkItemEntity workItem = all.stream()
+                                     .filter(wi -> "Cancel test".equals(wi.title))
+                                     .findFirst()
+                                     .orElseThrow();
 
         service.cancel(workItem.id, "admin", "project cancelled");
 
@@ -122,11 +123,11 @@ class HumanTaskIntegrationTest {
 
         assertThatThrownBy(() -> result.await().atMost(Duration.ofMillis(50)))
                 .isInstanceOf(Exception.class);
-        List<WorkItem> all = WorkItem.listAll();
-        WorkItem workItem = all.stream()
-                .filter(wi -> "Team approval".equals(wi.title))
-                .findFirst()
-                .orElseThrow();
+        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        WorkItemEntity workItem = all.stream()
+                                     .filter(wi -> "Team approval".equals(wi.title))
+                                     .findFirst()
+                                     .orElseThrow();
         assertThat(workItem.candidateGroups).isEqualTo("finance-team,leads");
         assertThat(workItem.status).isEqualTo(WorkItemStatus.PENDING);
     }
@@ -144,9 +145,9 @@ class HumanTaskIntegrationTest {
                 .createdBy("test")
                 .build();
         WorkItem other = service.create(req);
-        service.claim(other.id, "frank");
-        service.start(other.id, "frank");
-        service.complete(other.id, "frank", "{\"other\":true}", null);
+        service.claim(other.id(), "frank");
+        service.start(other.id(), "frank");
+        service.complete(other.id(), "frank", "{\"other\":true}", null);
 
         // The bridge's Uni should still be pending
         assertThatThrownBy(() -> result.await().atMost(Duration.ofMillis(50)))
@@ -162,10 +163,10 @@ class HumanTaskIntegrationTest {
 
         assertThat(result).isNotNull();
 
-        List<WorkItem> all = WorkItem.listAll();
-        WorkItem wi = all.stream()
-                .filter(w -> "Uni test".equals(w.title))
-                .findFirst().orElseThrow();
+        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        WorkItemEntity wi = all.stream()
+                               .filter(w -> "Uni test".equals(w.title))
+                               .findFirst().orElseThrow();
 
         service.claim(wi.id, "alice");
         service.start(wi.id, "alice");
@@ -180,10 +181,10 @@ class HumanTaskIntegrationTest {
         Uni<String> result = bridge.requestApproval(
                 "Uni reject test", null, "bob", WorkItemPriority.MEDIUM, null);
 
-        List<WorkItem> all = WorkItem.listAll();
-        WorkItem wi = all.stream()
-                .filter(w -> "Uni reject test".equals(w.title))
-                .findFirst().orElseThrow();
+        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        WorkItemEntity wi = all.stream()
+                               .filter(w -> "Uni reject test".equals(w.title))
+                               .findFirst().orElseThrow();
 
         service.claim(wi.id, "bob");
         service.reject(wi.id, "bob", "not applicable", null);
@@ -206,7 +207,7 @@ class HumanTaskIntegrationTest {
 
     @Test
     void workItemsDslFlow_createsWorkItemAndSuspends() {
-        List<WorkItem> before = WorkItem.listAll();
+        List<WorkItemEntity> before = WorkItemEntity.listAll();
 
         // Start the workflow asynchronously — it suspends on the WorkItem creation
         testWorkflow.startInstance(Map.of("docTitle", "My Document"))
@@ -221,13 +222,13 @@ class HumanTaskIntegrationTest {
             Thread.currentThread().interrupt();
         }
 
-        List<WorkItem> after = WorkItem.listAll();
+        List<WorkItemEntity> after = WorkItemEntity.listAll();
 
         // A WorkItem should have been created by the workflow
         assertThat(after.size()).isGreaterThan(before.size());
-        WorkItem wi = after.stream()
-                .filter(w -> "legal-team".equals(w.candidateGroups))
-                .findFirst().orElseThrow();
+        WorkItemEntity wi = after.stream()
+                                 .filter(w -> "legal-team".equals(w.candidateGroups))
+                                 .findFirst().orElseThrow();
         assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING);
     }
 }

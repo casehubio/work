@@ -5,21 +5,21 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
+import io.casehub.work.runtime.model.WorkItemEntity;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.api.MultiInstanceConfig;
 import io.casehub.work.api.MultiInstanceContext;
-import io.casehub.work.runtime.model.WorkItem;
 
 class InstanceAssignmentStrategyTest {
 
-    private static WorkItem item() {
-        WorkItem w = new WorkItem();
+    private static WorkItemEntity item() {
+        WorkItemEntity w = new WorkItemEntity();
         return w;
     }
 
-    private static WorkItem parent(String candidateGroups, String candidateUsers) {
-        WorkItem p = new WorkItem();
+    private static WorkItemEntity parent(String candidateGroups, String candidateUsers) {
+        WorkItemEntity p = new WorkItemEntity();
         p.candidateGroups = candidateGroups;
         p.candidateUsers = candidateUsers;
         return p;
@@ -55,7 +55,7 @@ class InstanceAssignmentStrategyTest {
     void explicit_assignsEachInstanceToCorrespondingAssignee() {
         var strategy = new ExplicitListAssignmentStrategy();
         var instances = List.of(item(), item(), item());
-        strategy.assign((List) instances, new MultiInstanceContext(new WorkItem(),
+        strategy.assign((List) instances, new MultiInstanceContext(new WorkItemEntity(),
                 new MultiInstanceConfig(3, 2, null, "explicit", null, false,
                         List.of("alice", "bob", "carol"))));
 
@@ -69,7 +69,7 @@ class InstanceAssignmentStrategyTest {
         var strategy = new ExplicitListAssignmentStrategy();
         var instances = List.of(item(), item());
         assertThatThrownBy(() -> strategy.assign((List) instances,
-                new MultiInstanceContext(new WorkItem(),
+                new MultiInstanceContext(new WorkItemEntity(),
                         new MultiInstanceConfig(2, 1, null, "explicit", null, false,
                                 List.of("alice")))))
                 .isInstanceOf(IllegalArgumentException.class)

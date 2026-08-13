@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
@@ -28,7 +28,7 @@ class WorkItemTemplateInstantiateTest {
     void cleanup() {
         AuditEntry.deleteAll();
         WorkItemSpawnGroup.deleteAll();
-        WorkItem.deleteAll();
+        WorkItemEntity.deleteAll();
         WorkItemTemplate.deleteAll();
     }
 
@@ -42,9 +42,9 @@ class WorkItemTemplateInstantiateTest {
                 .createdBy("system:engine")
                 .callerRef(callerRef)
                 .build();
-        final WorkItem workItem = templateService.createFromTemplate(request);
+        final io.casehub.work.api.WorkItem workItem = templateService.createFromTemplate(request);
 
-        assertThat(workItem.callerRef).isEqualTo(callerRef);
+        assertThat(workItem.callerRef()).isEqualTo(callerRef);
     }
 
     @Test
@@ -57,10 +57,10 @@ class WorkItemTemplateInstantiateTest {
                 .createdBy("system:engine")
                 .callerRef(callerRef)
                 .build();
-        final WorkItem parent = templateService.createFromTemplate(request);
+        final io.casehub.work.api.WorkItem parent = templateService.createFromTemplate(request);
 
         assertThat(parent).isNotNull();
-        assertThat(parent.callerRef).isEqualTo(callerRef);
+        assertThat(parent.callerRef()).isEqualTo(callerRef);
     }
 
     @Test
@@ -71,9 +71,9 @@ class WorkItemTemplateInstantiateTest {
                 .templateId(template.id)
                 .createdBy("system")
                 .build();
-        final WorkItem workItem = templateService.createFromTemplate(request);
+        final io.casehub.work.api.WorkItem workItem = templateService.createFromTemplate(request);
 
-        assertThat(workItem.callerRef).isNull();
+        assertThat(workItem.callerRef()).isNull();
     }
 
     @Transactional

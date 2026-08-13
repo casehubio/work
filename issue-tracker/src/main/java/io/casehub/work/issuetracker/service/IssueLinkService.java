@@ -3,6 +3,7 @@ package io.casehub.work.issuetracker.service;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.event.TransactionPhase;
@@ -217,7 +218,7 @@ public class IssueLinkService {
             return;
         }
 
-        final io.casehub.work.runtime.model.WorkItem workItem = event.workItem();
+        final WorkItem workItem = event.workItem();
 
         for (final WorkItemIssueLink link : links) {
             final IssueTrackerProvider provider;

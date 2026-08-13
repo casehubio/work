@@ -15,12 +15,12 @@ import org.jboss.logging.Logger;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 
 /**
@@ -92,49 +92,49 @@ public class LabellingScenario {
                 .build();
 
         final WorkItem wi = workItemService.create(request);
-        steps.add(new StepLog(1, description1, wi.id));
+        steps.add(new StepLog(1, description1, wi.id()));
 
         // Step 2: team-lead adds "priority/high" label
         final String description2 = "team-lead adds label 'priority/high' to escalate the ticket";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 2, total, description2);
-        workItemService.addLabel(wi.id, LABEL_PRIORITY, ACTOR_LEAD);
-        steps.add(new StepLog(2, description2, wi.id));
+        workItemService.addLabel(wi.id(), LABEL_PRIORITY, ACTOR_LEAD);
+        steps.add(new StepLog(2, description2, wi.id()));
 
         // Step 3: team-lead adds "customer/vip" label because customer is VIP
         final String description3 = "team-lead adds label 'customer/vip' — client is on VIP tier";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 3, total, description3);
-        workItemService.addLabel(wi.id, LABEL_VIP, ACTOR_LEAD);
-        steps.add(new StepLog(3, description3, wi.id));
+        workItemService.addLabel(wi.id(), LABEL_VIP, ACTOR_LEAD);
+        steps.add(new StepLog(3, description3, wi.id()));
 
         // Step 4: query by label pattern "customer/*" and count matches
         final String description4 = "query inbox by label pattern 'customer/*' — ticket should appear";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 4, total, description4);
-        final List<WorkItem> matching = workItemStore.scan(WorkItemQuery.byLabelPattern("customer/*"));
-        final int matchCount = matching.size();
-        steps.add(new StepLog(4, description4, wi.id));
+        final List<WorkItem> matching   = workItemStore.scan(WorkItemQuery.byLabelPattern("customer/*"));
+        final int                  matchCount = matching.size();
+        steps.add(new StepLog(4, description4, wi.id()));
 
         // Step 5: team-lead claims, starts, and completes the ticket
         final String description5 = "team-lead claims, starts, and completes the support ticket";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 5, total, description5);
-        workItemService.claim(wi.id, ACTOR_LEAD);
-        workItemService.start(wi.id, ACTOR_LEAD);
-        workItemService.complete(wi.id, ACTOR_LEAD, "{\"resolved\": true, \"resolution\": \"Password reset issued\"}", null);
-        steps.add(new StepLog(5, description5, wi.id));
+        workItemService.claim(wi.id(), ACTOR_LEAD);
+        workItemService.start(wi.id(), ACTOR_LEAD);
+        workItemService.complete(wi.id(), ACTOR_LEAD, "{\"resolved\": true, \"resolution\": \"Password reset issued\"}", null);
+        steps.add(new StepLog(5, description5, wi.id()));
 
         // Capture labels before removing the VIP label
-        final WorkItem afterCompletion = workItemStore.get(wi.id).orElseThrow();
-        final List<String> labelsAtCompletion = afterCompletion.labels.stream()
-                .map(l -> l.path)
+        final WorkItem afterCompletion = workItemStore.get(wi.id()).orElseThrow();
+        final List<String> labelsAtCompletion = afterCompletion.labels().stream()
+                .map(l -> l.path())
                 .toList();
 
         // Step 6: team-lead removes "customer/vip" — MANUAL labels can be removed post-completion
         final String description6 = "team-lead removes 'customer/vip' label after issue resolved";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 6, total, description6);
-        workItemService.removeLabel(wi.id, LABEL_VIP);
-        steps.add(new StepLog(6, description6, wi.id));
+        workItemService.removeLabel(wi.id(), LABEL_VIP);
+        steps.add(new StepLog(6, description6, wi.id()));
 
         // Collect audit trail
-        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id);
+        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id());
         final List<AuditEntryResponse> auditTrail = auditEntries.stream()
                 .map(a -> new AuditEntryResponse(a.id, a.event, a.actor, a.detail, a.occurredAt))
                 .toList();
@@ -142,7 +142,7 @@ public class LabellingScenario {
         return new LabellingResponse(
                 SCENARIO_ID,
                 steps,
-                wi.id,
+                wi.id(),
                 labelsAtCompletion,
                 matchCount,
                 auditTrail);

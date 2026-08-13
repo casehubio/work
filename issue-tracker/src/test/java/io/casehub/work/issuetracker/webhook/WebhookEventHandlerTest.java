@@ -3,19 +3,19 @@ package io.casehub.work.issuetracker.webhook;
 import io.casehub.work.api.NormativeResolution;
 import io.casehub.work.issuetracker.model.WorkItemIssueLink;
 import io.casehub.work.issuetracker.repository.IssueLinkStore;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLabel;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -41,12 +41,11 @@ class WebhookEventHandlerTest {
     }
 
     private WorkItem activeWorkItem() {
-        WorkItem wi = new WorkItem();
-        wi.id = workItemId;
-        wi.status = WorkItemStatus.ASSIGNED;
-        wi.assigneeId = "alice";
-        wi.labels = new ArrayList<>();
-        return wi;
+        return WorkItem.builder()
+                .id(workItemId)
+                .status(WorkItemStatus.ASSIGNED)
+                .assigneeId("alice")
+                .build();
     }
 
     private WorkItemIssueLink linkFor(final UUID wid) {
@@ -101,15 +100,8 @@ class WebhookEventHandlerTest {
         final UUID wid1 = UUID.randomUUID();
         final UUID wid2 = UUID.randomUUID();
 
-        final WorkItem wi1 = new WorkItem();
-        wi1.id = wid1;
-        wi1.status = WorkItemStatus.ASSIGNED;
-        wi1.labels = new ArrayList<>();
-
-        final WorkItem wi2 = new WorkItem();
-        wi2.id = wid2;
-        wi2.status = WorkItemStatus.IN_PROGRESS;
-        wi2.labels = new ArrayList<>();
+        final WorkItem wi1 = WorkItem.builder().id(wid1).status(WorkItemStatus.ASSIGNED).build();
+        final WorkItem wi2 = WorkItem.builder().id(wid2).status(WorkItemStatus.IN_PROGRESS).build();
 
         when(linkStore.findByTrackerRef("github", "owner/repo#42"))
                 .thenReturn(List.of(linkFor(wid1), linkFor(wid2)));
@@ -129,15 +121,8 @@ class WebhookEventHandlerTest {
         final UUID wid1 = UUID.randomUUID();
         final UUID wid2 = UUID.randomUUID();
 
-        final WorkItem wi1 = new WorkItem();
-        wi1.id = wid1;
-        wi1.status = WorkItemStatus.ASSIGNED;
-        wi1.labels = new ArrayList<>();
-
-        final WorkItem wi2 = new WorkItem();
-        wi2.id = wid2;
-        wi2.status = WorkItemStatus.ASSIGNED;
-        wi2.labels = new ArrayList<>();
+        final WorkItem wi1 = WorkItem.builder().id(wid1).status(WorkItemStatus.ASSIGNED).build();
+        final WorkItem wi2 = WorkItem.builder().id(wid2).status(WorkItemStatus.ASSIGNED).build();
 
         when(linkStore.findByTrackerRef("github", "owner/repo#42"))
                 .thenReturn(List.of(linkFor(wid1), linkFor(wid2)));
@@ -184,10 +169,7 @@ class WebhookEventHandlerTest {
 
     @Test
     void assigned_pending_callsClaim() {
-        WorkItem wi = new WorkItem();
-        wi.id = workItemId;
-        wi.status = WorkItemStatus.PENDING;
-        wi.labels = new ArrayList<>();
+        WorkItem wi = WorkItem.builder().id(workItemId).status(WorkItemStatus.PENDING).build();
 
         handler.applyTransition(workItemId, wi, new WebhookEvent(
                 "github", "owner/repo#42", WebhookEventKind.ASSIGNED,
@@ -198,14 +180,14 @@ class WebhookEventHandlerTest {
 
     @Test
     void assigned_alreadyAssigned_updatesAssigneeDirectly() {
-        WorkItem wi = activeWorkItem();
-
-        handler.applyTransition(workItemId, wi, new WebhookEvent(
+        handler.applyTransition(workItemId, activeWorkItem(), new WebhookEvent(
                 "github", "owner/repo#42", WebhookEventKind.ASSIGNED,
                 "alice", null, null, null, null, null, "carol"));
 
         verify(workItemService, never()).claim(any(), any());
-        assertThat(wi.assigneeId).isEqualTo("carol");
+        ArgumentCaptor<WorkItem> captor = ArgumentCaptor.forClass(WorkItem.class);
+        verify(workItemStore).put(captor.capture());
+        assertThat(captor.getValue().assigneeId()).isEqualTo("carol");
     }
 
     @Test
@@ -219,83 +201,69 @@ class WebhookEventHandlerTest {
 
     @Test
     void titleChanged_updatesTitle() {
-        WorkItem wi = activeWorkItem();
-
-        handler.applyTransition(workItemId, wi, new WebhookEvent(
+        handler.applyTransition(workItemId, activeWorkItem(), new WebhookEvent(
                 "github", "owner/repo#42", WebhookEventKind.TITLE_CHANGED,
                 "alice", null, null, null, "New Title", null, null));
 
-        assertThat(wi.title).isEqualTo("New Title");
-        verifyNoMoreInteractions(workItemService);
+        ArgumentCaptor<WorkItem> captor = ArgumentCaptor.forClass(WorkItem.class);
+        verify(workItemStore).put(captor.capture());
+        assertThat(captor.getValue().title()).isEqualTo("New Title");
     }
 
     @Test
     void descriptionChanged_stripsFooter() {
-        WorkItem wi = activeWorkItem();
         String rawBody = "The real description.\n\n---\n*Linked WorkItem: `" + workItemId + "`*";
 
-        handler.applyTransition(workItemId, wi, new WebhookEvent(
+        handler.applyTransition(workItemId, activeWorkItem(), new WebhookEvent(
                 "github", "owner/repo#42", WebhookEventKind.DESCRIPTION_CHANGED,
                 "alice", null, null, null, null, rawBody, null));
 
-        assertThat(wi.description).isEqualTo("The real description.");
+        ArgumentCaptor<WorkItem> captor = ArgumentCaptor.forClass(WorkItem.class);
+        verify(workItemStore).put(captor.capture());
+        assertThat(captor.getValue().description()).isEqualTo("The real description.");
     }
 
     @Test
     void priorityChanged_updatesPriority() {
-        WorkItem wi = activeWorkItem();
-
-        handler.applyTransition(workItemId, wi, new WebhookEvent(
+        handler.applyTransition(workItemId, activeWorkItem(), new WebhookEvent(
                 "github", "owner/repo#42", WebhookEventKind.PRIORITY_CHANGED,
                 "alice", null, WorkItemPriority.HIGH, null, null, null, null));
 
-        assertThat(wi.priority).isEqualTo(WorkItemPriority.HIGH);
+        ArgumentCaptor<WorkItem> captor = ArgumentCaptor.forClass(WorkItem.class);
+        verify(workItemStore).put(captor.capture());
+        assertThat(captor.getValue().priority()).isEqualTo(WorkItemPriority.HIGH);
     }
 
     @Test
     void labelAdded_appendsLabel() {
-        WorkItem wi = activeWorkItem();
-
-        handler.applyTransition(workItemId, wi, new WebhookEvent(
+        handler.applyTransition(workItemId, activeWorkItem(), new WebhookEvent(
                 "github", "owner/repo#42", WebhookEventKind.LABEL_ADDED,
                 "alice", null, null, "legal/nda", null, null, null));
 
-        assertThat(wi.labels).anyMatch(l -> "legal/nda".equals(l.path));
+        verify(workItemService).addLabel(workItemId, "legal/nda", "webhook");
     }
 
     @Test
     void labelAdded_duplicate_notAddedTwice() {
-        WorkItem wi = activeWorkItem();
-        WorkItemLabel existing = new WorkItemLabel();
-        existing.path = "legal/nda";
-        wi.labels.add(existing);
-
-        handler.applyTransition(workItemId, wi, new WebhookEvent(
+        handler.applyTransition(workItemId, activeWorkItem(), new WebhookEvent(
                 "github", "owner/repo#42", WebhookEventKind.LABEL_ADDED,
                 "alice", null, null, "legal/nda", null, null, null));
 
-        assertThat(wi.labels).hasSize(1);
+        verify(workItemService).addLabel(workItemId, "legal/nda", "webhook");
     }
 
     @Test
     void labelRemoved_removesLabel() {
-        WorkItem wi = activeWorkItem();
-        WorkItemLabel label = new WorkItemLabel();
-        label.path = "legal/nda";
-        wi.labels.add(label);
-
-        handler.applyTransition(workItemId, wi, new WebhookEvent(
+        handler.applyTransition(workItemId, activeWorkItem(), new WebhookEvent(
                 "github", "owner/repo#42", WebhookEventKind.LABEL_REMOVED,
                 "alice", null, null, "legal/nda", null, null, null));
 
-        assertThat(wi.labels).isEmpty();
+        verify(workItemService).removeLabel(workItemId, "legal/nda");
     }
 
     @Test
     void terminalWorkItem_skippedSilently() {
-        WorkItem wi = new WorkItem();
-        wi.id = workItemId;
-        wi.status = WorkItemStatus.COMPLETED;
+        WorkItem wi = WorkItem.builder().id(workItemId).status(WorkItemStatus.COMPLETED).build();
 
         handler.handle(workItemId, wi, new WebhookEvent(
                 "github", "owner/repo#42", WebhookEventKind.CLOSED,

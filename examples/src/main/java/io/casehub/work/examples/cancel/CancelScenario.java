@@ -3,6 +3,7 @@ package io.casehub.work.examples.cancel;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.POST;
@@ -15,7 +16,6 @@ import org.jboss.logging.Logger;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.repository.AuditEntryStore;
@@ -88,21 +88,21 @@ public class CancelScenario {
                 .build();
 
         final WorkItem wi = workItemService.create(request);
-        steps.add(new StepLog(1, description1, wi.id));
+        steps.add(new StepLog(1, description1, wi.id()));
 
         // Step 2: it-manager discovers the request — bulk licence already covers this
         final String description2 = "it-manager discovers existing bulk licence EL-2026-047 covers this request";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 2, total, description2);
-        steps.add(new StepLog(2, description2, wi.id));
+        steps.add(new StepLog(2, description2, wi.id()));
 
         // Step 3: it-manager cancels the WorkItem with a reason
         final String description3 = "it-manager cancels the licence request — redundant under bulk licence";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 3, total, description3);
-        final WorkItem cancelled = workItemService.cancel(wi.id, ACTOR_MANAGER, CANCEL_REASON);
-        steps.add(new StepLog(3, description3, wi.id));
+        final WorkItem cancelled = workItemService.cancel(wi.id(), ACTOR_MANAGER, CANCEL_REASON);
+        steps.add(new StepLog(3, description3, wi.id()));
 
         // Collect audit trail
-        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id);
+        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id());
         final List<AuditEntryResponse> auditTrail = auditEntries.stream()
                 .map(a -> new AuditEntryResponse(a.id, a.event, a.actor, a.detail, a.occurredAt))
                 .toList();
@@ -110,10 +110,10 @@ public class CancelScenario {
         return new CancelResponse(
                 SCENARIO_ID,
                 steps,
-                wi.id,
+                wi.id(),
                 ACTOR_MANAGER,
                 CANCEL_REASON,
-                cancelled.status.name(),
+                cancelled.status().name(),
                 auditTrail);
     }
 }

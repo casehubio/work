@@ -6,18 +6,20 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.runtime.repository.WorkItemEntityMapper;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemRelationStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
@@ -51,7 +53,7 @@ class JpaWorkItemRelationStoreTenancyTest {
 
     /** Create a minimal WorkItem in the current tenant. */
     private WorkItem createWorkItem() {
-        WorkItem wi = new WorkItem();
+        WorkItemEntity wi = new WorkItemEntity();
         wi.title = "test-" + UUID.randomUUID();
         wi.status = WorkItemStatus.PENDING;
         wi.priority = WorkItemPriority.MEDIUM;
@@ -59,7 +61,7 @@ class JpaWorkItemRelationStoreTenancyTest {
         wi.createdAt = Instant.now();
         wi.updatedAt = Instant.now();
         wi.expiresAt = Instant.now().plusSeconds(3600);
-        return workItemStore.put(wi);
+        return workItemStore.put(WorkItemEntityMapper.toDomain(wi));
     }
 
     private WorkItemRelation newRelation(UUID sourceId, UUID targetId, String type) {
@@ -78,7 +80,7 @@ class JpaWorkItemRelationStoreTenancyTest {
         WorkItem source = createWorkItem();
         WorkItem target = createWorkItem();
 
-        WorkItemRelation r = newRelation(source.id, target.id, WorkItemRelationType.PART_OF);
+        WorkItemRelation r = newRelation(source.id(), target.id(), WorkItemRelationType.PART_OF);
         assertThat(r.tenancyId).isNull();
 
         store.put(r);
@@ -89,9 +91,9 @@ class JpaWorkItemRelationStoreTenancyTest {
     @Test
     void get_returnsEmpty_forAnotherTenantRelation() {
         principal.setTenancyId(TENANT_A);
-        WorkItem source = createWorkItem();
-        WorkItem target = createWorkItem();
-        WorkItemRelation r = newRelation(source.id, target.id, "BLOCKS");
+        WorkItem         source = createWorkItem();
+        WorkItem         target = createWorkItem();
+        WorkItemRelation r      = newRelation(source.id(), target.id(), "BLOCKS");
         store.put(r);
         UUID id = r.id;
 
@@ -108,22 +110,22 @@ class JpaWorkItemRelationStoreTenancyTest {
         principal.setTenancyId(TENANT_A);
         WorkItem sourceA = createWorkItem();
         WorkItem targetA = createWorkItem();
-        store.put(newRelation(sourceA.id, targetA.id, "BLOCKS"));
+        store.put(newRelation(sourceA.id(), targetA.id(), "BLOCKS"));
 
         // Tenant B: create separate source and target
         principal.setTenancyId(TENANT_B);
         WorkItem sourceB = createWorkItem();
         WorkItem targetB = createWorkItem();
-        store.put(newRelation(sourceB.id, targetB.id, "BLOCKS"));
+        store.put(newRelation(sourceB.id(), targetB.id(), "BLOCKS"));
 
         // As tenant B, only see B's relation
-        List<WorkItemRelation> resultB = store.findBySourceId(sourceB.id);
+        List<WorkItemRelation> resultB = store.findBySourceId(sourceB.id());
         assertThat(resultB).hasSize(1);
         assertThat(resultB.get(0).tenancyId).isEqualTo(TENANT_B);
 
         // As tenant A, should not see B's relation for A's sourceId
         principal.setTenancyId(TENANT_A);
-        List<WorkItemRelation> resultA = store.findBySourceId(sourceA.id);
+        List<WorkItemRelation> resultA = store.findBySourceId(sourceA.id());
         assertThat(resultA).hasSize(1);
         assertThat(resultA.get(0).tenancyId).isEqualTo(TENANT_A);
     }
@@ -133,13 +135,13 @@ class JpaWorkItemRelationStoreTenancyTest {
         principal.setTenancyId(TENANT_A);
         WorkItem source = createWorkItem();
         WorkItem target = createWorkItem();
-        store.put(newRelation(source.id, target.id, WorkItemRelationType.PART_OF));
+        store.put(newRelation(source.id(), target.id(), WorkItemRelationType.PART_OF));
 
         principal.setTenancyId(TENANT_B);
-        assertThat(store.findByTargetAndType(target.id, WorkItemRelationType.PART_OF)).isEmpty();
+        assertThat(store.findByTargetAndType(target.id(), WorkItemRelationType.PART_OF)).isEmpty();
 
         principal.setTenancyId(TENANT_A);
-        assertThat(store.findByTargetAndType(target.id, WorkItemRelationType.PART_OF)).hasSize(1);
+        assertThat(store.findByTargetAndType(target.id(), WorkItemRelationType.PART_OF)).hasSize(1);
     }
 
     @Test
@@ -147,21 +149,21 @@ class JpaWorkItemRelationStoreTenancyTest {
         principal.setTenancyId(TENANT_A);
         WorkItem source = createWorkItem();
         WorkItem target = createWorkItem();
-        store.put(newRelation(source.id, target.id, "BLOCKS"));
+        store.put(newRelation(source.id(), target.id(), "BLOCKS"));
 
         principal.setTenancyId(TENANT_B);
-        assertThat(store.findExisting(source.id, target.id, "BLOCKS")).isEmpty();
+        assertThat(store.findExisting(source.id(), target.id(), "BLOCKS")).isEmpty();
 
         principal.setTenancyId(TENANT_A);
-        assertThat(store.findExisting(source.id, target.id, "BLOCKS")).isPresent();
+        assertThat(store.findExisting(source.id(), target.id(), "BLOCKS")).isPresent();
     }
 
     @Test
     void delete_cannotDeleteAnotherTenantRelation() {
         principal.setTenancyId(TENANT_A);
-        WorkItem source = createWorkItem();
-        WorkItem target = createWorkItem();
-        WorkItemRelation r = newRelation(source.id, target.id, "BLOCKS");
+        WorkItem         source = createWorkItem();
+        WorkItem         target = createWorkItem();
+        WorkItemRelation r      = newRelation(source.id(), target.id(), "BLOCKS");
         store.put(r);
         UUID id = r.id;
 

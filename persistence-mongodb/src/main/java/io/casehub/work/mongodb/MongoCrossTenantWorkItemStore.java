@@ -8,9 +8,9 @@ import jakarta.enterprise.inject.Alternative;
 
 import org.bson.Document;
 
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.CrossTenantWorkItemStore;
+import io.casehub.work.api.spi.CrossTenantWorkItemStore;
 
 /**
  * Cross-tenant MongoDB implementation of {@link CrossTenantWorkItemStore}.

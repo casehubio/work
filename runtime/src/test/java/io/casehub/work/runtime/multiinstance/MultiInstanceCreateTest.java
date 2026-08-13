@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -12,7 +14,6 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
@@ -51,24 +52,24 @@ class MultiInstanceCreateTest {
                 .build();
         WorkItem parent = templateService.createFromTemplate(request);
 
-        assertThat(parent.parentId).isNull(); // parent has no parent
-        assertThat(parent.id).isNotNull();
+        assertThat(parent.parentId()).isNull(); // parent has no parent
+        assertThat(parent.id()).isNotNull();
 
         // Three children should exist
-        List<WorkItem> children = WorkItem.list("parentId", parent.id);
+        List<WorkItemEntity> children = WorkItemEntity.list("parentId", parent.id());
         assertThat(children).hasSize(3);
 
         // All children have PART_OF relation to parent
         children.forEach(child -> {
-            assertThat(child.parentId).isEqualTo(parent.id);
+            assertThat(child.parentId).isEqualTo(parent.id());
             long relations = WorkItemRelation.count(
                     "sourceId = ?1 AND targetId = ?2 AND relationType = ?3",
-                    child.id, parent.id, WorkItemRelationType.PART_OF);
+                    child.id, parent.id(), WorkItemRelationType.PART_OF);
             assertThat(relations).isEqualTo(1);
         });
 
         // Spawn group created with policy
-        WorkItemSpawnGroup group = WorkItemSpawnGroup.findMultiInstanceByParentId(parent.id);
+        WorkItemSpawnGroup group = WorkItemSpawnGroup.findMultiInstanceByParentId(parent.id());
         assertThat(group).isNotNull();
         assertThat(group.instanceCount).isEqualTo(3);
         assertThat(group.requiredCount).isEqualTo(2);
@@ -91,7 +92,7 @@ class MultiInstanceCreateTest {
                 .build();
         WorkItem item = templateService.createFromTemplate(request);
 
-        assertThat(item.parentId).isNull();
-        assertThat(WorkItem.count("parentId", item.id)).isZero();
+        assertThat(item.parentId()).isNull();
+        assertThat(WorkItemEntity.count("parentId", item.id())).isZero();
     }
 }

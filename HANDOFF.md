@@ -1,24 +1,41 @@
-# HANDOFF — 2026-08-10
+# HANDOFF — 2026-08-13
 
 ## Last Session
 
-Closed `issue-346-v2-label-schema-conflict` — Flyway migration conflict where stale V2__label_schema.sql in `target/classes/` survived the consolidation commit (#343) and conflicted with the consolidated V1. Root cause: Maven incremental builds don't delete stale resources from `target/classes/` when source files are removed. Fix was `mvn clean install`; added gotcha to docs/GOTCHAS.md. Landed on origin/main as `70f45113`. Issue #346 closed.
+WorkItemStore SPI extraction (#337) — Tasks 7-10 completed. All runtime services, JPA/MongoDB/InMemory stores, and 9 downstream platform modules (rest, queues, ai, ledger, flow, issue-tracker, queues-dashboard, engine-adapter, qhorus) now compile against the `WorkItem` record from `api/`. The `toBuilder()` mutation pattern replaced all direct entity field mutation in services.
+
+### What's Done
+
+**Task 7 (runtime compilation):** 99 errors → 0. Changed 18 production files + 36 test files in runtime/. All services (WorkItemService, ExpiryLifecycleService, WorkItemSpawnService, etc.) use `WorkItem` records with `toBuilder()`. JPA stores map via `WorkItemEntityMapper` at persistence boundaries. `WorkItemLifecycleEvent`, `WorkItemAssignmentService`, `OutcomeValidator`, `WorkItemContextBuilder` all updated.
+
+**Task 8 (InMemoryWorkItemStore):** Converted to store `WorkItem` records directly. Label matching uses `LabelPatternMatcher` from api/. Type matching uses `Set<String>`. Full pom.xml dependency shift deferred (other in-memory stores still need runtime).
+
+**Task 9 (MongoDB stores):** `MongoWorkItemDocument.from()` accepts `WorkItem`, `toDomain()` returns `WorkItem` via builder. OCC preserved via version-checked `replaceOne`.
+
+**Task 10 (import sweep):** All 9 downstream platform modules updated. `WorkItemMapper` (rest), `QueueBoardBuilder`, `LedgerEventCapture`, `GitHubIssueTrackerProvider`, `WebhookEventHandler`, AI services — all use `WorkItem` record accessors.
+
+### What's NOT Done
+
+**Examples + integration tests:** `examples/`, `queues-examples/`, `flow-examples/`, `integration-tests/`, `integration-tests-memory/` still reference `WorkItemEntity`. These files mix `WorkItem` records (from service calls) with JPA entities (`AuditEntry`, `LabelRuleEntity`, `WorkItemSpawnGroup`) that have public `.id` fields — text replacement can't distinguish them. **Do this in IntelliJ IDE with type-aware Find Usages.**
+
+**Task 11 (progress API docs #333):** Not started. Independent of the SPI work.
+
+**Runtime Quarkus integration tests:** Pre-existing CDI wiring gap — `CapabilityValidator` and `WorkerRegistry` unsatisfied in test context. Not caused by this change. Unit tests pass (33/33).
 
 ## Immediate Next Step
 
-Pick up #329 (progress model epic) or #800 (agent learning & memory, slot 83). Run `/work` to start.
+Fix the example and integration-test modules in IntelliJ IDE. Use Find Usages on `WorkItemService.create()` return type to identify all `WorkItemEntity` variables that should be `WorkItem`. Then do Task 11 (progress API docs).
 
-## What's Left
+## Cross-Module
 
-- PR #339 to casehubio/work still open — merge when ready
-- engine#647 work-end incomplete — rebase/squash/push/stamp/close remaining · XS · Low
-- PLATFORM.md update for behavioral contracts capability ownership (AC4 from #647) — parent repo · S · Low
+**Blocking** (downstream repos committed but not pushed — push work first):
+- aml, clinical, engine, examples, iot, devtown, life — entity rename committed on main, awaiting work SNAPSHOT publish
 
-## What's Next
+## References
 
-| # | Description | Scale | Complexity | Notes |
-|---|-------------|-------|------------|-------|
-| #329 | Epic: Progress model enhancements (#307, #309, #308) | L | Med | Slot 8 created |
-| #800 | Agent Learning & Memory epic | XL | High | Slot 83 ready; brainstorming paused at scope |
-| #298 | Replace event-as-request pattern with direct WorkItemCreator.create() | M | Med | Design |
-| #152 | Split examples into core and full variants | M | Low | — |
+| Artifact | Path |
+|----------|------|
+| Design spec | `specs/issue-333-progress-api-docs-spi-fix/2026-08-13-progress-docs-spi-extraction-design.md` |
+| Plan | `plans/2026-08-13-progress-docs-spi-extraction.md` |
+| Branch | `issue-333-progress-api-docs-spi-fix` |
+| Issues | #333 (progress docs), #337 (SPI extraction), #340 (closed) |

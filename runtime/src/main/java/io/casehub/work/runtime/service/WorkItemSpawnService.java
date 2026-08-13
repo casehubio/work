@@ -1,26 +1,17 @@
 package io.casehub.work.runtime.service;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-
 import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.api.ChildSpec;
-import io.casehub.work.api.spi.SpawnPort;
 import io.casehub.work.api.SpawnRequest;
 import io.casehub.work.api.SpawnResult;
 import io.casehub.work.api.SpawnedChild;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.spi.SpawnPort;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.OutcomeCodecs;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
@@ -28,8 +19,15 @@ import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.WorkItemRelationStore;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
 import io.casehub.work.runtime.repository.WorkItemTemplateStore;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * Implements {@link SpawnPort} for the WorkItem domain.
@@ -74,15 +72,6 @@ public class WorkItemSpawnService implements SpawnPort {
         this.currentPrincipal = currentPrincipal;
     }
 
-    /**
-     * Spawn a group of child WorkItems from a parent.
-     *
-     * @param request the spawn request containing parentId, idempotencyKey, and child specs
-     * @return result with group ID, spawned children, and created flag
-     * @throws IllegalArgumentException if children is empty or idempotencyKey is blank
-     * @throws WorkItemNotFoundException if the parent WorkItem does not exist
-     * @throws IllegalStateException if the parent WorkItem is in a terminal status
-     */
     @Override
     @Transactional
     public SpawnResult spawn(final SpawnRequest request) {
@@ -93,12 +82,12 @@ public class WorkItemSpawnService implements SpawnPort {
             throw new IllegalArgumentException("idempotencyKey must not be blank");
         }
 
-        final WorkItem parent = workItemStore.get(request.parentId())
-                .orElseThrow(() -> new WorkItemNotFoundException(request.parentId()));
+        final io.casehub.work.api.WorkItem parent = workItemStore.get(request.parentId())
+                                                                 .orElseThrow(() -> new WorkItemNotFoundException(request.parentId()));
 
-        if (parent.status.isTerminal()) {
+        if (parent.status().isTerminal()) {
             throw new IllegalStateException(
-                    "Cannot spawn children from parent WorkItem in terminal status: " + parent.status);
+                    "Cannot spawn children from parent WorkItem in terminal status: " + parent.status());
         }
 
         // Idempotency check
@@ -107,20 +96,20 @@ public class WorkItemSpawnService implements SpawnPort {
         if (existing != null) {
             final String createdByMarker = "system:spawn:" + existing.id;
             final List<SpawnedChild> existingChildren = relationStore
-                    .findByTargetAndType(request.parentId(), WorkItemRelationType.PART_OF)
-                    .stream()
-                    .filter(r -> createdByMarker.equals(r.createdBy))
-                    .map(r -> {
-                        final WorkItem child = workItemStore.get(r.sourceId).orElseThrow();
-                        return new SpawnedChild(child.id, child.callerRef);
-                    })
-                    .toList();
+                                                                .findByTargetAndType(request.parentId(), WorkItemRelationType.PART_OF)
+                                                                .stream()
+                                                                .filter(r -> createdByMarker.equals(r.createdBy))
+                                                                .map(r -> {
+                                                                    final io.casehub.work.api.WorkItem child = workItemStore.get(r.sourceId).orElseThrow();
+                                                                    return new SpawnedChild(child.id(), child.callerRef());
+                                                                })
+                                                                .toList();
             return new SpawnResult(existing.id, existingChildren, false);
         }
 
         // Create the spawn group for idempotency
         final WorkItemSpawnGroup group = new WorkItemSpawnGroup();
-        group.parentId = request.parentId();
+        group.parentId       = request.parentId();
         group.idempotencyKey = request.idempotencyKey();
         spawnGroupStore.put(group);
 
@@ -128,49 +117,49 @@ public class WorkItemSpawnService implements SpawnPort {
         final List<SpawnedChild> spawnedChildren = new ArrayList<>();
         for (final ChildSpec spec : request.children()) {
             final WorkItemTemplate template = templateStore.get(spec.templateId())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "WorkItemTemplate not found: " + spec.templateId()));
+                                                           .orElseThrow(() -> new IllegalArgumentException(
+                                                                   "WorkItemTemplate not found: " + spec.templateId()));
 
             final WorkItemCreateRequest createRequest = WorkItemCreateRequest.builder()
-                    .title(template.name)
-                    .description(template.description)
-                    .types(WorkItemTemplateService.parseTypes(template).stream().map(t -> t.path).toList())
-                    .priority(template.priority)
-                    .candidateGroups(override(spec, "candidateGroups", template.candidateGroups))
-                    .candidateUsers(override(spec, "candidateUsers", template.candidateUsers))
-                    .requiredCapabilities(override(spec, "requiredCapabilities", template.requiredCapabilities))
-                    .createdBy("system:spawn:" + group.id)
-                    .payload(template.defaultPayload)
-                    .callerRef(spec.callerRef())
-                    .claimDeadlineBusinessHours(template.defaultClaimBusinessHours)
-                    .expiresAtBusinessHours(template.defaultExpiryBusinessHours)
-                    .templateId(template.id)
-                    .permittedOutcomes(OutcomeCodecs.decodeOutcomes(template.outcomes))
-                    .inputDataSchema(template.inputDataSchema)
-                    .outputDataSchema(template.outputDataSchema)
-                    .excludedUsers(templateExpander.expandExcludedUsers(template, currentPrincipal.tenancyId()))
-                    .build();
+                                                                             .title(template.name)
+                                                                             .description(template.description)
+                                                                             .types(WorkItemTemplateService.parseTypes(template).stream().map(t -> t.path).toList())
+                                                                             .priority(template.priority)
+                                                                             .candidateGroups(override(spec, "candidateGroups", template.candidateGroups))
+                                                                             .candidateUsers(override(spec, "candidateUsers", template.candidateUsers))
+                                                                             .requiredCapabilities(override(spec, "requiredCapabilities", template.requiredCapabilities))
+                                                                             .createdBy("system:spawn:" + group.id)
+                                                                             .payload(template.defaultPayload)
+                                                                             .callerRef(spec.callerRef())
+                                                                             .claimDeadlineBusinessHours(template.defaultClaimBusinessHours)
+                                                                             .expiresAtBusinessHours(template.defaultExpiryBusinessHours)
+                                                                             .templateId(template.id)
+                                                                             .permittedOutcomes(OutcomeCodecs.decodeOutcomes(template.outcomes))
+                                                                             .inputDataSchema(template.inputDataSchema)
+                                                                             .outputDataSchema(template.outputDataSchema)
+                                                                             .excludedUsers(templateExpander.expandExcludedUsers(template, currentPrincipal.tenancyId()))
+                                                                             .build();
 
-            final WorkItem child = workItemService.create(createRequest);
+            final io.casehub.work.api.WorkItem child = workItemService.create(createRequest);
 
             // Wire PART_OF relation: child → parent
             final WorkItemRelation relation = new WorkItemRelation();
-            relation.sourceId = child.id;
-            relation.targetId = request.parentId();
+            relation.sourceId     = child.id();
+            relation.targetId     = request.parentId();
             relation.relationType = WorkItemRelationType.PART_OF;
-            relation.createdBy = "system:spawn:" + group.id;
+            relation.createdBy    = "system:spawn:" + group.id;
             relationStore.put(relation);
 
-            spawnedChildren.add(new SpawnedChild(child.id, spec.callerRef()));
+            spawnedChildren.add(new SpawnedChild(child.id(), spec.callerRef()));
         }
 
         // Write SPAWNED audit entry on parent and fire CDI event
-        final String spawnDetail = "groupId:" + group.id + ",children:" + spawnedChildren.size();
-        final AuditEntry auditEntry = new AuditEntry();
-        auditEntry.workItemId = parent.id;
-        auditEntry.event = "SPAWNED";
-        auditEntry.actor = "system:spawn";
-        auditEntry.detail = spawnDetail;
+        final String     spawnDetail = "groupId:" + group.id + ",children:" + spawnedChildren.size();
+        final AuditEntry auditEntry  = new AuditEntry();
+        auditEntry.workItemId = parent.id();
+        auditEntry.event      = "SPAWNED";
+        auditEntry.actor      = "system:spawn";
+        auditEntry.detail     = spawnDetail;
         auditEntry.occurredAt = Instant.now();
         auditStore.append(auditEntry);
 
@@ -179,30 +168,23 @@ public class WorkItemSpawnService implements SpawnPort {
         return new SpawnResult(group.id, spawnedChildren, true);
     }
 
-    /**
-     * Cancel a spawn group, optionally cascading cancellation to PENDING children.
-     *
-     * @param groupId the spawn group UUID
-     * @param cascadeChildren if true, cancel all PENDING children with a PART_OF relation to the parent
-     * @throws WorkItemNotFoundException if the spawn group does not exist
-     */
     @Override
     @Transactional
     public void cancelGroup(final UUID groupId, final boolean cascadeChildren) {
         final WorkItemSpawnGroup group = spawnGroupStore.get(groupId)
-                .orElseThrow(() -> new WorkItemNotFoundException(groupId));
+                                                        .orElseThrow(() -> new WorkItemNotFoundException(groupId));
 
         if (cascadeChildren) {
             final String createdByMarker = "system:spawn:" + groupId;
             relationStore.findByTargetAndType(group.parentId, WorkItemRelationType.PART_OF)
-                    .stream()
-                    .filter(r -> createdByMarker.equals(r.createdBy))
-                    .forEach(r -> workItemStore.get(r.sourceId).ifPresent(child -> {
-                        if (child.status == io.casehub.work.api.WorkItemStatus.PENDING) {
-                            workItemService.cancel(child.id, "system:spawn",
-                                    "Cancelled by spawn group cancellation");
-                        }
-                    }));
+                         .stream()
+                         .filter(r -> createdByMarker.equals(r.createdBy))
+                         .forEach(r -> workItemStore.get(r.sourceId).ifPresent(child -> {
+                             if (child.status() == io.casehub.work.api.WorkItemStatus.PENDING) {
+                                 workItemService.cancel(child.id(), "system:spawn",
+                                                        "Cancelled by spawn group cancellation");
+                             }
+                         }));
         }
 
         spawnGroupStore.delete(groupId);

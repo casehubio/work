@@ -1,10 +1,11 @@
 package io.casehub.work.runtime.event;
 
 import io.casehub.work.api.WorkCloudEventTypes;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import io.casehub.work.runtime.model.WorkItemTemplate;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.repository.WorkItemTemplateStore;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.cloudevents.CloudEvent;
@@ -48,7 +49,7 @@ class WorkCloudEventRoundTripTest {
     void setUp() {
         cloudEventCapture.clear();
         WorkItemTemplate.deleteAll();
-        workItemStore.scanAll().forEach(wi -> WorkItem.deleteById(wi.id));
+        workItemStore.scanAll().forEach(wi -> WorkItemEntity.deleteById(wi.id()));
 
         final WorkItemTemplate template = new WorkItemTemplate();
         template.id                 = UUID.randomUUID();
@@ -84,21 +85,21 @@ class WorkCloudEventRoundTripTest {
         Thread.sleep(2000);
 
         final WorkItem workItem = workItemService.findByCallerRef(ceId).orElseThrow();
-        assertThat(workItem.callerRef).isEqualTo(ceId);
-        assertThat(workItem.payload).isEqualTo(payload);
-        assertThat(workItem.createdBy).isEqualTo("cloudevent:" + source);
-        assertThat(workItem.types).extracting(t -> t.path).containsExactly("test-type");
-        assertThat(workItem.priority).isEqualTo(WorkItemPriority.HIGH);
-        assertThat(workItem.candidateGroups).isEqualTo("test-group");
+        assertThat(workItem.callerRef()).isEqualTo(ceId);
+        assertThat(workItem.payload()).isEqualTo(payload);
+        assertThat(workItem.createdBy()).isEqualTo("cloudevent:" + source);
+        assertThat(workItem.types()).containsExactly("test-type");
+        assertThat(workItem.priority()).isEqualTo(WorkItemPriority.HIGH);
+        assertThat(workItem.candidateGroups()).isEqualTo("test-group");
 
-        workItemService.claim(workItem.id, "test-actor");
-        workItemService.start(workItem.id, "test-actor");
-        workItemService.complete(workItem.id, "test-actor", null, null);
+        workItemService.claim(workItem.id(), "test-actor");
+        workItemService.start(workItem.id(), "test-actor");
+        workItemService.complete(workItem.id(), "test-actor", null, null);
 
         Thread.sleep(2000);
 
         final List<CloudEvent> completedEvents = cloudEventCapture.ofTypeAndSubject(
-                WorkCloudEventTypes.COMPLETED, workItem.id.toString());
+                WorkCloudEventTypes.COMPLETED, workItem.id().toString());
         assertThat(completedEvents).hasSize(1);
         final CloudEvent completedEvent = completedEvents.get(0);
         assertThat(completedEvent.getId()).isNotNull();

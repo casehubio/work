@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
 
+import io.casehub.work.runtime.model.WorkItemEntity;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
@@ -21,7 +22,6 @@ import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.GroupStatus;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemGroupLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
@@ -62,11 +62,11 @@ class WorkItemGroupLifecycleEventTest {
                     .templateId(t.id)
                     .createdBy("test")
                     .build();
-            return templateService.createFromTemplate(request).id;
+            return templateService.createFromTemplate(request).id();
         });
 
         final List<UUID> children = inTx(() ->
-                WorkItem.<WorkItem>list("parentId", parentId).stream().map(w -> w.id).toList());
+                WorkItemEntity.<WorkItemEntity>list("parentId", parentId).stream().map(w -> w.id).toList());
 
         inTx(() -> workItemService.claim(children.get(0), "a"));
         inTx(() -> workItemService.start(children.get(0), "a"));
@@ -97,11 +97,11 @@ class WorkItemGroupLifecycleEventTest {
                     .templateId(t.id)
                     .createdBy("test")
                     .build();
-            return templateService.createFromTemplate(request).id;
+            return templateService.createFromTemplate(request).id();
         });
 
         final List<UUID> children = inTx(() ->
-                WorkItem.<WorkItem>list("parentId", parentId).stream().map(w -> w.id).toList());
+                WorkItemEntity.<WorkItemEntity>list("parentId", parentId).stream().map(w -> w.id).toList());
 
         // Complete only requiredCount (2) children — not all 3.
         // onThresholdReached is not set here so it defaults to KEEP (no side effects).
@@ -142,12 +142,12 @@ class WorkItemGroupLifecycleEventTest {
                     .createdBy("test")
                     .callerRef(callerRef)
                     .build();
-            return templateService.createFromTemplate(request).id;
+            return templateService.createFromTemplate(request).id();
         });
 
         final List<UUID> childIds = inTx(() ->
-            WorkItem.<WorkItem>list("parentId", parentId).stream()
-                .map(w -> w.id).toList());
+            WorkItemEntity.<WorkItemEntity>list("parentId", parentId).stream()
+                          .map(w -> w.id).toList());
 
         inTx(() -> workItemService.claim(childIds.get(0), "alice"));
         inTx(() -> workItemService.start(childIds.get(0), "alice"));
@@ -182,7 +182,7 @@ class WorkItemGroupLifecycleEventTest {
                     .templateId(t.id)
                     .createdBy("test")
                     .build();
-            return templateService.createFromTemplate(request).id;
+            return templateService.createFromTemplate(request).id();
         });
 
         final io.casehub.work.runtime.model.WorkItemSpawnGroup group =
@@ -205,11 +205,11 @@ class WorkItemGroupLifecycleEventTest {
                     .templateId(t.id)
                     .createdBy("test")
                     .build();
-            return templateService.createFromTemplate(request).id;
+            return templateService.createFromTemplate(request).id();
         });
 
         final List<UUID> children = inTx(() ->
-                WorkItem.<WorkItem>list("parentId", parentId).stream().map(w -> w.id).toList());
+                WorkItemEntity.<WorkItemEntity>list("parentId", parentId).stream().map(w -> w.id).toList());
 
         // Complete requiredCount (2) children to trigger threshold
         for (final UUID c : children.subList(0, 2)) {
@@ -247,11 +247,11 @@ class WorkItemGroupLifecycleEventTest {
                     .templateId(t.id)
                     .createdBy("test")
                     .build();
-            return templateService.createFromTemplate(request).id;
+            return templateService.createFromTemplate(request).id();
         });
 
         final List<UUID> children = inTx(() ->
-                WorkItem.<WorkItem>list("parentId", parentId).stream().map(w -> w.id).toList());
+                WorkItemEntity.<WorkItemEntity>list("parentId", parentId).stream().map(w -> w.id).toList());
 
         // Reject 2 of 3 children — threshold becomes unreachable (only 1 remains, need 2)
         for (final UUID c : children.subList(0, 2)) {
