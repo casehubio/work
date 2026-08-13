@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemLabel;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -25,7 +26,7 @@ import io.quarkus.test.junit.QuarkusTest;
 class WorkItemViewQueryTest {
 
     @Inject
-    SubjectViewQuery<WorkItem> viewQuery;
+    SubjectViewQuery<WorkItemEntity> viewQuery;
 
     @Inject
     WorkItemStore workItemStore;
@@ -41,7 +42,7 @@ class WorkItemViewQueryTest {
                 null, Instant.now());
 
         var results = viewQuery.findByView(spec);
-        assertThat(results).extracting(w -> w.id()).contains(wi.id());
+        assertThat(results).extracting(w -> w.id).contains(wi.id());
     }
 
     @Test
@@ -54,7 +55,7 @@ class WorkItemViewQueryTest {
                 "vq-tenant-2", "legal/**", null, null, null, null, Instant.now());
 
         var results = viewQuery.findByView(spec);
-        assertThat(results).extracting(w -> w.id()).doesNotContain(wi.id());
+        assertThat(results).extracting(w -> w.id).doesNotContain(wi.id());
     }
 
     @Test
@@ -67,7 +68,7 @@ class WorkItemViewQueryTest {
                 "vq-tenant-b", "legal/**", null, null, null, null, Instant.now());
 
         var results = viewQuery.findByView(spec);
-        assertThat(results).extracting(w -> w.id()).doesNotContain(wi.id());
+        assertThat(results).extracting(w -> w.id).doesNotContain(wi.id());
     }
 
     @Test
@@ -112,7 +113,7 @@ class WorkItemViewQueryTest {
                 "vq-exact-tenant", "legal", null, null, null, null, Instant.now());
 
         var results = viewQuery.findByView(spec);
-        assertThat(results).extracting(w -> w.id()).contains(wi.id());
+        assertThat(results).extracting(w -> w.id).contains(wi.id());
     }
 
     @Test
@@ -127,8 +128,8 @@ class WorkItemViewQueryTest {
                 "vq-wild-tenant", "legal/*", null, null, null, null, Instant.now());
 
         var results = viewQuery.findByView(spec);
-        assertThat(results).extracting(w -> w.id()).contains(wi1.id());
-        assertThat(results).extracting(w -> w.id()).doesNotContain(wi2.id());
+        assertThat(results).extracting(w -> w.id).contains(wi1.id());
+        assertThat(results).extracting(w -> w.id).doesNotContain(wi2.id());
     }
 
     private WorkItem createWorkItem(String labelPath, String tenancyId) {
