@@ -15,7 +15,7 @@ import java.util.UUID;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
 
@@ -39,14 +39,12 @@ class WorkItemSpiAdapterTest {
     void create_noTemplateId_delegatesToWorkItemService() {
         final WorkItemCreateRequest request = WorkItemCreateRequest.builder()
                 .title("test").createdBy("system").build();
-        final WorkItem entity = new WorkItem();
-        entity.id = UUID.randomUUID();
-        entity.status = WorkItemStatus.PENDING;
+        final WorkItem entity = WorkItem.builder().id(UUID.randomUUID()).status(WorkItemStatus.PENDING).build();
         when(workItemService.create(request)).thenReturn(entity);
 
         final WorkItemRef ref = adapter.create(request);
 
-        assertThat(ref.id()).isEqualTo(entity.id);
+        assertThat(ref.id()).isEqualTo(entity.id());
         assertThat(ref.status()).isEqualTo(WorkItemStatus.PENDING);
         verify(workItemTemplateService, never()).createFromTemplate(any());
     }
@@ -56,39 +54,31 @@ class WorkItemSpiAdapterTest {
         final UUID templateId = UUID.randomUUID();
         final WorkItemCreateRequest request = WorkItemCreateRequest.builder()
                 .title("test").templateId(templateId).createdBy("system").build();
-        final WorkItem entity = new WorkItem();
-        entity.id = UUID.randomUUID();
-        entity.status = WorkItemStatus.PENDING;
+        final WorkItem entity = WorkItem.builder().id(UUID.randomUUID()).status(WorkItemStatus.PENDING).build();
         when(workItemTemplateService.createFromTemplate(request)).thenReturn(entity);
 
         final WorkItemRef ref = adapter.create(request);
 
-        assertThat(ref.id()).isEqualTo(entity.id);
+        assertThat(ref.id()).isEqualTo(entity.id());
         verify(workItemService, never()).create(any());
     }
 
     @Test
     void findByCallerRef_delegatesAndConverts() {
-        final WorkItem entity = new WorkItem();
-        entity.id = UUID.randomUUID();
-        entity.status = WorkItemStatus.IN_PROGRESS;
-        entity.callerRef = "case:123/pi:456";
-        entity.assigneeId = "alice";
+        final WorkItem entity = WorkItem.builder().id(UUID.randomUUID()).status(WorkItemStatus.IN_PROGRESS).callerRef("case:123/pi:456").assigneeId("alice").build();
         when(workItemService.findByCallerRef("case:123/pi:456")).thenReturn(Optional.of(entity));
 
         final Optional<WorkItemRef> result = adapter.findByCallerRef("case:123/pi:456");
 
         assertThat(result).isPresent();
-        assertThat(result.get().id()).isEqualTo(entity.id);
+        assertThat(result.get().id()).isEqualTo(entity.id());
         assertThat(result.get().callerRef()).isEqualTo("case:123/pi:456");
         assertThat(result.get().assigneeId()).isEqualTo("alice");
     }
 
     @Test
     void findActiveByCallerRef_delegatesAndConverts() {
-        final WorkItem entity = new WorkItem();
-        entity.id = UUID.randomUUID();
-        entity.status = WorkItemStatus.PENDING;
+        final WorkItem entity = WorkItem.builder().id(UUID.randomUUID()).status(WorkItemStatus.PENDING).build();
         when(workItemService.findActiveByCallerRef("ref-1")).thenReturn(Optional.of(entity));
 
         final Optional<WorkItemRef> result = adapter.findActiveByCallerRef("ref-1");
@@ -99,10 +89,8 @@ class WorkItemSpiAdapterTest {
 
     @Test
     void cancel_delegatesToService() {
-        final UUID id = UUID.randomUUID();
-        final WorkItem entity = new WorkItem();
-        entity.id = id;
-        entity.status = WorkItemStatus.PENDING;
+        final UUID           id     = UUID.randomUUID();
+        final WorkItem entity = WorkItem.builder().id(id).status(WorkItemStatus.PENDING).build();
         when(workItemService.cancel(id, "system", "done")).thenReturn(entity);
 
         adapter.cancel(id, "system", "done");
@@ -112,10 +100,8 @@ class WorkItemSpiAdapterTest {
 
     @Test
     void cancel_idempotentOnTerminal() {
-        final UUID id = UUID.randomUUID();
-        final WorkItem entity = new WorkItem();
-        entity.id = id;
-        entity.status = WorkItemStatus.COMPLETED;
+        final UUID           id     = UUID.randomUUID();
+        final WorkItem entity = WorkItem.builder().id(id).status(WorkItemStatus.COMPLETED).build();
         when(workItemService.cancel(id, "system", "done"))
                 .thenThrow(new IllegalStateException("Cannot cancel"));
         when(workItemService.findById(id)).thenReturn(Optional.of(entity));
@@ -127,10 +113,8 @@ class WorkItemSpiAdapterTest {
 
     @Test
     void cancel_rethrowsOnActiveNonCancellable() {
-        final UUID id = UUID.randomUUID();
-        final WorkItem entity = new WorkItem();
-        entity.id = id;
-        entity.status = WorkItemStatus.IN_PROGRESS;
+        final UUID           id     = UUID.randomUUID();
+        final WorkItem entity = WorkItem.builder().id(id).status(WorkItemStatus.IN_PROGRESS).build();
         when(workItemService.cancel(id, "system", "done"))
                 .thenThrow(new IllegalStateException("Cannot cancel"));
         when(workItemService.findById(id)).thenReturn(Optional.of(entity));
@@ -141,32 +125,26 @@ class WorkItemSpiAdapterTest {
 
     @Test
     void obsoleteByCallerRef_delegatesToService() {
-        final WorkItem entity = new WorkItem();
-        entity.id = UUID.randomUUID();
-        entity.status = WorkItemStatus.PENDING;
-        entity.callerRef = "ref-1";
+        final WorkItem entity = WorkItem.builder().id(UUID.randomUUID()).status(WorkItemStatus.PENDING).callerRef("ref-1").build();
         when(workItemService.findByCallerRef("ref-1")).thenReturn(Optional.of(entity));
-        when(workItemService.obsolete(entity.id, "system", "Consumed by caller")).thenReturn(entity);
+        when(workItemService.obsolete(entity.id(), "system", "Consumed by caller")).thenReturn(entity);
 
         adapter.obsoleteByCallerRef("ref-1");
 
-        verify(workItemService).obsolete(entity.id, "system", "Consumed by caller");
+        verify(workItemService).obsolete(entity.id(), "system", "Consumed by caller");
     }
 
     @Test
     void obsoleteByCallerRef_idempotentOnTerminal() {
-        final WorkItem entity = new WorkItem();
-        entity.id = UUID.randomUUID();
-        entity.status = WorkItemStatus.COMPLETED;
-        entity.callerRef = "ref-1";
+        final WorkItem entity = WorkItem.builder().id(UUID.randomUUID()).status(WorkItemStatus.COMPLETED).callerRef("ref-1").build();
         when(workItemService.findByCallerRef("ref-1")).thenReturn(Optional.of(entity));
-        when(workItemService.obsolete(entity.id, "system", "Consumed by caller"))
+        when(workItemService.obsolete(entity.id(), "system", "Consumed by caller"))
                 .thenThrow(new IllegalStateException("Cannot obsolete"));
-        when(workItemService.findById(entity.id)).thenReturn(Optional.of(entity));
+        when(workItemService.findById(entity.id())).thenReturn(Optional.of(entity));
 
         adapter.obsoleteByCallerRef("ref-1");
 
-        verify(workItemService).obsolete(entity.id, "system", "Consumed by caller");
+        verify(workItemService).obsolete(entity.id(), "system", "Consumed by caller");
     }
 
     @Test
@@ -180,10 +158,8 @@ class WorkItemSpiAdapterTest {
 
     @Test
     void complete_idempotentOnTerminal() {
-        final UUID id = UUID.randomUUID();
-        final WorkItem entity = new WorkItem();
-        entity.id = id;
-        entity.status = WorkItemStatus.COMPLETED;
+        final UUID           id     = UUID.randomUUID();
+        final WorkItem entity = WorkItem.builder().id(id).status(WorkItemStatus.COMPLETED).build();
         when(workItemService.complete(eq(id), eq("alice"), eq("{}"), eq("approved"), any(), any()))
                 .thenThrow(new IllegalStateException("Cannot complete"));
         when(workItemService.findById(id)).thenReturn(Optional.of(entity));

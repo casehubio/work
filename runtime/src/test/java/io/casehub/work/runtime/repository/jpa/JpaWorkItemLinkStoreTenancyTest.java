@@ -6,18 +6,20 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.runtime.repository.WorkItemEntityMapper;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemLink;
 import io.casehub.work.runtime.model.WorkItemLinkType;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemLinkStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
@@ -51,7 +53,7 @@ class JpaWorkItemLinkStoreTenancyTest {
 
     /** Create a minimal WorkItem in the current tenant. */
     private WorkItem createWorkItem() {
-        WorkItem wi = new WorkItem();
+        WorkItemEntity wi = new WorkItemEntity();
         wi.title = "test-" + UUID.randomUUID();
         wi.status = WorkItemStatus.PENDING;
         wi.priority = WorkItemPriority.MEDIUM;
@@ -59,7 +61,7 @@ class JpaWorkItemLinkStoreTenancyTest {
         wi.createdAt = Instant.now();
         wi.updatedAt = Instant.now();
         wi.expiresAt = Instant.now().plusSeconds(3600);
-        return workItemStore.put(wi);
+        return workItemStore.put(WorkItemEntityMapper.toDomain(wi));
     }
 
     private WorkItemLink newLink(UUID workItemId, String url, String type) {
@@ -77,7 +79,7 @@ class JpaWorkItemLinkStoreTenancyTest {
         principal.setTenancyId(TENANT_A);
         WorkItem wi = createWorkItem();
 
-        WorkItemLink link = newLink(wi.id, "https://example.com", WorkItemLinkType.REFERENCE);
+        WorkItemLink link = newLink(wi.id(), "https://example.com", WorkItemLinkType.REFERENCE);
         assertThat(link.tenancyId).isNull();
 
         store.put(link);
@@ -88,8 +90,8 @@ class JpaWorkItemLinkStoreTenancyTest {
     @Test
     void get_returnsEmpty_forAnotherTenantLink() {
         principal.setTenancyId(TENANT_A);
-        WorkItem wi = createWorkItem();
-        WorkItemLink link = newLink(wi.id, "https://example.com", WorkItemLinkType.REFERENCE);
+        WorkItem     wi   = createWorkItem();
+        WorkItemLink link = newLink(wi.id(), "https://example.com", WorkItemLinkType.REFERENCE);
         store.put(link);
         UUID id = link.id;
 
@@ -105,18 +107,18 @@ class JpaWorkItemLinkStoreTenancyTest {
         // Each tenant creates its own WorkItem and link
         principal.setTenancyId(TENANT_A);
         WorkItem wiA = createWorkItem();
-        store.put(newLink(wiA.id, "https://a.example.com", WorkItemLinkType.REFERENCE));
+        store.put(newLink(wiA.id(), "https://a.example.com", WorkItemLinkType.REFERENCE));
 
         principal.setTenancyId(TENANT_B);
         WorkItem wiB = createWorkItem();
-        store.put(newLink(wiB.id, "https://b.example.com", WorkItemLinkType.ATTACHMENT));
+        store.put(newLink(wiB.id(), "https://b.example.com", WorkItemLinkType.ATTACHMENT));
 
-        List<WorkItemLink> resultB = store.findByWorkItemId(wiB.id);
+        List<WorkItemLink> resultB = store.findByWorkItemId(wiB.id());
         assertThat(resultB).hasSize(1);
         assertThat(resultB.get(0).url).isEqualTo("https://b.example.com");
 
         principal.setTenancyId(TENANT_A);
-        List<WorkItemLink> resultA = store.findByWorkItemId(wiA.id);
+        List<WorkItemLink> resultA = store.findByWorkItemId(wiA.id());
         assertThat(resultA).hasSize(1);
         assertThat(resultA.get(0).url).isEqualTo("https://a.example.com");
     }
@@ -125,20 +127,20 @@ class JpaWorkItemLinkStoreTenancyTest {
     void findByWorkItemIdAndType_tenantIsolated() {
         principal.setTenancyId(TENANT_A);
         WorkItem wi = createWorkItem();
-        store.put(newLink(wi.id, "https://a.example.com", WorkItemLinkType.REFERENCE));
+        store.put(newLink(wi.id(), "https://a.example.com", WorkItemLinkType.REFERENCE));
 
         principal.setTenancyId(TENANT_B);
-        assertThat(store.findByWorkItemIdAndType(wi.id, WorkItemLinkType.REFERENCE)).isEmpty();
+        assertThat(store.findByWorkItemIdAndType(wi.id(), WorkItemLinkType.REFERENCE)).isEmpty();
 
         principal.setTenancyId(TENANT_A);
-        assertThat(store.findByWorkItemIdAndType(wi.id, WorkItemLinkType.REFERENCE)).hasSize(1);
+        assertThat(store.findByWorkItemIdAndType(wi.id(), WorkItemLinkType.REFERENCE)).hasSize(1);
     }
 
     @Test
     void delete_cannotDeleteAnotherTenantLink() {
         principal.setTenancyId(TENANT_A);
-        WorkItem wi = createWorkItem();
-        WorkItemLink link = newLink(wi.id, "https://example.com", WorkItemLinkType.REFERENCE);
+        WorkItem     wi   = createWorkItem();
+        WorkItemLink link = newLink(wi.id(), "https://example.com", WorkItemLinkType.REFERENCE);
         store.put(link);
         UUID id = link.id;
 

@@ -1,16 +1,14 @@
 package io.casehub.work.runtime.multiinstance;
 
-import java.util.UUID;
-
+import io.casehub.work.api.WorkItemGroupLifecycleEvent;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.runtime.service.TenantContextRunner;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
 
-import io.casehub.work.api.WorkItemGroupLifecycleEvent;
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.service.TenantContextRunner;
+import java.util.UUID;
 
 /**
  * Observes terminal {@link WorkItemLifecycleEvent} instances asynchronously and
@@ -39,6 +37,8 @@ import io.casehub.work.runtime.service.TenantContextRunner;
  */
 @ApplicationScoped
 public class MultiInstanceCoordinator {
+    private static final org.jboss.logging.Logger LOG = org.jboss.logging.Logger.getLogger(MultiInstanceCoordinator.class);
+
 
     @Inject
     MultiInstanceGroupPolicy policy;
@@ -46,22 +46,14 @@ public class MultiInstanceCoordinator {
     @Inject
     TenantContextRunner tenantContextRunner;
 
-    /**
-     * Receives every terminal WorkItem lifecycle event asynchronously.
-     * Skips events for WorkItems that have no parent (not part of a multi-instance group).
-     *
-     * @param event the lifecycle event carrying the child WorkItem
-     */
     void onChildTerminal(@ObservesAsync WorkItemLifecycleEvent event) {
-        final WorkItem child = event.workItem();
-        if (child.parentId == null)
-            return;
-        if (!child.status.isTerminal())
-            return;
+        final io.casehub.work.api.WorkItem child = event.workItem();
+        if (child.parentId() == null) {return;}
+        if (!child.status().isTerminal()) {return;}
 
-        tenantContextRunner.runInTenantContext(child.tenancyId, () -> {
-            final UUID childId = child.id;
-            final WorkItemStatus childStatus = child.status;
+        tenantContextRunner.runInTenantContext(child.tenancyId(), () -> {
+            final UUID           childId     = child.id();
+            final WorkItemStatus childStatus = child.status();
 
             WorkItemGroupLifecycleEvent groupEvent = null;
             for (int attempt = 0; attempt < 2; attempt++) {
@@ -69,12 +61,15 @@ public class MultiInstanceCoordinator {
                     groupEvent = policy.process(childId, childStatus);
                     break;
                 } catch (Exception e) {
-                    // Retry once on any transient failure (OCC, RollbackException, etc.).
-                    // On the second attempt policyTriggered=true makes process() return null (idempotent).
+                    if (attempt == 0) {
+                        LOG.warnf("MultiInstance process failed for child %s (attempt 1), retrying: %s",
+                                  childId, e.getMessage());
+                    } else {
+                        LOG.errorf(e, "MultiInstance process failed for child %s after retry", childId);
+                        return;
+                    }
                 }
             }
-            // Fire the group event only after the transaction commits to prevent spurious
-            // events from transactions that subsequently roll back due to OCC.
             policy.fireEvent(groupEvent);
         });
     }

@@ -68,8 +68,8 @@ public class ContractReviewWorkflow extends WorkItemsFlow {
 When `startInstance()` is called:
 
 1. **validate** runs immediately — validates the contract fields and passes a draft map to the next step
-2. **legalReview** — Quarkus-Flow suspends the workflow; a `WorkItem` appears in the WorkItems inbox with `candidateGroups=legal-team` and `priority=HIGH`; the full contract details are in `payload` via `payloadFrom()`; the workflow waits until a team member claims and completes it
-3. **executiveSignOff** — the workflow suspends again; a `WorkItem` is assigned directly to `exec-officer` with `priority=CRITICAL`; the executive's resolution becomes the input to the next step
+2. **legalReview** — Quarkus-Flow suspends the workflow; a `WorkItemEntity` appears in the WorkItems inbox with `candidateGroups=legal-team` and `priority=HIGH`; the full contract details are in `payload` via `payloadFrom()`; the workflow waits until a team member claims and completes it
+3. **executiveSignOff** — the workflow suspends again; a `WorkItemEntity` is assigned directly to `exec-officer` with `priority=CRITICAL`; the executive's resolution becomes the input to the next step
 4. **countersign** runs immediately — records the execution with both approvals
 
 No threads are blocked during suspension. The workflow coroutine parks and resumes when a human acts via the WorkItems REST API.

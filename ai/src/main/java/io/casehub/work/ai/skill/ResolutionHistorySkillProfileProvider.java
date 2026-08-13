@@ -3,8 +3,8 @@ package io.casehub.work.ai.skill;
 import io.casehub.work.api.SkillProfile;
 import io.casehub.work.api.spi.SkillProfileProvider;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
@@ -54,16 +54,16 @@ public class ResolutionHistorySkillProfileProvider implements SkillProfileProvid
                         .statusIn(List.of(WorkItemStatus.COMPLETED))
                         .build())
                 .stream()
-                .filter(wi -> workerId.equals(wi.assigneeId)
-                        && wi.status == WorkItemStatus.COMPLETED
-                        && !wi.types.isEmpty())
+                .filter(wi -> workerId.equals(wi.assigneeId())
+                        && wi.status() == WorkItemStatus.COMPLETED
+                        && !wi.types().isEmpty())
                 .sorted(Comparator.comparing(
-                        wi -> wi.completedAt != null ? wi.completedAt : Instant.EPOCH,
+                        wi -> wi.completedAt() != null ? wi.completedAt() : Instant.EPOCH,
                         Comparator.reverseOrder()))
                 .limit(historyLimit)
                 // Primary type only: avoids double-counting multi-typed items in the frequency map.
                 // LinkedHashSet preserves insertion order, so iterator().next() is deterministic.
-                .collect(Collectors.groupingBy(wi -> wi.types.iterator().next().path, Collectors.counting()));
+                .collect(Collectors.groupingBy(wi -> wi.types().iterator().next(), Collectors.counting()));
 
         if (frequencies.isEmpty()) {
             return SkillProfile.ofNarrative("");

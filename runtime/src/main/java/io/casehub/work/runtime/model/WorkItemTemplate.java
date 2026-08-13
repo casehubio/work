@@ -15,7 +15,7 @@ import jakarta.persistence.Table;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
- * A predefined blueprint for creating {@link WorkItem} instances.
+ * A predefined blueprint for creating {@link WorkItemEntity} instances.
  *
  * <h2>What templates are for</h2>
  * <p>
@@ -139,40 +139,40 @@ public class WorkItemTemplate extends PanacheEntityBase {
      * Example: {@code [{"name":"approved","displayName":"Approved"},{"name":"rejected","displayName":"Rejected"}]}
      * Null means this template imposes no outcome constraint. When non-null,
      * {@code WorkItemService.complete()} requires the caller to supply one of the declared names.
-     * Name strings are snapshotted onto {@link WorkItem#permittedOutcomes} at instantiation time.
+     * Name strings are snapshotted onto {@link WorkItemEntity#permittedOutcomes} at instantiation time.
      */
     @Column(name = "outcomes", columnDefinition = "TEXT")
     public String outcomes;
 
     /** Comma-separated user IDs excluded from claiming WorkItems from this template.
-     *  Snapshotted onto {@link WorkItem#excludedUsers} at instantiation. Refs #171. */
+     *  Snapshotted onto {@link WorkItemEntity#excludedUsers} at instantiation. Refs #171. */
     @Column(name = "excluded_users", columnDefinition = "TEXT")
     public String excludedUsers;
 
     /** Comma-separated group names excluded from claiming WorkItems from this template.
      *  Expanded to actor IDs via GroupMembershipProvider at instantiation and merged into
-     *  {@link WorkItem#excludedUsers}. No excluded_groups column on work_item. Refs #184. */
+     *  {@link WorkItemEntity#excludedUsers}. No excluded_groups column on work_item. Refs #184. */
     @Column(name = "excluded_groups", columnDefinition = "TEXT")
     public String excludedGroups;
 
     /**
      * Hierarchical scope path in slash-separated form — e.g. {@code "casehubio/devtown/pr-review"}.
-     * Snapshotted onto {@link WorkItem#scope} at instantiation. Null means unscoped.
+     * Snapshotted onto {@link WorkItemEntity#scope} at instantiation. Null means unscoped.
      */
     @Column(name = "scope")
     public String scope;
 
     /**
-     * JSON Schema (draft-07) validating {@link WorkItem#payload} at instantiation.
-     * Null means no input constraint. Snapshotted onto {@link WorkItem#inputDataSchema}
+     * JSON Schema (draft-07) validating {@link WorkItemEntity#payload} at instantiation.
+     * Null means no input constraint. Snapshotted onto {@link WorkItemEntity#inputDataSchema}
      * at instantiation time.
      */
     @Column(name = "input_data_schema", columnDefinition = "TEXT")
     public String inputDataSchema;
 
     /**
-     * JSON Schema (draft-07) validating {@link WorkItem#resolution} at completion.
-     * Null means no output constraint. Snapshotted onto {@link WorkItem#outputDataSchema}
+     * JSON Schema (draft-07) validating {@link WorkItemEntity#resolution} at completion.
+     * Null means no output constraint. Snapshotted onto {@link WorkItemEntity#outputDataSchema}
      * at instantiation time.
      */
     @Column(name = "output_data_schema", columnDefinition = "TEXT")

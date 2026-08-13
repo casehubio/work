@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.model.WorkItemTemplate;
@@ -43,7 +43,7 @@ class WorkItemInstancesResourceTest {
                     .templateId(t.id)
                     .createdBy("test")
                     .build();
-            return templateService.createFromTemplate(request).id.toString();
+            return templateService.createFromTemplate(request).id().toString();
         });
 
         given()
@@ -70,7 +70,7 @@ class WorkItemInstancesResourceTest {
     void getInstancesReturns404ForNonMultiInstanceWorkItem() {
         // Regular (non-multi-instance) WorkItem — no spawn group with requiredCount
         String itemId = inTx(() -> {
-            WorkItem item = new WorkItem();
+            WorkItemEntity item = new WorkItemEntity();
             item.title = "Regular";
             item.status = WorkItemStatus.PENDING;
             item.priority = WorkItemPriority.MEDIUM;

@@ -13,9 +13,9 @@ import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
 import io.casehub.platform.api.label.LabelAction;
 import io.casehub.work.runtime.filter.LabelRuleEntity;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -27,7 +27,6 @@ import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Scenario: Finance Approval Chain.
@@ -125,55 +124,55 @@ public class FinanceApprovalScenario {
 
         LOG.info("[FINANCE] Step 1/4: MEDIUM expense report → finance/approval only");
         final WorkItem expense = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Q2 team training budget — approval required")
-                .description("Request to use £2,400 from training budget for team certification renewals.")
-                .types(List.of("finance"))
-                .formKey("budget-request")
-                .priority(WorkItemPriority.MEDIUM)
-                .candidateGroups("finance-team")
-                .createdBy("hr-system")
-                .payload("{\"amount\": 2400, \"currency\": \"GBP\", \"category\": \"training\"}")
-                .build());
+                                                                                   .title("Q2 team training budget — approval required")
+                                                                                   .description("Request to use £2,400 from training budget for team certification renewals.")
+                                                                                   .types(List.of("finance"))
+                                                                                   .formKey("budget-request")
+                                                                                   .priority(WorkItemPriority.MEDIUM)
+                                                                                   .candidateGroups("finance-team")
+                                                                                   .createdBy("hr-system")
+                                                                                   .payload("{\"amount\": 2400, \"currency\": \"GBP\", \"category\": \"training\"}")
+                                                                                   .build());
         steps.add(new QueueScenarioStep(1,
                 "MEDIUM expense — finance/approval only (standard team queue)",
-                expense.id, inferredPaths(expense), manualPaths(expense),
+                expense.id(), inferredPaths(expense), manualPaths(expense),
                 formatEvents(eventLog.drain())));
 
         LOG.info("[FINANCE] Step 2/4: HIGH budget reallocation → finance/approval only (HIGH != URGENT)");
         final WorkItem realloc = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Q3 marketing budget reallocation — £15,000 to digital")
-                .description("Propose reallocating £15,000 from events budget to digital marketing for H2.")
-                .types(List.of("finance"))
-                .formKey("budget-reallocation")
-                .priority(WorkItemPriority.HIGH)
-                .candidateGroups("finance-team")
-                .createdBy("finance-system")
-                .payload("{\"amount\": 15000, \"from\": \"events\", \"to\": \"digital\"}")
-                .build());
+                                                                                   .title("Q3 marketing budget reallocation — £15,000 to digital")
+                                                                                   .description("Propose reallocating £15,000 from events budget to digital marketing for H2.")
+                                                                                   .types(List.of("finance"))
+                                                                                   .formKey("budget-reallocation")
+                                                                                   .priority(WorkItemPriority.HIGH)
+                                                                                   .candidateGroups("finance-team")
+                                                                                   .createdBy("finance-system")
+                                                                                   .payload("{\"amount\": 15000, \"from\": \"events\", \"to\": \"digital\"}")
+                                                                                   .build());
         steps.add(new QueueScenarioStep(2,
                 "HIGH budget reallocation — finance/approval only (URGENT threshold not met for exec review)",
-                realloc.id, inferredPaths(realloc), manualPaths(realloc),
+                realloc.id(), inferredPaths(realloc), manualPaths(realloc),
                 formatEvents(eventLog.drain())));
 
         LOG.info("[FINANCE] Step 3/4: URGENT emergency spend → finance/approval + finance/exec-review");
         final WorkItem emergency = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Emergency cloud spend — incident recovery infrastructure")
-                .description("Incident required provisioning $180,000 of additional cloud capacity.")
-                .types(List.of("finance"))
-                .formKey("emergency-spend")
-                .priority(WorkItemPriority.URGENT)
-                .candidateGroups("finance-team,executive-team")
-                .createdBy("ops-system")
-                .payload("{\"amount\": 180000, \"currency\": \"USD\", \"incident_id\": \"INC-9981\"}")
-                .build());
+                                                                                     .title("Emergency cloud spend — incident recovery infrastructure")
+                                                                                     .description("Incident required provisioning $180,000 of additional cloud capacity.")
+                                                                                     .types(List.of("finance"))
+                                                                                     .formKey("emergency-spend")
+                                                                                     .priority(WorkItemPriority.URGENT)
+                                                                                     .candidateGroups("finance-team,executive-team")
+                                                                                     .createdBy("ops-system")
+                                                                                     .payload("{\"amount\": 180000, \"currency\": \"USD\", \"incident_id\": \"INC-9981\"}")
+                                                                                     .build());
         steps.add(new QueueScenarioStep(3,
                 "URGENT emergency spend — both finance/approval (standard) AND finance/exec-review (executive oversight)",
-                emergency.id, inferredPaths(emergency), manualPaths(emergency),
+                emergency.id(), inferredPaths(emergency), manualPaths(emergency),
                 formatEvents(eventLog.drain())));
 
         LOG.info("[FINANCE] Step 4/4: finance/exec-review queue — only URGENT item");
         final List<UUID> execQueue = workItemStore.scan(WorkItemQuery.byLabelPattern("finance/exec-review"))
-                .stream().map(w -> w.id).toList();
+                .stream().map(w -> w.id()).toList();
         steps.add(new QueueScenarioStep(4,
                 "finance/exec-review queue — contains URGENT emergency spend only; MEDIUM and HIGH items absent",
                 null,
@@ -187,13 +186,13 @@ public class FinanceApprovalScenario {
     }
 
     private List<String> inferredPaths(final WorkItem wi) {
-        return wi.labels.stream().filter(l -> l.persistence == LabelPersistence.INFERRED)
-                .map(l -> l.path).toList();
+        return wi.labels().stream().filter(l -> l.persistence() == LabelPersistence.INFERRED)
+                .map(l -> l.path()).toList();
     }
 
     private List<String> manualPaths(final WorkItem wi) {
-        return wi.labels.stream().filter(l -> l.persistence == LabelPersistence.MANUAL)
-                .map(l -> l.path).toList();
+        return wi.labels().stream().filter(l -> l.persistence() == LabelPersistence.MANUAL)
+                .map(l -> l.path()).toList();
     }
 
     private List<String> formatEvents(final List<QueueEventLog.Entry> entries) {

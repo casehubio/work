@@ -21,7 +21,7 @@ import io.casehub.work.rest.WorkItemMapper;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 
 /**
@@ -100,13 +100,13 @@ public class QueueStateResource {
             return Response.status(404).entity(Map.of("error", "WorkItem not found: " + id)).build();
         }
 
-        if (wi.status == WorkItemStatus.PENDING) {
+        if (wi.status() == WorkItemStatus.PENDING) {
             // Standard claim path
             final var claimed = workItemService.claim(id, claimant);
             return Response.ok(WorkItemMapper.toResponse(claimed)).build();
         }
 
-        if (wi.status == WorkItemStatus.ASSIGNED) {
+        if (wi.status() == WorkItemStatus.ASSIGNED) {
             // Soft pickup — only allowed when assignee has flagged relinquishable
             final var state = stateStore.get(id).orElse(null);
             if (state == null || !state.relinquishable) {
@@ -117,9 +117,8 @@ public class QueueStateResource {
                         .build();
             }
             // Transfer ownership
-            wi.assigneeId = claimant;
-            wi.assignedAt = Instant.now();
-            final var saved = workItemStore.put(wi);
+            final var updated = wi.toBuilder().assigneeId(claimant).assignedAt(Instant.now()).build();
+            final var saved = workItemStore.put(updated);
             // Clear the flag — the signal is consumed on first pickup
             state.relinquishable = false;
             // Fire lifecycle event so ledger, filter engine, and dashboard observers react
@@ -129,7 +128,7 @@ public class QueueStateResource {
         }
 
         return Response.status(409)
-                .entity(Map.of("error", "Cannot pick up WorkItem in status: " + wi.status))
+                .entity(Map.of("error", "Cannot pick up WorkItem in status: " + wi.status()))
                 .build();
     }
 

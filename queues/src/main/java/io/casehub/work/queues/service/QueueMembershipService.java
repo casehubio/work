@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -12,8 +13,7 @@ import io.casehub.platform.api.view.SubjectViewSpec;
 import io.casehub.work.api.WorkItemSummary;
 import io.casehub.work.queues.repository.WorkItemViewQuery;
 import io.casehub.work.runtime.event.WorkItemContextBuilder;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.service.WorkItemSummaryBuilder;
+import io.casehub.work.api.WorkItemSummaryBuilder;
 
 @ApplicationScoped
 public class QueueMembershipService {
@@ -48,10 +48,10 @@ public class QueueMembershipService {
                                                       (Class<Map<String, Object>>) (Class<?>) Map.class,
                                                       Boolean.class);
             candidates = candidates.stream()
-                                   .filter(wi -> Boolean.TRUE.equals(compiled.eval(WorkItemContextBuilder.toMap(wi))))
+                                   .filter(wi -> Boolean.TRUE.equals(compiled.eval(WorkItemContextBuilder.toMap(io.casehub.work.runtime.repository.WorkItemEntityMapper.toDomain(wi)))))
                                    .toList();
         }
-        return candidates;
+        return candidates.stream().map(io.casehub.work.runtime.repository.WorkItemEntityMapper::toDomain).toList();
     }
 
     @io.quarkus.cache.CacheInvalidateAll(cacheName = "queue-summary")

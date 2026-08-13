@@ -7,16 +7,17 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
+import java.util.UUID;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.ExpiryLifecycleService;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.quarkus.test.TestTransaction;
@@ -80,13 +81,13 @@ class WorkItemEventTest {
         assertThat(e.type()).endsWith("created");
         assertThat(e.status()).isEqualTo(WorkItemStatus.PENDING);
         assertThat(e.actor()).isEqualTo("system");
-        assertThat(e.workItemId()).isEqualTo(wi.id);
+        assertThat(e.workItemId()).isEqualTo(wi.id());
     }
 
     @Test
     void claim_emitsAssignedEvent() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
+        service.claim(wi.id(), "alice");
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         WorkItemLifecycleEvent last = events.get(events.size() - 1);
@@ -98,8 +99,8 @@ class WorkItemEventTest {
     @Test
     void start_emitsStartedEvent() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         WorkItemLifecycleEvent last = events.get(events.size() - 1);
@@ -110,9 +111,9 @@ class WorkItemEventTest {
     @Test
     void complete_emitsCompletedEvent() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         WorkItemLifecycleEvent last = events.get(events.size() - 1);
@@ -123,8 +124,8 @@ class WorkItemEventTest {
     @Test
     void reject_emitsRejectedEvent() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.reject(wi.id, "alice", "not applicable", null);
+        service.claim(wi.id(), "alice");
+        service.reject(wi.id(), "alice", "not applicable", null);
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         WorkItemLifecycleEvent last = events.get(events.size() - 1);
@@ -135,8 +136,8 @@ class WorkItemEventTest {
     @Test
     void delegate_emitsDelegatedEvent() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.delegate(wi.id, "alice", "bob", null);
+        service.claim(wi.id(), "alice");
+        service.delegate(wi.id(), "alice", "bob", null);
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         WorkItemLifecycleEvent last = events.get(events.size() - 1);
@@ -148,8 +149,8 @@ class WorkItemEventTest {
     @Test
     void release_emitsReleasedEvent() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.release(wi.id, "alice");
+        service.claim(wi.id(), "alice");
+        service.release(wi.id(), "alice");
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         WorkItemLifecycleEvent last = events.get(events.size() - 1);
@@ -160,8 +161,8 @@ class WorkItemEventTest {
     @Test
     void suspend_emitsSuspendedEvent() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.suspend(wi.id, "alice", "blocked");
+        service.claim(wi.id(), "alice");
+        service.suspend(wi.id(), "alice", "blocked");
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         WorkItemLifecycleEvent last = events.get(events.size() - 1);
@@ -172,9 +173,9 @@ class WorkItemEventTest {
     @Test
     void resume_emitsResumedEvent() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.suspend(wi.id, "alice", "blocked");
-        service.resume(wi.id, "alice");
+        service.claim(wi.id(), "alice");
+        service.suspend(wi.id(), "alice", "blocked");
+        service.resume(wi.id(), "alice");
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         WorkItemLifecycleEvent last = events.get(events.size() - 1);
@@ -184,7 +185,7 @@ class WorkItemEventTest {
     @Test
     void cancel_emitsCancelledEvent() {
         WorkItem wi = service.create(basicRequest());
-        service.cancel(wi.id, "admin", "no longer needed");
+        service.cancel(wi.id(), "admin", "no longer needed");
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         WorkItemLifecycleEvent last = events.get(events.size() - 1);
@@ -199,9 +200,9 @@ class WorkItemEventTest {
     @Test
     void fullHappyPath_emitsFourEventsInOrder() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         assertThat(events).hasSize(4);
@@ -217,7 +218,7 @@ class WorkItemEventTest {
         // At this point: 1 CREATED event
 
         // Attempt an invalid transition — PENDING cannot be completed directly
-        Throwable thrown = catchThrowable(() -> service.complete(wi.id, "alice", "done", null));
+        Throwable thrown = catchThrowable(() -> service.complete(wi.id(), "alice", "done", null));
         assertThat(thrown).isInstanceOf(IllegalStateException.class);
 
         // No additional event should have been fired
@@ -230,60 +231,63 @@ class WorkItemEventTest {
 
     @Test
     void expiryCheck_emitsExpiredEvent() {
-        WorkItem wi = new WorkItem();
-        wi.title = "Past expiry";
-        wi.status = WorkItemStatus.PENDING;
-        wi.priority = WorkItemPriority.MEDIUM;
-        wi.createdAt = Instant.now();
-        wi.updatedAt = Instant.now();
-        wi.expiresAt = Instant.now().minus(2, ChronoUnit.HOURS);
-        workItemStore.put(wi);
+        WorkItem wi = workItemStore.put(WorkItem.builder()
+                .id(UUID.randomUUID())
+                .title("Past expiry")
+                .status(WorkItemStatus.PENDING)
+                .priority(WorkItemPriority.MEDIUM)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .expiresAt(Instant.now().minus(2, ChronoUnit.HOURS))
+                .build());
         observer.clear(); // discard any save-triggered events
 
         expiryLifecycleService.checkExpired();
 
         List<WorkItemLifecycleEvent> expiredEvents = observer.ofType("expired");
         assertThat(expiredEvents).isNotEmpty();
-        assertThat(expiredEvents).anyMatch(e -> e.workItemId().equals(wi.id));
+        assertThat(expiredEvents).anyMatch(e -> e.workItemId().equals(wi.id()));
     }
 
     @Test
     void expiryCheck_emitsExpiredEvent_withNoOpPolicy() {
         // NoOpSlaBreachPolicy returns Fail — only EXPIRED event fires (no ESCALATED).
         // Applications configure SlaBreachPolicy to control the lifecycle event outcome.
-        WorkItem wi = new WorkItem();
-        wi.title = "Past expiry escalate";
-        wi.status = WorkItemStatus.PENDING;
-        wi.priority = WorkItemPriority.MEDIUM;
-        wi.createdAt = Instant.now();
-        wi.updatedAt = Instant.now();
-        wi.expiresAt = Instant.now().minus(2, ChronoUnit.HOURS);
-        workItemStore.put(wi);
+        WorkItem wi = workItemStore.put(WorkItem.builder()
+                .id(UUID.randomUUID())
+                .title("Past expiry escalate")
+                .status(WorkItemStatus.PENDING)
+                .priority(WorkItemPriority.MEDIUM)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .expiresAt(Instant.now().minus(2, ChronoUnit.HOURS))
+                .build());
         observer.clear();
 
         expiryLifecycleService.checkExpired();
 
         List<WorkItemLifecycleEvent> expiredEvents = observer.ofType("expired");
-        assertThat(expiredEvents).anyMatch(e -> e.workItemId().equals(wi.id));
+        assertThat(expiredEvents).anyMatch(e -> e.workItemId().equals(wi.id()));
     }
 
     @Test
     void claimDeadlineCheck_emitsClaimExpiredEvent() {
-        WorkItem wi = new WorkItem();
-        wi.title = "Past claim deadline";
-        wi.status = WorkItemStatus.PENDING;
-        wi.priority = WorkItemPriority.MEDIUM;
-        wi.createdAt = Instant.now();
-        wi.updatedAt = Instant.now();
-        wi.claimDeadline = Instant.now().minus(1, ChronoUnit.HOURS);
-        workItemStore.put(wi);
+        WorkItem wi = workItemStore.put(WorkItem.builder()
+                .id(UUID.randomUUID())
+                .title("Past claim deadline")
+                .status(WorkItemStatus.PENDING)
+                .priority(WorkItemPriority.MEDIUM)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .claimDeadline(Instant.now().minus(1, ChronoUnit.HOURS))
+                .build());
         observer.clear();
 
         expiryLifecycleService.checkClaimDeadlines();
 
         // Expiry lifecycle service fires CLAIM_EXPIRED (not generic ESCALATED)
         List<WorkItemLifecycleEvent> claimExpiredEvents = observer.ofType("claim_expired");
-        assertThat(claimExpiredEvents).anyMatch(e -> e.workItemId().equals(wi.id));
+        assertThat(claimExpiredEvents).anyMatch(e -> e.workItemId().equals(wi.id()));
     }
 
     // -------------------------------------------------------------------------
@@ -296,7 +300,7 @@ class WorkItemEventTest {
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         assertThat(events).hasSize(1);
-        assertThat(events.get(0).sourceUri()).isEqualTo("/workitems/" + wi.id);
+        assertThat(events.get(0).sourceUri()).isEqualTo("/workitems/" + wi.id());
     }
 
     @Test
@@ -305,6 +309,6 @@ class WorkItemEventTest {
 
         List<WorkItemLifecycleEvent> events = observer.getEvents();
         assertThat(events).hasSize(1);
-        assertThat(events.get(0).subject()).isEqualTo(wi.id.toString());
+        assertThat(events.get(0).subject()).isEqualTo(wi.id().toString());
     }
 }

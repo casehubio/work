@@ -10,6 +10,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.POST;
@@ -20,10 +21,9 @@ import jakarta.ws.rs.core.Response;
 
 import org.jboss.logging.Logger;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 
 /**
@@ -94,22 +94,22 @@ public class ContractReviewScenario {
         // Wait for the WorkItem to appear in the legal-team queue, then act on it.
         Log.info("[FLOW] Step 2: legalReview — workflow suspended, waiting for legal-team...");
         final WorkItem legalReview = waitForWorkItem("legal-team", null);
-        workItemIds.add(legalReview.id);
-        Log.infof("[FLOW] Step 2: alice (legal-team) claims WorkItem %s", legalReview.id);
-        workItemService.claim(legalReview.id, "alice");
-        workItemService.start(legalReview.id, "alice");
-        workItemService.complete(legalReview.id, "alice",
+        workItemIds.add(legalReview.id());
+        Log.infof("[FLOW] Step 2: alice (legal-team) claims WorkItem %s", legalReview.id());
+        workItemService.claim(legalReview.id(), "alice");
+        workItemService.start(legalReview.id(), "alice");
+        workItemService.complete(legalReview.id(), "alice",
                 "{\"approved\":true,\"notes\":\"Clauses acceptable. IP section revised.\"}", null);
         steps.add("Step 2 (legalReview): alice claimed from legal-team queue, approved with notes");
 
         // ── Step 3: Executive sign-off — workflow suspends again ─────────────
         Log.info("[FLOW] Step 3: executiveSignOff — workflow suspended, waiting for exec-officer...");
         final WorkItem execSignOff = waitForWorkItem(null, "exec-officer");
-        workItemIds.add(execSignOff.id);
-        Log.infof("[FLOW] Step 3: exec-officer signs off on WorkItem %s", execSignOff.id);
-        workItemService.claim(execSignOff.id, "exec-officer");
-        workItemService.start(execSignOff.id, "exec-officer");
-        workItemService.complete(execSignOff.id, "exec-officer",
+        workItemIds.add(execSignOff.id());
+        Log.infof("[FLOW] Step 3: exec-officer signs off on WorkItem %s", execSignOff.id());
+        workItemService.claim(execSignOff.id(), "exec-officer");
+        workItemService.start(execSignOff.id(), "exec-officer");
+        workItemService.complete(execSignOff.id(), "exec-officer",
                 "{\"signed\":true,\"authority\":\"CEO delegation ref CFO-2024-44\"}", null);
         steps.add("Step 3 (executiveSignOff): exec-officer signed off with authority reference");
 
@@ -147,11 +147,11 @@ public class ContractReviewScenario {
         final long deadline = System.currentTimeMillis() + POLL_TIMEOUT_MS;
         while (System.currentTimeMillis() < deadline) {
             final WorkItem found = workItemStore.scan(WorkItemQuery.all()).stream()
-                    .filter(wi -> wi.status == WorkItemStatus.PENDING)
-                    .filter(wi -> candidateGroup == null || candidateGroup.equals(wi.candidateGroups))
-                    .filter(wi -> assigneeId == null || assigneeId.equals(wi.assigneeId))
-                    .findFirst()
-                    .orElse(null);
+                                                      .filter(wi -> wi.status() == WorkItemStatus.PENDING)
+                                                      .filter(wi -> candidateGroup == null || candidateGroup.equals(wi.candidateGroups()))
+                                                      .filter(wi -> assigneeId == null || assigneeId.equals(wi.assigneeId()))
+                                                      .findFirst()
+                                                      .orElse(null);
             if (found != null) {
                 return found;
             }

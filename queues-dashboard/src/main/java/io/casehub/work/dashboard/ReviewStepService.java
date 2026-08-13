@@ -6,6 +6,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
@@ -18,9 +19,8 @@ import io.casehub.platform.api.path.Path;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.filter.LabelRuleEntity;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.repository.LabelRuleStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 
 @ApplicationScoped
@@ -102,43 +102,43 @@ public class ReviewStepService {
         ensureFilters();
 
         final WorkItem advisory = workItemService.create(WorkItemCreateRequest.builder()
-                                                                              .title("Security advisory: TLS 1.0 deprecation — migration guide")
-                                                                              .description("Update TLS guide. Must publish before customer notification Friday.")
-                                                                              .types(List.of("security-docs"))
-                                                                              .formKey("migration-guide")
-                                                                              .priority(WorkItemPriority.MEDIUM)
-                                                                              .candidateGroups("security-writers,docs-team")
-                                                                              .createdBy("doc-system")
-                                                                              .payload("{\"doc_type\": \"security-advisory\"}")
-                                                                              .build());
-        advisoryId.set(advisory.id);
+                                                                                    .title("Security advisory: TLS 1.0 deprecation — migration guide")
+                                                                                    .description("Update TLS guide. Must publish before customer notification Friday.")
+                                                                                    .types(List.of("security-docs"))
+                                                                                    .formKey("migration-guide")
+                                                                                    .priority(WorkItemPriority.MEDIUM)
+                                                                                    .candidateGroups("security-writers,docs-team")
+                                                                                    .createdBy("doc-system")
+                                                                                    .payload("{\"doc_type\": \"security-advisory\"}")
+                                                                                    .build());
+        advisoryId.set(advisory.id());
 
         final WorkItem releaseNotes = workItemService.create(WorkItemCreateRequest.builder()
-                                                                                  .title("v3.2 release notes — features and breaking changes")
-                                                                                  .description("Document all features and breaking changes for the v3.2 release.")
-                                                                                  .types(List.of("release-docs"))
-                                                                                  .formKey("release-notes")
-                                                                                  .priority(WorkItemPriority.HIGH)
-                                                                                  .candidateGroups("docs-team")
-                                                                                  .createdBy("release-system")
-                                                                                  .build());
-        releaseNotesId.set(releaseNotes.id);
+                                                                                        .title("v3.2 release notes — features and breaking changes")
+                                                                                        .description("Document all features and breaking changes for the v3.2 release.")
+                                                                                        .types(List.of("release-docs"))
+                                                                                        .formKey("release-notes")
+                                                                                        .priority(WorkItemPriority.HIGH)
+                                                                                        .candidateGroups("docs-team")
+                                                                                        .createdBy("release-system")
+                                                                                        .build());
+        releaseNotesId.set(releaseNotes.id());
 
         final WorkItem tutorial = workItemService.create(WorkItemCreateRequest.builder()
-                                                                              .title("Getting started tutorial — CaseHub Work quick start")
-                                                                              .description("Write a 10-minute getting-started guide for new users.")
-                                                                              .types(List.of("tutorials"))
-                                                                              .formKey("quick-start")
-                                                                              .priority(WorkItemPriority.MEDIUM)
-                                                                              .candidateGroups("docs-team")
-                                                                              .createdBy("doc-system")
-                                                                              .build());
-        tutorialId.set(tutorial.id);
+                                                                                    .title("Getting started tutorial — CaseHub Work quick start")
+                                                                                    .description("Write a 10-minute getting-started guide for new users.")
+                                                                                    .types(List.of("tutorials"))
+                                                                                    .formKey("quick-start")
+                                                                                    .priority(WorkItemPriority.MEDIUM)
+                                                                                    .candidateGroups("docs-team")
+                                                                                    .createdBy("doc-system")
+                                                                                    .build());
+        tutorialId.set(tutorial.id());
 
         step.set(1);
 
-        final WorkItem     fresh     = readFresh(advisory.id);
-        final List<String> labels    = fresh.labels.stream().map(l -> l.path).sorted().toList();
+        final WorkItem fresh  = readFresh(advisory.id());
+        final List<String>   labels = fresh.labels().stream().map(l -> l.path()).sorted().toList();
         final List<String> ruleNames = cdiRuleNames();
 
         return new StepResult(1,
@@ -157,8 +157,8 @@ public class ReviewStepService {
         }
         workItemService.claim(id, "senior-reviewer");
         step.set(2);
-        final WorkItem     fresh  = readFresh(id);
-        final List<String> labels = fresh.labels.stream().map(l -> l.path).sorted().toList();
+        final WorkItem fresh  = readFresh(id);
+        final List<String>   labels = fresh.labels().stream().map(l -> l.path()).sorted().toList();
         return new StepResult(2,
                               "Claimed security advisory",
                               "senior-reviewer claimed it. Status: ASSIGNED. Labels: " + labels,
@@ -174,8 +174,8 @@ public class ReviewStepService {
         }
         workItemService.start(id, "senior-reviewer");
         step.set(3);
-        final WorkItem     fresh  = readFresh(id);
-        final List<String> labels = fresh.labels.stream().map(l -> l.path).sorted().toList();
+        final WorkItem fresh  = readFresh(id);
+        final List<String>   labels = fresh.labels().stream().map(l -> l.path()).sorted().toList();
         return new StepResult(3,
                               "Started reviewing advisory",
                               "Status: IN_PROGRESS. Labels: " + labels,
@@ -195,8 +195,8 @@ public class ReviewStepService {
                                  "Content verified. Ready to publish.",
                                  "DOC-REVIEW-POLICY-v1.4");
         step.set(4);
-        final WorkItem     fresh  = readFresh(id);
-        final List<String> labels = fresh.labels.stream().map(l -> l.path).sorted().toList();
+        final WorkItem fresh  = readFresh(id);
+        final List<String>   labels = fresh.labels().stream().map(l -> l.path()).sorted().toList();
         return new StepResult(4,
                               "Completed security advisory",
                               "Status: COMPLETED. Labels: " + labels + " (all INFERRED labels cleared)",
@@ -219,8 +219,8 @@ public class ReviewStepService {
         for (final UUID id : ids) {
             if (id != null) {
                 workItemStore.get(id).ifPresent(wi -> {
-                    if (!wi.status.isTerminal()) {
-                        workItemService.cancel(wi.id, "dashboard-reset", "Dashboard reset");
+                    if (!wi.status().isTerminal()) {
+                        workItemService.cancel(wi.id(), "dashboard-reset", "Dashboard reset");
                     }
                 });
             }

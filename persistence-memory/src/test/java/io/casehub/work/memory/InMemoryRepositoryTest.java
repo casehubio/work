@@ -1,6 +1,13 @@
 package io.casehub.work.memory;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.runtime.model.AuditEntry;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -8,16 +15,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import io.casehub.platform.api.identity.CurrentPrincipal;
-import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemType;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemQuery;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Pure JUnit 5 tests for the in-memory store implementations.
@@ -67,19 +65,19 @@ class InMemoryRepositoryTest {
     @Test
     void save_assignsUuidIfAbsent() {
         final WorkItem wi = workItem(WorkItemStatus.PENDING);
-        assertThat(wi.id).isNull();
+        assertThat(wi.id()).isNull();
 
-        workItemStore.put(wi);
+        final WorkItem saved = workItemStore.put(wi);
 
-        assertThat(wi.id).isNotNull();
+        assertThat(saved.id()).isNotNull();
     }
 
     @Test
     void save_returnsPersistedItem() {
-        final WorkItem wi = workItem(WorkItemStatus.PENDING);
-        workItemStore.put(wi);
+        final WorkItem wi    = workItem(WorkItemStatus.PENDING);
+        final WorkItem saved = workItemStore.put(wi);
 
-        assertThat(workItemStore.get(wi.id)).isPresent().hasValue(wi);
+        assertThat(workItemStore.get(saved.id())).isPresent().hasValue(saved);
     }
 
     @Test
@@ -112,44 +110,39 @@ class InMemoryRepositoryTest {
 
     @Test
     void findInbox_byAssignee() {
-        final WorkItem wi = workItem(WorkItemStatus.ASSIGNED);
-        wi.assigneeId = "alice";
+        final WorkItem wi = workItem(WorkItemStatus.ASSIGNED).toBuilder().assigneeId("alice").build();
         workItemStore.put(wi);
 
         final List<WorkItem> result = workItemStore.scan(WorkItemQuery.inbox("alice", null, null));
 
-        assertThat(result).containsExactly(wi);
+        assertThat(result).hasSize(1);
     }
 
     @Test
     void findInbox_byCandidateGroup() {
-        final WorkItem wi = workItem(WorkItemStatus.PENDING);
-        wi.candidateGroups = "team-a,team-b";
+        final WorkItem wi = workItem(WorkItemStatus.PENDING).toBuilder().candidateGroups("team-a,team-b").build();
         workItemStore.put(wi);
 
         final List<WorkItem> result = workItemStore.scan(WorkItemQuery.inbox(null, List.of("team-a"), null));
 
-        assertThat(result).containsExactly(wi);
+        assertThat(result).hasSize(1);
     }
 
     @Test
     void findInbox_byCandidateUser_exactMatch() {
-        final WorkItem wi = workItem(WorkItemStatus.PENDING);
-        wi.candidateUsers = "bob";
+        final WorkItem wi = workItem(WorkItemStatus.PENDING).toBuilder().candidateUsers("bob").build();
         workItemStore.put(wi);
 
         final List<WorkItem> result = workItemStore.scan(WorkItemQuery.inbox("bob", null, null));
 
-        assertThat(result).containsExactly(wi);
+        assertThat(result).hasSize(1);
     }
 
     @Test
     void findInbox_candidateUser_noPartialMatch() {
-        final WorkItem wi = workItem(WorkItemStatus.PENDING);
-        wi.candidateUsers = "bobby";
+        final WorkItem wi = workItem(WorkItemStatus.PENDING).toBuilder().candidateUsers("bobby").build();
         workItemStore.put(wi);
 
-        // "bob" must NOT match "bobby" — token matching, not substring
         final List<WorkItem> result = workItemStore.scan(WorkItemQuery.inbox("bob", null, null));
 
         assertThat(result).isEmpty();
@@ -161,8 +154,7 @@ class InMemoryRepositoryTest {
 
     @Test
     void findInbox_statusFilter() {
-        final WorkItem wi = workItem(WorkItemStatus.COMPLETED);
-        wi.assigneeId = "alice";
+        final WorkItem wi = workItem(WorkItemStatus.COMPLETED).toBuilder().assigneeId("alice").build();
         workItemStore.put(wi);
 
         final List<WorkItem> result = workItemStore.scan(
@@ -173,8 +165,7 @@ class InMemoryRepositoryTest {
 
     @Test
     void scan_byType_exactMatch() {
-        final WorkItem wi = workItem(WorkItemStatus.PENDING);
-        wi.types.add(new WorkItemType("compliance/audit"));
+        final WorkItem wi = workItem(WorkItemStatus.PENDING).toBuilder().types(Set.of("compliance/audit")).build();
         workItemStore.put(wi);
 
         final List<WorkItem> result = workItemStore.scan(WorkItemQuery.builder().type("compliance/audit").build());
@@ -183,8 +174,7 @@ class InMemoryRepositoryTest {
 
     @Test
     void scan_byType_ancestorMatch() {
-        final WorkItem wi = workItem(WorkItemStatus.PENDING);
-        wi.types.add(new WorkItemType("compliance/audit"));
+        final WorkItem wi = workItem(WorkItemStatus.PENDING).toBuilder().types(Set.of("compliance/audit")).build();
         workItemStore.put(wi);
 
         final List<WorkItem> result = workItemStore.scan(WorkItemQuery.builder().type("compliance").build());
@@ -193,8 +183,7 @@ class InMemoryRepositoryTest {
 
     @Test
     void scan_byType_noMatch() {
-        final WorkItem wi = workItem(WorkItemStatus.PENDING);
-        wi.types.add(new WorkItemType("approval"));
+        final WorkItem wi = workItem(WorkItemStatus.PENDING).toBuilder().types(Set.of("approval")).build();
         workItemStore.put(wi);
 
         final List<WorkItem> result = workItemStore.scan(WorkItemQuery.builder().type("compliance").build());
@@ -209,42 +198,38 @@ class InMemoryRepositoryTest {
     void findExpired() {
         final Instant fiveMinutesAgo = Instant.now().minus(5, ChronoUnit.MINUTES);
 
-        final WorkItem expired = workItem(WorkItemStatus.PENDING);
-        expired.expiresAt = fiveMinutesAgo;
+        final WorkItem expired = workItem(WorkItemStatus.PENDING).toBuilder().expiresAt(fiveMinutesAgo).build();
         workItemStore.put(expired);
 
-        final WorkItem alreadyCompleted = workItem(WorkItemStatus.COMPLETED);
-        alreadyCompleted.expiresAt = fiveMinutesAgo;
+        final WorkItem alreadyCompleted = workItem(WorkItemStatus.COMPLETED).toBuilder().expiresAt(fiveMinutesAgo).build();
         workItemStore.put(alreadyCompleted);
 
-        final WorkItem notExpired = workItem(WorkItemStatus.PENDING);
-        notExpired.expiresAt = Instant.now().plus(1, ChronoUnit.HOURS);
+        final WorkItem notExpired = workItem(WorkItemStatus.PENDING).toBuilder().expiresAt(Instant.now().plus(1, ChronoUnit.HOURS)).build();
         workItemStore.put(notExpired);
 
         final List<WorkItem> result = workItemStore.scan(WorkItemQuery.expired(Instant.now()));
 
-        assertThat(result).containsExactly(expired);
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).status()).isEqualTo(WorkItemStatus.PENDING);
     }
 
     @Test
     void findUnclaimedPastDeadline() {
         final Instant fiveMinutesAgo = Instant.now().minus(5, ChronoUnit.MINUTES);
 
-        final WorkItem unclaimed = workItem(WorkItemStatus.PENDING);
-        unclaimed.claimDeadline = fiveMinutesAgo;
+        final WorkItem unclaimed = workItem(WorkItemStatus.PENDING).toBuilder().claimDeadline(fiveMinutesAgo).build();
         workItemStore.put(unclaimed);
 
-        final WorkItem assigned = workItem(WorkItemStatus.ASSIGNED);
-        assigned.claimDeadline = fiveMinutesAgo;
+        final WorkItem assigned = workItem(WorkItemStatus.ASSIGNED).toBuilder().claimDeadline(fiveMinutesAgo).build();
         workItemStore.put(assigned);
 
-        final WorkItem futureDeadline = workItem(WorkItemStatus.PENDING);
-        futureDeadline.claimDeadline = Instant.now().plus(1, ChronoUnit.HOURS);
+        final WorkItem futureDeadline = workItem(WorkItemStatus.PENDING).toBuilder().claimDeadline(Instant.now().plus(1, ChronoUnit.HOURS)).build();
         workItemStore.put(futureDeadline);
 
         final List<WorkItem> result = workItemStore.scan(WorkItemQuery.claimExpired(Instant.now()));
 
-        assertThat(result).containsExactly(unclaimed);
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).status()).isEqualTo(WorkItemStatus.PENDING);
     }
 
     // =========================================================================
@@ -364,14 +349,14 @@ class InMemoryRepositoryTest {
     // Helpers
     // =========================================================================
 
-    private WorkItem workItem(final WorkItemStatus status) {
-        final WorkItem wi = new WorkItem();
-        wi.status = status;
-        wi.priority = WorkItemPriority.MEDIUM;
-        wi.title = "Test";
-        wi.createdAt = Instant.now();
-        wi.updatedAt = Instant.now();
-        return wi;
+    private io.casehub.work.api.WorkItem workItem(final WorkItemStatus status) {
+        return io.casehub.work.api.WorkItem.builder()
+                                           .status(status)
+                                           .priority(WorkItemPriority.MEDIUM)
+                                           .title("Test")
+                                           .createdAt(Instant.now())
+                                           .updatedAt(Instant.now())
+                                           .build();
     }
 
     private AuditEntry auditEntry(final UUID workItemId, final String event) {

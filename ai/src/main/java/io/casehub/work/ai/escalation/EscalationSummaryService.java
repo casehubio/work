@@ -4,6 +4,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
@@ -13,9 +14,8 @@ import org.jboss.logging.Logger;
 import dev.langchain4j.model.chat.ChatModel;
 import io.casehub.work.ai.config.WorkItemsAiConfig;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 
 /**
  * Generates and persists LLM-drafted escalation summaries.
@@ -109,7 +109,7 @@ public class EscalationSummaryService {
     }
 
     private String buildPrompt(final WorkItem wi, final List<AuditEntry> allAudit,
-            final String eventType) {
+                               final String eventType) {
         final List<AuditEntry> recent = allAudit.stream()
                 .sorted((a, b) -> b.occurredAt.compareTo(a.occurredAt))
                 .limit(auditLimit)
@@ -124,13 +124,13 @@ public class EscalationSummaryService {
                 .append("for the escalation target about the following work item.\n\n");
 
         sb.append("Work item:\n");
-        sb.append("Title: ").append(wi.title).append("\n");
-        if (wi.description != null && !wi.description.isBlank()) {
-            sb.append("Description: ").append(wi.description).append("\n");
+        sb.append("Title: ").append(wi.title()).append("\n");
+        if (wi.description() != null && !wi.description().isBlank()) {
+            sb.append("Description: ").append(wi.description()).append("\n");
         }
-        if (!wi.types.isEmpty()) {
-            sb.append("Types: ").append(wi.types.stream()
-                    .map(t -> t.path)
+        if (!wi.types().isEmpty()) {
+            sb.append("Types: ").append(wi.types().stream()
+                    .map(t -> t)
                     .collect(java.util.stream.Collectors.joining(", "))).append("\n");
         }
         sb.append("Escalation reason: ").append(escalationReason).append("\n\n");

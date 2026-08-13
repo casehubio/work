@@ -6,17 +6,17 @@ import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.event.WorkItemEventBroadcaster;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.runtime.model.WorkItemLink;
 import io.casehub.work.runtime.model.WorkItemNote;
 import io.casehub.work.runtime.model.WorkItemRelationType;
-import io.casehub.work.runtime.model.WorkItemRootView;
+import io.casehub.work.api.WorkItemRootView;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.WorkItemLinkStore;
 import io.casehub.work.runtime.repository.WorkItemNoteStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
+import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.runtime.repository.WorkItemRelationStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.LabelNotFoundException;
 import io.casehub.work.runtime.service.WorkItemNotFoundException;
 import io.casehub.work.runtime.service.WorkItemService;
@@ -79,8 +79,8 @@ public class WorkItemResource {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response create(final CreateWorkItemRequest request) {
         try {
-            final WorkItem created = workItemService.create(WorkItemMapper.toServiceRequest(request));
-            final URI location = URI.create("/workitems/" + created.id);
+            final WorkItem created  = workItemService.create(WorkItemMapper.toServiceRequest(request));
+            final URI            location = URI.create("/workitems/" + created.id());
             return Response.created(location).entity(WorkItemMapper.toResponse(created)).build();
         } catch (io.casehub.work.api.MalformedCapabilityException | io.casehub.work.api.UnknownCapabilityException e) {
             // Let the dedicated @Provider mappers handle these — do not swallow them here.
@@ -110,7 +110,7 @@ public class WorkItemResource {
         // byLabelPattern bypasses the query builder; post-filter by outcome when both are present
         if (label != null && !label.isBlank() && outcome != null && !outcome.isBlank()) {
             final String outcomeFilter = outcome;
-            stream = stream.filter(wi -> outcomeFilter.equals(wi.outcome));
+            stream = stream.filter(wi -> outcomeFilter.equals(wi.outcome()));
         }
         return stream.map(WorkItemMapper::toResponse).toList();
     }
@@ -178,19 +178,19 @@ public class WorkItemResource {
             @QueryParam("followUp") final Boolean followUp,
             @QueryParam("outcome") final String outcome) {
         Stream<WorkItemRootView> stream = workItemStore.scanRoots(assignee, candidateUser, candidateGroups).stream();
-        if (status != null)   stream = stream.filter(v -> Objects.equals(v.workItem().status, status));
-        if (priority != null) stream = stream.filter(v -> Objects.equals(v.workItem().priority, priority));
+        if (status != null)   stream = stream.filter(v -> Objects.equals(v.workItem().status(), status));
+        if (priority != null) stream = stream.filter(v -> Objects.equals(v.workItem().priority(), priority));
         if (type != null) {
             final io.casehub.platform.api.path.Path queryPath = io.casehub.platform.api.path.Path.parse(type);
-            stream = stream.filter(v -> v.workItem().types.stream().anyMatch(t -> {
-                final io.casehub.platform.api.path.Path typePath = io.casehub.platform.api.path.Path.parse(t.path);
+            stream = stream.filter(v -> v.workItem().types().stream().anyMatch(t -> {
+                final io.casehub.platform.api.path.Path typePath = io.casehub.platform.api.path.Path.parse(t);
                 return typePath.equals(queryPath) || queryPath.isAncestorOf(typePath);
             }));
         }
         if (followUp != null) stream = stream.filter(v -> Boolean.TRUE.equals(followUp)
-                ? v.workItem().followUpDate != null
-                : v.workItem().followUpDate == null);
-        if (outcome != null)  stream = stream.filter(v -> outcome.equals(v.workItem().outcome));
+                ? v.workItem().followUpDate() != null
+                : v.workItem().followUpDate() == null);
+        if (outcome != null)  stream = stream.filter(v -> outcome.equals(v.workItem().outcome()));
         return stream.map(WorkItemRootResponse::from).toList();
     }
 
@@ -198,7 +198,7 @@ public class WorkItemResource {
     @Path("/{id}")
     public WorkItemWithAuditResponse getById(@PathParam("id") final UUID id) {
         final WorkItem wi = workItemService.findById(id)
-                .orElseThrow(() -> new WorkItemNotFoundException(id));
+                                                 .orElseThrow(() -> new WorkItemNotFoundException(id));
         final List<AuditEntry> trail = auditStore.findByWorkItemId(id);
         return WorkItemMapper.toWithAudit(wi, trail);
     }
@@ -474,7 +474,7 @@ public class WorkItemResource {
             final String createdBy = (request != null && request.createdBy() != null)
                     ? request.createdBy()
                     : "unknown";
-            final String title = (request != null) ? request.title() : null;
+            final String         title = (request != null) ? request.title() : null;
             final WorkItem clone = workItemService.clone(id, title, createdBy);
             return Response.status(Response.Status.CREATED).entity(WorkItemMapper.toResponse(clone)).build();
         } catch (WorkItemNotFoundException e) {

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import io.casehub.work.runtime.model.WorkItemEntity;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import io.quarkus.arc.Unremovable;
@@ -19,7 +20,6 @@ import io.casehub.work.api.MultiInstanceContext;
 import io.casehub.work.api.SelectionContext;
 import io.casehub.work.api.spi.WorkerSelectionStrategy;
 import io.casehub.work.runtime.config.WorkItemsConfig;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.service.CapabilityParser;
 
 /**
@@ -79,11 +79,11 @@ public class RoundRobinAssignmentStrategy implements InstanceAssignmentStrategy 
      */
     @Override
     public void assign(final List<Object> instances, final MultiInstanceContext context) {
-        final WorkItem parent = (WorkItem) context.parent();
-        final Set<String> alreadyAssigned = new HashSet<>();
+        final WorkItemEntity parent          = (WorkItemEntity) context.parent();
+        final Set<String>    alreadyAssigned = new HashSet<>();
 
         for (final Object obj : instances) {
-            final WorkItem child = (WorkItem) obj;
+            final WorkItemEntity child = (WorkItemEntity) obj;
             // Combine already-assigned workers and template-level excluded users so the
             // pre-filtered candidateUsers passed to the strategy never contains either set,
             // regardless of whether the strategy itself honours context.excludedUsers().

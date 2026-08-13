@@ -26,8 +26,8 @@ import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.memory.InMemoryWorkItemStore;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.worker.api.PlannedAction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.vertx.ConsumeEvent;
@@ -69,17 +69,17 @@ class ActionGateHandlerTest {
 
   private static WorkItemRef toRef(final WorkItem wi) {
     return new WorkItemRef(
-        wi.id,
-        wi.status,
-        wi.callerRef,
-        wi.assigneeId,
-        wi.resolution,
-        wi.candidateGroups,
-        wi.outcome,
-        wi.tenancyId,
-        wi.payload,
-        wi.payloadTypeName,
-        wi.resolutionTypeName);
+        wi.id(),
+        wi.status(),
+        wi.callerRef(),
+        wi.assigneeId(),
+        wi.resolution(),
+        wi.candidateGroups(),
+        wi.outcome(),
+        wi.tenancyId(),
+        wi.payload(),
+        wi.payloadTypeName(),
+        wi.resolutionTypeName());
   }
 
   @BeforeEach
@@ -118,16 +118,16 @@ class ActionGateHandlerTest {
         new ActionGateScheduleEvent(
             caseId, TENANCY_ID, gateId, action, gate, Set.of("mlro", "analyst"), null));
 
-    final String expectedCallerRef = GateCallerRef.encode(caseId, gateId);
-    final WorkItem workItem = workItemStore.findByCallerRef(expectedCallerRef).orElse(null);
+    final String   expectedCallerRef = GateCallerRef.encode(caseId, gateId);
+    final WorkItem workItem          = workItemStore.findByCallerRef(expectedCallerRef).orElse(null);
 
     assertThat(workItem).isNotNull();
-    assertThat(workItem.callerRef).isEqualTo(expectedCallerRef);
-    assertThat(workItem.title).isEqualTo("SAR filing requires MLRO sign-off");
-    assertThat(workItem.candidateGroups).isEqualTo("analyst,mlro");
-    assertThat(workItem.payload).contains("sar.file");
-    assertThat(workItem.payload).contains("ACC-123");
-    assertThat(workItem.payload).contains("File SAR");
+    assertThat(workItem.callerRef()).isEqualTo(expectedCallerRef);
+    assertThat(workItem.title()).isEqualTo("SAR filing requires MLRO sign-off");
+    assertThat(workItem.candidateGroups()).isEqualTo("analyst,mlro");
+    assertThat(workItem.payload()).contains("sar.file");
+    assertThat(workItem.payload()).contains("ACC-123");
+    assertThat(workItem.payload()).contains("File SAR");
   }
 
   @Test
@@ -140,11 +140,11 @@ class ActionGateHandlerTest {
     actionGateWorkItemHandler.onActionGateSchedule(
         new ActionGateScheduleEvent(caseId, TENANCY_ID, 99L, action, gate, Set.of(), null));
 
-    final String callerRef = GateCallerRef.encode(caseId, 99L);
-    final WorkItem workItem = workItemStore.findByCallerRef(callerRef).orElse(null);
+    final String   callerRef = GateCallerRef.encode(caseId, 99L);
+    final WorkItem workItem  = workItemStore.findByCallerRef(callerRef).orElse(null);
     assertThat(workItem).isNotNull();
     // candidateGroups is null when not specified — WorkItemService does not add defaults
-    assertThat(workItem.candidateGroups).isNull();
+    assertThat(workItem.candidateGroups()).isNull();
     // expiresAt may be set by WorkItemService defaults; we don't assert null here
   }
 
@@ -166,19 +166,20 @@ class ActionGateHandlerTest {
     final WorkItem workItem =
         workItemStore.findByCallerRef(GateCallerRef.encode(caseId, 77L)).orElse(null);
     assertThat(workItem).isNotNull();
-    assertThat(workItem.expiresAt).isNotNull();
-    assertThat(workItem.expiresAt).isAfter(before.plus(Duration.ofHours(23)));
-    assertThat(workItem.expiresAt).isBefore(before.plus(Duration.ofHours(25)));
+    assertThat(workItem.expiresAt()).isNotNull();
+    assertThat(workItem.expiresAt()).isAfter(before.plus(Duration.ofHours(23)));
+    assertThat(workItem.expiresAt()).isBefore(before.plus(Duration.ofHours(25)));
   }
 
   @Test
   void completionApplier_completed_publishesApprovedEvent() {
     final UUID caseId = UUID.randomUUID();
-    final long gateId = 10L;
-    final WorkItem workItem = new WorkItem();
-    workItem.callerRef = GateCallerRef.encode(caseId, gateId);
-    workItem.assigneeId = "user-mlro-001";
-    workItem.resolution = "{\"note\": \"approved\"}";
+    final long     gateId   = 10L;
+    final WorkItem workItem = WorkItem.builder()
+        .callerRef(GateCallerRef.encode(caseId, gateId))
+        .assigneeId("user-mlro-001")
+        .resolution("{\"note\": \"approved\"}")
+        .build();
 
     actionGateCompletionApplier.apply(
         new GateCallerRef(caseId, gateId), WorkItemStatus.COMPLETED, toRef(workItem), "test-tenant");
@@ -197,11 +198,12 @@ class ActionGateHandlerTest {
   @Test
   void completionApplier_rejected_publishesRejectedEvent() {
     final UUID caseId = UUID.randomUUID();
-    final long gateId = 20L;
-    final WorkItem workItem = new WorkItem();
-    workItem.callerRef = GateCallerRef.encode(caseId, gateId);
-    workItem.assigneeId = "user-mlro-002";
-    workItem.resolution = "{\"reason\": \"rejected\"}";
+    final long     gateId   = 20L;
+    final WorkItem workItem = WorkItem.builder()
+        .callerRef(GateCallerRef.encode(caseId, gateId))
+        .assigneeId("user-mlro-002")
+        .resolution("{\"reason\": \"rejected\"}")
+        .build();
 
     actionGateCompletionApplier.apply(
         new GateCallerRef(caseId, gateId), WorkItemStatus.REJECTED, toRef(workItem), "test-tenant");
@@ -216,9 +218,10 @@ class ActionGateHandlerTest {
 
   @Test
   void completionApplier_cancelled_publishesRejectedEvent() {
-    final UUID caseId = UUID.randomUUID();
-    final WorkItem workItem = new WorkItem();
-    workItem.callerRef = GateCallerRef.encode(caseId, 30L);
+    final UUID     caseId   = UUID.randomUUID();
+    final WorkItem workItem = WorkItem.builder()
+        .callerRef(GateCallerRef.encode(caseId, 30L))
+        .build();
 
     actionGateCompletionApplier.apply(
         new GateCallerRef(caseId, 30L), WorkItemStatus.CANCELLED, toRef(workItem), "test-tenant");
@@ -232,9 +235,10 @@ class ActionGateHandlerTest {
 
   @Test
   void completionApplier_expired_publishesExpiredEvent() {
-    final UUID caseId = UUID.randomUUID();
-    final WorkItem workItem = new WorkItem();
-    workItem.callerRef = GateCallerRef.encode(caseId, 40L);
+    final UUID     caseId   = UUID.randomUUID();
+    final WorkItem workItem = WorkItem.builder()
+        .callerRef(GateCallerRef.encode(caseId, 40L))
+        .build();
 
     actionGateCompletionApplier.apply(
         new GateCallerRef(caseId, 40L), WorkItemStatus.EXPIRED, toRef(workItem), "test-tenant");
@@ -248,8 +252,9 @@ class ActionGateHandlerTest {
     @Test
     void completionApplier_escalated_publishesExpiredEvent() {
         final UUID     caseId   = UUID.randomUUID();
-        final WorkItem workItem = new WorkItem();
-        workItem.callerRef = GateCallerRef.encode(caseId, 42L);
+        final WorkItem workItem = WorkItem.builder()
+                .callerRef(GateCallerRef.encode(caseId, 42L))
+                .build();
 
         actionGateCompletionApplier.apply(
                 new GateCallerRef(caseId, 42L), WorkItemStatus.ESCALATED, toRef(workItem), "test-tenant");

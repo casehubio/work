@@ -8,11 +8,11 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 
 class WorkItemFlowEventListenerTest {
@@ -35,9 +35,10 @@ class WorkItemFlowEventListenerTest {
     }
 
     private WorkItemLifecycleEvent event(final String type, final UUID workItemId, final String detail) {
-        final WorkItem wi = new WorkItem();
-        wi.id = workItemId;
-        wi.status = WorkItemStatus.COMPLETED;
+        final WorkItem wi = WorkItem.builder()
+                .id(workItemId)
+                .status(WorkItemStatus.COMPLETED)
+                .build();
         // The factory builds the full type prefix, but these tests pass the complete type string.
         // Extract the event suffix from the full type to use with the factory.
         final String suffix = type.substring(type.lastIndexOf('.') + 1);

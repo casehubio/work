@@ -13,10 +13,10 @@ import org.junit.jupiter.api.Test;
 import io.casehub.work.queues.model.WorkItemQueueState;
 import io.casehub.work.queues.repository.QueueStateStore;
 import io.casehub.work.queues.test.MutableCurrentPrincipal;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -46,14 +46,15 @@ class JpaQueueStateStoreTenancyTest {
 
     /** Create a parent WorkItem so FK constraints are satisfied. */
     private UUID createParentWorkItem(String title) {
-        WorkItem wi = new WorkItem();
-        wi.title = title;
-        wi.status = WorkItemStatus.PENDING;
-        wi.priority = WorkItemPriority.MEDIUM;
-        wi.createdAt = Instant.now();
-        wi.updatedAt = Instant.now();
-        workItemStore.put(wi);
-        return wi.id;
+        WorkItem wi = WorkItem.builder()
+                .title(title)
+                .status(WorkItemStatus.PENDING)
+                .priority(WorkItemPriority.MEDIUM)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+        WorkItem stored = workItemStore.put(wi);
+        return stored.id();
     }
 
     @Test

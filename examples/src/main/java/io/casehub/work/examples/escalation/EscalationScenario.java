@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
@@ -15,11 +16,10 @@ import org.jboss.logging.Logger;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.ExpiryLifecycleService;
 import io.casehub.work.runtime.service.WorkItemService;
 
@@ -96,26 +96,26 @@ public class EscalationScenario {
                 .expiresAt(Instant.now().minusSeconds(10)) // already expired
                 .build();
         final WorkItem wi = workItemService.create(request);
-        steps.add(new StepLog(1, description1, wi.id));
+        steps.add(new StepLog(1, description1, wi.id()));
 
         // Step 2: trigger the expiry cleanup job (simulates the scheduler firing)
         final String description2 = "ExpiryLifecycleService.checkExpired() processes the already-expired WorkItem";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 2, total, description2);
         expiryLifecycleService.checkExpired();
-        steps.add(new StepLog(2, description2, wi.id));
+        steps.add(new StepLog(2, description2, wi.id()));
 
         // Step 3: reload the WorkItem and verify EXPIRED status
         final String description3 = "Reload WorkItem from store — confirm status is EXPIRED";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 3, total, description3);
-        final WorkItem reloaded = workItemStore.get(wi.id)
-                .orElseThrow(() -> new IllegalStateException("WorkItem not found after expiry: " + wi.id));
-        final String finalStatus = reloaded.status.name();
-        steps.add(new StepLog(3, description3 + " — status=" + finalStatus, wi.id));
+        final WorkItem reloaded = workItemStore.get(wi.id())
+                                                     .orElseThrow(() -> new IllegalStateException("WorkItem not found after expiry: " + wi.id()));
+        final String finalStatus = reloaded.status().name();
+        steps.add(new StepLog(3, description3 + " — status=" + finalStatus, wi.id()));
 
         // Step 4: collect audit trail and confirm EXPIRED event is present
         final String description4 = "Collect audit trail confirming CREATED → EXPIRED event sequence";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 4, total, description4);
-        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id);
+        final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id());
         final boolean escalationEventPresent = auditEntries.stream()
                 .anyMatch(e -> "EXPIRED".equals(e.event));
         final List<AuditEntryResponse> auditTrail = auditEntries.stream()
@@ -123,12 +123,12 @@ public class EscalationScenario {
                 .toList();
         steps.add(new StepLog(4,
                 description4 + " — " + auditEntries.size() + " entries, EXPIRED present: " + escalationEventPresent,
-                wi.id));
+                wi.id()));
 
         return new EscalationResponse(
                 SCENARIO_ID,
                 steps,
-                wi.id,
+                wi.id(),
                 finalStatus,
                 escalationEventPresent,
                 auditTrail);

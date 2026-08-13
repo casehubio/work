@@ -91,7 +91,7 @@ The runtime defines 18+ store interfaces with JPA implementations:
 
 | Store | Entity | Tenant-Scoped? |
 |-------|--------|---------------|
-| `WorkItemStore` | `WorkItem` | yes |
+| `WorkItemStore` | `WorkItem` (api/ record) | yes |
 | `WorkItemTemplateStore` | `WorkItemTemplate` | yes |
 | `AuditEntryStore` | `AuditEntry` | yes |
 | `WorkItemScheduleStore` | `WorkItemSchedule` | yes |
@@ -103,7 +103,7 @@ The runtime defines 18+ store interfaces with JPA implementations:
 | `LabelVocabularyStore` | `LabelVocabulary` | yes |
 | `LabelRuleStore` | `LabelRuleEntity` | yes |
 | `RoutingCursorStore` | `RoutingCursor` | cross-tenant |
-| `CrossTenantWorkItemStore` | `WorkItem` | cross-tenant |
+| `CrossTenantWorkItemStore` | `WorkItem` (api/ record) | cross-tenant |
 | `CrossTenantWorkItemScheduleStore` | `WorkItemSchedule` | cross-tenant |
 | `CrossTenantRoutingCursorStore` | `RoutingCursor` | cross-tenant |
 

@@ -8,7 +8,6 @@ import io.casehub.work.api.ParentRole;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.runtime.model.OutcomeCodecs;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
@@ -40,69 +39,47 @@ public class MultiInstanceSpawnService {
 
     @Inject
     StrategyResolver strategyResolver;
+    @Inject
+    io.casehub.work.api.spi.WorkItemStore workItemStore;
 
-    /**
-     * Create a multi-instance group: parent WorkItem + N child instances + spawn group.
-     * All created in the caller's transaction.
-     *
-     * @param mergedRequest the fully-merged create request for the parent (request-wins over template)
-     * @param template the template driving the group; must have {@code instanceCount} set
-     * @param expandedExcludedUsers excluded users after group expansion; may be null
-     * @return the parent WorkItem
-     *
-     * <p>
-     * <strong>Threshold behaviour:</strong> controlled by {@code template.onThresholdReached}.
-     * When not set, the group defaults to {@link io.casehub.work.api.OnThresholdReached#KEEP}
-     * — remaining children are left active, no side effects. Set explicitly to opt in to
-     * other behaviours:
-     * <ul>
-     *   <li>{@code KEEP} — no action on remaining children (default)</li>
-     *   <li>{@code SUSPEND} — pause ASSIGNED/IN_PROGRESS children; PENDING children unchanged</li>
-     *   <li>{@code CANCEL} — cancel all remaining non-terminal children (opt-in only)</li>
-     * </ul>
-     */
+
     @Transactional
-    public WorkItem createGroup(final WorkItemCreateRequest mergedRequest,
-            final WorkItemTemplate template, final String expandedExcludedUsers) {
-        // 1. Create parent from merged request
-        final WorkItem parent = workItemService.create(mergedRequest);
+    public io.casehub.work.api.WorkItem createGroup(final WorkItemCreateRequest mergedRequest,
+                                                    final WorkItemTemplate template, final String expandedExcludedUsers) {
+        final io.casehub.work.api.WorkItem parent = workItemService.create(mergedRequest);
 
-        // 2. Create WorkItemSpawnGroup with M-of-N policy
         final WorkItemSpawnGroup group = new WorkItemSpawnGroup();
-        group.parentId = parent.id;
-        group.idempotencyKey = "multi-instance:" + parent.id;
-        group.instanceCount = template.instanceCount;
-        group.requiredCount = template.requiredCount;
-        // null → KEEP semantics (no side effects on remaining children).
-        // CANCEL must be set explicitly — it is never applied by default.
+        group.parentId           = parent.id();
+        group.idempotencyKey     = "multi-instance:" + parent.id();
+        group.instanceCount      = template.instanceCount;
+        group.requiredCount      = template.requiredCount;
         group.onThresholdReached = template.onThresholdReached;
-        group.allowSameAssignee = Boolean.TRUE.equals(template.allowSameAssignee);
-        group.parentRole = template.parentRole != null ? template.parentRole : ParentRole.COORDINATOR.name();
-        group.groupStatus = GroupStatus.IN_PROGRESS;
-        group.tenancyId = parent.tenancyId;
+        group.allowSameAssignee  = Boolean.TRUE.equals(template.allowSameAssignee);
+        group.parentRole         = template.parentRole != null ? template.parentRole : ParentRole.COORDINATOR.name();
+        group.groupStatus        = GroupStatus.IN_PROGRESS;
+        group.tenancyId          = parent.tenancyId();
         group.persist();
 
-        // 3. Create N child instances and wire PART_OF relations
-        final List<WorkItem> children = new ArrayList<>();
+        final List<io.casehub.work.api.WorkItem> children = new ArrayList<>();
         for (int i = 0; i < template.instanceCount; i++) {
             final WorkItemCreateRequest childReq = buildChildRequest(template, expandedExcludedUsers,
-                    mergedRequest.createdBy, i, group, mergedRequest.scope, mergedRequest.tenancyId,
-                    mergedRequest.permittedOutcomes);
-            final WorkItem child = workItemService.create(childReq);
-            child.parentId = parent.id;
+                                                                     mergedRequest.createdBy, i, group, mergedRequest.scope, mergedRequest.tenancyId,
+                                                                     mergedRequest.permittedOutcomes);
+            io.casehub.work.api.WorkItem child = workItemService.create(childReq);
+            child = child.toBuilder().parentId(parent.id()).build();
+            workItemStore.put(child);
 
             final WorkItemRelation rel = new WorkItemRelation();
-            rel.sourceId = child.id;
-            rel.targetId = parent.id;
+            rel.sourceId     = child.id();
+            rel.targetId     = parent.id();
             rel.relationType = WorkItemRelationType.PART_OF;
-            rel.createdBy = "system:multi-instance:" + group.id;
-            rel.tenancyId = parent.tenancyId;
+            rel.createdBy    = "system:multi-instance:" + group.id;
+            rel.tenancyId    = parent.tenancyId();
             rel.persist();
 
             children.add(child);
         }
 
-        // 4. Apply assignment strategy (may mutate candidateGroups/candidateUsers/assigneeId on children)
         final InstanceAssignmentStrategy strategy = resolveStrategy(template.assignmentStrategy);
         final MultiInstanceConfig config = new MultiInstanceConfig(
                 template.instanceCount,
@@ -118,9 +95,8 @@ public class MultiInstanceSpawnService {
     }
 
     @Transactional
-    public WorkItem createGroupFromRequest(final WorkItemCreateRequest parentRequest,
-                                           final MultiInstanceConfig config) {
-        // Idempotency: check for existing active parent with same callerRef
+    public io.casehub.work.api.WorkItem createGroupFromRequest(final WorkItemCreateRequest parentRequest,
+                                                               final MultiInstanceConfig config) {
         if (parentRequest.callerRef != null) {
             workItemService.findActiveByCallerRef(parentRequest.callerRef)
                            .ifPresent(existing -> {
@@ -129,22 +105,22 @@ public class MultiInstanceSpawnService {
                            });
         }
 
-        final WorkItem parent = workItemService.create(parentRequest);
+        final io.casehub.work.api.WorkItem parent = workItemService.create(parentRequest);
 
         final WorkItemSpawnGroup group = new WorkItemSpawnGroup();
-        group.parentId           = parent.id;
+        group.parentId           = parent.id();
         group.idempotencyKey     = parentRequest.callerRef != null
-                                   ? parentRequest.callerRef : "multi-instance:" + parent.id;
+                                   ? parentRequest.callerRef : "multi-instance:" + parent.id();
         group.instanceCount      = config.instanceCount();
         group.requiredCount      = config.requiredCount();
         group.onThresholdReached = config.effectiveOnThresholdReached().name();
         group.allowSameAssignee  = config.allowSameAssignee();
         group.parentRole         = config.effectiveParentRole().name();
         group.groupStatus        = GroupStatus.IN_PROGRESS;
-        group.tenancyId          = parent.tenancyId;
+        group.tenancyId          = parent.tenancyId();
         group.persist();
 
-        final List<WorkItem> children = new ArrayList<>();
+        final List<io.casehub.work.api.WorkItem> children = new ArrayList<>();
         for (int i = 0; i < config.instanceCount(); i++) {
             final WorkItemCreateRequest childReq = parentRequest.toBuilder()
                                                                 .callerRef(null)
@@ -152,15 +128,16 @@ public class MultiInstanceSpawnService {
                                                                 .title(parentRequest.title + " [" + (i + 1) + "/" + config.instanceCount() + "]")
                                                                 .auditDetail("Multi-instance child " + (i + 1) + " of " + config.instanceCount())
                                                                 .build();
-            final WorkItem child = workItemService.create(childReq);
-            child.parentId = parent.id;
+            io.casehub.work.api.WorkItem child = workItemService.create(childReq);
+            child = child.toBuilder().parentId(parent.id()).build();
+            workItemStore.put(child);
 
             final WorkItemRelation rel = new WorkItemRelation();
-            rel.sourceId     = child.id;
-            rel.targetId     = parent.id;
+            rel.sourceId     = child.id();
+            rel.targetId     = parent.id();
             rel.relationType = WorkItemRelationType.PART_OF;
             rel.createdBy    = "system:multi-instance:" + group.id;
-            rel.tenancyId    = parent.tenancyId;
+            rel.tenancyId    = parent.tenancyId();
             rel.persist();
 
             children.add(child);

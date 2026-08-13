@@ -14,7 +14,7 @@ import jakarta.persistence.UniqueConstraint;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
- * A directed relation between two {@link WorkItem} instances.
+ * A directed relation between two {@link WorkItemEntity} instances.
  *
  * <h2>Directionality</h2>
  * <p>

@@ -12,12 +12,14 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import io.casehub.work.runtime.model.WorkItemNote;
+import io.casehub.work.runtime.repository.WorkItemEntityMapper;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.WorkItemNoteStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
@@ -53,8 +55,8 @@ class JpaWorkItemNoteStoreTenancyTest {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private WorkItem newWorkItem(String title) {
-        WorkItem wi = new WorkItem();
+    private WorkItemEntity newWorkItem(String title) {
+        WorkItemEntity wi = new WorkItemEntity();
         wi.title = title;
         wi.status = WorkItemStatus.PENDING;
         wi.priority = WorkItemPriority.MEDIUM;
@@ -81,10 +83,10 @@ class JpaWorkItemNoteStoreTenancyTest {
         principal.setTenancyId(TENANT_A);
 
         // Create work item first
-        WorkItem wi = newWorkItem("test-workitem");
-        workItemStore.put(wi);
+        WorkItemEntity wi = newWorkItem("test-workitem");
+        WorkItem stored = workItemStore.put(WorkItemEntityMapper.toDomain(wi));
 
-        WorkItemNote note = newNote(wi.id, "test note");
+        WorkItemNote note = newNote(stored.id(), "test note");
         assertThat(note.tenancyId).isNull();
 
         store.append(note);
@@ -97,10 +99,10 @@ class JpaWorkItemNoteStoreTenancyTest {
         principal.setTenancyId(TENANT_B);
 
         // Create work item first
-        WorkItem wi = newWorkItem("test-workitem");
-        workItemStore.put(wi);
+        WorkItemEntity wi = newWorkItem("test-workitem");
+        WorkItem stored = workItemStore.put(WorkItemEntityMapper.toDomain(wi));
 
-        WorkItemNote note = newNote(wi.id, "test note");
+        WorkItemNote note = newNote(stored.id(), "test note");
         note.tenancyId = TENANT_A; // explicitly set to A
 
         store.append(note);
@@ -117,10 +119,10 @@ class JpaWorkItemNoteStoreTenancyTest {
     void findById_returnsEmpty_forAnotherTenantNote() {
         // Create work item and note as tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItem wi = newWorkItem("tenant-a-workitem");
-        workItemStore.put(wi);
+        WorkItemEntity wi = newWorkItem("tenant-a-workitem");
+        WorkItem stored = workItemStore.put(WorkItemEntityMapper.toDomain(wi));
 
-        WorkItemNote note = newNote(wi.id, "tenant-a-note");
+        WorkItemNote note = newNote(stored.id(), "tenant-a-note");
         store.append(note);
         UUID noteId = note.id;
 
@@ -141,37 +143,37 @@ class JpaWorkItemNoteStoreTenancyTest {
     void findByWorkItemId_returnsOnlyCurrentTenantNotes() {
         // Create work item for tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItem wiA = newWorkItem("tenant-a-workitem");
-        workItemStore.put(wiA);
+        WorkItemEntity wiA = newWorkItem("tenant-a-workitem");
+        WorkItem storedA = workItemStore.put(WorkItemEntityMapper.toDomain(wiA));
 
         // Create note for tenant A
-        WorkItemNote noteA = newNote(wiA.id, "note from tenant A");
+        WorkItemNote noteA = newNote(storedA.id(), "note from tenant A");
         store.append(noteA);
 
         // Create work item for tenant B
         principal.setTenancyId(TENANT_B);
-        WorkItem wiB = newWorkItem("tenant-b-workitem");
-        workItemStore.put(wiB);
+        WorkItemEntity wiB = newWorkItem("tenant-b-workitem");
+        WorkItem storedB = workItemStore.put(WorkItemEntityMapper.toDomain(wiB));
 
         // Create note for tenant B
-        WorkItemNote noteB = newNote(wiB.id, "note from tenant B");
+        WorkItemNote noteB = newNote(storedB.id(), "note from tenant B");
         store.append(noteB);
 
         // As tenant A — should only see A's note
         principal.setTenancyId(TENANT_A);
-        List<WorkItemNote> resultA = store.findByWorkItemId(wiA.id);
+        List<WorkItemNote> resultA = store.findByWorkItemId(storedA.id());
         assertThat(resultA).hasSize(1);
         assertThat(resultA.get(0).id).isEqualTo(noteA.id);
 
         // As tenant B — should only see B's note
         principal.setTenancyId(TENANT_B);
-        List<WorkItemNote> resultB = store.findByWorkItemId(wiB.id);
+        List<WorkItemNote> resultB = store.findByWorkItemId(storedB.id());
         assertThat(resultB).hasSize(1);
         assertThat(resultB.get(0).id).isEqualTo(noteB.id);
 
         // As tenant A trying to see B's notes — should be empty
         principal.setTenancyId(TENANT_A);
-        List<WorkItemNote> resultA2 = store.findByWorkItemId(wiB.id);
+        List<WorkItemNote> resultA2 = store.findByWorkItemId(storedB.id());
         assertThat(resultA2).isEmpty();
     }
 
@@ -183,10 +185,10 @@ class JpaWorkItemNoteStoreTenancyTest {
     void update_stampsTenancyId_whenNull() {
         // Create work item and note as tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItem wi = newWorkItem("test-workitem");
-        workItemStore.put(wi);
+        WorkItemEntity wi = newWorkItem("test-workitem");
+        WorkItem stored = workItemStore.put(WorkItemEntityMapper.toDomain(wi));
 
-        WorkItemNote note = newNote(wi.id, "initial content");
+        WorkItemNote note = newNote(stored.id(), "initial content");
         store.append(note);
 
         // Clear tenancyId (artificial scenario, but tests the guard)
@@ -206,10 +208,10 @@ class JpaWorkItemNoteStoreTenancyTest {
     void delete_returnsFalse_forAnotherTenantNote() {
         // Create work item and note as tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItem wi = newWorkItem("tenant-a-workitem");
-        workItemStore.put(wi);
+        WorkItemEntity wi = newWorkItem("tenant-a-workitem");
+        WorkItem stored = workItemStore.put(WorkItemEntityMapper.toDomain(wi));
 
-        WorkItemNote note = newNote(wi.id, "tenant-a-note");
+        WorkItemNote note = newNote(stored.id(), "tenant-a-note");
         store.append(note);
         UUID noteId = note.id;
 

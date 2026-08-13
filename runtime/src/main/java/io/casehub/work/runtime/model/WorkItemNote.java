@@ -12,7 +12,7 @@ import jakarta.persistence.Table;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
- * An internal operational note attached to a {@link WorkItem}.
+ * An internal operational note attached to a {@link WorkItemEntity}.
  *
  * <h2>What a note is for</h2>
  * <p>

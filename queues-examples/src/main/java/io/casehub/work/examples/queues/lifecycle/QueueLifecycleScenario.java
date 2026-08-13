@@ -6,7 +6,7 @@ import io.casehub.platform.api.view.SubjectViewStore;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.queues.event.QueueEventType;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -144,8 +144,8 @@ public class QueueLifecycleScenario {
                 .priority(WorkItemPriority.HIGH)
                 .createdBy("demo")
                 .build();
-        final WorkItem wi = workItemService.create(createReq);
-        final UUID itemId = wi.id;
+        final WorkItem wi     = workItemService.create(createReq);
+        final UUID           itemId = wi.id();
 
         // Add the MANUAL label that makes the item a member of the queue.
         // TRACKER INVARIANT: WorkItemLifecycleEvent fires AFTER persistence.

@@ -3,7 +3,7 @@ package io.casehub.work.queues.service;
 import io.casehub.platform.api.view.SubjectViewQuery;
 import io.casehub.platform.api.view.SubjectViewStore;
 import io.casehub.work.queues.event.WorkItemQueueEvent;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -17,7 +17,7 @@ public class WorkItemQueueMetrics {
     MeterRegistry registry;
 
     @Inject
-    SubjectViewQuery<WorkItem> viewQuery;
+    SubjectViewQuery<WorkItemEntity> viewQuery;
 
     @Inject
     SubjectViewStore viewStore;

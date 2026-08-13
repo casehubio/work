@@ -1,8 +1,8 @@
 package io.casehub.work.runtime.event;
 
 import io.casehub.work.api.WorkCloudEventTypes;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.TenantContextRunner;
 import io.casehub.work.runtime.service.WorkItemService;
@@ -52,8 +52,7 @@ class WorkCloudEventInboundAdapterTest {
         template.name = "invoice-review";
         when(templateService.findByRef(templateId.toString())).thenReturn(Optional.of(template));
 
-        final WorkItem created = new WorkItem();
-        created.id = UUID.randomUUID();
+        final WorkItem created = WorkItem.builder().id(UUID.randomUUID()).build();
         when(templateService.createFromTemplate(any())).thenReturn(created);
         when(workItemService.findByCallerRef(ceId)).thenReturn(Optional.empty());
 
@@ -124,9 +123,8 @@ class WorkCloudEventInboundAdapterTest {
 
     @Test
     void onCloudEvent_duplicateCallerRef_skips() {
-        final String ceId = UUID.randomUUID().toString();
-        final WorkItem existing = new WorkItem();
-        existing.id = UUID.randomUUID();
+        final String         ceId     = UUID.randomUUID().toString();
+        final WorkItem existing = WorkItem.builder().id(UUID.randomUUID()).build();
         when(workItemService.findByCallerRef(ceId)).thenReturn(Optional.of(existing));
 
         final CloudEvent ce = CloudEventBuilder.v1()

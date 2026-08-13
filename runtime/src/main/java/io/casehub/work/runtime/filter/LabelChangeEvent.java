@@ -1,11 +1,11 @@
 package io.casehub.work.runtime.filter;
 
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 
 import java.util.List;
 
 public record LabelChangeEvent(
-    WorkItem workItem,
+    WorkItemEntity workItem,
     List<LabelDelta> deltas
 ) {
     public record LabelDelta(String path, ChangeType changeType) {}

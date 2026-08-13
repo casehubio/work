@@ -1,9 +1,11 @@
 package io.casehub.work.runtime.service;
 
+import io.casehub.work.runtime.model.WorkItemEntity;
+
 import java.util.UUID;
 
 /**
- * Thrown when a requested {@link io.casehub.work.runtime.model.WorkItem}
+ * Thrown when a requested {@link WorkItemEntity}
  * cannot be found by its UUID primary key.
  *
  * <p>

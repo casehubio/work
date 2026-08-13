@@ -13,9 +13,9 @@ import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
 import io.casehub.platform.api.label.LabelAction;
 import io.casehub.work.runtime.filter.LabelRuleEntity;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -27,7 +27,6 @@ import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Scenario: Support Triage Cascade.
@@ -142,45 +141,45 @@ public class SupportTriageScenario {
 
         LOG.info("[TRIAGE] Step 1/4: Creating URGENT ticket — should get sla/critical + queue/fast-track");
         final WorkItem critical = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Production database unreachable — all services down")
-                .description("Database cluster is not responding. All customer-facing APIs returning 503.")
-                .types(List.of("infrastructure"))
-                .priority(WorkItemPriority.URGENT)
-                .candidateGroups("ops-team")
-                .createdBy("incident-detector")
-                .payload("{\"affected_services\": 12, \"error\": \"Connection refused\"}")
-                .build());
+                                                                                    .title("Production database unreachable — all services down")
+                                                                                    .description("Database cluster is not responding. All customer-facing APIs returning 503.")
+                                                                                    .types(List.of("infrastructure"))
+                                                                                    .priority(WorkItemPriority.URGENT)
+                                                                                    .candidateGroups("ops-team")
+                                                                                    .createdBy("incident-detector")
+                                                                                    .payload("{\"affected_services\": 12, \"error\": \"Connection refused\"}")
+                                                                                    .build());
         steps.add(new QueueScenarioStep(1,
                 "URGENT production incident created — filter A fires: sla/critical + queue/fast-track",
-                critical.id, inferredPaths(critical), manualPaths(critical),
+                critical.id(), inferredPaths(critical), manualPaths(critical),
                 formatEvents(eventLog.drain())));
 
         LOG.info("[TRIAGE] Step 2/4: Creating HIGH unassigned ticket — should get intake/triage + team/support-lead (cascade)");
         final WorkItem high = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Login flow broken for EU region customers")
-                .description("Multiple reports of authentication failures for users in EU region. Appears intermittent.")
-                .types(List.of("authentication"))
-                .priority(WorkItemPriority.HIGH)
-                .candidateGroups("support-tier1")
-                .createdBy("support-portal")
-                .payload("{\"region\": \"EU\", \"affected_users\": 47}")
-                .build());
+                                                                                .title("Login flow broken for EU region customers")
+                                                                                .description("Multiple reports of authentication failures for users in EU region. Appears intermittent.")
+                                                                                .types(List.of("authentication"))
+                                                                                .priority(WorkItemPriority.HIGH)
+                                                                                .candidateGroups("support-tier1")
+                                                                                .createdBy("support-portal")
+                                                                                .payload("{\"region\": \"EU\", \"affected_users\": 47}")
+                                                                                .build());
         steps.add(new QueueScenarioStep(2,
                 "HIGH unassigned ticket — filter B fires: intake/triage; filter C cascades: team/support-lead",
-                high.id, inferredPaths(high), manualPaths(high),
+                high.id(), inferredPaths(high), manualPaths(high),
                 formatEvents(eventLog.drain())));
 
         LOG.info("[TRIAGE] Step 3/4: Claiming the HIGH ticket — intake/triage should disappear on re-evaluation");
-        workItemService.claim(high.id, "senior-support-agent");
-        final WorkItem highAfterClaim = workItemStore.get(high.id).orElseThrow();
+        workItemService.claim(high.id(), "senior-support-agent");
+        final WorkItem highAfterClaim = workItemStore.get(high.id()).orElseThrow();
         steps.add(new QueueScenarioStep(3,
                 "HIGH ticket claimed — re-evaluation: assigneeId != null so intake/triage and team/support-lead labels removed → REMOVED queue events",
-                highAfterClaim.id, inferredPaths(highAfterClaim), manualPaths(highAfterClaim),
+                highAfterClaim.id(), inferredPaths(highAfterClaim), manualPaths(highAfterClaim),
                 formatEvents(eventLog.drain())));
 
         LOG.info("[TRIAGE] Step 4/4: Listing queue/fast-track contents — should contain URGENT ticket only");
         final List<UUID> fastTrackQueue = workItemStore.scan(WorkItemQuery.byLabelPattern("queue/fast-track"))
-                .stream().map(w -> w.id).toList();
+                .stream().map(w -> w.id()).toList();
         steps.add(new QueueScenarioStep(4,
                 "queue/fast-track queue contents — contains URGENT ticket; HIGH ticket left when claimed",
                 null, List.of("queue/fast-track contains " + fastTrackQueue.size() + " item(s)"),
@@ -193,13 +192,13 @@ public class SupportTriageScenario {
     }
 
     private List<String> inferredPaths(final WorkItem wi) {
-        return wi.labels.stream().filter(l -> l.persistence == LabelPersistence.INFERRED)
-                .map(l -> l.path).toList();
+        return wi.labels().stream().filter(l -> l.persistence() == LabelPersistence.INFERRED)
+                .map(l -> l.path()).toList();
     }
 
     private List<String> manualPaths(final WorkItem wi) {
-        return wi.labels.stream().filter(l -> l.persistence == LabelPersistence.MANUAL)
-                .map(l -> l.path).toList();
+        return wi.labels().stream().filter(l -> l.persistence() == LabelPersistence.MANUAL)
+                .map(l -> l.path()).toList();
     }
 
     private List<String> formatEvents(final List<QueueEventLog.Entry> entries) {

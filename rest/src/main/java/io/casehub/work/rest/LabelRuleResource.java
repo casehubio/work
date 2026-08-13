@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import io.casehub.work.api.spi.WorkItemStore;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -40,7 +41,7 @@ public class LabelRuleResource {
     Instance<LabelRule> permanentRules;
 
     @Inject
-    io.casehub.work.runtime.repository.WorkItemStore workItemStore;
+    WorkItemStore workItemStore;
 
     @Inject
     io.casehub.work.runtime.filter.LabelRuleEngine labelRuleEngine;
@@ -134,8 +135,9 @@ public class LabelRuleResource {
             return Response.status(404).entity(Map.of("error", "Not found")).build();
         }
         for (var wi : workItemStore.scanAll()) {
-            labelRuleEngine.evaluate(wi, io.casehub.work.runtime.event.WorkItemContextBuilder.toMap(wi), "UPDATE");
-            workItemStore.put(wi);
+            final io.casehub.work.runtime.model.WorkItemEntity entity = io.casehub.work.runtime.repository.WorkItemEntityMapper.toEntity(wi);
+            labelRuleEngine.evaluate(entity, io.casehub.work.runtime.event.WorkItemContextBuilder.toMap(wi), "UPDATE");
+            workItemStore.put(io.casehub.work.runtime.repository.WorkItemEntityMapper.toDomain(entity));
         }
         return Response.noContent().build();
     }

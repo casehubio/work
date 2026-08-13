@@ -8,7 +8,7 @@ import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.repository.CrossTenant;
 import io.casehub.work.runtime.repository.CrossTenantRoutingCursorStore;
 import io.casehub.work.runtime.repository.CrossTenantWorkItemScheduleStore;
-import io.casehub.work.runtime.repository.CrossTenantWorkItemStore;
+import io.casehub.work.api.spi.CrossTenantWorkItemStore;
 
 /**
  * CDI producer for {@code @CrossTenant} store variants.

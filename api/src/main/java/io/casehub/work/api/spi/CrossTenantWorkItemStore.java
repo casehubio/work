@@ -1,8 +1,8 @@
-package io.casehub.work.runtime.repository;
+package io.casehub.work.api.spi;
 
 import java.util.List;
 
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 
 /**
  * Cross-tenant {@link WorkItem} store for system-level operations.

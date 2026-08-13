@@ -1,7 +1,7 @@
 package io.casehub.work.runtime.event;
 
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -17,10 +17,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class WorkItemLifecycleEventTest {
 
     private WorkItem workItem(final UUID id, final WorkItemStatus status) {
-        final WorkItem wi = new WorkItem();
-        wi.id = id;
-        wi.status = status;
-        return wi;
+        return WorkItem.builder()
+                .id(id)
+                .status(status)
+                .build();
     }
 
     @Test
@@ -40,10 +40,10 @@ class WorkItemLifecycleEventTest {
     }
 
     @Test
-    void of_workItemReturnsEntity() {
-        UUID id = UUID.randomUUID();
-        WorkItem wi = workItem(id, WorkItemStatus.ASSIGNED);
-        WorkItemLifecycleEvent e = WorkItemLifecycleEvent.of("ASSIGNED", wi, "alice", null);
+    void of_workItemReturnsDomain() {
+        UUID                   id = UUID.randomUUID();
+        WorkItem               wi = workItem(id, WorkItemStatus.ASSIGNED);
+        WorkItemLifecycleEvent e  = WorkItemLifecycleEvent.of("ASSIGNED", wi, "alice", null);
         assertThat(e.workItem()).isSameAs(wi);
     }
 
@@ -90,21 +90,22 @@ class WorkItemLifecycleEventTest {
     }
 
     @Test
-    void ref_returnsWorkItemRefFromEntity() {
-        final WorkItem workItem = new WorkItem();
-        workItem.id = UUID.randomUUID();
-        workItem.status = WorkItemStatus.IN_PROGRESS;
-        workItem.callerRef = "case:1/pi:2";
-        workItem.assigneeId = "alice";
-        workItem.resolution = "{}";
-        workItem.candidateGroups = "team-a";
-        workItem.outcome = "approved";
-        workItem.tenancyId = "tenant-1";
+    void ref_returnsWorkItemRefFromDomain() {
+        final WorkItem workItem = WorkItem.builder()
+                .id(UUID.randomUUID())
+                .status(WorkItemStatus.IN_PROGRESS)
+                .callerRef("case:1/pi:2")
+                .assigneeId("alice")
+                .resolution("{}")
+                .candidateGroups("team-a")
+                .outcome("approved")
+                .tenancyId("tenant-1")
+                .build();
 
         final WorkItemLifecycleEvent event = WorkItemLifecycleEvent.of("COMPLETED", workItem, "alice", null);
         final io.casehub.work.api.WorkItemRef ref = event.ref();
 
-        assertThat(ref.id()).isEqualTo(workItem.id);
+        assertThat(ref.id()).isEqualTo(workItem.id());
         assertThat(ref.callerRef()).isEqualTo("case:1/pi:2");
         assertThat(ref.assigneeId()).isEqualTo("alice");
         assertThat(ref.resolution()).isEqualTo("{}");
@@ -133,10 +134,11 @@ class WorkItemLifecycleEventTest {
 
     @Test
     void implementsSubscribableEvent() {
-        WorkItem wi = new WorkItem();
-        wi.id        = UUID.randomUUID();
-        wi.status    = WorkItemStatus.IN_PROGRESS;
-        wi.tenancyId = "test-tenant";
+        WorkItem wi = WorkItem.builder()
+                .id(UUID.randomUUID())
+                .status(WorkItemStatus.IN_PROGRESS)
+                .tenancyId("test-tenant")
+                .build();
         WorkItemLifecycleEvent e = WorkItemLifecycleEvent.of("CREATED", wi, "alice", null);
 
         assertThat(e).isInstanceOf(io.casehub.platform.api.subscription.SubscribableEvent.class);

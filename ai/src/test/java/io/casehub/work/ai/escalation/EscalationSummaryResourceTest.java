@@ -81,13 +81,13 @@ class EscalationSummaryResourceTest {
 
         // Allow the AFTER_SUCCESS observer transaction to commit by calling GET
         final Response list = given()
-                .when().get("/workitems/" + wi.id + "/escalation-summaries")
+                .when().get("/workitems/" + wi.id() + "/escalation-summaries")
                 .then().statusCode(200)
                 .extract().response();
 
         final List<Map<String, Object>> summaries = list.jsonPath().getList("$");
         assertThat(summaries).hasSize(1);
-        assertThat(summaries.get(0).get("workItemId")).isEqualTo(wi.id.toString());
+        assertThat(summaries.get(0).get("workItemId")).isEqualTo(wi.id().toString());
         assertThat(summaries.get(0).get("eventType")).isEqualTo("EXPIRED");
         // No ChatModel configured — summary text is null
         assertThat(summaries.get(0).get("summary")).isNull();

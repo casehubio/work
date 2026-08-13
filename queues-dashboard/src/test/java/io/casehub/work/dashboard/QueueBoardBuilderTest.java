@@ -4,51 +4,48 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemLabel;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLabel;
 
 class QueueBoardBuilderTest {
 
     @Test
     void tier_urgentInferredLabel_returnsUrgent() {
-        final var wi = workItemWithLabels("review/urgent", "review/urgent/unassigned");
+        final var wi = workItemWithLabels(List.of("review/urgent", "review/urgent/unassigned"));
         assertThat(QueueBoardBuilder.tier(wi)).isEqualTo("review/urgent");
     }
 
     @Test
     void state_unassignedLabel_returnsUnassigned() {
-        final var wi = workItemWithLabels("review/urgent", "review/urgent/unassigned");
+        final var wi = workItemWithLabels(List.of("review/urgent", "review/urgent/unassigned"));
         assertThat(QueueBoardBuilder.state(wi)).isEqualTo("unassigned");
     }
 
     @Test
     void state_claimedLabel_returnsClaimed() {
-        final var wi = workItemWithLabels("review/standard", "review/standard/claimed");
+        final var wi = workItemWithLabels(List.of("review/standard", "review/standard/claimed"));
         assertThat(QueueBoardBuilder.state(wi)).isEqualTo("claimed");
     }
 
     @Test
     void state_activeLabel_returnsActive() {
-        final var wi = workItemWithLabels("review/routine", "review/routine/active");
+        final var wi = workItemWithLabels(List.of("review/routine", "review/routine/active"));
         assertThat(QueueBoardBuilder.state(wi)).isEqualTo("active");
     }
 
     @Test
     void tier_noLabels_returnsNull() {
-        assertThat(QueueBoardBuilder.tier(new WorkItem())).isNull();
+        assertThat(QueueBoardBuilder.tier(WorkItem.builder().build())).isNull();
     }
 
     @Test
     void build_threeItems_correctlyBucketed() {
-        final var urgent = workItemWithLabels("review/urgent", "review/urgent/unassigned");
-        urgent.title = "Security advisory";
-        final var standard = workItemWithLabels("review/standard", "review/standard/unassigned");
-        standard.title = "Release notes";
-        final var routine = workItemWithLabels("review/routine", "review/routine/unassigned");
-        routine.title = "Tutorial";
+        final var urgent = workItemWithLabels("Security advisory", List.of("review/urgent", "review/urgent/unassigned"));
+        final var standard = workItemWithLabels("Release notes", List.of("review/standard", "review/standard/unassigned"));
+        final var routine = workItemWithLabels("Tutorial", List.of("review/routine", "review/routine/unassigned"));
 
         final var grid = QueueBoardBuilder.build(List.of(urgent, standard, routine));
 
@@ -60,8 +57,7 @@ class QueueBoardBuilderTest {
 
     @Test
     void build_itemWithNoTier_omittedFromGrid() {
-        final var wi = new WorkItem();
-        wi.title = "No tier item";
+        final var wi = WorkItem.builder().title("No tier item").build();
         final var grid = QueueBoardBuilder.build(List.of(wi));
         assertThat(grid.values().stream().flatMap(m -> m.values().stream()).allMatch(List::isEmpty)).isTrue();
     }
@@ -82,11 +78,16 @@ class QueueBoardBuilderTest {
         assertThat(QueueBoardBuilder.formatCell(titles)).contains("(+2 more)");
     }
 
-    private WorkItem workItemWithLabels(final String... paths) {
-        final var wi = new WorkItem();
-        for (final String path : paths) {
-            wi.labels.add(new WorkItemLabel(path, LabelPersistence.INFERRED, "test-filter"));
-        }
-        return wi;
+    private WorkItem workItemWithLabels(final List<String> paths) {
+        return workItemWithLabels(null, paths);
+    }
+
+    private WorkItem workItemWithLabels(final String title, final List<String> paths) {
+        return WorkItem.builder()
+                .title(title)
+                .labels(paths.stream()
+                        .map(p -> new WorkItemLabel(p, LabelPersistence.INFERRED, "test-filter"))
+                        .toList())
+                .build();
     }
 }

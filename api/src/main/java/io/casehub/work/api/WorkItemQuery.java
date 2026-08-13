@@ -1,10 +1,7 @@
-package io.casehub.work.runtime.repository;
+package io.casehub.work.api;
 
 import java.time.Instant;
 import java.util.List;
-
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.api.WorkItemStatus;
 
 /**
  * KV-native query criteria for {@link WorkItemStore#scan}.

@@ -4,7 +4,7 @@ import io.casehub.platform.api.datasource.DataSource;
 import io.casehub.platform.api.datasource.DataSourceRegistry;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.inject.Instance;
 import org.junit.jupiter.api.Test;
 
@@ -64,10 +64,11 @@ class WorkItemSubscriptionBridgeTest {
     }
 
     private WorkItemLifecycleEvent sampleEvent(final String name) {
-        var wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.status = WorkItemStatus.IN_PROGRESS;
-        wi.tenancyId = "test-tenant";
+        var wi = WorkItem.builder()
+                .id(UUID.randomUUID())
+                .status(WorkItemStatus.IN_PROGRESS)
+                .tenancyId("test-tenant")
+                .build();
         return WorkItemLifecycleEvent.of(name, wi, "test", null);
     }
 

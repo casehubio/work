@@ -76,10 +76,10 @@ type: java
 CaseHub Work is a **CaseHub platform module** providing **human-scale WorkItem lifecycle management**. It gives any Quarkus application a human task inbox with expiry, delegation, escalation, priority, and audit trail — usable independently or with an optional Quarkus-Flow integration. CaseHub and Qhorus adapters are planned but not yet built. It is hosted under the CaseHub organisation (`casehubio/work`), not submitted to Quarkiverse.
 
 **The core concept — WorkItem (not Task):**
-A `WorkItem` is a unit of work requiring human attention or judgment. It is deliberately NOT called `Task` because:
+A `WorkItemEntity` is a unit of work requiring human attention or judgment. It is deliberately NOT called `Task` because:
 - The CNCF Serverless Workflow SDK (used by Quarkus-Flow) has its own `Task` class (`io.serverlessworkflow.api.types.Task`) — a machine-executed workflow step
 - CaseHub has its own `Task` class — a CMMN-style case work unit
-Using `WorkItem` avoids naming conflicts and accurately describes what WorkItems manages: work that waits for a person.
+Using `WorkItemEntity` avoids naming conflicts and accurately describes what WorkItems manages: work that waits for a person.
 
 **See the full glossary:** `ARC42STORIES.MD §13` — Glossary
 
@@ -178,7 +178,7 @@ CaseHub engine adapter (`casehub-work-engine-adapter`, package `io.casehub.work.
 
 Activated by adding `casehub-work-engine-adapter` to the consumer's classpath (transitively brings `casehub-engine-planning`). Required for any runtime that uses `humanTask` YAML bindings — without it, `HumanTaskScheduleEvent` is published but never handled and WorkItems are never created.
 
-**Routing context threading (engine#756):** `HumanTaskScheduleHandler` serializes `candidateScores` (`Map<String, Double>`) and `experiences` (`List<RetrievedExperience>`) from `HumanTaskScheduleEvent` to JSON strings and passes them through `WorkItemCreateRequest` → `WorkItemService` → `WorkItem` entity (TEXT columns, V44 migration) → REST API responses. Both inline and template modes thread the data. `WorkItemTemplateService.mergeRequestWithTemplate()` passes both fields through unchanged. The work repo treats both as opaque JSON — no engine type dependencies in work-api or work-runtime.
+**Routing context threading (engine#756):** `HumanTaskScheduleHandler` serializes `candidateScores` (`Map<String, Double>`) and `experiences` (`List<RetrievedExperience>`) from `HumanTaskScheduleEvent` to JSON strings and passes them through `WorkItemCreateRequest` → `WorkItemService` → `WorkItemEntity` entity (TEXT columns, V44 migration) → REST API responses. Both inline and template modes thread the data. `WorkItemTemplateService.mergeRequestWithTemplate()` passes both fields through unchanged. The work repo treats both as opaque JSON — no engine type dependencies in work-api or work-runtime.
 
 Two-way bridge:
 - **Outbound** (`HumanTaskScheduleHandler`, `ActionGateWorkItemHandler`) — consumes engine event bus messages, creates WorkItems

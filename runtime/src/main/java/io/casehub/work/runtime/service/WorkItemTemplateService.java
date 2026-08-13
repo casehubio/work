@@ -1,30 +1,28 @@
 package io.casehub.work.runtime.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
-import jakarta.inject.Inject;
-import jakarta.transaction.Transactional;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.jboss.logging.Logger;
 import io.casehub.platform.api.path.Path;
-import io.casehub.work.api.Outcome;
 import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.runtime.model.OutcomeCodecs;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.Outcome;
 import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.runtime.model.WorkItemLabel;
+import io.casehub.work.runtime.model.OutcomeCodecs;
+import io.casehub.work.runtime.model.WorkItemLabelEntity;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.model.WorkItemType;
 import io.casehub.work.runtime.multiinstance.MultiInstanceSpawnService;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import org.jboss.logging.Logger;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Service for creating and instantiating {@link WorkItemTemplate} records.
@@ -53,35 +51,16 @@ public class WorkItemTemplateService {
     io.casehub.work.runtime.repository.WorkItemTemplateStore templateStore;
 
 
-    /**
-     * Create a WorkItem from a template using request-wins merge semantics.
-     *
-     * <p>
-     * The request's fields take precedence over template defaults for every non-null value.
-     * When a request field is null, the corresponding template default is used. This enables
-     * SPI callers to provide a {@link WorkItemCreateRequest} with only the fields they want
-     * to override, and let the template fill in everything else.
-     *
-     * <p>
-     * For multi-instance templates, delegates to {@link MultiInstanceSpawnService#createGroup}
-     * with the merged request. For simple templates, creates a single WorkItem and applies
-     * template labels.
-     *
-     * @param request the create request; must have {@code templateId} set
-     * @return the newly created WorkItem (or parent WorkItem for multi-instance)
-     * @throws IllegalArgumentException if the template is not found
-     */
     @Transactional
-    public WorkItem createFromTemplate(final WorkItemCreateRequest request) {
+    public io.casehub.work.api.WorkItem createFromTemplate(final WorkItemCreateRequest request) {
         final WorkItemTemplate template = templateStore.get(request.templateId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Template not found: " + request.templateId));
+                                                       .orElseThrow(() -> new IllegalArgumentException(
+                                                               "Template not found: " + request.templateId));
 
         final String expandedExcludedUsers = templateExpander.expandExcludedUsers(template, request.tenancyId);
 
         WorkItemCreateRequest merged = mergeRequestWithTemplate(template, request, expandedExcludedUsers);
 
-        // Audit trail for excludedGroups expansion — mirrors the instantiate() pattern
         if (expandedExcludedUsers != null && !expandedExcludedUsers.equals(template.excludedUsers)) {
             final String auditDetail = buildExpansionAuditDetail(template, expandedExcludedUsers);
             merged = merged.toBuilder().excludedUsers(expandedExcludedUsers).auditDetail(auditDetail).build();
@@ -89,15 +68,14 @@ public class WorkItemTemplateService {
 
         if (template.instanceCount != null) {
             return multiInstanceSpawnService.get()
-                    .createGroup(merged, template, expandedExcludedUsers);
+                                            .createGroup(merged, template, expandedExcludedUsers);
         }
 
-        final WorkItem workItem = workItemService.create(merged);
+        io.casehub.work.api.WorkItem result = workItemService.create(merged);
 
-        final List<WorkItemLabel> labels = parseLabels(template);
-        WorkItem result = workItem;
-        for (final WorkItemLabel label : labels) {
-            result = workItemService.addLabel(result.id, label.path, label.appliedBy);
+        final List<WorkItemLabelEntity> labels = parseLabels(template);
+        for (final WorkItemLabelEntity label : labels) {
+            result = workItemService.addLabel(result.id(), label.path, label.appliedBy);
         }
         return result;
     }
@@ -222,7 +200,7 @@ public class WorkItemTemplateService {
 
     /**
      * Parse the template's {@link WorkItemTemplate#labelPaths} JSON array into
-     * {@link WorkItemLabel} instances ready to be applied at instantiation.
+     * {@link WorkItemLabelEntity} instances ready to be applied at instantiation.
      *
      * <p>
      * Returns an empty list if {@code labelPaths} is null, blank, or invalid JSON.
@@ -232,19 +210,19 @@ public class WorkItemTemplateService {
      * Static for unit testability — no CDI or JPA dependency.
      *
      * @param template the template whose labels are to be parsed
-     * @return list of {@link WorkItemLabel} ready for application; may be empty
+     * @return list of {@link WorkItemLabelEntity} ready for application; may be empty
      */
-    public static List<WorkItemLabel> parseLabels(final WorkItemTemplate template) {
+    public static List<WorkItemLabelEntity> parseLabels(final WorkItemTemplate template) {
         if (template.labelPaths == null || template.labelPaths.isBlank()) {
             return List.of();
         }
         try {
             final List<String> paths = MAPPER.readValue(template.labelPaths, new TypeReference<>() {
             });
-            final List<WorkItemLabel> result = new ArrayList<>();
+            final List<WorkItemLabelEntity> result = new ArrayList<>();
             for (final String path : paths) {
                 if (path != null && !path.isBlank()) {
-                    result.add(new WorkItemLabel(path, LabelPersistence.MANUAL, "template"));
+                    result.add(new WorkItemLabelEntity(path, LabelPersistence.MANUAL, "template"));
                 }
             }
             return result;

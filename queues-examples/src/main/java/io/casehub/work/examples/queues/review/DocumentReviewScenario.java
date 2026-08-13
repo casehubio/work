@@ -13,9 +13,9 @@ import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
 import io.casehub.platform.api.label.LabelAction;
 import io.casehub.work.runtime.filter.LabelRuleEntity;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -29,7 +29,6 @@ import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Scenario: Document Review Pipeline — state-tracking queues.
@@ -188,79 +187,79 @@ public class DocumentReviewScenario {
         // ── Step 1: Security advisory — MEDIUM priority, overridden to urgent by Lambda ──
         LOG.info("[REVIEW] Step 1/7: Security advisory submitted — Lambda overrides MEDIUM priority to urgent tier");
         final WorkItem secAdvisory = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Security advisory: TLS 1.0 deprecation — migration guide")
-                .description("Update the TLS migration guide to reflect Q2 deprecation timeline.")
-                .types(List.of("security-docs"))
-                .formKey("migration-guide")
-                .priority(WorkItemPriority.MEDIUM)
-                .candidateGroups("security-writers,docs-team")
-                .createdBy("doc-system")
-                .payload("{\"doc_type\": \"security-advisory\", \"publish_deadline\": \"2026-04-18\"}")
-                .build());
+                                                                                       .title("Security advisory: TLS 1.0 deprecation — migration guide")
+                                                                                       .description("Update the TLS migration guide to reflect Q2 deprecation timeline.")
+                                                                                       .types(List.of("security-docs"))
+                                                                                       .formKey("migration-guide")
+                                                                                       .priority(WorkItemPriority.MEDIUM)
+                                                                                       .candidateGroups("security-writers,docs-team")
+                                                                                       .createdBy("doc-system")
+                                                                                       .payload("{\"doc_type\": \"security-advisory\", \"publish_deadline\": \"2026-04-18\"}")
+                                                                                       .build());
         steps.add(new QueueScenarioStep(1,
                 "Security advisory — priority=MEDIUM but candidateGroups contains 'security-writers'. " +
                         "Lambda filter overrides: review/urgent + review/urgent/unassigned",
-                secAdvisory.id, inferredPaths(secAdvisory), manualPaths(secAdvisory),
+                secAdvisory.id(), inferredPaths(secAdvisory), manualPaths(secAdvisory),
                 formatEvents(eventLog.drain())));
         sleep(delayMs);
 
         // ── Step 2: Release notes — HIGH priority → standard tier ──
         LOG.info("[REVIEW] Step 2/7: Release notes — HIGH priority → standard tier");
         final WorkItem releaseNotes = workItemService.create(WorkItemCreateRequest.builder()
-                .title("v3.2 release notes — features and breaking changes")
-                .description("Document all features and breaking changes for the v3.2 release.")
-                .types(List.of("release-docs"))
-                .formKey("release-notes")
-                .priority(WorkItemPriority.HIGH)
-                .candidateGroups("docs-team")
-                .createdBy("release-system")
-                .payload("{\"version\": \"3.2\", \"breaking_changes\": 3, \"new_features\": 12}")
-                .build());
+                                                                                        .title("v3.2 release notes — features and breaking changes")
+                                                                                        .description("Document all features and breaking changes for the v3.2 release.")
+                                                                                        .types(List.of("release-docs"))
+                                                                                        .formKey("release-notes")
+                                                                                        .priority(WorkItemPriority.HIGH)
+                                                                                        .candidateGroups("docs-team")
+                                                                                        .createdBy("release-system")
+                                                                                        .payload("{\"version\": \"3.2\", \"breaking_changes\": 3, \"new_features\": 12}")
+                                                                                        .build());
         steps.add(new QueueScenarioStep(2,
                 "Release notes — priority=HIGH → JEXL filter: review/standard + review/standard/unassigned",
-                releaseNotes.id, inferredPaths(releaseNotes), manualPaths(releaseNotes),
+                releaseNotes.id(), inferredPaths(releaseNotes), manualPaths(releaseNotes),
                 formatEvents(eventLog.drain())));
         sleep(delayMs);
 
         // ── Step 3: Tutorial — MEDIUM priority → routine tier ──
         LOG.info("[REVIEW] Step 3/7: Tutorial — MEDIUM priority → routine tier");
         final WorkItem tutorial = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Getting started tutorial — CaseHub Work quick start")
-                .description("Write a 10-minute getting-started guide for new users.")
-                .types(List.of("tutorials"))
-                .formKey("quick-start")
-                .priority(WorkItemPriority.MEDIUM)
-                .candidateGroups("docs-team")
-                .createdBy("doc-system")
-                .payload("{\"estimated_reading_time_min\": 10, \"skill_level\": \"beginner\"}")
-                .build());
+                                                                                    .title("Getting started tutorial — CaseHub Work quick start")
+                                                                                    .description("Write a 10-minute getting-started guide for new users.")
+                                                                                    .types(List.of("tutorials"))
+                                                                                    .formKey("quick-start")
+                                                                                    .priority(WorkItemPriority.MEDIUM)
+                                                                                    .candidateGroups("docs-team")
+                                                                                    .createdBy("doc-system")
+                                                                                    .payload("{\"estimated_reading_time_min\": 10, \"skill_level\": \"beginner\"}")
+                                                                                    .build());
         steps.add(new QueueScenarioStep(3,
                 "Tutorial — priority=MEDIUM → JEXL filter: review/routine + review/routine/unassigned",
-                tutorial.id, inferredPaths(tutorial), manualPaths(tutorial),
+                tutorial.id(), inferredPaths(tutorial), manualPaths(tutorial),
                 formatEvents(eventLog.drain())));
         sleep(delayMs);
 
         // ── Step 4: Reviewer claims the security advisory ──
         LOG.info("[REVIEW] Step 4/7: Senior reviewer claims the security advisory");
-        workItemService.claim(secAdvisory.id, "senior-reviewer");
-        final WorkItem afterClaim = readFresh(secAdvisory.id);
+        workItemService.claim(secAdvisory.id(), "senior-reviewer");
+        final WorkItem afterClaim = readFresh(secAdvisory.id());
         steps.add(new QueueScenarioStep(4,
                 "Security advisory claimed (PENDING→ASSIGNED). " +
                         "Re-evaluation: review/urgent/unassigned removed, review/urgent/claimed applied. " +
                         "Queue event: CHANGED to Urgent Reviews (item stayed in queue, state label changed).",
-                afterClaim.id, inferredPaths(afterClaim), manualPaths(afterClaim),
+                afterClaim.id(), inferredPaths(afterClaim), manualPaths(afterClaim),
                 formatEvents(eventLog.drain())));
         sleep(delayMs);
 
         // ── Step 5: Reviewer starts the advisory ──
         LOG.info("[REVIEW] Step 5/7: Reviewer starts reading the security advisory");
-        workItemService.start(secAdvisory.id, "senior-reviewer");
-        final WorkItem afterStart = readFresh(secAdvisory.id);
+        workItemService.start(secAdvisory.id(), "senior-reviewer");
+        final WorkItem afterStart = readFresh(secAdvisory.id());
         steps.add(new QueueScenarioStep(5,
                 "Security advisory started (ASSIGNED→IN_PROGRESS). " +
                         "Re-evaluation: review/urgent/claimed removed, review/urgent/active applied. " +
                         "Queue event: CHANGED to Urgent Reviews (item still in queue).",
-                afterStart.id, inferredPaths(afterStart), manualPaths(afterStart),
+                afterStart.id(), inferredPaths(afterStart), manualPaths(afterStart),
                 formatEvents(eventLog.drain())));
         sleep(delayMs);
 
@@ -268,16 +267,16 @@ public class DocumentReviewScenario {
         LOG.info("[REVIEW] Step 6/7: Queue snapshot");
         final List<UUID> urgentUnassigned = workItemStore
                 .scan(WorkItemQuery.byLabelPattern("review/urgent/unassigned"))
-                .stream().map(w -> w.id).toList();
+                .stream().map(w -> w.id()).toList();
         final List<UUID> urgentActive = workItemStore
                 .scan(WorkItemQuery.byLabelPattern("review/urgent/active"))
-                .stream().map(w -> w.id).toList();
+                .stream().map(w -> w.id()).toList();
         final List<UUID> standardUnassigned = workItemStore
                 .scan(WorkItemQuery.byLabelPattern("review/standard/unassigned"))
-                .stream().map(w -> w.id).toList();
+                .stream().map(w -> w.id()).toList();
         final List<UUID> routineUnassigned = workItemStore
                 .scan(WorkItemQuery.byLabelPattern("review/routine/unassigned"))
-                .stream().map(w -> w.id).toList();
+                .stream().map(w -> w.id()).toList();
         steps.add(new QueueScenarioStep(6,
                 "Queue snapshot: " +
                         "review/urgent/unassigned=" + urgentUnassigned.size() + " (advisory moved out), " +
@@ -296,17 +295,17 @@ public class DocumentReviewScenario {
         // ── Step 7: Complete the advisory — leaves all review queues ──
         LOG.info("[REVIEW] Step 7/7: Security advisory approved — leaves all review queues");
         workItemService.complete(
-                secAdvisory.id, "senior-reviewer",
+                secAdvisory.id(), "senior-reviewer",
                 "{\"approved\": true, \"comments\": \"Accurate, well-structured. Ready to publish.\"}",
                 null,
                 "Content verified against latest NIST guidelines. No security issues found.",
                 "DOC-REVIEW-POLICY-v1.4");
-        final WorkItem afterComplete = readFresh(secAdvisory.id);
+        final WorkItem afterComplete = readFresh(secAdvisory.id());
         steps.add(new QueueScenarioStep(7,
                 "Security advisory completed (IN_PROGRESS→COMPLETED). " +
                         "Re-evaluation: notTerminal guard fails, all INFERRED labels removed. " +
                         "Queue event: REMOVED from Urgent Reviews.",
-                afterComplete.id, inferredPaths(afterComplete), manualPaths(afterComplete),
+                afterComplete.id(), inferredPaths(afterComplete), manualPaths(afterComplete),
                 formatEvents(eventLog.drain())));
 
         return new QueueScenarioResponse(
@@ -318,13 +317,13 @@ public class DocumentReviewScenario {
     }
 
     private List<String> inferredPaths(final WorkItem wi) {
-        return wi.labels.stream().filter(l -> l.persistence == LabelPersistence.INFERRED)
-                .map(l -> l.path).sorted().toList();
+        return wi.labels().stream().filter(l -> l.persistence() == LabelPersistence.INFERRED)
+                .map(l -> l.path()).sorted().toList();
     }
 
     private List<String> manualPaths(final WorkItem wi) {
-        return wi.labels.stream().filter(l -> l.persistence == LabelPersistence.MANUAL)
-                .map(l -> l.path).toList();
+        return wi.labels().stream().filter(l -> l.persistence() == LabelPersistence.MANUAL)
+                .map(l -> l.path()).toList();
     }
 
     private List<String> formatEvents(final List<QueueEventLog.Entry> entries) {

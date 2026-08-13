@@ -1,26 +1,24 @@
 package io.casehub.work.runtime.service;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
 import io.casehub.platform.api.routing.StrategyResolver;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.AssignmentTrigger;
-import io.casehub.work.api.spi.ExclusionPolicy;
 import io.casehub.work.api.SelectionContext;
+import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.WorkerCandidate;
+import io.casehub.work.api.spi.ExclusionPolicy;
 import io.casehub.work.api.spi.WorkerRegistry;
 import io.casehub.work.api.spi.WorkerSelectionStrategy;
 import io.casehub.work.api.spi.WorkloadProvider;
 import io.casehub.work.core.strategy.WorkBroker;
 import io.casehub.work.runtime.config.WorkItemsConfig;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemStatus;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Orchestrates worker selection for WorkItems on creation, release, and delegation.
@@ -63,73 +61,71 @@ public class WorkItemAssignmentService {
         this.exclusionPolicy = exclusionPolicy;
     }
 
-    public void assign(final WorkItem workItem, final AssignmentTrigger trigger) {
-        final WorkerSelectionStrategy strategy = activeStrategy();
-        final List<WorkerCandidate> candidates = resolveCandidates(workItem);
+    public io.casehub.work.api.WorkItem assign(final io.casehub.work.api.WorkItem workItem, final AssignmentTrigger trigger) {
+        final WorkerSelectionStrategy strategy   = activeStrategy();
+        final List<WorkerCandidate>   candidates = resolveCandidates(workItem);
         final SelectionContext context = new SelectionContext(
-                workItem.types != null ? workItem.types.stream().map(t -> t.path).toList() : java.util.List.of(),
-                workItem.priority != null ? workItem.priority.name() : null,
-                CapabilityParser.parseLenient(workItem.requiredCapabilities),
-                workItem.candidateGroups,
-                workItem.candidateUsers,
-                workItem.title,
-                workItem.description,
-                workItem.excludedUsers);
+                workItem.types() != null ? List.copyOf(workItem.types()) : java.util.List.of(),
+                workItem.priority() != null ? workItem.priority().name() : null,
+                CapabilityParser.parseLenient(workItem.requiredCapabilities()),
+                workItem.candidateGroups(),
+                workItem.candidateUsers(),
+                workItem.title(),
+                workItem.description(),
+                workItem.excludedUsers());
 
         final AssignmentDecision decision = workBroker.apply(context, trigger, candidates, strategy);
-        applyDecision(workItem, decision);
+        return applyDecision(workItem, decision);
     }
 
     private WorkerSelectionStrategy activeStrategy() {
         return strategyResolver.resolve(WorkerSelectionStrategy.class, config.routing().strategy());
     }
 
-    private List<WorkerCandidate> resolveCandidates(final WorkItem workItem) {
+    private List<WorkerCandidate> resolveCandidates(final io.casehub.work.api.WorkItem workItem) {
         final List<WorkerCandidate> candidates = new ArrayList<>();
 
-        // 1. candidateUsers — direct user IDs
-        if (workItem.candidateUsers != null && !workItem.candidateUsers.isBlank()) {
-            Arrays.stream(workItem.candidateUsers.split(","))
-                    .map(String::trim)
-                    .filter(id -> !id.isEmpty())
-                    .forEach(id -> candidates.add(
-                            WorkerCandidate.of(id).withActiveWorkItemCount(
-                                    workloadProvider.getActiveWorkCount(id))));
+        if (workItem.candidateUsers() != null && !workItem.candidateUsers().isBlank()) {
+            Arrays.stream(workItem.candidateUsers().split(","))
+                  .map(String::trim)
+                  .filter(id -> !id.isEmpty())
+                  .forEach(id -> candidates.add(
+                          WorkerCandidate.of(id).withActiveWorkItemCount(
+                                  workloadProvider.getActiveWorkCount(id))));
         }
 
-        // 2. candidateGroups — resolved via WorkerRegistry
-        if (workItem.candidateGroups != null && !workItem.candidateGroups.isBlank()) {
-            Arrays.stream(workItem.candidateGroups.split(","))
-                    .map(String::trim)
-                    .filter(g -> !g.isEmpty())
-                    .flatMap(g -> workerRegistry.resolveGroup(g).stream())
-                    .filter(c -> candidates.stream().noneMatch(e -> e.id().equals(c.id())))
-                    .map(c -> c.activeWorkItemCount() > 0
+        if (workItem.candidateGroups() != null && !workItem.candidateGroups().isBlank()) {
+            Arrays.stream(workItem.candidateGroups().split(","))
+                  .map(String::trim)
+                  .filter(g -> !g.isEmpty())
+                  .flatMap(g -> workerRegistry.resolveGroup(g).stream())
+                  .filter(c -> candidates.stream().noneMatch(e -> e.id().equals(c.id())))
+                  .map(c -> c.activeWorkItemCount() > 0
                             ? c
                             : c.withActiveWorkItemCount(workloadProvider.getActiveWorkCount(c.id())))
-                    .forEach(candidates::add);
+                  .forEach(candidates::add);
         }
 
-        // Filter excluded users — prevents excluded users from being auto-assigned
-        if (workItem.excludedUsers != null) {
-            candidates.removeIf(c -> exclusionPolicy.check(c.id(), workItem.excludedUsers).denied());
+        if (workItem.excludedUsers() != null) {
+            candidates.removeIf(c -> exclusionPolicy.check(c.id(), workItem.excludedUsers()).denied());
         }
 
-        // Capability filtering and trigger gating are handled by WorkBroker.apply()
         return candidates;
     }
 
-    private void applyDecision(final WorkItem workItem, final AssignmentDecision decision) {
+    private io.casehub.work.api.WorkItem applyDecision(final io.casehub.work.api.WorkItem workItem, final AssignmentDecision decision) {
+        var builder = workItem.toBuilder();
         if (decision.assigneeId() != null) {
-            workItem.assigneeId = decision.assigneeId();
-            workItem.status = WorkItemStatus.ASSIGNED;
-            workItem.assignedAt = Instant.now();
+            builder.assigneeId(decision.assigneeId());
+            builder.status(WorkItemStatus.ASSIGNED);
+            builder.assignedAt(Instant.now());
         }
         if (decision.candidateGroups() != null) {
-            workItem.candidateGroups = decision.candidateGroups();
+            builder.candidateGroups(decision.candidateGroups());
         }
         if (decision.candidateUsers() != null) {
-            workItem.candidateUsers = decision.candidateUsers();
+            builder.candidateUsers(decision.candidateUsers());
         }
+        return builder.build();
     }
 }

@@ -8,18 +8,18 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemNotFoundException;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.quarkus.test.TestTransaction;
@@ -58,83 +58,83 @@ class WorkItemSmokeTest {
     @Test
     void createAndStatus() {
         WorkItem wi = service.create(basicRequest());
-        assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.PENDING);
     }
 
     @Test
     void fullHappyPath() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        wi = service.complete(wi.id, "alice", "All done", null);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        wi = service.complete(wi.id(), "alice", "All done", null);
 
-        assertThat(wi.status).isEqualTo(WorkItemStatus.COMPLETED);
-        assertThat(wi.resolution).isEqualTo("All done");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.COMPLETED);
+        assertThat(wi.resolution()).isEqualTo("All done");
     }
 
     @Test
     void rejectPath() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.reject(wi.id, "alice", "Not applicable", null);
+        service.claim(wi.id(), "alice");
+        wi = service.reject(wi.id(), "alice", "Not applicable", null);
 
-        assertThat(wi.status).isEqualTo(WorkItemStatus.REJECTED);
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.REJECTED);
     }
 
     @Test
     void delegatePath() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.delegate(wi.id, "alice", "bob", null);
+        service.claim(wi.id(), "alice");
+        wi = service.delegate(wi.id(), "alice", "bob", null);
 
-        assertThat(wi.status).isEqualTo(WorkItemStatus.DELEGATED);
-        assertThat(wi.assigneeId).isEqualTo("bob");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.DELEGATED);
+        assertThat(wi.assigneeId()).isEqualTo("bob");
     }
 
     @Test
     void releasePath() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        wi = service.release(wi.id, "alice");
+        service.claim(wi.id(), "alice");
+        wi = service.release(wi.id(), "alice");
 
-        assertThat(wi.status).isEqualTo(WorkItemStatus.PENDING);
-        assertThat(wi.assigneeId).isNull();
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(wi.assigneeId()).isNull();
     }
 
     @Test
     void suspendResumePath() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.suspend(wi.id, "alice", "blocked");
-        wi = service.resume(wi.id, "alice");
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.suspend(wi.id(), "alice", "blocked");
+        wi = service.resume(wi.id(), "alice");
 
-        assertThat(wi.status).isEqualTo(WorkItemStatus.IN_PROGRESS);
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.IN_PROGRESS);
     }
 
     @Test
     void cancelPath() {
         WorkItem wi = service.create(basicRequest());
-        wi = service.cancel(wi.id, "admin", "no longer needed");
+        wi = service.cancel(wi.id(), "admin", "no longer needed");
 
-        assertThat(wi.status).isEqualTo(WorkItemStatus.CANCELLED);
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.CANCELLED);
     }
 
     @Test
     void auditTrailGrowsWithEachOperation() {
         WorkItem wi = service.create(basicRequest());
-        service.claim(wi.id, "alice");
-        service.start(wi.id, "alice");
-        service.complete(wi.id, "alice", "done", null);
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        service.complete(wi.id(), "alice", "done", null);
 
-        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id);
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
         assertThat(trail).hasSize(4);
     }
 
     @Test
     void invalidTransitionThrows() {
         WorkItem wi = service.create(basicRequest());
-        assertThatThrownBy(() -> service.complete(wi.id, "alice", "done", null))
+        assertThatThrownBy(() -> service.complete(wi.id(), "alice", "done", null))
                 .isInstanceOf(IllegalStateException.class);
     }
 
@@ -154,7 +154,7 @@ class WorkItemSmokeTest {
                 .createdBy("system")
                 .build();
         WorkItem wi = service.create(req);
-        assertThat(wi.expiresAt).isNotNull();
+        assertThat(wi.expiresAt()).isNotNull();
     }
 
     // -------------------------------------------------------------------------
@@ -163,39 +163,39 @@ class WorkItemSmokeTest {
 
     @Test
     void findExpiredQuery_returnsExpiredItem() {
-        WorkItem wi = new WorkItem();
-        wi.title = "Expired item";
-        wi.status = WorkItemStatus.PENDING;
-        wi.priority = WorkItemPriority.MEDIUM;
-        wi.createdAt = Instant.now();
-        wi.updatedAt = Instant.now();
-        wi.expiresAt = Instant.now().minus(2, ChronoUnit.HOURS);
-        workItemStore.put(wi);
+        WorkItem wi = workItemStore.put(WorkItem.builder()
+                .title("Expired item")
+                .status(WorkItemStatus.PENDING)
+                .priority(WorkItemPriority.MEDIUM)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .expiresAt(Instant.now().minus(2, ChronoUnit.HOURS))
+                .build());
 
         List<WorkItem> expired = workItemStore.scan(WorkItemQuery.expired(Instant.now()));
-        assertThat(expired).extracting(w -> w.id).contains(wi.id);
+        assertThat(expired).extracting(w -> w.id()).contains(wi.id());
     }
 
     @Test
     void findExpiredQuery_doesNotReturnActiveItem() {
         WorkItem wi = service.create(basicRequest()); // expiresAt = now + 24h
         List<WorkItem> expired = workItemStore.scan(WorkItemQuery.expired(Instant.now()));
-        assertThat(expired).extracting(w -> w.id).doesNotContain(wi.id);
+        assertThat(expired).extracting(w -> w.id()).doesNotContain(wi.id());
     }
 
     @Test
     void findUnclaimedPastDeadlineQuery_returnsPastDeadlinePendingItem() {
-        WorkItem wi = new WorkItem();
-        wi.title = "Past deadline";
-        wi.status = WorkItemStatus.PENDING;
-        wi.priority = WorkItemPriority.MEDIUM;
-        wi.createdAt = Instant.now();
-        wi.updatedAt = Instant.now();
-        wi.claimDeadline = Instant.now().minus(1, ChronoUnit.HOURS);
-        workItemStore.put(wi);
+        WorkItem wi = workItemStore.put(WorkItem.builder()
+                .title("Past deadline")
+                .status(WorkItemStatus.PENDING)
+                .priority(WorkItemPriority.MEDIUM)
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .claimDeadline(Instant.now().minus(1, ChronoUnit.HOURS))
+                .build());
 
         List<WorkItem> unclaimed = workItemStore.scan(WorkItemQuery.claimExpired(Instant.now()));
-        assertThat(unclaimed).extracting(w -> w.id).contains(wi.id);
+        assertThat(unclaimed).extracting(w -> w.id()).contains(wi.id());
     }
 
     @Test
@@ -209,10 +209,10 @@ class WorkItemSmokeTest {
                 .claimDeadline(deadline)
                 .build();
         WorkItem wi = service.create(req);
-        assertThat(wi.claimDeadline).isNotNull();
+        assertThat(wi.claimDeadline()).isNotNull();
         // verify it round-trips through JPA
-        WorkItem reloaded = workItemStore.get(wi.id).orElseThrow();
-        assertThat(reloaded.claimDeadline.truncatedTo(ChronoUnit.SECONDS))
+        WorkItem reloaded = workItemStore.get(wi.id()).orElseThrow();
+        assertThat(reloaded.claimDeadline().truncatedTo(ChronoUnit.SECONDS))
                 .isEqualTo(deadline);
     }
 }

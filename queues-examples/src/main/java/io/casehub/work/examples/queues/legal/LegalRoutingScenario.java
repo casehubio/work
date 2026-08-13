@@ -13,9 +13,9 @@ import io.casehub.work.examples.queues.QueueScenarioStep;
 import io.casehub.work.examples.queues.lifecycle.QueueEventLog;
 import io.casehub.platform.api.label.LabelAction;
 import io.casehub.work.runtime.filter.LabelRuleEntity;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemService;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -27,7 +27,6 @@ import org.jboss.logging.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Scenario: Legal Compliance Routing.
@@ -125,39 +124,39 @@ public class LegalRoutingScenario {
 
         LOG.info("[LEGAL] Step 1/3: MEDIUM priority contract review — gets legal/review only");
         final WorkItem contractReview = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Vendor contract review — Acme Corp SaaS agreement")
-                .description("Review vendor SaaS agreement for GDPR compliance. Non-urgent; renewal date in 6 weeks.")
-                .types(List.of("legal"))
-                .formKey("contract-review")
-                .priority(WorkItemPriority.MEDIUM)
-                .candidateGroups("legal-team")
-                .createdBy("contract-service")
-                .payload("{\"vendor\": \"Acme Corp\", \"contract_type\": \"SaaS\", \"renewal_date\": \"2026-06-01\"}")
-                .build());
+                                                                                          .title("Vendor contract review — Acme Corp SaaS agreement")
+                                                                                          .description("Review vendor SaaS agreement for GDPR compliance. Non-urgent; renewal date in 6 weeks.")
+                                                                                          .types(List.of("legal"))
+                                                                                          .formKey("contract-review")
+                                                                                          .priority(WorkItemPriority.MEDIUM)
+                                                                                          .candidateGroups("legal-team")
+                                                                                          .createdBy("contract-service")
+                                                                                          .payload("{\"vendor\": \"Acme Corp\", \"contract_type\": \"SaaS\", \"renewal_date\": \"2026-06-01\"}")
+                                                                                          .build());
         steps.add(new QueueScenarioStep(1,
                 "MEDIUM legal contract review — JEXL filter fires: legal/review; JQ filter (legal+HIGH) does not match",
-                contractReview.id, inferredPaths(contractReview), manualPaths(contractReview),
+                contractReview.id(), inferredPaths(contractReview), manualPaths(contractReview),
                 formatEvents(eventLog.drain())));
 
         LOG.info("[LEGAL] Step 2/3: HIGH priority NDA dispute — gets legal/review + legal/urgent");
         final WorkItem ndaDispute = workItemService.create(WorkItemCreateRequest.builder()
-                .title("NDA breach — former employee posted confidential roadmap")
-                .description("Ex-employee posted internal roadmap on LinkedIn. Legal and PR action required immediately.")
-                .types(List.of("legal"))
-                .formKey("nda-breach")
-                .priority(WorkItemPriority.HIGH)
-                .candidateGroups("legal-team,executive-team")
-                .createdBy("hr-system")
-                .payload("{\"employee_id\": \"EMP-4521\", \"disclosure_type\": \"roadmap\", \"channel\": \"LinkedIn\"}")
-                .build());
+                                                                                      .title("NDA breach — former employee posted confidential roadmap")
+                                                                                      .description("Ex-employee posted internal roadmap on LinkedIn. Legal and PR action required immediately.")
+                                                                                      .types(List.of("legal"))
+                                                                                      .formKey("nda-breach")
+                                                                                      .priority(WorkItemPriority.HIGH)
+                                                                                      .candidateGroups("legal-team,executive-team")
+                                                                                      .createdBy("hr-system")
+                                                                                      .payload("{\"employee_id\": \"EMP-4521\", \"disclosure_type\": \"roadmap\", \"channel\": \"LinkedIn\"}")
+                                                                                      .build());
         steps.add(new QueueScenarioStep(2,
                 "HIGH legal NDA dispute — JEXL fires: legal/review; JQ fires: legal/urgent — two filters, two queues",
-                ndaDispute.id, inferredPaths(ndaDispute), manualPaths(ndaDispute),
+                ndaDispute.id(), inferredPaths(ndaDispute), manualPaths(ndaDispute),
                 formatEvents(eventLog.drain())));
 
         LOG.info("[LEGAL] Step 3/3: legal/urgent queue contains only the NDA dispute");
         final List<UUID> urgentQueue = workItemStore.scan(WorkItemQuery.byLabelPattern("legal/urgent"))
-                .stream().map(w -> w.id).toList();
+                .stream().map(w -> w.id()).toList();
         steps.add(new QueueScenarioStep(3,
                 "legal/urgent queue — contains HIGH priority items only; MEDIUM contract review is absent",
                 null,
@@ -171,13 +170,13 @@ public class LegalRoutingScenario {
     }
 
     private List<String> inferredPaths(final WorkItem wi) {
-        return wi.labels.stream().filter(l -> l.persistence == LabelPersistence.INFERRED)
-                .map(l -> l.path).toList();
+        return wi.labels().stream().filter(l -> l.persistence() == LabelPersistence.INFERRED)
+                .map(l -> l.path()).toList();
     }
 
     private List<String> manualPaths(final WorkItem wi) {
-        return wi.labels.stream().filter(l -> l.persistence == LabelPersistence.MANUAL)
-                .map(l -> l.path).toList();
+        return wi.labels().stream().filter(l -> l.persistence() == LabelPersistence.MANUAL)
+                .map(l -> l.path()).toList();
     }
 
     private List<String> formatEvents(final List<QueueEventLog.Entry> entries) {

@@ -4,11 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemLabel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemLabel;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 
@@ -46,8 +45,8 @@ class GitHubLabelBuilderTest {
 
     @Test
     void labels_includeAllThreeNamespaces() {
-        final WorkItem wi = workItem(WorkItemStatus.IN_PROGRESS, WorkItemPriority.HIGH, "finance");
-        final List<String> labels = provider.labels(wi);
+        final WorkItem wi     = workItem(WorkItemStatus.IN_PROGRESS, WorkItemPriority.HIGH, "finance");
+        final List<String>   labels = provider.labels(wi);
 
         assertThat(labels).contains("priority:high", "type:finance", "status:in-progress");
     }
@@ -163,11 +162,13 @@ class GitHubLabelBuilderTest {
 
     @Test
     void workItemLabels_addedToManagedLabels() {
-        final WorkItem wi = workItem(WorkItemStatus.PENDING, WorkItemPriority.MEDIUM, null);
-        wi.labels.add(new WorkItemLabel("legal/contracts/nda",
-                                        io.casehub.work.api.LabelPersistence.MANUAL, "alice"));
-        wi.labels.add(new WorkItemLabel("finance/approval",
-                                        io.casehub.work.api.LabelPersistence.INFERRED, "filter-1"));
+        final WorkItem wi = WorkItem.builder()
+                .status(WorkItemStatus.PENDING)
+                .priority(WorkItemPriority.MEDIUM)
+                .labels(List.of(
+                        new WorkItemLabel("legal/contracts/nda", io.casehub.work.api.LabelPersistence.MANUAL, "alice"),
+                        new WorkItemLabel("finance/approval", io.casehub.work.api.LabelPersistence.INFERRED, "filter-1")))
+                .build();
 
         final List<String> labels = provider.labels(wi);
 
@@ -177,7 +178,6 @@ class GitHubLabelBuilderTest {
     @Test
     void workItemLabels_null_noError() {
         final WorkItem wi = workItem(WorkItemStatus.PENDING, WorkItemPriority.MEDIUM, null);
-        wi.labels = null;
 
         assertThat(provider.labels(wi)).isNotEmpty(); // priority label at minimum
     }
@@ -185,13 +185,13 @@ class GitHubLabelBuilderTest {
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private WorkItem workItem(final WorkItemStatus status, final WorkItemPriority priority,
-            final String category) {
-        final WorkItem wi = new WorkItem();
-        wi.status = status;
-        wi.priority = priority;
+                              final String category) {
+        var builder = WorkItem.builder()
+                .status(status)
+                .priority(priority);
         if (category != null) {
-            wi.types.add(new io.casehub.work.runtime.model.WorkItemType(category));
+            builder.types(java.util.Set.of(category));
         }
-        return wi;
+        return builder.build();
     }
 }

@@ -24,7 +24,7 @@ import io.casehub.work.api.spi.WorkerSelectionStrategy;
 import io.casehub.work.api.spi.WorkloadProvider;
 import io.casehub.work.core.strategy.LeastLoadedStrategy;
 
-import io.casehub.work.runtime.model.*;
+import io.casehub.work.api.WorkItem;
 
 /**
  * Unit tests for WorkItemAssignmentService — no Quarkus boot.
@@ -76,16 +76,16 @@ class WorkItemAssignmentServiceTest {
         service = serviceWith(createdOnly);
 
         final WorkItem wi = workItem(null, null, "alice,bob");
-        service.assign(wi, AssignmentTrigger.RELEASED);
-        assertThat(wi.assigneeId).isNull();
+        final WorkItem result = service.assign(wi, AssignmentTrigger.RELEASED);
+        assertThat(result.assigneeId()).isNull();
     }
 
     @Test
     void assign_fires_whenTriggerIsInStrategyTriggers() {
         when(workloadProvider.getActiveWorkCount("alice")).thenReturn(0);
         final WorkItem wi = workItem(null, null, "alice");
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.assigneeId).isEqualTo("alice");
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.assigneeId()).isEqualTo("alice");
     }
 
     // ── candidateUsers resolution ─────────────────────────────────────────────
@@ -96,8 +96,8 @@ class WorkItemAssignmentServiceTest {
         when(workloadProvider.getActiveWorkCount("bob")).thenReturn(1);
         when(workloadProvider.getActiveWorkCount("carol")).thenReturn(3);
         final WorkItem wi = workItem(null, null, "alice,bob,carol");
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.assigneeId).isEqualTo("bob");
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.assigneeId()).isEqualTo("bob");
     }
 
     @Test
@@ -105,15 +105,15 @@ class WorkItemAssignmentServiceTest {
         when(workloadProvider.getActiveWorkCount("alice")).thenReturn(0);
         when(workloadProvider.getActiveWorkCount("bob")).thenReturn(2);
         final WorkItem wi = workItem(null, null, " alice , bob ");
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.assigneeId).isEqualTo("alice");
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.assigneeId()).isEqualTo("alice");
     }
 
     @Test
     void assign_noChange_whenNoCandidateUsersAndNoGroupResolution() {
         final WorkItem wi = workItem(null, null, null);
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.assigneeId).isNull();
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.assigneeId()).isNull();
     }
 
     // ── candidateGroups resolution via WorkerRegistry ─────────────────────────
@@ -125,8 +125,8 @@ class WorkItemAssignmentServiceTest {
         when(workloadProvider.getActiveWorkCount("alice")).thenReturn(3);
         when(workloadProvider.getActiveWorkCount("bob")).thenReturn(0);
         final WorkItem wi = workItem(null, "finance-team", null);
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.assigneeId).isEqualTo("bob");
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.assigneeId()).isEqualTo("bob");
     }
 
     @Test
@@ -136,8 +136,8 @@ class WorkItemAssignmentServiceTest {
         when(workloadProvider.getActiveWorkCount("alice")).thenReturn(2);
         when(workloadProvider.getActiveWorkCount("bob")).thenReturn(1);
         final WorkItem wi = workItem(null, "team", "alice,bob");
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.assigneeId).isEqualTo("bob");
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.assigneeId()).isEqualTo("bob");
     }
 
     // ── requiredCapabilities filtering ────────────────────────────────────────
@@ -147,29 +147,29 @@ class WorkItemAssignmentServiceTest {
         when(workerRegistry.resolveGroup("team")).thenReturn(List.of(
                 new WorkerCandidate("alice", Set.of(Capability.of("audit"), Capability.of("legal")), 0),
                 new WorkerCandidate("bob", Set.of(Capability.of("sales")), 0)));
-        final WorkItem wi = workItem(null, "team", null);
-        wi.requiredCapabilities = "audit";
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.assigneeId).isEqualTo("alice");
+        final WorkItem wi = workItem(null, "team", null)
+                .toBuilder().requiredCapabilities("audit").build();
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.assigneeId()).isEqualTo("alice");
     }
 
     @Test
     void assign_returnsNoChange_whenAllCandidatesLackRequiredCapabilities() {
         when(workerRegistry.resolveGroup("team")).thenReturn(List.of(
                 new WorkerCandidate("alice", Set.of(Capability.of("sales")), 0)));
-        final WorkItem wi = workItem(null, "team", null);
-        wi.requiredCapabilities = "audit";
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.assigneeId).isNull();
+        final WorkItem wi = workItem(null, "team", null)
+                .toBuilder().requiredCapabilities("audit").build();
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.assigneeId()).isNull();
     }
 
     @Test
     void assign_candidateUsersHaveNoCapabilities_soAllFilteredWhenCapRequired() {
         // candidateUsers get WorkerCandidate.of() — empty capabilities
-        final WorkItem wi = workItem(null, null, "alice,bob");
-        wi.requiredCapabilities = "exotic-skill";
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.assigneeId).isNull();
+        final WorkItem wi = workItem(null, null, "alice,bob")
+                .toBuilder().requiredCapabilities("exotic-skill").build();
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.assigneeId()).isNull();
     }
 
     // ── AssignmentDecision application ────────────────────────────────────────
@@ -178,8 +178,8 @@ class WorkItemAssignmentServiceTest {
     void assign_setsAssigneeId_fromDecision() {
         when(workloadProvider.getActiveWorkCount("alice")).thenReturn(0);
         final WorkItem wi = workItem(null, null, "alice");
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.assigneeId).isEqualTo("alice");
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.assigneeId()).isEqualTo("alice");
     }
 
     @Test
@@ -192,9 +192,9 @@ class WorkItemAssignmentServiceTest {
         };
         service = serviceWith(narrower);
         final WorkItem wi = workItem(null, "original-group", null);
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.candidateGroups).isEqualTo("narrowed-group");
-        assertThat(wi.assigneeId).isNull();
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.candidateGroups()).isEqualTo("narrowed-group");
+        assertThat(result.assigneeId()).isNull();
     }
 
     @Test
@@ -206,19 +206,19 @@ class WorkItemAssignmentServiceTest {
             }
         };
         service = serviceWith(noOp);
-        final WorkItem wi = workItem(null, null, "alice");
-        wi.assigneeId = "pre-existing";
-        service.assign(wi, AssignmentTrigger.CREATED);
-        assertThat(wi.assigneeId).isEqualTo("pre-existing");
+        final WorkItem wi = workItem(null, null, "alice")
+                .toBuilder().assigneeId("pre-existing").build();
+        final WorkItem result = service.assign(wi, AssignmentTrigger.CREATED);
+        assertThat(result.assigneeId()).isEqualTo("pre-existing");
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private WorkItem workItem(final String groups, final String groupsOnly, final String users) {
-        final WorkItem wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.candidateGroups = groups != null ? groups : groupsOnly;
-        wi.candidateUsers = users;
-        return wi;
+        return WorkItem.builder()
+                .id(UUID.randomUUID())
+                .candidateGroups(groups != null ? groups : groupsOnly)
+                .candidateUsers(users)
+                .build();
     }
 }

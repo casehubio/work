@@ -4,9 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 
 /**
@@ -15,11 +15,11 @@ import io.casehub.work.api.WorkItemStatus;
 class WorkItemLifecycleEventOutcomeTest {
 
     private WorkItem workItem(final UUID id, final WorkItemStatus status, final String outcome) {
-        final WorkItem wi = new WorkItem();
-        wi.id = id;
-        wi.status = status;
-        wi.outcome = outcome;
-        return wi;
+        return WorkItem.builder()
+                .id(id)
+                .status(status)
+                .outcome(outcome)
+                .build();
     }
 
     @Test

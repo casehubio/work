@@ -7,15 +7,15 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 
 /**
  * Unit tests for JpaWorkloadProvider — no Quarkus boot.
@@ -29,13 +29,13 @@ class JpaWorkloadProviderTest {
     WorkItemStore workItemStore;
 
     private WorkItem workItem(final String assignee, final WorkItemStatus status) {
-        final var wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.assigneeId = assignee;
-        wi.status = status;
-        wi.title = "T";
-        wi.createdBy = "test";
-        return wi;
+        return WorkItem.builder()
+                .id(UUID.randomUUID())
+                .assigneeId(assignee)
+                .status(status)
+                .title("T")
+                .createdBy("test")
+                .build();
     }
 
     private void mockStore(final String actorId, final List<WorkItem> items) {
@@ -83,9 +83,9 @@ class JpaWorkloadProviderTest {
     void filtersByAssigneeId_exactMatch() {
         // Verifies the post-scan assigneeId filter — guards against the
         // candidateUsers LIKE over-counting described in the original countActive().
-        final var provider = new JpaWorkloadProvider(workItemStore);
+        final var            provider  = new JpaWorkloadProvider(workItemStore);
         final WorkItem aliceItem = workItem("alice", WorkItemStatus.ASSIGNED);
-        final WorkItem bobItem = workItem("bob", WorkItemStatus.ASSIGNED);
+        final WorkItem bobItem   = workItem("bob", WorkItemStatus.ASSIGNED);
         // Store returns both but filter should keep only alice
         when(workItemStore.scan(any(WorkItemQuery.class))).thenReturn(List.of(aliceItem, bobItem));
 

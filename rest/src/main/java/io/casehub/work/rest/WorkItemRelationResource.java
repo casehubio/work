@@ -22,7 +22,7 @@ import jakarta.ws.rs.core.Response;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.repository.WorkItemRelationStore;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 
 /**
  * REST resource for the WorkItem relation graph.

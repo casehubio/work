@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.event.Event;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -27,7 +28,6 @@ import io.cloudevents.CloudEvent;
 import io.casehub.work.api.GroupStatus;
 import io.casehub.work.api.WorkCloudEventTypes;
 import io.casehub.work.api.WorkItemGroupLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,7 +49,7 @@ class WorkCloudEventAdapterTest {
 
     @Test
     void onWorkItemLifecycle_typeMatchesWorkCloudEventTypes() {
-        final WorkItem wi = workItem(UUID.randomUUID(), WorkItemStatus.PENDING, "tenant-1");
+        final WorkItem               wi    = workItem(UUID.randomUUID(), WorkItemStatus.PENDING, "tenant-1");
         final WorkItemLifecycleEvent event = WorkItemLifecycleEvent.of("CREATED", wi, "actor", null);
 
         adapter.onWorkItemLifecycle(event);
@@ -60,8 +60,8 @@ class WorkCloudEventAdapterTest {
 
     @Test
     void workItemEvent_buildsCorrectCloudEventFields() {
-        final UUID id = UUID.randomUUID();
-        final WorkItem wi = workItem(id, WorkItemStatus.COMPLETED, "tenant-1");
+        final UUID                   id    = UUID.randomUUID();
+        final WorkItem               wi    = workItem(id, WorkItemStatus.COMPLETED, "tenant-1");
         final WorkItemLifecycleEvent event = WorkItemLifecycleEvent.of("COMPLETED", wi, "alice", "done");
 
         adapter.onWorkItemLifecycle(event);
@@ -79,7 +79,7 @@ class WorkCloudEventAdapterTest {
 
     @Test
     void workItemEvent_usesEventTimestampNotAdapterTime() {
-        final WorkItem wi = workItem(UUID.randomUUID(), WorkItemStatus.PENDING, "t1");
+        final WorkItem               wi    = workItem(UUID.randomUUID(), WorkItemStatus.PENDING, "t1");
         final WorkItemLifecycleEvent event = WorkItemLifecycleEvent.of("CREATED", wi, "system", null);
         final Instant eventTime = event.occurredAt();
 
@@ -91,7 +91,7 @@ class WorkCloudEventAdapterTest {
 
     @Test
     void workItemEvent_nullTenancyId_extensionOmitted() {
-        final WorkItem wi = workItem(UUID.randomUUID(), WorkItemStatus.PENDING, null);
+        final WorkItem               wi    = workItem(UUID.randomUUID(), WorkItemStatus.PENDING, null);
         final WorkItemLifecycleEvent event = WorkItemLifecycleEvent.of("CREATED", wi, "system", null);
 
         adapter.onWorkItemLifecycle(event);
@@ -111,7 +111,7 @@ class WorkCloudEventAdapterTest {
             throw new RuntimeException(e);
         }
 
-        final WorkItem wi = workItem(UUID.randomUUID(), WorkItemStatus.COMPLETED, "t1");
+        final WorkItem               wi    = workItem(UUID.randomUUID(), WorkItemStatus.COMPLETED, "t1");
         final WorkItemLifecycleEvent event = WorkItemLifecycleEvent.of("COMPLETED", wi, "alice", null);
 
         brokenAdapter.onWorkItemLifecycle(event);
@@ -175,10 +175,10 @@ class WorkCloudEventAdapterTest {
     }
 
     private WorkItem workItem(final UUID id, final WorkItemStatus status, final String tenancyId) {
-        final WorkItem wi = new WorkItem();
-        wi.id = id;
-        wi.status = status;
-        wi.tenancyId = tenancyId;
-        return wi;
+        return WorkItem.builder()
+                .id(id)
+                .status(status)
+                .tenancyId(tenancyId)
+                .build();
     }
 }

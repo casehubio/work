@@ -29,8 +29,9 @@ import io.casehub.persistence.memory.InMemoryCaseMetaModelRepository;
 import io.casehub.persistence.memory.InMemoryEventLogRepository;
 import io.casehub.persistence.memory.InMemoryPlanItemStore;
 import io.casehub.persistence.memory.InMemorySubCaseGroupRepository;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -99,7 +100,7 @@ class HumanTaskScheduleHandlerAtomicityTest {
     public static final AtomicBoolean shouldFail = new AtomicBoolean(false);
     public static volatile CountDownLatch putAttemptLatch = new CountDownLatch(1);
 
-    private final java.util.Map<UUID, io.casehub.work.runtime.model.WorkItem> store =
+    private final java.util.Map<UUID, WorkItem> store =
         new ConcurrentHashMap<>();
 
     public void clear() {
@@ -107,21 +108,22 @@ class HumanTaskScheduleHandlerAtomicityTest {
     }
 
     @Override
-    public io.casehub.work.runtime.model.WorkItem put(io.casehub.work.runtime.model.WorkItem w) {
+    public WorkItem put(WorkItem w) {
       putAttemptLatch.countDown(); // signal that handler reached put() before any throw
       if (shouldFail.get()) throw new RuntimeException("Simulated WorkItemStore failure");
-      if (w.id == null) w.id = UUID.randomUUID();
-      store.put(w.id, w);
-      return w;
+      WorkItem stored = w;
+      if (stored.id() == null) stored = stored.toBuilder().id(UUID.randomUUID()).build();
+      store.put(stored.id(), stored);
+      return stored;
     }
 
     @Override
-    public Optional<io.casehub.work.runtime.model.WorkItem> get(UUID id) {
+    public Optional<WorkItem> get(UUID id) {
       return Optional.ofNullable(store.get(id));
     }
 
     @Override
-    public List<io.casehub.work.runtime.model.WorkItem> scan(WorkItemQuery query) {
+    public List<WorkItem> scan(WorkItemQuery query) {
       return new ArrayList<>(store.values());
     }
   }

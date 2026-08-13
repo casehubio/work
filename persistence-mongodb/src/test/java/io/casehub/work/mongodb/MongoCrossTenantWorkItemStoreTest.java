@@ -7,15 +7,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.CrossTenant;
-import io.casehub.work.runtime.repository.CrossTenantWorkItemStore;
+import io.casehub.work.api.spi.CrossTenantWorkItemStore;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -50,7 +50,7 @@ class MongoCrossTenantWorkItemStoreTest {
         List<WorkItem> results = unqualifiedStore.findActiveWithDeadlines();
 
         assertThat(results).hasSize(2)
-                .extracting(w -> w.title)
+                .extracting(w -> w.title())
                 .containsExactlyInAnyOrder("Tenant A expiry", "Tenant B claim");
     }
 
@@ -73,7 +73,7 @@ class MongoCrossTenantWorkItemStoreTest {
         List<WorkItem> results = unqualifiedStore.findActiveWithDeadlines();
 
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).title).isEqualTo("Active");
+        assertThat(results.get(0).title()).isEqualTo("Active");
     }
 
     @Test
@@ -86,7 +86,7 @@ class MongoCrossTenantWorkItemStoreTest {
         List<WorkItem> results = unqualifiedStore.findActiveWithDeadlines();
 
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).title).isEqualTo("Has expiry");
+        assertThat(results.get(0).title()).isEqualTo("Has expiry");
     }
 
     @Test
@@ -98,21 +98,22 @@ class MongoCrossTenantWorkItemStoreTest {
         List<WorkItem> results = crossTenantStore.findActiveWithDeadlines();
 
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).title).isEqualTo("Wiring test");
+        assertThat(results.get(0).title()).isEqualTo("Wiring test");
     }
 
     private void persistWorkItem(String title, WorkItemStatus status,
             Instant expiresAt, Instant claimDeadline) {
-        WorkItem wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.tenancyId = principal.tenancyId();
-        wi.title = title;
-        wi.status = status;
-        wi.expiresAt = expiresAt;
-        wi.claimDeadline = claimDeadline;
-        wi.createdBy = "test";
-        wi.createdAt = Instant.now();
-        wi.updatedAt = Instant.now();
+        WorkItem wi = WorkItem.builder()
+                .id(UUID.randomUUID())
+                .tenancyId(principal.tenancyId())
+                .title(title)
+                .status(status)
+                .expiresAt(expiresAt)
+                .claimDeadline(claimDeadline)
+                .createdBy("test")
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
         MongoWorkItemDocument.from(wi).persist();
     }
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
@@ -13,10 +14,9 @@ import org.jboss.logging.Logger;
 
 import dev.langchain4j.model.chat.ChatModel;
 import io.casehub.work.ai.config.WorkItemsAiConfig;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 
 /**
  * Finds similar completed WorkItems and calls a {@link ChatModel} to suggest
@@ -79,14 +79,14 @@ public class ResolutionSuggestionService {
         }
         final List<WorkItem> examples = findExamples(workItem);
         if (examples.isEmpty()) {
-            LOG.debugf("No completed examples found for WorkItem %s — skipping suggestion", workItem.id);
+            LOG.debugf("No completed examples found for WorkItem %s — skipping suggestion", workItem.id());
             return null;
         }
         try {
             final String prompt = buildPrompt(workItem, examples);
             return chatModel.chat(prompt);
         } catch (final Exception e) {
-            LOG.warnf("ChatModel call failed for WorkItem %s: %s", workItem.id, e.getMessage());
+            LOG.warnf("ChatModel call failed for WorkItem %s: %s", workItem.id(), e.getMessage());
             return null;
         }
     }
@@ -104,9 +104,9 @@ public class ResolutionSuggestionService {
 
     private List<WorkItem> findExamples(final WorkItem workItem) {
         // First try: same type (most informative)
-        if (!workItem.types.isEmpty()) {
-            final String primaryType = workItem.types.iterator().next().path;
-            final List<WorkItem> byType = completedWithResolution(primaryType);
+        if (!workItem.types().isEmpty()) {
+            final String               primaryType = workItem.types().iterator().next();
+            final List<WorkItem> byType      = completedWithResolution(primaryType);
             if (!byType.isEmpty()) {
                 return byType;
             }
@@ -121,9 +121,9 @@ public class ResolutionSuggestionService {
                 .type(type)
                 .build();
         return workItemStore.scan(query).stream()
-                .filter(wi -> wi.resolution != null && !wi.resolution.isBlank())
-                .filter(wi -> wi.completedAt != null)
-                .sorted(Comparator.comparing((WorkItem wi) -> wi.completedAt).reversed())
+                .filter(wi -> wi.resolution() != null && !wi.resolution().isBlank())
+                .filter(wi -> wi.completedAt() != null)
+                .sorted(Comparator.comparing((WorkItem wi) -> wi.completedAt()).reversed())
                 .limit(historyLimit)
                 .collect(Collectors.toList());
     }
@@ -132,9 +132,8 @@ public class ResolutionSuggestionService {
         final StringBuilder sb = new StringBuilder();
         sb.append("You are a work item resolution assistant.\n\n");
 
-        if (!current.types.isEmpty()) {
-            sb.append("Types: ").append(current.types.stream()
-                    .map(t -> t.path)
+        if (!current.types().isEmpty()) {
+            sb.append("Types: ").append(current.types().stream()
                     .collect(Collectors.joining(", "))).append("\n\n");
         }
 
@@ -142,20 +141,20 @@ public class ResolutionSuggestionService {
         IntStream.range(0, examples.size()).forEach(i -> {
             final WorkItem ex = examples.get(i);
             sb.append("Example ").append(i + 1).append(":\n");
-            sb.append("Title: ").append(ex.title).append("\n");
-            if (ex.description != null && !ex.description.isBlank()) {
-                sb.append("Description: ").append(ex.description).append("\n");
+            sb.append("Title: ").append(ex.title()).append("\n");
+            if (ex.description() != null && !ex.description().isBlank()) {
+                sb.append("Description: ").append(ex.description()).append("\n");
             }
-            sb.append("Resolution: ").append(ex.resolution).append("\n\n");
+            sb.append("Resolution: ").append(ex.resolution()).append("\n\n");
         });
 
         sb.append("Current work item:\n");
-        sb.append("Title: ").append(current.title).append("\n");
-        if (current.description != null && !current.description.isBlank()) {
-            sb.append("Description: ").append(current.description).append("\n");
+        sb.append("Title: ").append(current.title()).append("\n");
+        if (current.description() != null && !current.description().isBlank()) {
+            sb.append("Description: ").append(current.description()).append("\n");
         }
-        if (current.payload != null && !current.payload.isBlank()) {
-            sb.append("Payload: ").append(current.payload).append("\n");
+        if (current.payload() != null && !current.payload().isBlank()) {
+            sb.append("Payload: ").append(current.payload()).append("\n");
         }
 
         sb.append("\nBased on the examples above, suggest a resolution for this work item. ")

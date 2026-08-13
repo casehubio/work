@@ -638,7 +638,7 @@ void onCreated(@Observes WorkItemLifecycleEvent event) {
 }
 ```
 
-Call `event.source()` to get the `WorkItem` entity. Call `event.sourceUri()` to get the URI string — do not confuse the two: `source()` returns `Object` typed as the work unit, not a string.
+Call `event.source()` to get the `WorkItemEntity` entity. Call `event.sourceUri()` to get the URI string — do not confuse the two: `source()` returns `Object` typed as the work unit, not a string.
 
 ### SlaBreachPolicy — decision-returning interface
 

@@ -20,7 +20,7 @@ import io.casehub.work.api.ChildSpec;
 import io.casehub.work.api.SpawnRequest;
 import io.casehub.work.api.SpawnResult;
 import io.casehub.work.examples.StepLog;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.WorkItemService;
@@ -66,25 +66,25 @@ public class SpawnScenario {
 
         // Step 2: create the parent WorkItem — in a real CaseHub deployment CaseHub does this
         final WorkItem parent = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Loan Application #" + UUID.randomUUID().toString().substring(0, 8))
-                .description("Parallel approval checks for loan application")
-                .types(List.of("loan-application"))
-                .createdBy("finance-system")
-                .build());
-        steps.add(new StepLog(2, "Creates loan-application WorkItem (parent)", parent.id));
+                                                                                  .title("Loan Application #" + UUID.randomUUID().toString().substring(0, 8))
+                                                                                  .description("Parallel approval checks for loan application")
+                                                                                  .types(List.of("loan-application"))
+                                                                                  .createdBy("finance-system")
+                                                                                  .build());
+        steps.add(new StepLog(2, "Creates loan-application WorkItem (parent)", parent.id()));
 
         // Step 3: spawn three parallel child WorkItems
         // callerRef mimics what CaseHub embeds: caseId:planItemId for routing on completion
         final SpawnRequest spawnRequest = new SpawnRequest(
-                parent.id,
-                "loan-spawn-" + parent.id,
+                parent.id(),
+                "loan-spawn-" + parent.id(),
                 List.of(
-                        new ChildSpec(creditTmpl.id, "case:loan-" + parent.id + "/pi:credit", null),
-                        new ChildSpec(fraudTmpl.id, "case:loan-" + parent.id + "/pi:fraud", null),
-                        new ChildSpec(compTmpl.id, "case:loan-" + parent.id + "/pi:compliance", null)));
+                        new ChildSpec(creditTmpl.id, "case:loan-" + parent.id() + "/pi:credit", null),
+                        new ChildSpec(fraudTmpl.id, "case:loan-" + parent.id() + "/pi:fraud", null),
+                        new ChildSpec(compTmpl.id, "case:loan-" + parent.id() + "/pi:compliance", null)));
 
         final SpawnResult result = spawnService.spawn(spawnRequest);
-        steps.add(new StepLog(3, "Spawns 3 parallel child WorkItems via POST /workitems/{id}/spawn", parent.id));
+        steps.add(new StepLog(3, "Spawns 3 parallel child WorkItems via POST /workitems/{id}/spawn", parent.id()));
         steps.add(new StepLog(4,
                 "Each child carries callerRef — CaseHub uses it to route completion back to the right PlanItem",
                 null));
@@ -96,7 +96,7 @@ public class SpawnScenario {
         return Map.of(
                 "scenario", "parallel-spawn",
                 "steps", steps,
-                "parentWorkItemId", parent.id.toString(),
+                "parentWorkItemId", parent.id().toString(),
                 "spawnGroupId", result.groupId().toString(),
                 "childWorkItemIds", childIds,
                 "note",

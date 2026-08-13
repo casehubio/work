@@ -6,9 +6,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 
 /**
@@ -84,17 +84,19 @@ class WorkItemMetricsTest {
     // ── Helper ────────────────────────────────────────────────────────────────
 
     private WorkItem wi(final WorkItemStatus status) {
-        final WorkItem wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.status = status;
-        return wi;
+        return WorkItem.builder()
+                .id(UUID.randomUUID())
+                .status(status)
+                .build();
     }
 
     private WorkItem wiWithDeadlines(final WorkItemStatus status,
-            final Instant expiresAt, final Instant claimDeadline) {
-        final WorkItem wi = wi(status);
-        wi.expiresAt = expiresAt;
-        wi.claimDeadline = claimDeadline;
-        return wi;
+                                     final Instant expiresAt, final Instant claimDeadline) {
+        return WorkItem.builder()
+                .id(UUID.randomUUID())
+                .status(status)
+                .expiresAt(expiresAt)
+                .claimDeadline(claimDeadline)
+                .build();
     }
 }

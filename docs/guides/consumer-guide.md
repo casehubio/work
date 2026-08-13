@@ -9,9 +9,9 @@
 
 ## What This Module Does
 
-Provides a human task inbox (`WorkItem`) with an 11-status lifecycle, SLA breach policies, delegation with accept/decline, M-of-N parallel group completion, conflict-of-interest exclusion, conditional named outcomes, and hierarchical progress tracking. Usable standalone or integrated with CaseHub engine, Quarkus-Flow, and Qhorus.
+Provides a human task inbox (`WorkItemEntity`) with an 11-status lifecycle, SLA breach policies, delegation with accept/decline, M-of-N parallel group completion, conflict-of-interest exclusion, conditional named outcomes, and hierarchical progress tracking. Usable standalone or integrated with CaseHub engine, Quarkus-Flow, and Qhorus.
 
-A `WorkItem` is deliberately NOT called `Task` — CNCF Serverless Workflow and CaseHub both have `Task` concepts with different semantics.
+A `WorkItemEntity` is deliberately NOT called `Task` — CNCF Serverless Workflow and CaseHub both have `Task` concepts with different semantics.
 
 ## Modules to Depend On
 

@@ -11,8 +11,8 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -62,9 +62,9 @@ class SemanticRoutingTest {
 
         final WorkItem wi = workItemStore.get(UUID.fromString(id)).orElseThrow();
         assertThat(wi).isNotNull();
-        assertThat(wi.title).isEqualTo("Review legal contract");
+        assertThat(wi.title()).isEqualTo("Review legal contract");
         // With no EmbeddingModel configured, strategy returns noChange() — WorkItem stays PENDING
-        assertThat(wi.status.name()).isIn("PENDING", "ASSIGNED");
+        assertThat(wi.status().name()).isIn("PENDING", "ASSIGNED");
     }
 
     @Test

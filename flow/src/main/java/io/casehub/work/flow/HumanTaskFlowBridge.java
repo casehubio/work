@@ -3,7 +3,7 @@ package io.casehub.work.flow;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.service.WorkItemService;
@@ -69,7 +69,7 @@ public class HumanTaskFlowBridge {
                 .build();
 
         final WorkItem workItem = workItemService.create(request);
-        return Uni.createFrom().completionStage(registry.register(workItem.id));
+        return Uni.createFrom().completionStage(registry.register(workItem.id()));
     }
 
     /**
@@ -100,6 +100,6 @@ public class HumanTaskFlowBridge {
                 .build();
 
         final WorkItem workItem = workItemService.create(request);
-        return Uni.createFrom().completionStage(registry.register(workItem.id));
+        return Uni.createFrom().completionStage(registry.register(workItem.id()));
     }
 }

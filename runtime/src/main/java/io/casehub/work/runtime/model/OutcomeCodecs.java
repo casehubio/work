@@ -12,7 +12,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.casehub.work.api.Outcome;
 
 /**
- * JSON encoding and decoding utilities for outcome fields on {@link WorkItem} and
+ * JSON encoding and decoding utilities for outcome fields on {@link WorkItemEntity} and
  * {@link WorkItemTemplate}.
  *
  * <p>
@@ -20,7 +20,7 @@ import io.casehub.work.api.Outcome;
  * service, event) without introducing layering violations.
  *
  * <p>
- * Both {@link WorkItemTemplate#outcomes} and {@link WorkItem#permittedOutcomes} are stored
+ * Both {@link WorkItemTemplate#outcomes} and {@link WorkItemEntity#permittedOutcomes} are stored
  * as JSON arrays of {@link Outcome} objects. {@code encodeOutcomes()} and
  * {@code decodeOutcomes()} serve both columns. {@code decodePermittedOutcomes()} handles
  * a legacy string-array format for WorkItems created before this encoding was introduced.
@@ -35,7 +35,7 @@ public final class OutcomeCodecs {
 
     /**
      * Encodes a list of {@link Outcome} objects to JSON for storage on either
-     * {@link WorkItemTemplate#outcomes} or {@link WorkItem#permittedOutcomes}.
+     * {@link WorkItemTemplate#outcomes} or {@link WorkItemEntity#permittedOutcomes}.
      *
      * @param outcomes list to encode; null or empty returns null
      * @return JSON string, or null
@@ -71,7 +71,7 @@ public final class OutcomeCodecs {
     }
 
     /**
-     * Decodes {@link WorkItem#permittedOutcomes} JSON to a list of {@link Outcome} objects.
+     * Decodes {@link WorkItemEntity#permittedOutcomes} JSON to a list of {@link Outcome} objects.
      *
      * <p>
      * Handles two storage formats:

@@ -12,7 +12,7 @@ import jakarta.persistence.Table;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
- * Immutable audit log entry recording a lifecycle event on a {@link WorkItem}.
+ * Immutable audit log entry recording a lifecycle event on a {@link WorkItemEntity}.
  *
  * <p>
  * Entries are append-only: once written they are never updated or deleted.
@@ -30,7 +30,7 @@ public class AuditEntry extends PanacheEntityBase {
     @Column(name = "tenancy_id", nullable = false)
     public String tenancyId;
 
-    /** Foreign key referencing the {@link WorkItem} this entry belongs to. */
+    /** Foreign key referencing the {@link WorkItemEntity} this entry belongs to. */
     @Column(name = "work_item_id", nullable = false)
     public UUID workItemId;
 

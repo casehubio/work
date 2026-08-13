@@ -3,6 +3,7 @@ package io.casehub.work.examples.lowconfidence;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.POST;
@@ -15,7 +16,6 @@ import org.jboss.logging.Logger;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.api.AuditEntryResponse;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.repository.AuditEntryStore;
@@ -96,7 +96,7 @@ public class LowConfidenceScenario {
                 .build();
 
         final WorkItem highConfidenceWi = workItemService.create(highConfidenceRequest);
-        steps.add(new StepLog(1, description1, highConfidenceWi.id));
+        steps.add(new StepLog(1, description1, highConfidenceWi.id()));
 
         // Step 2: AI agent creates a LOW-confidence WorkItem (0.45) — should be flagged
         final String description2 = "contract-ai creates WorkItem with confidenceScore=0.45 (low confidence — ai/low-confidence label expected)";
@@ -115,7 +115,7 @@ public class LowConfidenceScenario {
                 .build();
 
         final WorkItem lowConfidenceWi = workItemService.create(lowConfidenceRequest);
-        steps.add(new StepLog(2, description2, lowConfidenceWi.id));
+        steps.add(new StepLog(2, description2, lowConfidenceWi.id()));
 
         // Step 3: manual request with null confidence — should NOT be flagged
         final String description3 = "assistant creates WorkItem with no confidence score (manual request — no flag expected)";
@@ -133,7 +133,7 @@ public class LowConfidenceScenario {
                 .build();
 
         final WorkItem nullConfidenceWi = workItemService.create(nullConfidenceRequest);
-        steps.add(new StepLog(3, description3, nullConfidenceWi.id));
+        steps.add(new StepLog(3, description3, nullConfidenceWi.id()));
 
         // Step 4: verify labels
         final String description4 = String.format(
@@ -154,14 +154,14 @@ public class LowConfidenceScenario {
         final String description5 = "contract-reviewer completes high-confidence and low-confidence WorkItems";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 5, total, description5);
 
-        workItemService.claim(highConfidenceWi.id, ACTOR_REVIEWER);
-        workItemService.start(highConfidenceWi.id, ACTOR_REVIEWER);
-        workItemService.complete(highConfidenceWi.id, ACTOR_REVIEWER,
+        workItemService.claim(highConfidenceWi.id(), ACTOR_REVIEWER);
+        workItemService.start(highConfidenceWi.id(), ACTOR_REVIEWER);
+        workItemService.complete(highConfidenceWi.id(), ACTOR_REVIEWER,
                 "{\"outcome\": \"APPROVED\", \"notes\": \"Standard NDA — no amendments required\"}", null);
 
-        workItemService.claim(lowConfidenceWi.id, ACTOR_REVIEWER);
-        workItemService.start(lowConfidenceWi.id, ACTOR_REVIEWER);
-        workItemService.complete(lowConfidenceWi.id, ACTOR_REVIEWER,
+        workItemService.claim(lowConfidenceWi.id(), ACTOR_REVIEWER);
+        workItemService.start(lowConfidenceWi.id(), ACTOR_REVIEWER);
+        workItemService.complete(lowConfidenceWi.id(), ACTOR_REVIEWER,
                 "{\"outcome\": \"APPROVED_WITH_AMENDMENTS\", \"notes\": \"IP clause narrowed — extra scrutiny applied due to ai/low-confidence flag\"}", null);
 
         steps.add(new StepLog(5, description5, null));
@@ -169,7 +169,7 @@ public class LowConfidenceScenario {
         // Collect audit trail across all three WorkItems
         final List<AuditEntryResponse> auditTrail = new ArrayList<>();
         for (final WorkItem wi : List.of(highConfidenceWi, lowConfidenceWi, nullConfidenceWi)) {
-            final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id);
+            final List<AuditEntry> auditEntries = auditStore.findByWorkItemId(wi.id());
             auditEntries.stream()
                     .map(a -> new AuditEntryResponse(a.id, a.event, a.actor, a.detail, a.occurredAt))
                     .forEach(auditTrail::add);
@@ -178,9 +178,9 @@ public class LowConfidenceScenario {
         return new LowConfidenceResponse(
                 SCENARIO_ID,
                 steps,
-                highConfidenceWi.id,
-                lowConfidenceWi.id,
-                nullConfidenceWi.id,
+                highConfidenceWi.id(),
+                lowConfidenceWi.id(),
+                nullConfidenceWi.id(),
                 highConfidenceClean,
                 lowConfidenceFlagged,
                 nullConfidenceClean,
@@ -188,6 +188,6 @@ public class LowConfidenceScenario {
     }
 
     private boolean hasLabel(final WorkItem wi, final String labelPath) {
-        return wi.labels != null && wi.labels.stream().anyMatch(l -> labelPath.equals(l.path));
+        return wi.labels() != null && wi.labels().stream().anyMatch(l -> labelPath.equals(l.path()));
     }
 }

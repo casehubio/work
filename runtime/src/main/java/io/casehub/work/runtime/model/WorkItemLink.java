@@ -13,7 +13,7 @@ import jakarta.persistence.Table;
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
- * A structured reference from a {@link WorkItem} to an external resource.
+ * A structured reference from a {@link WorkItemEntity} to an external resource.
  *
  * <h2>What this is for</h2>
  * <p>

@@ -1,16 +1,15 @@
 package io.casehub.work.runtime.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.api.WorkItemSummaryBuilder;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-import org.junit.jupiter.api.Test;
-
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.api.WorkItemStatus;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Pure unit tests for inbox summary aggregation logic — no Quarkus, no DB.
@@ -184,20 +183,20 @@ class WorkItemSummaryBuilderTest {
 
     // ── Helper ────────────────────────────────────────────────────────────────
 
-    private WorkItem wi(final WorkItemStatus status, final WorkItemPriority priority,
-            final Instant expiresAt, final Instant claimDeadline) {
+    private io.casehub.work.api.WorkItem wi(final WorkItemStatus status, final WorkItemPriority priority,
+                                            final Instant expiresAt, final Instant claimDeadline) {
         return wi(status, priority, expiresAt, claimDeadline, null);
     }
 
-    private WorkItem wi(final WorkItemStatus status, final WorkItemPriority priority,
-            final Instant expiresAt, final Instant claimDeadline, final Instant createdAt) {
-        final WorkItem wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.status = status;
-        wi.priority = priority;
-        wi.expiresAt = expiresAt;
-        wi.claimDeadline = claimDeadline;
-        wi.createdAt = createdAt;
-        return wi;
+    private io.casehub.work.api.WorkItem wi(final WorkItemStatus status, final WorkItemPriority priority,
+                                            final Instant expiresAt, final Instant claimDeadline, final Instant createdAt) {
+        return io.casehub.work.api.WorkItem.builder()
+                                           .id(UUID.randomUUID())
+                                           .status(status)
+                                           .priority(priority)
+                                           .expiresAt(expiresAt)
+                                           .claimDeadline(claimDeadline)
+                                           .createdAt(createdAt)
+                                           .build();
     }
 }

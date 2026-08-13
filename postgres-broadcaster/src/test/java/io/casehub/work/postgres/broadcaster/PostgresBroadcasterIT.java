@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -16,7 +17,6 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.event.WorkItemEventBroadcaster;
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.api.WorkItemCreateRequest;
@@ -81,7 +81,7 @@ class PostgresBroadcasterIT {
 
         Awaitility.await().atMost(Duration.ofSeconds(5))
                 .untilAsserted(() -> assertThat(received)
-                        .anyMatch(e -> wi.id.equals(e.workItemId())));
+                        .anyMatch(e -> wi.id().equals(e.workItemId())));
     }
 
     @Test
@@ -114,11 +114,11 @@ class PostgresBroadcasterIT {
 
         final WorkItem target = createWorkItem("Target item");
         Awaitility.await().atMost(Duration.ofSeconds(10))
-                .until(() -> warmup.stream().anyMatch(e -> target.id.equals(e.workItemId())));
+                .until(() -> warmup.stream().anyMatch(e -> target.id().equals(e.workItemId())));
 
         // LISTEN channel confirmed active. Now subscribe to the filtered stream.
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
-        broadcaster.stream(target.id, null, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).subscribe().with(received::add);
+        broadcaster.stream(target.id(), null, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID).subscribe().with(received::add);
 
         createWorkItem("Noise item 1");
         createWorkItem("Noise item 2");
@@ -127,7 +127,7 @@ class PostgresBroadcasterIT {
         Awaitility.await().atMost(Duration.ofSeconds(10))
                 .untilAsserted(() -> {
                     assertThat(received).isNotEmpty();
-                    assertThat(received).allMatch(e -> target.id.equals(e.workItemId()));
+                    assertThat(received).allMatch(e -> target.id().equals(e.workItemId()));
                 });
     }
 
@@ -184,15 +184,16 @@ class PostgresBroadcasterIT {
 
     @Transactional
     WorkItem claimWorkItem(final WorkItem wi, final String assignee) {
-        return workItemService.claim(wi.id, assignee);
+        return workItemService.claim(wi.id(), assignee);
     }
 
     @Transactional
     void fireEventInRolledBackTransaction() {
-        final WorkItem wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.status = WorkItemStatus.PENDING;
-        wi.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
+        final WorkItem wi = WorkItem.builder()
+                .id(UUID.randomUUID())
+                .status(WorkItemStatus.PENDING)
+                .tenancyId(io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID)
+                .build();
         // Fire a synthetic event and then force rollback
         lifecycleEvents.fire(WorkItemLifecycleEvent.of("rollback_marker", wi, "test", null));
         throw new RuntimeException("intentional rollback");

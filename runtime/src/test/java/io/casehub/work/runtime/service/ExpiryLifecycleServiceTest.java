@@ -16,6 +16,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.casehub.work.api.spi.WorkerSelectionStrategy;
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.NotificationOptions;
 import jakarta.enterprise.util.TypeLiteral;
@@ -39,11 +40,10 @@ import io.casehub.work.api.WorkerCandidate;
 import io.casehub.work.runtime.event.SlaBreachEvent;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.AuditEntryStore;
-import io.casehub.work.runtime.repository.WorkItemQuery;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.spi.WorkItemStore;
 
 /**
  * Pure unit tests for {@link ExpiryLifecycleService} — no Quarkus, no CDI.
@@ -60,9 +60,10 @@ class ExpiryLifecycleServiceTest {
 
         @Override
         public WorkItem put(final WorkItem wi) {
-            if (wi.id == null) wi.id = UUID.randomUUID();
-            items.put(wi.id, wi);
-            return wi;
+            final WorkItem toStore = wi.id() == null
+                    ? wi.toBuilder().id(UUID.randomUUID()).build() : wi;
+            items.put(toStore.id(), toStore);
+            return toStore;
         }
 
         @Override
@@ -75,14 +76,14 @@ class ExpiryLifecycleServiceTest {
             return items.values().stream()
                     .filter(wi -> {
                         if (query.expiresAtOrBefore() != null) {
-                            return wi.expiresAt != null
-                                    && !wi.expiresAt.isAfter(query.expiresAtOrBefore())
-                                    && !wi.status.isTerminal();
+                            return wi.expiresAt() != null
+                                    && !wi.expiresAt().isAfter(query.expiresAtOrBefore())
+                                    && !wi.status().isTerminal();
                         }
                         if (query.claimDeadlineOrBefore() != null) {
-                            return wi.claimDeadline != null
-                                    && !wi.claimDeadline.isAfter(query.claimDeadlineOrBefore())
-                                    && wi.status == WorkItemStatus.PENDING;
+                            return wi.claimDeadline() != null
+                                    && !wi.claimDeadline().isAfter(query.claimDeadlineOrBefore())
+                                    && wi.status() == WorkItemStatus.PENDING;
                         }
                         return false;
                     })
@@ -215,30 +216,30 @@ class ExpiryLifecycleServiceTest {
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private WorkItem expiredItem() {
-        final WorkItem wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.tenancyId = "test-tenant";
-        wi.title = "test item";
-        wi.status = WorkItemStatus.PENDING;
-        wi.expiresAt = Instant.now().minus(1, ChronoUnit.HOURS);
-        wi.createdAt = Instant.now().minus(2, ChronoUnit.HOURS);
-        wi.accumulatedUnclaimedSeconds = 0L;
-        store.put(wi);
-        return wi;
+        final WorkItem wi = WorkItem.builder()
+                .id(UUID.randomUUID())
+                .tenancyId("test-tenant")
+                .title("test item")
+                .status(WorkItemStatus.PENDING)
+                .expiresAt(Instant.now().minus(1, ChronoUnit.HOURS))
+                .createdAt(Instant.now().minus(2, ChronoUnit.HOURS))
+                .accumulatedUnclaimedSeconds(0L)
+                .build();
+        return store.put(wi);
     }
 
     private WorkItem claimExpiredItem() {
-        final WorkItem wi = new WorkItem();
-        wi.id = UUID.randomUUID();
-        wi.tenancyId = "test-tenant";
-        wi.title = "test item";
-        wi.status = WorkItemStatus.PENDING;
-        wi.claimDeadline = Instant.now().minus(1, ChronoUnit.HOURS);
-        wi.createdAt = Instant.now().minus(2, ChronoUnit.HOURS);
-        wi.lastReturnedToPoolAt = Instant.now().minus(2, ChronoUnit.HOURS);
-        wi.accumulatedUnclaimedSeconds = 0L;
-        store.put(wi);
-        return wi;
+        final WorkItem wi = WorkItem.builder()
+                .id(UUID.randomUUID())
+                .tenancyId("test-tenant")
+                .title("test item")
+                .status(WorkItemStatus.PENDING)
+                .claimDeadline(Instant.now().minus(1, ChronoUnit.HOURS))
+                .createdAt(Instant.now().minus(2, ChronoUnit.HOURS))
+                .lastReturnedToPoolAt(Instant.now().minus(2, ChronoUnit.HOURS))
+                .accumulatedUnclaimedSeconds(0L)
+                .build();
+        return store.put(wi);
     }
 
     // ── checkExpired — Fail decision ─────────────────────────────────────────
@@ -248,7 +249,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Fail("missed-deadline"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.EXPIRED);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.EXPIRED);
     }
 
     @Test
@@ -256,7 +257,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Fail("missed-deadline"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().completedAt).isNotNull();
+        assertThat(store.get(wi.id()).orElseThrow().completedAt()).isNotNull();
     }
 
     @Test
@@ -264,7 +265,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Fail("missed-deadline"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().resolution).isEqualTo("missed-deadline");
+        assertThat(store.get(wi.id()).orElseThrow().resolution()).isEqualTo("missed-deadline");
     }
 
     @Test
@@ -272,7 +273,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Fail("missed-deadline"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(auditStore.findByWorkItemId(wi.id))
+        assertThat(auditStore.findByWorkItemId(wi.id()))
                 .anyMatch(e -> "EXPIRED".equals(e.event) && "system".equals(e.actor));
     }
 
@@ -283,7 +284,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(BreachDecision.EscalateTo.to("escalation-group"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.PENDING);
     }
 
     @Test
@@ -291,7 +292,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(BreachDecision.EscalateTo.to("senior-reviewers", "tech-leads"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        final String groups = store.get(wi.id).orElseThrow().candidateGroups;
+        final String groups = store.get(wi.id()).orElseThrow().candidateGroups();
         assertThat(groups).contains("senior-reviewers");
         assertThat(groups).contains("tech-leads");
     }
@@ -300,10 +301,9 @@ class ExpiryLifecycleServiceTest {
     void checkExpired_withEscalateToDecision_clearsAssignee() {
         policy.willReturn(BreachDecision.EscalateTo.to("escalation-group"));
         final WorkItem wi = expiredItem();
-        wi.assigneeId = "original-assignee";
-        store.put(wi);
+        store.put(wi.toBuilder().assigneeId("original-assignee").build());
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().assigneeId).isNull();
+        assertThat(store.get(wi.id()).orElseThrow().assigneeId()).isNull();
     }
 
     @Test
@@ -312,7 +312,7 @@ class ExpiryLifecycleServiceTest {
         final WorkItem wi = expiredItem();
         service.checkExpired();
         // config.defaultExpiryHours() = 24 → expiresAt should be ~24h in future
-        final Instant expiresAt = store.get(wi.id).orElseThrow().expiresAt;
+        final Instant expiresAt = store.get(wi.id()).orElseThrow().expiresAt();
         assertThat(expiresAt).isAfter(Instant.now().plus(23, ChronoUnit.HOURS));
     }
 
@@ -322,7 +322,7 @@ class ExpiryLifecycleServiceTest {
         final WorkItem wi = expiredItem();
         service.checkExpired();
         // deadline=4h → expiresAt should be ~4h in future (not 24h default)
-        final Instant expiresAt = store.get(wi.id).orElseThrow().expiresAt;
+        final Instant expiresAt = store.get(wi.id()).orElseThrow().expiresAt();
         assertThat(expiresAt).isBefore(Instant.now().plus(5, ChronoUnit.HOURS));
         assertThat(expiresAt).isAfter(Instant.now().plus(3, ChronoUnit.HOURS));
     }
@@ -333,7 +333,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(BreachDecision.EscalateTo.to("escalation-group"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(auditStore.findByWorkItemId(wi.id))
+        assertThat(auditStore.findByWorkItemId(wi.id()))
                 .anyMatch(e -> "SLA_REASSIGNED".equals(e.event));
     }
 
@@ -344,7 +344,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Fail("deadline-breach"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        final AuditEntry entry = auditStore.findByWorkItemId(wi.id).stream()
+        final AuditEntry entry = auditStore.findByWorkItemId(wi.id()).stream()
                 .filter(e -> "EXPIRED".equals(e.event))
                 .findFirst().orElseThrow();
         assertThat(entry.detail).isEqualTo("deadline-breach");
@@ -371,8 +371,8 @@ class ExpiryLifecycleServiceTest {
         service.checkExpired();
 
         assertThat(capturing.calls).hasSize(1);
-        assertThat(store.get(wi.id).orElseThrow().assigneeId).isEqualTo("escalation-worker");
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.ASSIGNED);
+        assertThat(store.get(wi.id()).orElseThrow().assigneeId()).isEqualTo("escalation-worker");
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
     @Test
@@ -382,8 +382,8 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(BreachDecision.EscalateTo.to("senior-reviewers"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.PENDING);
-        assertThat(store.get(wi.id).orElseThrow().assigneeId).isNull();
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(store.get(wi.id()).orElseThrow().assigneeId()).isNull();
     }
 
     // ── checkExpired — Extend decision ────────────────────────────────────────
@@ -394,7 +394,7 @@ class ExpiryLifecycleServiceTest {
         final WorkItem wi = expiredItem();
         service.checkExpired();
         // expiresAt was 1h in the past; after Extend(2h) it should be ~1h in the future
-        assertThat(store.get(wi.id).orElseThrow().expiresAt).isAfter(Instant.now());
+        assertThat(store.get(wi.id()).orElseThrow().expiresAt()).isAfter(Instant.now());
     }
 
     @Test
@@ -402,7 +402,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Extend(Duration.ofHours(2)));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.PENDING);
     }
 
     @Test
@@ -410,7 +410,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Extend(Duration.ofHours(2)));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(auditStore.findByWorkItemId(wi.id))
+        assertThat(auditStore.findByWorkItemId(wi.id()))
                 .anyMatch(e -> "SLA_EXTENDED".equals(e.event));
     }
 
@@ -424,9 +424,9 @@ class ExpiryLifecycleServiceTest {
         final WorkItem wi = expiredItem();
         service.checkExpired();
         // Item status unchanged (still PENDING — not expired, not escalated)
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.PENDING);
         // Audit entry written for observability
-        assertThat(auditStore.findByWorkItemId(wi.id))
+        assertThat(auditStore.findByWorkItemId(wi.id()))
                 .anyMatch(e -> "BREACH_POLICY_MISCONFIGURED".equals(e.event));
         // No SlaBreachEvent fired for the skipped item
         assertThat(breachEvents).isEmpty();
@@ -468,10 +468,9 @@ class ExpiryLifecycleServiceTest {
     @Test
     void checkExpired_skipsAlreadyTerminalItems() {
         final WorkItem wi = expiredItem();
-        wi.status = WorkItemStatus.COMPLETED;
-        store.put(wi);
+        store.put(wi.toBuilder().status(WorkItemStatus.COMPLETED).build());
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.COMPLETED);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.COMPLETED);
     }
 
     @Test
@@ -481,7 +480,7 @@ class ExpiryLifecycleServiceTest {
         expiredItem();
         service.checkExpired();
         final long expiredCount = store.items.values().stream()
-                .filter(wi -> wi.status == WorkItemStatus.EXPIRED).count();
+                .filter(wi -> wi.status() == WorkItemStatus.EXPIRED).count();
         assertThat(expiredCount).isEqualTo(2);
     }
 
@@ -492,7 +491,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Fail("claim-window-exhausted"));
         final WorkItem wi = claimExpiredItem();
         service.checkClaimDeadlines();
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.EXPIRED);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.EXPIRED);
     }
 
     @Test
@@ -500,7 +499,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Fail("claim-window-exhausted"));
         final WorkItem wi = claimExpiredItem();
         service.checkClaimDeadlines();
-        assertThat(auditStore.findByWorkItemId(wi.id))
+        assertThat(auditStore.findByWorkItemId(wi.id()))
                 .anyMatch(e -> "EXPIRED".equals(e.event));
     }
 
@@ -511,7 +510,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(BreachDecision.EscalateTo.to("escalation-group"));
         final WorkItem wi = claimExpiredItem();
         service.checkClaimDeadlines();
-        assertThat(store.get(wi.id).orElseThrow().claimDeadline).isAfter(Instant.now());
+        assertThat(store.get(wi.id()).orElseThrow().claimDeadline()).isAfter(Instant.now());
     }
 
     @Test
@@ -521,7 +520,7 @@ class ExpiryLifecycleServiceTest {
         final WorkItem wi = claimExpiredItem();
         service.checkClaimDeadlines();
         // FixedClaimSlaPolicy returns +4h, not +5m
-        assertThat(store.get(wi.id).orElseThrow().claimDeadline)
+        assertThat(store.get(wi.id()).orElseThrow().claimDeadline())
                 .isAfter(Instant.now().plus(3, ChronoUnit.HOURS));
     }
 
@@ -530,7 +529,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(BreachDecision.EscalateTo.to("escalation-group"));
         final WorkItem wi = claimExpiredItem();
         service.checkClaimDeadlines();
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.PENDING);
     }
 
     @Test
@@ -552,8 +551,8 @@ class ExpiryLifecycleServiceTest {
         service.checkClaimDeadlines();
 
         assertThat(capturing.calls).hasSize(1);
-        assertThat(store.get(wi.id).orElseThrow().assigneeId).isEqualTo("escalation-worker");
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.ASSIGNED);
+        assertThat(store.get(wi.id()).orElseThrow().assigneeId()).isEqualTo("escalation-worker");
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
     // ── checkClaimDeadlines — Extend decision ─────────────────────────────────
@@ -563,7 +562,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Extend(Duration.ofHours(2)));
         final WorkItem wi = claimExpiredItem();
         service.checkClaimDeadlines();
-        assertThat(store.get(wi.id).orElseThrow().claimDeadline)
+        assertThat(store.get(wi.id()).orElseThrow().claimDeadline())
                 .isAfter(Instant.now().plus(1, ChronoUnit.HOURS));
     }
 
@@ -572,7 +571,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Extend(Duration.ofHours(2)));
         final WorkItem wi = claimExpiredItem();
         service.checkClaimDeadlines();
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.PENDING);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.PENDING);
     }
 
     // ── checkClaimDeadlines — time accumulation (always) ─────────────────────
@@ -582,16 +581,16 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Extend(Duration.ofHours(2)));
         final WorkItem wi = claimExpiredItem();
         service.checkClaimDeadlines();
-        assertThat(store.get(wi.id).orElseThrow().accumulatedUnclaimedSeconds).isGreaterThan(0);
+        assertThat(store.get(wi.id()).orElseThrow().accumulatedUnclaimedSeconds()).isGreaterThan(0);
     }
 
     @Test
     void checkClaimDeadlines_updatesLastReturnedToPoolAt() {
         policy.willReturn(new BreachDecision.Extend(Duration.ofHours(2)));
-        final WorkItem wi = claimExpiredItem();
-        final Instant before = wi.lastReturnedToPoolAt;
+        final WorkItem wi     = claimExpiredItem();
+        final Instant        before = wi.lastReturnedToPoolAt();
         service.checkClaimDeadlines();
-        assertThat(store.get(wi.id).orElseThrow().lastReturnedToPoolAt).isAfter(before);
+        assertThat(store.get(wi.id()).orElseThrow().lastReturnedToPoolAt()).isAfter(before);
     }
 
     @Test
@@ -618,8 +617,7 @@ class ExpiryLifecycleServiceTest {
     void checkExpired_breachContextUsesParsedScopeWhenItemHasScope() {
         policy.willReturn(new BreachDecision.Fail("test"));
         final WorkItem wi = expiredItem();
-        wi.scope = "casehubio/devtown/pr-review";
-        store.put(wi);
+        store.put(wi.toBuilder().scope("casehubio/devtown/pr-review").build());
         service.checkExpired();
         assertThat(breachEvents.get(0).context().scope())
                 .isEqualTo(Path.of("casehubio", "devtown", "pr-review"));
@@ -634,7 +632,7 @@ class ExpiryLifecycleServiceTest {
                 new BreachDecision.EscalateTo(java.util.Set.of(), null)));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.ESCALATED);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ESCALATED);
     }
 
     @Test
@@ -644,7 +642,7 @@ class ExpiryLifecycleServiceTest {
                 new BreachDecision.EscalateTo(java.util.Set.of(), null)));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().completedAt).isNotNull();
+        assertThat(store.get(wi.id()).orElseThrow().completedAt()).isNotNull();
     }
 
     @Test
@@ -654,7 +652,7 @@ class ExpiryLifecycleServiceTest {
                 new BreachDecision.EscalateTo(java.util.Set.of(), null)));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(auditStore.findByWorkItemId(wi.id))
+        assertThat(auditStore.findByWorkItemId(wi.id()))
                 .anyMatch(e -> "ESCALATED".equals(e.event) && "system".equals(e.actor));
     }
 
@@ -674,7 +672,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.Exhausted("all-paths-exhausted"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(WorkItemStatus.ESCALATED);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ESCALATED);
     }
 
     // ── #244: non-Chained EscalateTo(∅) → skip ───────────────────────────────
@@ -682,10 +680,10 @@ class ExpiryLifecycleServiceTest {
     @Test
     void checkExpired_withNonChainedEmptyEscalateTo_skipsItemWithNoStatusChange() {
         policy.willReturn(new BreachDecision.EscalateTo(java.util.Set.of(), null));
-        final WorkItem wi = expiredItem();
-        final WorkItemStatus originalStatus = wi.status;
+        final WorkItem wi             = expiredItem();
+        final WorkItemStatus originalStatus = wi.status();
         service.checkExpired();
-        assertThat(store.get(wi.id).orElseThrow().status).isEqualTo(originalStatus);
+        assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(originalStatus);
     }
 
     @Test
@@ -693,7 +691,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(new BreachDecision.EscalateTo(java.util.Set.of(), null));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(auditStore.findByWorkItemId(wi.id))
+        assertThat(auditStore.findByWorkItemId(wi.id()))
                 .anyMatch(e -> "BREACH_POLICY_MISCONFIGURED".equals(e.event));
     }
 
@@ -715,7 +713,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(BreachDecision.EscalateTo.to("escalation-group"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(auditStore.findByWorkItemId(wi.id))
+        assertThat(auditStore.findByWorkItemId(wi.id()))
                 .anyMatch(e -> "SLA_REASSIGNED".equals(e.event));
     }
 
@@ -725,7 +723,7 @@ class ExpiryLifecycleServiceTest {
         policy.willReturn(BreachDecision.EscalateTo.to("escalation-group"));
         final WorkItem wi = expiredItem();
         service.checkExpired();
-        assertThat(auditStore.findByWorkItemId(wi.id))
+        assertThat(auditStore.findByWorkItemId(wi.id()))
                 .noneMatch(e -> "ESCALATED".equals(e.event));
     }
 }

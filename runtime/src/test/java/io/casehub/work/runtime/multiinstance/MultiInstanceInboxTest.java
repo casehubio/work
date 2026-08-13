@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -12,12 +14,11 @@ import org.junit.jupiter.api.Test;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.GroupStatus;
 import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.runtime.model.WorkItemRootView;
+import io.casehub.work.api.WorkItemRootView;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.model.WorkItemTemplate;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -33,7 +34,7 @@ class MultiInstanceInboxTest {
     @Test
     @Transactional
     void standaloneWorkItemAppearsAsRootWithChildCountZero() {
-        WorkItem item = new WorkItem();
+        WorkItemEntity item = new WorkItemEntity();
         item.assigneeId = "alice-inbox-test";
         item.status = WorkItemStatus.PENDING;
         item.priority = WorkItemPriority.MEDIUM;
@@ -43,7 +44,7 @@ class MultiInstanceInboxTest {
         item.persist();
 
         List<WorkItemRootView> roots = store.scanRoots("alice-inbox-test", null, List.of());
-        assertThat(roots).anyMatch(r -> r.workItem().id.equals(item.id)
+        assertThat(roots).anyMatch(r -> r.workItem().id().equals(item.id)
                 && r.childCount() == 0
                 && r.completedCount() == null
                 && r.groupStatus() == null);
@@ -66,9 +67,9 @@ class MultiInstanceInboxTest {
                 .createdBy("test")
                 .build();
         WorkItem parent = templateService.createFromTemplate(request);
-        List<WorkItemRootView> roots = store.scanRoots(null, null, List.of(t.candidateGroups));
+        List<WorkItemRootView> roots  = store.scanRoots(null, null, List.of(t.candidateGroups));
 
-        assertThat(roots).anyMatch(r -> r.workItem().id.equals(parent.id)
+        assertThat(roots).anyMatch(r -> r.workItem().id().equals(parent.id())
                 && r.childCount() == 3
                 && r.completedCount() == 0
                 && r.requiredCount() == 2
@@ -98,7 +99,7 @@ class MultiInstanceInboxTest {
         // User in child-group has visibility into children, not coordinator parent directly
         List<WorkItemRootView> roots = store.scanRoots(null, null, List.of(uniqueGroup));
 
-        assertThat(roots).anyMatch(r -> r.workItem().id.equals(parent.id));
+        assertThat(roots).anyMatch(r -> r.workItem().id().equals(parent.id()));
     }
 
     @Test
@@ -123,6 +124,6 @@ class MultiInstanceInboxTest {
         List<WorkItemRootView> roots = store.scanRoots(null, null, List.of(uniqueGroup));
 
         // All returned items must have parentId == null
-        assertThat(roots).allMatch(r -> r.workItem().parentId == null);
+        assertThat(roots).allMatch(r -> r.workItem().parentId() == null);
     }
 }

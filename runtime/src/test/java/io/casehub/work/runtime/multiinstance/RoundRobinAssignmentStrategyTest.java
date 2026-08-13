@@ -3,7 +3,6 @@ package io.casehub.work.runtime.multiinstance;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,20 +21,20 @@ import io.casehub.work.core.strategy.ClaimFirstStrategy;
 import io.casehub.work.core.strategy.LeastLoadedStrategy;
 import io.casehub.work.core.strategy.RoundRobinStrategy;
 import io.casehub.work.runtime.config.WorkItemsConfig;
-import io.casehub.work.runtime.model.WorkItem;
+import io.casehub.work.runtime.model.WorkItemEntity;
 
 @ExtendWith(MockitoExtension.class)
 class RoundRobinAssignmentStrategyTest {
 
     private static MultiInstanceContext context(final String candidateUsers) {
-        final WorkItem parent = new WorkItem();
+        final WorkItemEntity parent = new WorkItemEntity();
         parent.candidateUsers = candidateUsers;
         return new MultiInstanceContext(parent,
                 new MultiInstanceConfig(1, 1, null, "round-robin", null, false, null));
     }
 
-    private static List<WorkItem> oneInstance() {
-        final WorkItem child = new WorkItem();
+    private static List<WorkItemEntity> oneInstance() {
+        final WorkItemEntity child = new WorkItemEntity();
         return List.of(child);
     }
 

@@ -29,8 +29,8 @@ import io.casehub.persistence.memory.InMemoryPlanItemStore;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.engine.PlanItemCallerRef;
 import io.casehub.work.memory.InMemoryWorkItemStore;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.repository.WorkItemStore;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.spi.WorkItemStore;
 import io.quarkus.runtime.StartupEvent;
 import io.quarkus.test.junit.QuarkusTest;
 import io.vertx.mutiny.core.eventbus.EventBus;
@@ -174,13 +174,13 @@ class HumanTaskRecoveryServiceTest {
   }
 
   private WorkItem createWorkItem(String ref, WorkItemStatus status) {
-    WorkItem w = new WorkItem();
-    w.id = UUID.randomUUID();
-    w.callerRef = ref;
-    w.title = "Test WorkItem";
-    w.status = status;
-    w.createdAt = Instant.now();
-    workItemStore.put(w);
-    return w;
+    WorkItem w = WorkItem.builder()
+        .id(UUID.randomUUID())
+        .callerRef(ref)
+        .title("Test WorkItem")
+        .status(status)
+        .createdAt(Instant.now())
+        .build();
+    return workItemStore.put(w);
   }
 }

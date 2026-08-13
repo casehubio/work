@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import io.casehub.work.api.WorkItem;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.GET;
@@ -18,7 +19,6 @@ import jakarta.ws.rs.core.Response;
 
 import io.casehub.work.api.spi.BusinessCalendar;
 import io.casehub.work.examples.StepLog;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.service.WorkItemService;
@@ -63,34 +63,34 @@ public class BusinessHoursScenario {
 
         // Step 1: create with 48 business-hour SLA
         final WorkItem wi = workItemService.create(WorkItemCreateRequest.builder()
-                .title("Loan application review — 48 business-hour SLA")
-                .description("Review and approve or reject the loan application within 48 business hours.")
-                .types(List.of("loan-approval"))
-                .priority(WorkItemPriority.HIGH)
-                .candidateGroups("loan-officers")
-                .createdBy("finance-system")
-                .expiresAtBusinessHours(48)
-                .build());
+                                                                              .title("Loan application review — 48 business-hour SLA")
+                                                                              .description("Review and approve or reject the loan application within 48 business hours.")
+                                                                              .types(List.of("loan-approval"))
+                                                                              .priority(WorkItemPriority.HIGH)
+                                                                              .candidateGroups("loan-officers")
+                                                                              .createdBy("finance-system")
+                                                                              .expiresAtBusinessHours(48)
+                                                                              .build());
         steps.add(new StepLog(1,
                 "Created loan-approval WorkItem with expiresAtBusinessHours=48",
-                wi.id));
+                wi.id()));
 
         // Step 2: compare with wall-clock
         final java.time.Instant wallClock48h = java.time.Instant.now()
                 .plus(Duration.ofHours(48));
         final long calendarHoursToDeadline = Duration.between(
-                java.time.Instant.now(), wi.expiresAt).toHours();
+                java.time.Instant.now(), wi.expiresAt()).toHours();
 
         steps.add(new StepLog(2,
                 "expiresAt resolves to " + calendarHoursToDeadline
                         + " wall-clock hours from now (always ≥ 48, more if weekend/nights crossed)",
-                wi.id));
+                wi.id()));
 
         return Response.ok(Map.of(
                 "scenario", "business-hours-sla",
                 "steps", steps,
-                "workItemId", wi.id.toString(),
-                "expiresAt", wi.expiresAt.toString(),
+                "workItemId", wi.id().toString(),
+                "expiresAt", wi.expiresAt().toString(),
                 "wallClock48hEquivalent", wallClock48h.toString(),
                 "calendarHoursToDeadline", calendarHoursToDeadline,
                 "note", "48 business hours always spans more calendar time — nights, weekends, and holidays are skipped"))

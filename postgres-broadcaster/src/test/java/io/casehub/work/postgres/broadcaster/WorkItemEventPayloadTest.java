@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-import io.casehub.work.runtime.model.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 
 /**
@@ -100,8 +100,7 @@ class WorkItemEventPayloadTest {
 
     @Test
     void payload_roundTrip_preservesOutcome() {
-        final WorkItem wi = workItem(UUID.randomUUID());
-        wi.outcome = "approved";
+        final WorkItem wi = workItem(UUID.randomUUID()).toBuilder().outcome("approved").build();
         final WorkItemLifecycleEvent event = WorkItemLifecycleEvent.of("COMPLETED", wi, "alice", null);
 
         final WorkItemEventPayload payload = WorkItemEventPayload.from(event);
@@ -128,9 +127,9 @@ class WorkItemEventPayloadTest {
     }
 
     private WorkItem workItem(final UUID id) {
-        final WorkItem wi = new WorkItem();
-        wi.id = id;
-        wi.status = WorkItemStatus.PENDING;
-        return wi;
+        return WorkItem.builder()
+                .id(id)
+                .status(WorkItemStatus.PENDING)
+                .build();
     }
 }

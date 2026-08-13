@@ -10,7 +10,7 @@ import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.WorkItemLabelRequest;
 
 // MANUAL labels only — INFERRED rejection is a service concern tested in WorkItemServiceTest.
-class WorkItemLabelMapperTest {
+class WorkItemLabelEntityMapperTest {
 
     @Test
     void toServiceRequest_passesLabelsThroughUnchanged() {

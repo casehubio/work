@@ -71,48 +71,48 @@ public class AuditSearchScenario {
         final var wi1 = workItemService.create(procurementRequest("Approve vendor contract: Acme Supplies"));
         final var wi2 = workItemService.create(procurementRequest("Approve vendor contract: Beta Tech"));
         final var wi3 = workItemService.create(procurementRequest("Approve vendor contract: Gamma Logistics"));
-        workItemIds.add(wi1.id);
-        workItemIds.add(wi2.id);
-        workItemIds.add(wi3.id);
-        steps.add(new StepLog(1, description1, wi1.id));
+        workItemIds.add(wi1.id());
+        workItemIds.add(wi2.id());
+        workItemIds.add(wi3.id());
+        steps.add(new StepLog(1, description1, wi1.id()));
 
         // Step 2: auditor-sarah claims all three
         final String description2 = "auditor-sarah claims all three procurement WorkItems";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 2, total, description2);
-        workItemService.claim(wi1.id, ACTOR_SARAH);
-        workItemService.claim(wi2.id, ACTOR_SARAH);
-        workItemService.claim(wi3.id, ACTOR_SARAH);
-        steps.add(new StepLog(2, description2, wi1.id));
+        workItemService.claim(wi1.id(), ACTOR_SARAH);
+        workItemService.claim(wi2.id(), ACTOR_SARAH);
+        workItemService.claim(wi3.id(), ACTOR_SARAH);
+        steps.add(new StepLog(2, description2, wi1.id()));
 
         // Step 3: auditor-sarah starts all three
         final String description3 = "auditor-sarah starts reviewing all three WorkItems";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 3, total, description3);
-        workItemService.start(wi1.id, ACTOR_SARAH);
-        workItemService.start(wi2.id, ACTOR_SARAH);
-        workItemService.start(wi3.id, ACTOR_SARAH);
-        steps.add(new StepLog(3, description3, wi1.id));
+        workItemService.start(wi1.id(), ACTOR_SARAH);
+        workItemService.start(wi2.id(), ACTOR_SARAH);
+        workItemService.start(wi3.id(), ACTOR_SARAH);
+        steps.add(new StepLog(3, description3, wi1.id()));
 
         // Step 4: auditor-sarah completes all three with different resolutions
         final String description4 = "auditor-sarah completes all three WorkItems with different resolutions";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 4, total, description4);
-        workItemService.complete(wi1.id, ACTOR_SARAH,
+        workItemService.complete(wi1.id(), ACTOR_SARAH,
                 "{\"approved\": true, \"reason\": \"Within budget; vendor approved\"}", null);
-        workItemService.complete(wi2.id, ACTOR_SARAH,
+        workItemService.complete(wi2.id(), ACTOR_SARAH,
                 "{\"approved\": true, \"reason\": \"Preferred supplier; approved under standing agreement\"}", null);
-        workItemService.complete(wi3.id, ACTOR_SARAH,
+        workItemService.complete(wi3.id(), ACTOR_SARAH,
                 "{\"approved\": false, \"reason\": \"Over budget threshold; escalate to CFO\"}", null);
-        steps.add(new StepLog(4, description4, wi1.id));
+        steps.add(new StepLog(4, description4, wi1.id()));
 
         // Step 5: create and complete a fourth WorkItem by auditor-james
         final String description5 = "auditor-james completes a different WorkItem (not Sarah's)";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 5, total, description5);
         final var wi4 = workItemService.create(procurementRequest("Approve vendor contract: Delta Freight"));
-        workItemIds.add(wi4.id);
-        workItemService.claim(wi4.id, ACTOR_JAMES);
-        workItemService.start(wi4.id, ACTOR_JAMES);
-        workItemService.complete(wi4.id, ACTOR_JAMES,
+        workItemIds.add(wi4.id());
+        workItemService.claim(wi4.id(), ACTOR_JAMES);
+        workItemService.start(wi4.id(), ACTOR_JAMES);
+        workItemService.complete(wi4.id(), ACTOR_JAMES,
                 "{\"approved\": true, \"reason\": \"Standard freight contract; approved\"}", null);
-        steps.add(new StepLog(5, description5, wi4.id));
+        steps.add(new StepLog(5, description5, wi4.id()));
 
         // Step 6: query audit by actorId=auditor-sarah
         final String description6 = "Query audit trail by actorId=auditor-sarah";

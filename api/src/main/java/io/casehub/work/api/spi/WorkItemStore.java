@@ -1,15 +1,16 @@
-package io.casehub.work.runtime.repository;
+package io.casehub.work.api.spi;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.api.WorkItemSummary;
-import io.casehub.work.runtime.model.WorkItem;
-import io.casehub.work.runtime.model.WorkItemRootView;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemRootView;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.runtime.service.WorkItemSummaryBuilder;
+import io.casehub.work.api.WorkItemSummaryBuilder;
 
 /**
  * KV-native store SPI for {@link WorkItem} persistence.
@@ -54,7 +55,7 @@ public interface WorkItemStore {
      *
      * @param workItem the work item to persist; must not be {@code null}
      * @return the persisted work item
-     * @throws jakarta.persistence.OptimisticLockException if the item was concurrently modified
+     * @throws RuntimeException if the item was concurrently modified (OCC violation)
      */
     WorkItem put(WorkItem workItem);
 
@@ -138,8 +139,8 @@ public interface WorkItemStore {
      */
     default Optional<WorkItem> findByCallerRef(String callerRef) {
         return scanAll().stream()
-                .filter(wi -> callerRef.equals(wi.callerRef))
-                .max(java.util.Comparator.comparing(wi -> wi.createdAt));
+                .filter(wi -> callerRef.equals(wi.callerRef()))
+                .max(java.util.Comparator.comparing(wi -> wi.createdAt()));
     }
 
     /**
@@ -161,9 +162,9 @@ public interface WorkItemStore {
      */
     default Optional<WorkItem> findActiveByCallerRef(String callerRef) {
         return scanAll().stream()
-                .filter(wi -> callerRef.equals(wi.callerRef))
-                .filter(wi -> wi.status != null && wi.status.isActive())
-                .max(java.util.Comparator.comparing(wi -> wi.createdAt));
+                .filter(wi -> callerRef.equals(wi.callerRef()))
+                .filter(wi -> wi.status() != null && wi.status().isActive())
+                .max(java.util.Comparator.comparing(wi -> wi.createdAt()));
     }
 
     /**
@@ -197,8 +198,8 @@ public interface WorkItemStore {
      */
     default List<WorkItem> findByParentIdExcludingStatuses(UUID parentId, List<WorkItemStatus> excludeStatuses) {
         return scanAll().stream()
-                .filter(wi -> parentId.equals(wi.parentId))
-                .filter(wi -> !excludeStatuses.contains(wi.status))
+                .filter(wi -> parentId.equals(wi.parentId()))
+                .filter(wi -> !excludeStatuses.contains(wi.status()))
                 .toList();
     }
 
@@ -211,8 +212,8 @@ public interface WorkItemStore {
      */
     default List<WorkItem> findByParentIdWithStatuses(UUID parentId, List<WorkItemStatus> statuses) {
         return scanAll().stream()
-                .filter(wi -> parentId.equals(wi.parentId))
-                .filter(wi -> statuses.contains(wi.status))
+                .filter(wi -> parentId.equals(wi.parentId()))
+                .filter(wi -> statuses.contains(wi.status()))
                 .toList();
     }
 
@@ -224,7 +225,7 @@ public interface WorkItemStore {
      */
     default List<WorkItem> findByParentId(UUID parentId) {
         return scanAll().stream()
-                .filter(wi -> parentId.equals(wi.parentId))
+                .filter(wi -> parentId.equals(wi.parentId()))
                 .toList();
     }
 }

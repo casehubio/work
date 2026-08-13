@@ -116,9 +116,9 @@ Three systems in the Quarkus ecosystem define "task":
 |---|---|---|
 | `Task` | CNCF Serverless Workflow / Quarkus-Flow | Machine-executed step — milliseconds, no assignee, no expiry |
 | `Task` | CaseHub | CMMN case work unit — assigned to any worker via capabilities |
-| `WorkItem` | casehub-work | Asynchronous unit awaiting resolution — minutes to days, assignee, expiry, delegation, audit |
+| `WorkItemEntity` | casehub-work | Asynchronous unit awaiting resolution — minutes to days, assignee, expiry, delegation, audit |
 
-**Rule:** a `Task` is controlled by a machine. A `WorkItem` waits for resolution.
+**Rule:** a `Task` is controlled by a machine. A `WorkItemEntity` waits for resolution.
 
 ---
 

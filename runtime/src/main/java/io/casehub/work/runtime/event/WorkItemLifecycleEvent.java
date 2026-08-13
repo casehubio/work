@@ -2,13 +2,13 @@ package io.casehub.work.runtime.event;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.casehub.platform.api.subscription.SubscribableEvent;
 import io.casehub.work.api.WorkCloudEventTypes;
 import io.casehub.work.api.WorkEventType;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemEvent;
 import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.platform.api.subscription.SubscribableEvent;
-import io.casehub.work.runtime.model.WorkItem;
 
 import java.time.Instant;
 import java.util.List;
@@ -35,7 +35,7 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent, Subscribable
     private final String         resolution;
     private final String         candidateGroups;
     private final List<String>   types;
-    private final WorkItem       workItem;
+    private final WorkItem workItem;
 
     private WorkItemLifecycleEvent(final String type, final String sourceUri, final String subject,
                                    final UUID workItemId, final WorkItemStatus status, final Instant occurredAt,
@@ -64,49 +64,30 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent, Subscribable
         this.workItem        = workItem;
     }
 
-    /**
-     * Creates a lifecycle event with the standard WorkItems type prefix.
-     *
-     * @param eventName the audit event name (e.g. "CREATED") — lowercased automatically
-     * @param workItem  the WorkItem entity in its post-mutation state
-     * @param actor     who triggered the transition
-     * @param detail    optional JSON detail (nullable)
-     */
     public static WorkItemLifecycleEvent of(final String eventName, final WorkItem workItem,
                                             final String actor, final String detail) {
         return new WorkItemLifecycleEvent(
                 WorkCloudEventTypes.PREFIX + eventName.toLowerCase(Locale.ROOT),
-                "/workitems/" + workItem.id,
-                workItem.id.toString(),
-                workItem.id, workItem.status, Instant.now(),
-                actor, detail, null, null, workItem.outcome, workItem.tenancyId,
-                workItem.callerRef, workItem.assigneeId, workItem.resolution, workItem.candidateGroups,
-                workItem.types.stream().map(t -> t.path).toList(),
+                "/workitems/" + workItem.id(),
+                workItem.id().toString(),
+                workItem.id(), workItem.status(), Instant.now(),
+                actor, detail, null, null, workItem.outcome(), workItem.tenancyId(),
+                workItem.callerRef(), workItem.assigneeId(), workItem.resolution(), workItem.candidateGroups(),
+                workItem.types() != null ? List.copyOf(workItem.types()) : List.of(),
                 workItem);
     }
 
-    /**
-     * Creates a lifecycle event with rationale and plan reference.
-     * Used when the actor's stated basis and governing policy are known.
-     *
-     * @param eventName the audit event name
-     * @param workItem  the WorkItem entity in its post-mutation state
-     * @param actor     who triggered the transition
-     * @param detail    optional JSON detail (nullable)
-     * @param rationale the actor's stated basis for the decision (nullable)
-     * @param planRef   the policy/procedure version that governed this action (nullable)
-     */
     public static WorkItemLifecycleEvent of(final String eventName, final WorkItem workItem,
                                             final String actor, final String detail,
                                             final String rationale, final String planRef) {
         return new WorkItemLifecycleEvent(
                 WorkCloudEventTypes.PREFIX + eventName.toLowerCase(Locale.ROOT),
-                "/workitems/" + workItem.id,
-                workItem.id.toString(),
-                workItem.id, workItem.status, Instant.now(),
-                actor, detail, rationale, planRef, workItem.outcome, workItem.tenancyId,
-                workItem.callerRef, workItem.assigneeId, workItem.resolution, workItem.candidateGroups,
-                workItem.types.stream().map(t -> t.path).toList(),
+                "/workitems/" + workItem.id(),
+                workItem.id().toString(),
+                workItem.id(), workItem.status(), Instant.now(),
+                actor, detail, rationale, planRef, workItem.outcome(), workItem.tenancyId(),
+                workItem.callerRef(), workItem.assigneeId(), workItem.resolution(), workItem.candidateGroups(),
+                workItem.types() != null ? List.copyOf(workItem.types()) : List.of(),
                 workItem);
     }
 
@@ -144,7 +125,7 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent, Subscribable
 
     /**
      * The CloudEvents source URI (e.g. "/workitems/{id}").
-     * Use {@link #source()} for the WorkItem entity itself.
+     * Use {@link #workItem()} for the WorkItem itself.
      */
     @JsonProperty("source")
     public String sourceUri() {
@@ -297,18 +278,13 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent, Subscribable
 
     // ---- WorkItemEvent interface implementation ----
 
-    /**
-     * Returns a {@link WorkItemRef} built from this event's data.
-     * For local events (workItem != null), fields are read from the embedded entity.
-     * For wire events (workItem == null), fields are read from independently stored values.
-     */
     @JsonIgnore
     @Override
     public WorkItemRef ref() {
         if (workItem != null) {
-            return new WorkItemRef(workItemId, status, workItem.callerRef, workItem.assigneeId,
-                                   workItem.resolution, workItem.candidateGroups, outcome, tenancyId,
-                                   workItem.payload, workItem.payloadTypeName, workItem.resolutionTypeName);
+            return new WorkItemRef(workItemId, status, workItem.callerRef(), workItem.assigneeId(),
+                                   workItem.resolution(), workItem.candidateGroups(), outcome, tenancyId,
+                                   workItem.payload(), workItem.payloadTypeName(), workItem.resolutionTypeName());
         }
         return new WorkItemRef(workItemId, status, callerRef, assigneeId,
                                resolution, candidateGroups, outcome, tenancyId, null, null, null);
@@ -328,10 +304,6 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent, Subscribable
         return WorkItemContextBuilder.toMap(workItem);
     }
 
-    /**
-     * Returns the WorkItem entity in its post-mutation state.
-     * Callers needing the CloudEvents source URI should use {@link #sourceUri()} instead.
-     */
     @JsonIgnore
     public WorkItem workItem() {
         return workItem;

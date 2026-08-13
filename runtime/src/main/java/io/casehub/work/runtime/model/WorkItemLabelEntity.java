@@ -6,7 +6,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 
 /**
- * A label applied to a {@link WorkItem}, identified by a {@code /}-separated path.
+ * A label applied to a {@link WorkItemEntity}, identified by a {@code /}-separated path.
  *
  * <p>
  * Labels are either {@link io.casehub.work.api.LabelPersistence#MANUAL} (human-applied, persists until
@@ -19,7 +19,7 @@ import jakarta.persistence.Enumerated;
  * structurally identical to a multi-segment path.
  */
 @Embeddable
-public class WorkItemLabel {
+public class WorkItemLabelEntity {
 
     /** The label path, e.g. {@code legal/contracts/nda}. */
     @Column(name = "path", nullable = false, length = 500)
@@ -43,7 +43,7 @@ public class WorkItemLabel {
     public String appliedBy;
 
     /** JPA requires a no-arg constructor. */
-    public WorkItemLabel() {
+    public WorkItemLabelEntity() {
     }
 
     /**
@@ -53,7 +53,7 @@ public class WorkItemLabel {
      * @param persistence how the label is maintained
      * @param appliedBy userId (MANUAL) or filterId (INFERRED); may be null
      */
-    public WorkItemLabel(final String path, final io.casehub.work.api.LabelPersistence persistence, final String appliedBy) {
+    public WorkItemLabelEntity(final String path, final io.casehub.work.api.LabelPersistence persistence, final String appliedBy) {
         this.path = path;
         this.persistence = persistence;
         this.appliedBy = appliedBy;
@@ -64,7 +64,7 @@ public class WorkItemLabel {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof WorkItemLabel other)) {
+        if (!(o instanceof WorkItemLabelEntity other)) {
             return false;
         }
         return java.util.Objects.equals(path, other.path)
