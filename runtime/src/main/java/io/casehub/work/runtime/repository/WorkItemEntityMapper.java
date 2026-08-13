@@ -69,6 +69,7 @@ public final class WorkItemEntityMapper {
                 .resolutionTypeName(entity.resolutionTypeName)
                 .candidateScores(entity.candidateScores)
                 .routingExperiences(entity.routingExperiences)
+                .version(entity.version)
                 .build();
     }
 

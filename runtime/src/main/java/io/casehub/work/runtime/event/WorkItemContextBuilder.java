@@ -74,6 +74,7 @@ public final class WorkItemContextBuilder {
         map.put("resolutionTypeName", workItem.resolutionTypeName());
         map.put("candidateScores", workItem.candidateScores());
         map.put("routingExperiences", workItem.routingExperiences());
+        map.put("version", workItem.version());
         return map;
     }
 }
