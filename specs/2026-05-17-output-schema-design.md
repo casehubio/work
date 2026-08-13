@@ -35,7 +35,7 @@ The right design: the template IS the type definition. Schemas belong on the tem
 | `inputDataSchema` | TEXT | JSON Schema (draft-07) for `WorkItem.payload`. Validated at instantiation. |
 | `outputDataSchema` | TEXT | JSON Schema (draft-07) for `WorkItem.resolution`. Validated at completion. |
 
-**`WorkItem` gains two snapshotted fields:**
+**`WorkItemEntity` gains two snapshotted fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|

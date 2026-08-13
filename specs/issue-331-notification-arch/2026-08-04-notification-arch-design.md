@@ -77,7 +77,7 @@ Garden entry GE-20260421-cd3f95 documents this exact reentrancy pattern.
 ### Observer contract
 
 - Observers use `@Observes LabelChangeEvent` — synchronous, same transaction.
-- The `WorkItem` entity has its post-evaluation label state (labels already mutated in-memory).
+- The `WorkItemEntity` entity has its post-evaluation label state (labels already mutated in-memory).
 - The delta list shows exactly what changed.
 - Observers may modify the WorkItem entity directly (e.g., set priority). The caller (`FilterEvaluationObserver`) persists via `workItemStore.put(wi)` after `evaluate()` returns, so observer mutations are included in the same persist.
 - Observers must NOT call `WorkItemService` methods that fire lifecycle events — use direct entity mutation instead.

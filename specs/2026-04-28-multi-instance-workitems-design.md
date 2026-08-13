@@ -104,7 +104,7 @@ on_threshold_reached    VARCHAR(10)
 allow_same_assignee     BOOLEAN
 ```
 
-### `WorkItem` — new field
+### `WorkItemEntity` — new field
 
 ```
 parent_id   UUID   nullable   FK → work_item(id)

@@ -45,7 +45,7 @@ Three field additions, all `TEXT`, comma-separated, consistent with `candidateUs
 | Entity | Field | Description |
 |--------|-------|-------------|
 | `WorkItemTemplate` | `excludedUsers` | User IDs excluded from claiming instances of this template |
-| `WorkItem` | `excludedUsers` | Snapshotted from template at instantiation; set directly on direct creation |
+| `WorkItemEntity` | `excludedUsers` | Snapshotted from template at instantiation; set directly on direct creation |
 | `WorkItemCreateRequest` | `excludedUsers` | String param — positioned after `permittedOutcomes`, before `inputDataSchema` |
 
 **`SelectionContext`** gains `excludedUsers` String — carries the raw value so

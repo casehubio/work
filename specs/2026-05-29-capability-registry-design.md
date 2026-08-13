@@ -210,7 +210,7 @@ private List<WorkerCandidate> filterByCapabilities(SelectionContext ctx, List<Wo
 
 ### Dual parse modes (strict-on-write, lenient-on-read)
 
-The `Capability` value type is new — existing `WorkItem` DB rows may contain capability strings that violate the format contract (underscores, uppercase). Strict parsing everywhere would throw `MalformedCapabilityException` inside `@Transactional` routing operations for those rows — a production incident at deployment time.
+The `Capability` value type is new — existing `WorkItemEntity` DB rows may contain capability strings that violate the format contract (underscores, uppercase). Strict parsing everywhere would throw `MalformedCapabilityException` inside `@Transactional` routing operations for those rows — a production incident at deployment time.
 
 Two parse modes address this:
 
@@ -268,7 +268,7 @@ public WorkItem create(final WorkItemCreateRequest request) {
 }
 ```
 
-`WorkItemAssignmentService` calls `CapabilityParser.parseLenient()` when building `SelectionContext` from a `WorkItem` entity.
+`WorkItemAssignmentService` calls `CapabilityParser.parseLenient()` when building `SelectionContext` from a `WorkItemEntity` entity.
 
 ### Immutability
 

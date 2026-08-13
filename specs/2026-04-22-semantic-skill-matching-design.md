@@ -61,7 +61,7 @@ public record SelectionContext(
     String description      // new — work item description
 ) {}
 ```
-`WorkItemAssignmentService` populates `title` and `description` from the `WorkItem`
+`WorkItemAssignmentService` populates `title` and `description` from the `WorkItemEntity`
 entity when building the context. All existing callers that construct `SelectionContext`
 directly (tests, CaseHub) need updating — no external consumers yet.
 

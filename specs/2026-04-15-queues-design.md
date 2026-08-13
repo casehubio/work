@@ -22,8 +22,8 @@ engine that maintains them, one query per queue view.
 
 | Concern | Module |
 |---|---|
-| `WorkItemLabel` type | `quarkus-work` core |
-| `labels` collection on `WorkItem` | `quarkus-work` core |
+| `WorkItemLabelEntity` type | `quarkus-work` core |
+| `labels` collection on `WorkItemEntity` | `quarkus-work` core |
 | `LabelVocabulary` + `LabelDefinition` | `quarkus-work` core |
 | Label REST endpoints (add, remove, query by label) | `quarkus-work` core |
 | `WorkItemFilter` (conditions + actions) | `quarkus-work-queues` |
@@ -316,7 +316,7 @@ labels.any(l -> l.path.startsWith('legal/'))
 status == 'PENDING' && category == 'security-review'
 ```
 
-Fields exposed in the JEXL context: all `WorkItem` fields, plus a `labels`
+Fields exposed in the JEXL context: all `WorkItemEntity` fields, plus a `labels`
 collection supporting `.any()`, `.all()`, `.path` access.
 
 #### Built-in: JQ
