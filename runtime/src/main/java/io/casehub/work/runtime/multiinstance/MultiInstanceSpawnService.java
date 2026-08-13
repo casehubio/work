@@ -8,6 +8,7 @@ import io.casehub.work.api.ParentRole;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.runtime.model.OutcomeCodecs;
+import io.casehub.work.runtime.model.WorkItemEntity;
 import io.casehub.work.runtime.model.WorkItemRelation;
 import io.casehub.work.runtime.model.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
@@ -89,7 +90,7 @@ public class MultiInstanceSpawnService {
                 null,
                 Boolean.TRUE.equals(template.allowSameAssignee),
                 null);
-        strategy.assign((List) children, new MultiInstanceContext(parent, config));
+        applyStrategy(strategy, children, parent, config);
 
         return parent;
     }
@@ -145,7 +146,7 @@ public class MultiInstanceSpawnService {
 
         final InstanceAssignmentStrategy strategy = resolveStrategy(
                 config.effectiveAssignmentStrategyName());
-        strategy.assign((List) children, new MultiInstanceContext(parent, config));
+        applyStrategy(strategy, children, parent, config);
 
         return parent;
     }
@@ -178,6 +179,17 @@ public class MultiInstanceSpawnService {
                 .scope(scope != null ? scope : template.scope)
                 .tenancyId(tenancyId)
                 .build();
+    }
+
+    private void applyStrategy(final InstanceAssignmentStrategy strategy,
+                               final List<io.casehub.work.api.WorkItem> children,
+                               final io.casehub.work.api.WorkItem parent,
+                               final MultiInstanceConfig config) {
+        final WorkItemEntity parentEntity = WorkItemEntity.findById(parent.id());
+        final List<WorkItemEntity> childEntities = children.stream()
+                .map(c -> WorkItemEntity.<WorkItemEntity>findById(c.id()))
+                .toList();
+        strategy.assign((List) childEntities, new MultiInstanceContext(parentEntity, config));
     }
 
     private InstanceAssignmentStrategy resolveStrategy(final String name) {
