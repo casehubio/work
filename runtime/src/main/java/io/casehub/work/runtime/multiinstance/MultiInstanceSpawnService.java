@@ -90,6 +90,9 @@ public class MultiInstanceSpawnService {
                 Boolean.TRUE.equals(template.allowSameAssignee),
                 null);
         strategy.assign((List) children, new MultiInstanceContext(parent, config));
+        for (int i = 0; i < children.size(); i++) {
+            workItemStore.put(children.get(i));
+        }
 
         return parent;
     }
@@ -146,6 +149,9 @@ public class MultiInstanceSpawnService {
         final InstanceAssignmentStrategy strategy = resolveStrategy(
                 config.effectiveAssignmentStrategyName());
         strategy.assign((List) children, new MultiInstanceContext(parent, config));
+        for (int i = 0; i < children.size(); i++) {
+            workItemStore.put(children.get(i));
+        }
 
         return parent;
     }
