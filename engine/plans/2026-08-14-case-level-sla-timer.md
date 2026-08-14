@@ -195,7 +195,7 @@ Adding `SignalTarget` to the sealed `BindingTarget` will cause compilation failu
 
 The `CbrCaseRetainObserver.buildRoutingKeyMap()` uses `default ->` — already handles `SignalTarget` via the catch-all.
 
-For the work repo's `PlanItemCompletionApplier.java`, add: `case SignalTarget ignored -> null;`
+**Cross-repo coordination:** The work repo's `PlanItemCompletionApplier.java` has an exhaustive switch on `BindingTarget`. After publishing the engine artifact with the new `SignalTarget` permit, the work repo will fail to compile. Fix: add `case SignalTarget ignored -> null;` in `casehubio/work`. This must be done immediately after the engine artifact is published — file a work repo issue and coordinate the fix before merging to main.
 
 - [ ] **Step 9: Build to verify compilation**
 
@@ -805,6 +805,8 @@ public void registerScheduledTriggers(CaseInstance caseInstance) {
 Add the `scheduleSignal()` method:
 
 ```java
+private static final ObjectMapper SIGNAL_MAPPER = new ObjectMapper();
+
 private void scheduleSignal(UUID caseId, Binding binding, ScheduleTrigger trigger, SignalTarget st) {
     JobIdentifier jobId = createJobIdentifier(caseId, binding.getName());
     ScheduleStrategy schedule = toScheduleStrategy(trigger);
@@ -812,11 +814,14 @@ private void scheduleSignal(UUID caseId, Binding binding, ScheduleTrigger trigge
     data.put("caseId", caseId.toString());
     data.put("bindingName", binding.getName());
     data.put("triggerType", "signal");
-    data.put("signalPayload", OBJECT_MAPPER.writeValueAsString(
-        OBJECT_MAPPER.valueToTree(st.payload())));
+    try {
+        data.put("signalPayload", SIGNAL_MAPPER.writeValueAsString(
+            SIGNAL_MAPPER.valueToTree(st.payload())));
+    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+        throw new IllegalStateException("Failed to serialize signal payload", e);
+    }
     if (binding.getWhen() != null) {
         data.put("hasCondition", "true");
-        data.put("conditionExpression", binding.getWhen().toString());
     }
 
     scheduler.schedule(ScheduledJobRequest.builder()
@@ -846,12 +851,14 @@ package io.casehub.engine.scheduler.quartz;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.casehub.api.model.Binding;
+import io.casehub.api.model.CaseDefinition;
 import io.casehub.api.model.CaseStatus;
 import io.casehub.engine.common.internal.event.ContextSignalEvent;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.engine.common.internal.model.CaseInstance;
+import io.casehub.engine.common.spi.CaseDefinitionRegistry;
 import io.casehub.engine.common.spi.recovery.WorkerExecutionRecoveryService;
-import io.casehub.engine.internal.jq.JQEvaluator;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -863,6 +870,7 @@ import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
+@DisallowConcurrentExecution
 @ApplicationScoped
 public class ScheduledSignalJob implements Job {
 
@@ -871,7 +879,7 @@ public class ScheduledSignalJob implements Job {
 
     @Inject EventBus eventBus;
     @Inject WorkerExecutionRecoveryService recoveryService;
-    @Inject JQEvaluator jqEvaluator;
+    @Inject CaseDefinitionRegistry caseDefinitionRegistry;
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
@@ -897,13 +905,25 @@ public class ScheduledSignalJob implements Job {
         }
 
         if ("true".equals(data.getString("hasCondition"))) {
-            String expr = data.getString("conditionExpression");
+            CaseDefinition definition =
+                caseDefinitionRegistry.getCaseDefinition(caseInstance.getCaseMetaModel());
+            if (definition == null) {
+                LOG.warnf("CaseDefinition not found for case %s", caseId);
+                return;
+            }
+            Binding binding = definition.getBindings().stream()
+                .filter(b -> bindingName.equals(b.getName()))
+                .findFirst().orElse(null);
+            if (binding == null || binding.getWhen() == null) {
+                LOG.warnf("Binding '%s' not found or has no condition", bindingName);
+                return;
+            }
             try {
-                var result = jqEvaluator.evaluate(expr,
+                var result = binding.getWhen().evaluate(
                     caseInstance.getCaseContext()
                         .layer(io.casehub.api.context.ContextLayer.WORKING)
                         .asJsonNode());
-                if (!result.isValid() || !result.asBoolean()) {
+                if (!result.ok() || !result.isTrue()) {
                     LOG.debugf("Signal condition not met for case=%s binding=%s", caseId, bindingName);
                     return;
                 }
