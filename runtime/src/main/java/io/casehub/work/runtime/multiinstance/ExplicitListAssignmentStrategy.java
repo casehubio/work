@@ -8,7 +8,7 @@ import io.quarkus.arc.Unremovable;
 
 import io.casehub.work.api.spi.InstanceAssignmentStrategy;
 import io.casehub.work.api.MultiInstanceContext;
-import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.api.WorkItem;
 
 /**
  * Assigns each child instance to the corresponding named user from {@code explicitAssignees}.
@@ -46,7 +46,7 @@ public class ExplicitListAssignmentStrategy implements InstanceAssignmentStrateg
                             + ", expected " + instances.size());
         }
         for (int i = 0; i < instances.size(); i++) {
-            ((WorkItemEntity) instances.get(i)).assigneeId = assignees.get(i);
+            instances.set(i, ((WorkItem) instances.get(i)).toBuilder().assigneeId(assignees.get(i)).build());
         }
     }
 }

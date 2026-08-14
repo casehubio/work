@@ -142,27 +142,27 @@ class JpaWorkItemStoreTenancyTest {
     void scan_returnsOnlyCurrentTenantItems() {
         // Create items for tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItemEntity wiA = newWorkItem("scan-tenant-a");
-        wiA.assigneeId = "alice";
-        store.put(WorkItemEntityMapper.toDomain(wiA));
+        WorkItemEntity wiAEntity = newWorkItem("scan-tenant-a");
+        wiAEntity.assigneeId = "alice";
+        WorkItem wiA = store.put(WorkItemEntityMapper.toDomain(wiAEntity));
 
         // Create items for tenant B
         principal.setTenancyId(TENANT_B);
-        WorkItemEntity wiB = newWorkItem("scan-tenant-b");
-        wiB.assigneeId = "alice";
-        store.put(WorkItemEntityMapper.toDomain(wiB));
+        WorkItemEntity wiBEntity = newWorkItem("scan-tenant-b");
+        wiBEntity.assigneeId = "alice";
+        WorkItem wiB = store.put(WorkItemEntityMapper.toDomain(wiBEntity));
 
         // Scan as tenant A — should only see A's item
         principal.setTenancyId(TENANT_A);
         List<WorkItem> resultA = store.scan(WorkItemQuery.inbox("alice", null, null));
-        assertThat(resultA).extracting(w -> w.id()).contains(wiA.id);
-        assertThat(resultA).extracting(w -> w.id()).doesNotContain(wiB.id);
+        assertThat(resultA).extracting(w -> w.id()).contains(wiA.id());
+        assertThat(resultA).extracting(w -> w.id()).doesNotContain(wiB.id());
 
         // Scan as tenant B — should only see B's item
         principal.setTenancyId(TENANT_B);
         List<WorkItem> resultB = store.scan(WorkItemQuery.inbox("alice", null, null));
-        assertThat(resultB).extracting(w -> w.id()).contains(wiB.id);
-        assertThat(resultB).extracting(w -> w.id()).doesNotContain(wiA.id);
+        assertThat(resultB).extracting(w -> w.id()).contains(wiB.id());
+        assertThat(resultB).extracting(w -> w.id()).doesNotContain(wiA.id());
     }
 
     // -------------------------------------------------------------------------
@@ -173,25 +173,23 @@ class JpaWorkItemStoreTenancyTest {
     void scanAll_returnsOnlyCurrentTenantItems() {
         // Create items for tenant A
         principal.setTenancyId(TENANT_A);
-        WorkItemEntity wiA = newWorkItem("scanall-tenant-a");
-        store.put(WorkItemEntityMapper.toDomain(wiA));
+        WorkItem wiA = store.put(WorkItemEntityMapper.toDomain(newWorkItem("scanall-tenant-a")));
 
         // Create items for tenant B
         principal.setTenancyId(TENANT_B);
-        WorkItemEntity wiB = newWorkItem("scanall-tenant-b");
-        store.put(WorkItemEntityMapper.toDomain(wiB));
+        WorkItem wiB = store.put(WorkItemEntityMapper.toDomain(newWorkItem("scanall-tenant-b")));
 
         // scanAll as tenant A — should only see A's item
         principal.setTenancyId(TENANT_A);
         List<WorkItem> resultA = store.scanAll();
-        assertThat(resultA).extracting(w -> w.id()).contains(wiA.id);
-        assertThat(resultA).extracting(w -> w.id()).doesNotContain(wiB.id);
+        assertThat(resultA).extracting(w -> w.id()).contains(wiA.id());
+        assertThat(resultA).extracting(w -> w.id()).doesNotContain(wiB.id());
 
         // scanAll as tenant B — should only see B's item
         principal.setTenancyId(TENANT_B);
         List<WorkItem> resultB = store.scanAll();
-        assertThat(resultB).extracting(w -> w.id()).contains(wiB.id);
-        assertThat(resultB).extracting(w -> w.id()).doesNotContain(wiA.id);
+        assertThat(resultB).extracting(w -> w.id()).contains(wiB.id());
+        assertThat(resultB).extracting(w -> w.id()).doesNotContain(wiA.id());
     }
 
     // -------------------------------------------------------------------------
@@ -202,9 +200,8 @@ class JpaWorkItemStoreTenancyTest {
     void countByParentAndAssignee_excludesAllTerminalStatuses() {
         principal.setTenancyId(TENANT_A);
 
-        WorkItemEntity parent = newWorkItem("Parent");
-        store.put(WorkItemEntityMapper.toDomain(parent));
-        final UUID parentId = parent.id;
+        WorkItem parent = store.put(WorkItemEntityMapper.toDomain(newWorkItem("Parent")));
+        final UUID parentId = parent.id();
 
         // One active child as the baseline count
         WorkItemEntity activeChild = newWorkItem("Active child");

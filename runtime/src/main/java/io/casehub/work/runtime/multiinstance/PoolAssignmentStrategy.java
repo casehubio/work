@@ -2,7 +2,7 @@ package io.casehub.work.runtime.multiinstance;
 
 import java.util.List;
 
-import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import io.quarkus.arc.Unremovable;
@@ -33,17 +33,16 @@ public class PoolAssignmentStrategy implements InstanceAssignmentStrategy {
      */
     @Override
     public void assign(final List<Object> instances, final MultiInstanceContext context) {
-        final WorkItemEntity parent = (WorkItemEntity) context.parent();
-        // Only propagate candidateGroups/candidateUsers from parent when parent is a PARTICIPANT
-        // (has its own candidateGroups). For COORDINATOR parents, children already have the
-        // correct routing from their create request and must not be overwritten with null.
-        if (parent.candidateGroups == null && parent.candidateUsers == null) {
+        final WorkItem parent = (WorkItem) context.parent();
+        if (parent.candidateGroups() == null && parent.candidateUsers() == null) {
             return;
         }
-        for (final Object obj : instances) {
-            final WorkItemEntity child = (WorkItemEntity) obj;
-            child.candidateGroups = parent.candidateGroups;
-            child.candidateUsers = parent.candidateUsers;
+        for (int i = 0; i < instances.size(); i++) {
+            final WorkItem child = (WorkItem) instances.get(i);
+            instances.set(i, child.toBuilder()
+                    .candidateGroups(parent.candidateGroups())
+                    .candidateUsers(parent.candidateUsers())
+                    .build());
         }
     }
 }

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.context.ApplicationScoped;
 
 import io.quarkus.arc.Unremovable;
@@ -79,37 +79,36 @@ public class RoundRobinAssignmentStrategy implements InstanceAssignmentStrategy 
      */
     @Override
     public void assign(final List<Object> instances, final MultiInstanceContext context) {
-        final WorkItemEntity parent          = (WorkItemEntity) context.parent();
+        final WorkItem parent          = (WorkItem) context.parent();
         final Set<String>    alreadyAssigned = new HashSet<>();
 
-        for (final Object obj : instances) {
-            final WorkItemEntity child = (WorkItemEntity) obj;
-            // Combine already-assigned workers and template-level excluded users so the
-            // pre-filtered candidateUsers passed to the strategy never contains either set,
-            // regardless of whether the strategy itself honours context.excludedUsers().
+        for (int i = 0; i < instances.size(); i++) {
+            final WorkItem child = (WorkItem) instances.get(i);
             final Set<String> excluded = new HashSet<>(alreadyAssigned);
-            if (child.excludedUsers != null && !child.excludedUsers.isBlank()) {
-                Arrays.stream(child.excludedUsers.split(",")).map(String::trim).forEach(excluded::add);
+            if (child.excludedUsers() != null && !child.excludedUsers().isBlank()) {
+                Arrays.stream(child.excludedUsers().split(",")).map(String::trim).forEach(excluded::add);
             }
-            final String filteredUsers = filterOut(parent.candidateUsers, excluded);
+            final String filteredUsers = filterOut(parent.candidateUsers(), excluded);
 
             final SelectionContext selCtx = new SelectionContext(
-                    child.types != null ? child.types.stream().map(t -> t.path).toList() : List.of(),
-                    child.priority != null ? child.priority.name() : null,
-                    CapabilityParser.parseLenient(child.requiredCapabilities),
-                    parent.candidateGroups,
+                    child.types() != null ? List.copyOf(child.types()) : List.of(),
+                    child.priority() != null ? child.priority().name() : null,
+                    CapabilityParser.parseLenient(child.requiredCapabilities()),
+                    parent.candidateGroups(),
                     filteredUsers,
-                    child.title,
-                    child.description,
-                    child.excludedUsers);
+                    child.title(),
+                    child.description(),
+                    child.excludedUsers());
 
             final AssignmentDecision decision = workerStrategy().select(selCtx, List.of());
             if (decision != null && decision.assigneeId() != null) {
-                child.assigneeId = decision.assigneeId();
+                instances.set(i, child.toBuilder().assigneeId(decision.assigneeId()).build());
                 alreadyAssigned.add(decision.assigneeId());
             } else {
-                child.candidateGroups = parent.candidateGroups;
-                child.candidateUsers = parent.candidateUsers;
+                instances.set(i, child.toBuilder()
+                        .candidateGroups(parent.candidateGroups())
+                        .candidateUsers(parent.candidateUsers())
+                        .build());
             }
         }
     }
