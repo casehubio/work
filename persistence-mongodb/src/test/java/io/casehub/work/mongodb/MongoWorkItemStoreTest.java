@@ -1,7 +1,18 @@
 package io.casehub.work.mongodb;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import io.casehub.work.api.DeclineTarget;
+import io.casehub.work.api.LabelPersistence;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemLabel;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.api.spi.WorkItemStore;
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
+import jakarta.persistence.OptimisticLockException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -9,21 +20,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import io.casehub.work.api.WorkItem;
-import io.casehub.work.api.WorkItemLabel;
-import jakarta.inject.Inject;
-import jakarta.persistence.OptimisticLockException;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import io.casehub.work.api.DeclineTarget;
-import io.casehub.work.api.LabelPersistence;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.api.WorkItemQuery;
-import io.casehub.work.api.spi.WorkItemStore;
-import io.quarkus.test.junit.QuarkusTest;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @QuarkusTest
 class MongoWorkItemStoreTest {
@@ -301,11 +299,11 @@ class MongoWorkItemStoreTest {
     @Test
     void labels_roundtrip_preservesAllFields() {
         final WorkItem wi = pending("alice", "Label roundtrip").toBuilder()
-                .labels(List.of(new WorkItemLabel("legal/contracts", LabelPersistence.MANUAL, "alice")))
-                .build();
+                                                               .labels(List.of(new WorkItemLabel("legal/contracts", LabelPersistence.MANUAL, "alice")))
+                                                               .build();
 
-        store.put(wi);
-        final WorkItem loaded = store.get(wi.id()).orElseThrow();
+        final WorkItem saved  = store.put(wi);
+        final WorkItem loaded = store.get(saved.id()).orElseThrow();
 
         assertThat(loaded.labels()).hasSize(1);
         assertThat(loaded.labels().get(0).path()).isEqualTo("legal/contracts");
@@ -336,10 +334,10 @@ class MongoWorkItemStoreTest {
     @Test
     void candidateGroups_roundtrip_commaSeparatedPreserved() {
         final WorkItem wi = pending("system", "Group routing").toBuilder()
-                .candidateGroups("finance-team,hr-team").build();
+                                                              .candidateGroups("finance-team,hr-team").build();
 
-        store.put(wi);
-        final WorkItem loaded = store.get(wi.id()).orElseThrow();
+        final WorkItem saved  = store.put(wi);
+        final WorkItem loaded = store.get(saved.id()).orElseThrow();
 
         assertThat(loaded.candidateGroups()).isEqualTo("finance-team,hr-team");
     }
@@ -543,23 +541,23 @@ class MongoWorkItemStoreTest {
         WorkItem wi = pending("alice", "Version insert test");
         wi = store.put(wi);
 
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(0L);
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(0L);
 
         store.get(wi.id()).orElseThrow();
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(0L);
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(0L);
     }
 
     @Test
     void put_incrementsVersion_onUpdate() {
         WorkItem wi = store.put(pending("alice", "Version update test"));
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(0L);
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(0L);
 
         wi = wi.toBuilder().status(WorkItemStatus.ASSIGNED).assigneeId("bob").build();
         wi = store.put(wi);
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(1L);
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(1L);
 
         store.get(wi.id()).orElseThrow();
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(1L);
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(1L);
         assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
@@ -571,12 +569,12 @@ class MongoWorkItemStoreTest {
         final WorkItem reader1 = store.get(wi.id()).orElseThrow();
         final WorkItem reader2 = store.get(wi.id()).orElseThrow();
 
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(0L);
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(0L);
 
         // Reader 1 updates successfully
         WorkItem updated1 = reader1.toBuilder().status(WorkItemStatus.ASSIGNED).assigneeId("bob").build();
         updated1 = store.put(updated1);
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id()).version).isEqualTo(1L);
+        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(1L);
 
         // Reader 2 attempts to update with stale version — should fail
         final WorkItem stale2 = reader2.toBuilder().status(WorkItemStatus.ASSIGNED).assigneeId("carol").build();
