@@ -233,6 +233,7 @@ class WorkItemEntityMapperTest {
                 .outcome("oc").inputDataSchema("ids").outputDataSchema("ods")
                 .payloadTypeName("ptn").resolutionTypeName("rtn")
                 .candidateScores("cs").routingExperiences("re")
+                .version(0L)
                 .build();
 
         WorkItemEntity entity = WorkItemEntityMapper.toEntity(original);

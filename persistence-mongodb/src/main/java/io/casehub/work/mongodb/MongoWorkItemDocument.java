@@ -181,6 +181,7 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
                                            .outcome(outcome)
                                            .inputDataSchema(inputDataSchema)
                                            .outputDataSchema(outputDataSchema)
+                                           .version(version)
                                            .labels(labels != null ? labels.stream().map(ml ->
                                                                                                 new io.casehub.work.api.WorkItemLabel(ml.path,
                                                                                                                                       ml.persistence != null ? LabelPersistence.valueOf(ml.persistence) : null,

@@ -53,7 +53,8 @@ public record WorkItem(
         String payloadTypeName,
         String resolutionTypeName,
         String candidateScores,
-        String routingExperiences
+        String routingExperiences,
+        Long version
 ) {
 
     public WorkItem {
@@ -86,7 +87,8 @@ public record WorkItem(
                 .outcome(outcome).inputDataSchema(inputDataSchema)
                 .outputDataSchema(outputDataSchema).payloadTypeName(payloadTypeName)
                 .resolutionTypeName(resolutionTypeName)
-                .candidateScores(candidateScores).routingExperiences(routingExperiences);
+                .candidateScores(candidateScores).routingExperiences(routingExperiences)
+                .version(version);
     }
 
     public static final class Builder {
@@ -136,6 +138,7 @@ public record WorkItem(
         private String resolutionTypeName;
         private String candidateScores;
         private String routingExperiences;
+        private Long version;
 
         public Builder id(UUID v) { this.id = v; return this; }
         public Builder tenancyId(String v) { this.tenancyId = v; return this; }
@@ -183,6 +186,7 @@ public record WorkItem(
         public Builder resolutionTypeName(String v) { this.resolutionTypeName = v; return this; }
         public Builder candidateScores(String v) { this.candidateScores = v; return this; }
         public Builder routingExperiences(String v) { this.routingExperiences = v; return this; }
+        public Builder version(Long v) { this.version = v; return this; }
 
         public WorkItem build() {
             return new WorkItem(
@@ -197,7 +201,7 @@ public record WorkItem(
                     templateId, templateVersion, permittedOutcomes, excludedUsers,
                     outcome, inputDataSchema, outputDataSchema,
                     payloadTypeName, resolutionTypeName,
-                    candidateScores, routingExperiences);
+                    candidateScores, routingExperiences, version);
         }
     }
 }

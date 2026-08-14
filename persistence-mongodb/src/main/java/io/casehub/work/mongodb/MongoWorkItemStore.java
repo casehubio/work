@@ -2,10 +2,10 @@ package io.casehub.work.mongodb;
 
 import com.mongodb.client.result.UpdateResult;
 import io.casehub.platform.api.identity.CurrentPrincipal;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.spi.WorkItemStore;
-import io.casehub.work.api.WorkItem;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
@@ -67,15 +67,22 @@ public class MongoWorkItemStore implements WorkItemStore {
             final MongoWorkItemDocument doc = MongoWorkItemDocument.from(stored);
             doc.version = 0L;
             doc.persist();
+            stored = stored.toBuilder().version(0L).build();
         } else {
-            final MongoWorkItemDocument existing = MongoWorkItemDocument.find(
-                    new Document("_id", idStr)).firstResult();
-            final long                  currentVersion = existing != null && existing.version != null ? existing.version : 0L;
-            final MongoWorkItemDocument doc            = MongoWorkItemDocument.from(stored);
-            doc.version = currentVersion + 1;
+            final Long expectedVersion = stored.version();
+            final long versionToMatch;
+            if (expectedVersion != null) {
+                versionToMatch = expectedVersion;
+            } else {
+                final MongoWorkItemDocument existing = MongoWorkItemDocument.find(
+                        new Document("_id", idStr)).firstResult();
+                versionToMatch = existing != null && existing.version != null ? existing.version : 0L;
+            }
+            final MongoWorkItemDocument doc = MongoWorkItemDocument.from(stored);
+            doc.version = versionToMatch + 1;
 
             final Document filter = new Document("_id", idStr)
-                                            .append("version", currentVersion);
+                                            .append("version", versionToMatch);
 
             final UpdateResult result =
                     MongoWorkItemDocument.mongoCollection().replaceOne(filter, doc);
@@ -83,8 +90,9 @@ public class MongoWorkItemStore implements WorkItemStore {
             if (result.getModifiedCount() == 0) {
                 throw new OptimisticLockException(
                         "Version conflict on WorkItem " + idStr
-                        + " (expected version " + currentVersion + ")");
+                        + " (expected version " + versionToMatch + ")");
             }
+            stored = stored.toBuilder().version(doc.version).build();
         }
         return stored;
     }
