@@ -56,9 +56,11 @@ Binding.builder()
 `Binding.Builder` gains `.signal(Map<String, Object>)` convenience method which creates `new SignalTarget(payload)` and sets it as the target.
 
 **Build-time validation** in `Binding.Builder.build()`:
-- `SignalTarget` requires `LifecycleScope.BINDING` (same guard pattern as `ScopeActivatedTrigger`)
+- `SignalTarget` requires `LifecycleScope.BINDING` — opposite constraint to `ScopeActivatedTrigger` (which requires COMPOUND or CASE), same validation site
 - `SignalTarget` rejects `Participation.COMPANION`
-- `SignalTarget` is compatible with all trigger types: `ContextChangeTrigger`, `ScopeActivatedTrigger`, `ScheduleTrigger`
+- `SignalTarget` is compatible with `ContextChangeTrigger` and `ScheduleTrigger`. Not compatible with `ScopeActivatedTrigger` — the existing validation rejects `ScopeActivatedTrigger + BINDING scope`
+
+The existing `instanceof CapabilityTarget` guard at line 368 (`ls != LifecycleScope.BINDING && !(target instanceof CapabilityTarget)`) already rejects non-BINDING scopes for non-CapabilityTarget types. A new explicit guard for `SignalTarget` is clearer but functionally redundant.
 
 ### YAML syntax
 
@@ -86,7 +88,7 @@ Mutually exclusive with `capability:`, `subCase:`, `humanTask:`. The nested map 
 
 ### Dispatch path — context-change-triggered signals
 
-When a `ContextChangeTrigger` or `ScopeActivatedTrigger` binding with `SignalTarget` fires, `CaseContextChangedEventHandler.publishByTarget()` handles it in a new switch branch:
+When a `ContextChangeTrigger` binding with `SignalTarget` fires, `CaseContextChangedEventHandler.publishByTarget()` handles it in a new switch branch:
 
 ```java
 case SignalTarget st -> applySignal(caseInstance, binding, st);
@@ -116,8 +118,11 @@ case SignalTarget st -> {
 - `caseId`, `bindingName`
 - `signalPayload` — serialized JSON of the signal map
 - `hasCondition` — whether the binding has a `when` guard
+- `conditionExpression` — the JQ expression string from `binding.getWhen()` (only when `hasCondition` is true)
 
 No worker or capability lookup needed.
+
+**Note:** The current `registerScheduledTriggers()` uses a switch expression that yields `CapabilityTarget`. The `SignalTarget` branch requires restructuring to a switch statement — `SignalTarget` does not yield a `CapabilityTarget`, and the subsequent worker lookup is not needed.
 
 **QuartzJobScheduler.resolveJobClass()** gains:
 
@@ -179,7 +184,7 @@ public static final String CONTEXT_SIGNAL = "casehub.context.signal";
 EventLog metadata for `CONTEXT_SIGNAL_APPLIED`:
 - `bindingName` — which binding fired
 - `signalKeys` — list of top-level keys written (e.g., `["caseSla"]`)
-- `triggerType` — `"contextChange"`, `"scopeActivated"`, or `"schedule"`
+- `triggerType` — `"contextChange"` or `"schedule"`
 
 ### Exhaustive switch updates
 
@@ -191,7 +196,8 @@ Every exhaustive `switch` on `BindingTarget` needs a `case SignalTarget` branch.
 | `SchedulerService` | `registerScheduledTriggers()` | Schedule signal job |
 | `SchedulerService` | `createJobData()` | Not called for signals (separate path) |
 | `CbrCaseRetainObserver` | `buildRoutingKeyMap()` | Skip — no capability trace |
-| `Binding.Builder` | `build()` | Validation (BINDING scope only) |
+
+`Binding.Builder.build()` uses `instanceof` guards, not an exhaustive switch. The existing guard at line 368 already rejects non-BINDING scopes for non-CapabilityTarget types — no new branch needed, though an explicit `SignalTarget` guard improves readability.
 
 `instanceof CapabilityTarget` guards across the codebase are naturally correct — signal bindings don't have capabilities, so they're excluded from worker routing, agent matching, and capability-based lookups.
 
