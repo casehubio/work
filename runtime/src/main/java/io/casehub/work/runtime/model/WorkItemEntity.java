@@ -36,7 +36,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  * Lifecycle transitions are managed by {@code WorkItemService}. All status changes are
  * recorded in the immutable {@link AuditEntry} log.
  */
-@Entity(name = "WorkItem")
+@Entity
 @Table(name = "work_item")
 public class WorkItemEntity extends PanacheEntityBase {
 
