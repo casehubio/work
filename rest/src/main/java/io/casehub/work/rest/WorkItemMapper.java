@@ -12,6 +12,10 @@ public final class WorkItemMapper {
     }
 
     public static WorkItemResponse toResponse(final io.casehub.work.api.WorkItem wi) {
+        return toResponse(wi, entityVersion(wi.id()));
+    }
+
+    public static WorkItemResponse toResponse(final io.casehub.work.api.WorkItem wi, final Long version) {
         return new WorkItemResponse(
                 wi.id(), wi.title(), wi.description(),
                 wi.types() == null ? List.of() : List.copyOf(wi.types()),
@@ -24,7 +28,7 @@ public final class WorkItemMapper {
                 wi.createdAt(), wi.updatedAt(), wi.assignedAt(), wi.startedAt(),
                 wi.completedAt(), wi.suspendedAt(),
                 wi.labels() == null ? List.of() : wi.labels().stream().map(WorkItemMapper::toLabelResponse).toList(),
-                wi.confidenceScore(), wi.callerRef(), null,
+                wi.confidenceScore(), wi.callerRef(), version,
                 wi.templateId(), wi.templateVersion(), wi.outcome(),
                 OutcomeCodecs.decodePermittedOutcomes(wi.permittedOutcomes()),
                 wi.inputDataSchema(),
@@ -33,6 +37,13 @@ public final class WorkItemMapper {
                 wi.scope(),
                 wi.candidateScores(),
                 wi.routingExperiences());
+    }
+
+    static Long entityVersion(final java.util.UUID id) {
+        if (id == null) return null;
+        final io.casehub.work.runtime.model.WorkItemEntity entity =
+                io.casehub.work.runtime.model.WorkItemEntity.findById(id);
+        return entity != null ? entity.version : null;
     }
 
     public static io.casehub.work.api.AuditEntryResponse toAuditResponse(final AuditEntry e) {
@@ -56,7 +67,7 @@ public final class WorkItemMapper {
                 wi.claimDeadline(), wi.expiresAt(), wi.followUpDate(),
                 wi.createdAt(), wi.updatedAt(), wi.assignedAt(), wi.startedAt(),
                 wi.completedAt(), wi.suspendedAt(),
-                labelResponses, auditResponses, wi.confidenceScore(), wi.callerRef(), null,
+                labelResponses, auditResponses, wi.confidenceScore(), wi.callerRef(), entityVersion(wi.id()),
                 wi.templateId(), wi.templateVersion(), wi.outcome(),
                 OutcomeCodecs.decodePermittedOutcomes(wi.permittedOutcomes()),
                 wi.inputDataSchema(),
