@@ -212,7 +212,7 @@ public class WorkItemService {
         }
         audit(saved.id(), "CREATED", request.createdBy, request.auditDetail);
         lifecycleEmitter.emit(WorkItemLifecycleEvent.of("CREATED", saved, request.createdBy, null));
-        return saved;
+        return workItemStore.get(saved.id()).orElse(saved);
     }
 
     @Transactional
