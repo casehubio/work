@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -16,26 +17,26 @@ import io.casehub.platform.api.routing.StrategyResolver;
 import io.casehub.work.api.AssignmentDecision;
 import io.casehub.work.api.MultiInstanceConfig;
 import io.casehub.work.api.MultiInstanceContext;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.spi.WorkerSelectionStrategy;
 import io.casehub.work.core.strategy.ClaimFirstStrategy;
 import io.casehub.work.core.strategy.LeastLoadedStrategy;
 import io.casehub.work.core.strategy.RoundRobinStrategy;
 import io.casehub.work.runtime.config.WorkItemsConfig;
-import io.casehub.work.runtime.model.WorkItemEntity;
 
 @ExtendWith(MockitoExtension.class)
 class RoundRobinAssignmentStrategyTest {
 
     private static MultiInstanceContext context(final String candidateUsers) {
-        final WorkItemEntity parent = new WorkItemEntity();
-        parent.candidateUsers = candidateUsers;
+        final WorkItem parent = WorkItem.builder()
+                .candidateUsers(candidateUsers)
+                .build();
         return new MultiInstanceContext(parent,
                 new MultiInstanceConfig(1, 1, null, "round-robin", null, false, null));
     }
 
-    private static List<WorkItemEntity> oneInstance() {
-        final WorkItemEntity child = new WorkItemEntity();
-        return List.of(child);
+    private static List<Object> oneInstance() {
+        return new ArrayList<>(List.of(WorkItem.builder().build()));
     }
 
     private static RoundRobinAssignmentStrategy strategyResolving(
@@ -55,7 +56,7 @@ class RoundRobinAssignmentStrategyTest {
         when(roundRobin.select(any(), anyList())).thenReturn(AssignmentDecision.assignTo("alice"));
 
         final var strategy = strategyResolving(roundRobin, "round-robin");
-        strategy.assign((List) oneInstance(), context("alice,bob"));
+        strategy.assign(oneInstance(), context("alice,bob"));
 
         verify(roundRobin).select(any(), anyList());
     }
@@ -66,7 +67,7 @@ class RoundRobinAssignmentStrategyTest {
         when(claimFirst.select(any(), anyList())).thenReturn(AssignmentDecision.assignTo("bob"));
 
         final var strategy = strategyResolving(claimFirst, "claim-first");
-        strategy.assign((List) oneInstance(), context("alice,bob"));
+        strategy.assign(oneInstance(), context("alice,bob"));
 
         verify(claimFirst).select(any(), anyList());
     }
@@ -77,7 +78,7 @@ class RoundRobinAssignmentStrategyTest {
         when(leastLoaded.select(any(), anyList())).thenReturn(AssignmentDecision.assignTo("carol"));
 
         final var strategy = strategyResolving(leastLoaded, "least-loaded");
-        strategy.assign((List) oneInstance(), context("alice,bob,carol"));
+        strategy.assign(oneInstance(), context("alice,bob,carol"));
 
         verify(leastLoaded).select(any(), anyList());
     }

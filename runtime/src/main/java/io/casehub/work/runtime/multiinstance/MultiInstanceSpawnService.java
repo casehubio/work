@@ -90,6 +90,7 @@ public class MultiInstanceSpawnService {
                 Boolean.TRUE.equals(template.allowSameAssignee),
                 null);
         strategy.assign((List) children, new MultiInstanceContext(parent, config));
+        persistStrategyChanges(children);
 
         return parent;
     }
@@ -146,6 +147,7 @@ public class MultiInstanceSpawnService {
         final InstanceAssignmentStrategy strategy = resolveStrategy(
                 config.effectiveAssignmentStrategyName());
         strategy.assign((List) children, new MultiInstanceContext(parent, config));
+        persistStrategyChanges(children);
 
         return parent;
     }
@@ -178,6 +180,13 @@ public class MultiInstanceSpawnService {
                 .scope(scope != null ? scope : template.scope)
                 .tenancyId(tenancyId)
                 .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private void persistStrategyChanges(final List<io.casehub.work.api.WorkItem> children) {
+        for (final io.casehub.work.api.WorkItem child : children) {
+            workItemStore.put(child);
+        }
     }
 
     private InstanceAssignmentStrategy resolveStrategy(final String name) {
