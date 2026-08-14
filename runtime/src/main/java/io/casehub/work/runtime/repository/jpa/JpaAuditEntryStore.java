@@ -84,7 +84,7 @@ public class JpaAuditEntryStore extends TenantAwareStore implements AuditEntrySt
         }
         if (query.type() != null && !query.type().isBlank()) {
             // Subquery to filter by WorkItem type path — tenant-scoped subquery
-            predicates.add("a.workItemId IN (SELECT w.id FROM WorkItem w JOIN w.types t WHERE t.path = :type AND w.tenancyId = :tenancyId)");
+            predicates.add("a.workItemId IN (SELECT w.id FROM WorkItemEntity w JOIN w.types t WHERE t.path = :type AND w.tenancyId = :tenancyId)");
         }
 
         if (!predicates.isEmpty()) {

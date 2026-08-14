@@ -31,7 +31,7 @@ public class ReportService extends TenantAwareStore {
         final Instant now = Instant.now();
 
         final StringBuilder jpql = new StringBuilder(
-                "SELECT w FROM WorkItem w WHERE w.tenancyId = :tenancyId")
+                "SELECT w FROM WorkItemEntity w WHERE w.tenancyId = :tenancyId")
                 .append(" AND w.expiresAt IS NOT NULL AND (")
                 .append("(w.status IN :activeStatuses AND w.expiresAt < :now)")
                 .append(" OR ")
@@ -119,7 +119,7 @@ public class ReportService extends TenantAwareStore {
 
         // avg(completedAt - assignedAt) for items completed by this actor
         final StringBuilder avgJpql = new StringBuilder(
-                "SELECT w.assignedAt, w.completedAt FROM WorkItem w"
+                "SELECT w.assignedAt, w.completedAt FROM WorkItemEntity w"
                         + " WHERE w.tenancyId = :tenancyId"
                         + " AND w.assigneeId = :actorId"
                         + " AND w.completedAt IS NOT NULL AND w.assignedAt IS NOT NULL");
@@ -159,7 +159,7 @@ public class ReportService extends TenantAwareStore {
 
         // byType — join types collection, group by type path
         final StringBuilder typeJpql = new StringBuilder(
-                "SELECT t.path, COUNT(w) FROM WorkItem w JOIN w.types t"
+                "SELECT t.path, COUNT(w) FROM WorkItemEntity w JOIN w.types t"
                         + " WHERE w.tenancyId = :tenancyId"
                         + " AND w.assigneeId = :actorId"
                         + " AND w.status = :completed");
@@ -222,7 +222,7 @@ public class ReportService extends TenantAwareStore {
 
         // overdueCount
         final StringBuilder overdueJpql = new StringBuilder(
-                "SELECT COUNT(w) FROM WorkItem w WHERE w.tenancyId = :tenancyId"
+                "SELECT COUNT(w) FROM WorkItemEntity w WHERE w.tenancyId = :tenancyId"
                         + " AND w.expiresAt IS NOT NULL"
                         + " AND w.expiresAt < :now AND w.status IN :activeStatuses");
         if (type != null && !type.isBlank()) {
@@ -246,7 +246,7 @@ public class ReportService extends TenantAwareStore {
 
         // criticalOverdueCount
         final StringBuilder critJpql = new StringBuilder(
-                "SELECT COUNT(w) FROM WorkItem w WHERE w.tenancyId = :tenancyId"
+                "SELECT COUNT(w) FROM WorkItemEntity w WHERE w.tenancyId = :tenancyId"
                         + " AND w.expiresAt IS NOT NULL"
                         + " AND w.expiresAt < :now AND w.status IN :activeStatuses"
                         + " AND w.priority = :critical");
@@ -266,7 +266,7 @@ public class ReportService extends TenantAwareStore {
 
         // pending items: count, oldest, avg age
         final StringBuilder pendingJpql = new StringBuilder(
-                "SELECT w.createdAt FROM WorkItem w WHERE w.tenancyId = :tenancyId"
+                "SELECT w.createdAt FROM WorkItemEntity w WHERE w.tenancyId = :tenancyId"
                         + " AND w.status = :pending");
         if (type != null && !type.isBlank()) {
             pendingJpql.append(" AND EXISTS (SELECT t FROM w.types t WHERE t.path = :type)");
@@ -310,7 +310,7 @@ public class ReportService extends TenantAwareStore {
         }
         if (type != null && !type.isBlank()) {
             jpql.append(" AND a.workItemId IN"
-                    + " (SELECT w.id FROM WorkItem w JOIN w.types t WHERE w.tenancyId = :tenancyId AND t.path = :type)");
+                    + " (SELECT w.id FROM WorkItemEntity w JOIN w.types t WHERE w.tenancyId = :tenancyId AND t.path = :type)");
         }
 
         final TypedQuery<Long> q = em.createQuery(jpql.toString(), Long.class);

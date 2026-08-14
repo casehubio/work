@@ -146,7 +146,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
             params.put("priority", query.priority());
         }
         if (query.type() != null) {
-            jpql.append(" AND id IN (SELECT w.id FROM WorkItem w JOIN w.types t WHERE t.path = :type OR t.path LIKE :typePrefix)");
+            jpql.append(" AND id IN (SELECT w.id FROM WorkItemEntity w JOIN w.types t WHERE t.path = :type OR t.path LIKE :typePrefix)");
             params.put("type", query.type());
             params.put("typePrefix", query.type() + "/%");
         }
@@ -191,7 +191,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                 return WorkItemSummaryBuilder.build(scan(query), now);
             }
             final JpqlAndParams jp = buildScanJpql(query);
-            return SummaryQueryBuilder.build(em, "FROM WorkItem wi WHERE " + jp.jpql(), jp.params(), false, now);
+            return SummaryQueryBuilder.build(em, "FROM WorkItemEntity wi WHERE " + jp.jpql(), jp.params(), false, now);
         });
     }
 
@@ -295,18 +295,18 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
         if (pattern.endsWith("/**")) {
             final String prefix = pattern.substring(0, pattern.length() - 3) + "/";
             return WorkItemEntity.count(
-                    "SELECT COUNT(DISTINCT wi) FROM WorkItem wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path LIKE ?2",
+                    "SELECT COUNT(DISTINCT wi) FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path LIKE ?2",
                     tenancyId, prefix + "%");
         }
         if (pattern.endsWith("/*")) {
             final String prefix = pattern.substring(0, pattern.length() - 2) + "/";
             return WorkItemEntity.count(
-                    "SELECT COUNT(DISTINCT wi) FROM WorkItem wi JOIN wi.labels l " +
+                    "SELECT COUNT(DISTINCT wi) FROM WorkItemEntity wi JOIN wi.labels l " +
                             "WHERE wi.tenancyId = ?1 AND l.path LIKE ?2 AND l.path NOT LIKE ?3",
                     tenancyId, prefix + "%", prefix + "%/%");
         }
         return WorkItemEntity.count(
-                "SELECT COUNT(DISTINCT wi) FROM WorkItem wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path = ?2",
+                "SELECT COUNT(DISTINCT wi) FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path = ?2",
                 tenancyId, pattern);
     }
 
@@ -315,18 +315,18 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
         if (pattern.endsWith("/**")) {
             final String prefix = pattern.substring(0, pattern.length() - 3) + "/";
             return WorkItemEntity.<WorkItemEntity> find(
-                    "SELECT DISTINCT wi FROM WorkItem wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path LIKE ?2",
+                    "SELECT DISTINCT wi FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path LIKE ?2",
                     tenancyId, prefix + "%").list();
         }
         if (pattern.endsWith("/*")) {
             final String prefix = pattern.substring(0, pattern.length() - 2) + "/";
             return WorkItemEntity.<WorkItemEntity> find(
-                    "SELECT DISTINCT wi FROM WorkItem wi JOIN wi.labels l " +
+                    "SELECT DISTINCT wi FROM WorkItemEntity wi JOIN wi.labels l " +
                             "WHERE wi.tenancyId = ?1 AND l.path LIKE ?2 AND l.path NOT LIKE ?3",
                     tenancyId, prefix + "%", prefix + "%/%").list();
         }
         return WorkItemEntity.<WorkItemEntity> find(
-                "SELECT DISTINCT wi FROM WorkItem wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path = ?2",
+                "SELECT DISTINCT wi FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path = ?2",
                 tenancyId, pattern).list();
     }
 

@@ -85,7 +85,7 @@ public class WorkItemViewQuery implements SubjectViewQuery<WorkItemEntity> {
         params.put("tenancyId", view.tenancyId());
 
         final String labelJpql = buildLabelJpql(view.labelPattern(), params);
-        final String baseJpql = "FROM WorkItem wi JOIN wi.labels l WHERE wi.tenancyId = :tenancyId AND " + labelJpql;
+        final String baseJpql = "FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = :tenancyId AND " + labelJpql;
         return SummaryQueryBuilder.build(em, baseJpql, params, true, now);
     }
 

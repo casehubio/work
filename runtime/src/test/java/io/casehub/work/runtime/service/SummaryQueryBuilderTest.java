@@ -40,7 +40,7 @@ class SummaryQueryBuilderTest {
         final Map<String, Object> params = new HashMap<>();
         params.put("tid", tenancyId);
         final WorkItemSummary summary = SummaryQueryBuilder.build(
-                em, "FROM WorkItem wi WHERE wi.tenancyId = :tid", params, false, now);
+                em, "FROM WorkItemEntity wi WHERE wi.tenancyId = :tid", params, false, now);
 
         assertThat(summary.total()).isEqualTo(4);
         assertThat(summary.byStatus()).containsEntry("PENDING", 2L);
@@ -60,7 +60,7 @@ class SummaryQueryBuilderTest {
         final Map<String, Object> params = new HashMap<>();
         params.put("tid", "nonexistent-tenant-" + UUID.randomUUID());
         final WorkItemSummary summary = SummaryQueryBuilder.build(
-                em, "FROM WorkItem wi WHERE wi.tenancyId = :tid", params, false, Instant.now());
+                em, "FROM WorkItemEntity wi WHERE wi.tenancyId = :tid", params, false, Instant.now());
 
         assertThat(summary.total()).isEqualTo(0);
         assertThat(summary.byStatus()).isEmpty();
@@ -82,7 +82,7 @@ class SummaryQueryBuilderTest {
         final Map<String, Object> params = new HashMap<>();
         params.put("tid", tenancyId);
         final WorkItemSummary summary = SummaryQueryBuilder.build(
-                em, "FROM WorkItem wi WHERE wi.tenancyId = :tid", params, false, now);
+                em, "FROM WorkItemEntity wi WHERE wi.tenancyId = :tid", params, false, now);
 
         assertThat(summary.claimDeadlineBreached()).isEqualTo(1);
     }
@@ -105,7 +105,7 @@ class SummaryQueryBuilderTest {
         final Map<String, Object> params = new HashMap<>();
         params.put("tid", tenancyId);
         final WorkItemSummary summary = SummaryQueryBuilder.build(
-                em, "FROM WorkItem wi WHERE wi.tenancyId = :tid", params, false, Instant.now());
+                em, "FROM WorkItemEntity wi WHERE wi.tenancyId = :tid", params, false, Instant.now());
 
         assertThat(summary.oldestCreatedAt()).isEqualTo(recent);
     }
@@ -124,7 +124,7 @@ class SummaryQueryBuilderTest {
         params.put("tid", tenancyId);
 
         final WorkItemSummary withDistinct = SummaryQueryBuilder.build(
-                em, "FROM WorkItem wi JOIN wi.labels l WHERE wi.tenancyId = :tid",
+                em, "FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = :tid",
                 params, true, Instant.now());
 
         assertThat(withDistinct.total()).isEqualTo(1);
