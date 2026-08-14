@@ -21,21 +21,19 @@ import io.casehub.work.core.strategy.ClaimFirstStrategy;
 import io.casehub.work.core.strategy.LeastLoadedStrategy;
 import io.casehub.work.core.strategy.RoundRobinStrategy;
 import io.casehub.work.runtime.config.WorkItemsConfig;
-import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.api.WorkItem;
 
 @ExtendWith(MockitoExtension.class)
 class RoundRobinAssignmentStrategyTest {
 
     private static MultiInstanceContext context(final String candidateUsers) {
-        final WorkItemEntity parent = new WorkItemEntity();
-        parent.candidateUsers = candidateUsers;
-        return new MultiInstanceContext(parent,
+        return new MultiInstanceContext(
+                WorkItem.builder().candidateUsers(candidateUsers).build(),
                 new MultiInstanceConfig(1, 1, null, "round-robin", null, false, null));
     }
 
-    private static List<WorkItemEntity> oneInstance() {
-        final WorkItemEntity child = new WorkItemEntity();
-        return List.of(child);
+    private static java.util.ArrayList<Object> oneInstance() {
+        return new java.util.ArrayList<>(List.of(WorkItem.builder().build()));
     }
 
     private static RoundRobinAssignmentStrategy strategyResolving(

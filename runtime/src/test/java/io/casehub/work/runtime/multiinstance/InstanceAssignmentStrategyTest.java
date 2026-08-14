@@ -3,9 +3,10 @@ package io.casehub.work.runtime.multiinstance;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import io.casehub.work.runtime.model.WorkItemEntity;
+import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.api.MultiInstanceConfig;
@@ -13,16 +14,15 @@ import io.casehub.work.api.MultiInstanceContext;
 
 class InstanceAssignmentStrategyTest {
 
-    private static WorkItemEntity item() {
-        WorkItemEntity w = new WorkItemEntity();
-        return w;
+    private static WorkItem item() {
+        return WorkItem.builder().build();
     }
 
-    private static WorkItemEntity parent(String candidateGroups, String candidateUsers) {
-        WorkItemEntity p = new WorkItemEntity();
-        p.candidateGroups = candidateGroups;
-        p.candidateUsers = candidateUsers;
-        return p;
+    private static WorkItem parent(String candidateGroups, String candidateUsers) {
+        return WorkItem.builder()
+                .candidateGroups(candidateGroups)
+                .candidateUsers(candidateUsers)
+                .build();
     }
 
     // --- PoolAssignmentStrategy ---
@@ -31,22 +31,22 @@ class InstanceAssignmentStrategyTest {
     void pool_copiesCandidateGroupsToAllInstances() {
         var strategy = new PoolAssignmentStrategy();
         var parent = parent("reviewers,approvers", null);
-        var instances = List.of(item(), item(), item());
+        var instances = new ArrayList<>(List.of(item(), item(), item()));
         strategy.assign((List) instances, new MultiInstanceContext(parent,
                 new MultiInstanceConfig(3, 2, null, "pool", null, false, null)));
 
-        assertThat(instances).allMatch(i -> "reviewers,approvers".equals(i.candidateGroups));
+        assertThat(instances).allMatch(i -> "reviewers,approvers".equals(((WorkItem) i).candidateGroups()));
     }
 
     @Test
     void pool_copiesCandidateUsersToAllInstances() {
         var strategy = new PoolAssignmentStrategy();
         var parent = parent(null, "alice,bob,carol");
-        var instances = List.of(item(), item());
+        var instances = new ArrayList<>(List.of(item(), item()));
         strategy.assign((List) instances, new MultiInstanceContext(parent,
                 new MultiInstanceConfig(2, 1, null, "pool", null, false, null)));
 
-        assertThat(instances).allMatch(i -> "alice,bob,carol".equals(i.candidateUsers));
+        assertThat(instances).allMatch(i -> "alice,bob,carol".equals(((WorkItem) i).candidateUsers()));
     }
 
     // --- ExplicitListAssignmentStrategy ---
@@ -54,22 +54,22 @@ class InstanceAssignmentStrategyTest {
     @Test
     void explicit_assignsEachInstanceToCorrespondingAssignee() {
         var strategy = new ExplicitListAssignmentStrategy();
-        var instances = List.of(item(), item(), item());
-        strategy.assign((List) instances, new MultiInstanceContext(new WorkItemEntity(),
+        var instances = new ArrayList<>(List.of(item(), item(), item()));
+        strategy.assign((List) instances, new MultiInstanceContext(item(),
                 new MultiInstanceConfig(3, 2, null, "explicit", null, false,
                         List.of("alice", "bob", "carol"))));
 
-        assertThat(instances.get(0).assigneeId).isEqualTo("alice");
-        assertThat(instances.get(1).assigneeId).isEqualTo("bob");
-        assertThat(instances.get(2).assigneeId).isEqualTo("carol");
+        assertThat(((WorkItem) instances.get(0)).assigneeId()).isEqualTo("alice");
+        assertThat(((WorkItem) instances.get(1)).assigneeId()).isEqualTo("bob");
+        assertThat(((WorkItem) instances.get(2)).assigneeId()).isEqualTo("carol");
     }
 
     @Test
     void explicit_throwsWhenListSizeMismatch() {
         var strategy = new ExplicitListAssignmentStrategy();
-        var instances = List.of(item(), item());
+        var instances = new ArrayList<>(List.of(item(), item()));
         assertThatThrownBy(() -> strategy.assign((List) instances,
-                new MultiInstanceContext(new WorkItemEntity(),
+                new MultiInstanceContext(item(),
                         new MultiInstanceConfig(2, 1, null, "explicit", null, false,
                                 List.of("alice")))))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -86,14 +86,13 @@ class InstanceAssignmentStrategyTest {
         var composite = new CompositeInstanceAssignmentStrategy(List.of(pool, explicit));
 
         var parent = parent("reviewers", null);
-        var instances = List.of(item(), item());
+        var instances = new ArrayList<>(List.of(item(), item()));
         composite.assign((List) instances, new MultiInstanceContext(parent,
                 new MultiInstanceConfig(2, 1, null, "composite", null, false,
                         List.of("alice", "bob"))));
 
-        // Pool ran first: candidateGroups set; Explicit ran second: assigneeId set
-        assertThat(instances).allMatch(i -> "reviewers".equals(i.candidateGroups));
-        assertThat(instances.get(0).assigneeId).isEqualTo("alice");
-        assertThat(instances.get(1).assigneeId).isEqualTo("bob");
+        assertThat(instances).allMatch(i -> "reviewers".equals(((WorkItem) i).candidateGroups()));
+        assertThat(((WorkItem) instances.get(0)).assigneeId()).isEqualTo("alice");
+        assertThat(((WorkItem) instances.get(1)).assigneeId()).isEqualTo("bob");
     }
 }
