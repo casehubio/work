@@ -1,34 +1,25 @@
-# HANDOFF — 2026-08-14
+# HANDOFF — 2026-08-16
 
 ## Last Session
 
-Fixed CI — 5 `MongoWorkItemStoreTest` failures in the `persistence-mongodb` module. Two commits landed on main via quick-fix:
+Housekeeping session. Fixed build failure from upstream engine change — `SignalTarget` added to `BindingTarget` sealed hierarchy (engine `794bad13`) broke the switch in `PlanItemCompletionApplier.applyOutputMapping()`. Fix committed as `31f0d564`. Removed stray engine workspace directory that had been committed inside the work repo due to a misdirected `wksp` symlink — engine session fixed the symlink, we cleaned up the artifacts. Re-scaffolded `.plan` for #333/#337/#340 queue after the old one was lost with the stray directory removal.
 
-**Commit 1** (`b065fbe`) — Closes #354:
-- `findById(wi.id())` → `findById(wi.id().toString())` — 3 OCC tests were passing `UUID` to a `String @BsonId` field, triggering `CodecConfigurationException: uuidRepresentation not specified`
-- `store.put(wi)` return value captured as `saved` — 2 roundtrip tests were discarding the put result and calling `store.get(wi.id())` with null id
+## Immediate Next Step
 
-**Commit 2** (`fd4de76`) — Refs #354:
-- Added `Long version` to `WorkItem` record — the OCC test (`put_throwsOptimisticLockException_onStaleVersion`) revealed that `MongoWorkItemStore.put()` always read the current version from the database instead of comparing against the caller's expected version
-- `MongoWorkItemStore.put()` now uses `stored.version()` for the OCC filter when present (backwards-compatible null fallback)
-- Mapped version through `WorkItemEntityMapper.toDomain()`, `MongoWorkItemDocument.toDomain()`, `WorkItemContextBuilder`
-- Updated `WorkItemEntityMapperTest.roundTripPreservesAllFields` to account for entity default `version=0L`
+Run `/work` to start branch `issue-333-progress-api-docs-spi-fix`. First issue in queue is #333 (docs: add progress REST API to api-reference.md) — S/Low, read the progress REST resources and write the api-reference.md section.
 
-CI is GREEN on `fd4de76`.
+## Cross-Module
 
-Also merged branch `issue-510-case-level-sla-timer` (docs-only: design spec and implementation plan for engine issue #510).
-
-## Peer Repo CI Status
-
-| Repo | CI | Issue |
-|------|-----|-------|
-| work | GREEN | — |
+**Enabled** (we delivered, downstream unblocked):
+- `engine-adapter` — SignalTarget compat fix landed (`31f0d564`), engine can close `issue-510-case-level-sla-timer` (engine#510)
 
 ## References
 
 | Artifact | Path |
 |----------|------|
-| Issue | https://github.com/casehubio/work/issues/354 |
-| MongoWorkItemStore | `persistence-mongodb/src/main/java/io/casehub/work/mongodb/MongoWorkItemStore.java` |
-| MongoWorkItemStoreTest | `persistence-mongodb/src/test/java/io/casehub/work/mongodb/MongoWorkItemStoreTest.java` |
-| WorkItem record | `api/src/main/java/io/casehub/work/api/WorkItem.java` |
+| .plan | `.plan` (workspace root) |
+| Progress REST resource | `progress-rest/src/main/java/` |
+| API reference | `docs/api-reference.md` |
+| Issue #333 | https://github.com/casehubio/work/issues/333 |
+| Issue #337 | https://github.com/casehubio/work/issues/337 |
+| Issue #340 | https://github.com/casehubio/work/issues/340 |
