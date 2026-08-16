@@ -25,6 +25,7 @@ import io.casehub.api.model.CaseDefinition;
 import io.casehub.api.model.ConflictResolver;
 import io.casehub.api.model.ExtensionTarget;
 import io.casehub.api.model.HumanTaskTarget;
+import io.casehub.api.model.SignalTarget;
 import io.casehub.api.model.SubCaseTarget;
 import io.casehub.api.model.TaskStatus;
 import io.casehub.api.model.evaluator.JQExpressionEvaluator;
@@ -186,6 +187,7 @@ public class PlanItemCompletionApplier {
                     case CapabilityTarget ignored -> null;
                     case SubCaseTarget ignored -> null;
                     case ExtensionTarget ignored -> null;
+                    case SignalTarget ignored -> null;
                 };
         if (ht == null) {return;}
         if (ht.outputMapping() == null) {return;}
