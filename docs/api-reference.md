@@ -1137,6 +1137,26 @@ WorkItemSummary fields: `total` (long), `byStatus` (map\<string, long\>), `byPri
 
 ---
 
+### GET /queues/health
+
+Global queue health KPI metrics aggregated across all tenant queues. Each queue's cached summary is summed to produce totals.
+
+**Response:** `200 OK`
+**Body:** `QueueHealthMetric[]`
+
+| Field | Type | Description |
+|---|---|---|
+| `key` | string | Metric identifier (`total`, `pending`, `active`, `overdue`, `breached`) |
+| `value` | long | Aggregate count |
+| `label` | string | Display label |
+| `status` | string | `neutral`, `warning`, or `critical` |
+
+**Status thresholds:** `overdue > 0` or `breached > 0` → `critical`. `pending > 0` → `warning`. Otherwise `neutral`.
+
+**Deduplication note:** A WorkItem in multiple queues (overlapping label patterns) is counted in each queue's summary. Totals reflect queue load, not unique WorkItem count.
+
+---
+
 ### POST /queues
 
 Create a new queue view.

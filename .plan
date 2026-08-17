@@ -2,7 +2,7 @@
 
 ## State
 branch: issue-357-global-queue-health-enriched-list
-state: scaffolded
+state: closing:promoted
 project-sha: b6ae8eb1211141acf73aa8a19981a0b71fe04296
 date: 2026-08-17
 issue-repo: casehubio/work
@@ -13,3 +13,6 @@ flyway-next-v: none
 
 ## Queue
 - [ ] #357 — Issue #357 ← active
+  - [x] Batch 1: Enriched list and health
+    - [x] Task 1: Enrich GET /queues with summary
+    - [x] Task 2: Add GET /queues/health endpoint

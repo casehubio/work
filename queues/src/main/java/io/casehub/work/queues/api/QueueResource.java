@@ -73,6 +73,40 @@ public class QueueResource {
                         .toList();
     }
 
+    @GET
+    @Path("/health")
+    @Transactional
+    public List<QueueHealthMetric> health() {
+        final Instant now = Instant.now();
+        final var queues = viewStore.findByTenancy(currentPrincipal.tenancyId());
+
+        long total = 0;
+        long pending = 0;
+        long active = 0;
+        long overdue = 0;
+        long breached = 0;
+
+        for (final var queue : queues) {
+            final var summary = membershipService.summarize(queue, now);
+            total += summary.total();
+            pending += summary.byStatus().getOrDefault("PENDING", 0L);
+            active += summary.byStatus().getOrDefault("IN_PROGRESS", 0L)
+                    + summary.byStatus().getOrDefault("ASSIGNED", 0L);
+            overdue += summary.overdue();
+            breached += summary.claimDeadlineBreached();
+        }
+
+        return List.of(
+                new QueueHealthMetric("total", total, "Total", "neutral"),
+                new QueueHealthMetric("pending", pending, "Pending",
+                        pending > 0 ? "warning" : "neutral"),
+                new QueueHealthMetric("active", active, "Active", "neutral"),
+                new QueueHealthMetric("overdue", overdue, "Overdue",
+                        overdue > 0 ? "critical" : "neutral"),
+                new QueueHealthMetric("breached", breached, "Claim SLA",
+                        breached > 0 ? "critical" : "neutral"));
+    }
+
     @POST
     @Transactional
     public Response create(final CreateQueueRequest req) {
