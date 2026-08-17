@@ -1,25 +1,20 @@
-# HANDOFF — 2026-08-16
+# HANDOFF — 2026-08-17
 
 ## Last Session
 
-Housekeeping session. Fixed build failure from upstream engine change — `SignalTarget` added to `BindingTarget` sealed hierarchy (engine `794bad13`) broke the switch in `PlanItemCompletionApplier.applyOutputMapping()`. Fix committed as `31f0d564`. Removed stray engine workspace directory that had been committed inside the work repo due to a misdirected `wksp` symlink — engine session fixed the symlink, we cleaned up the artifacts. Re-scaffolded `.plan` for #333/#337/#340 queue after the old one was lost with the stray directory removal.
+Cleanup session. Discovered that all three queued issues (#333, #337, #340) were already completed and merged from the prior branch iteration — the `.plan` re-scaffolded last session was stale. Verified each issue against the codebase:
 
-## Immediate Next Step
+- **#333** — Progress REST API docs already in `docs/api-reference.md` (lines 1696–2015, 18 endpoints)
+- **#337** — SPI extraction complete: `WorkItem` record, `WorkItemStore`/`CrossTenantWorkItemStore` interfaces, `WorkItemQuery`, `WorkItemLabel`, `LabelPatternMatcher` all in `api/`
+- **#340** — `HumanTaskScheduleHandler` already uses `event.resolvedScope()` with fallback in both inline (line 135) and template (line 243) modes
 
-Run `/work` to start branch `issue-333-progress-api-docs-spi-fix`. First issue in queue is #333 (docs: add progress REST API to api-reference.md) — S/Low, read the progress REST resources and write the api-reference.md section.
+Removed stale `.plan`, `JOURNAL.md`, `.execute-progress` scaffold files. Pushed all pending commits to origin/main (8 commits covering SignalTarget fix, workspace cleanup, and scaffold removal).
 
 ## Cross-Module
 
-**Enabled** (we delivered, downstream unblocked):
-- `engine-adapter` — SignalTarget compat fix landed (`31f0d564`), engine can close `issue-510-case-level-sla-timer` (engine#510)
+**Enabled** (delivered in prior sessions, downstream unblocked):
+- `engine-adapter` — SignalTarget compat fix (`31f0d564`), engine can close `issue-510-case-level-sla-timer` (engine#510)
 
-## References
+## What's Next
 
-| Artifact | Path |
-|----------|------|
-| .plan | `.plan` (workspace root) |
-| Progress REST resource | `progress-rest/src/main/java/` |
-| API reference | `docs/api-reference.md` |
-| Issue #333 | https://github.com/casehubio/work/issues/333 |
-| Issue #337 | https://github.com/casehubio/work/issues/337 |
-| Issue #340 | https://github.com/casehubio/work/issues/340 |
+Pick new work from the open issue backlog. No queued issues remain from the prior plan.
