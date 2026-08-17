@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.Map;
 
 import io.casehub.work.api.WorkItem;
+<<<<<<< HEAD
+=======
+import io.casehub.work.api.WorkItemLifecycleEvent;
+>>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -57,7 +61,7 @@ public class QueueMembershipService {
     @io.quarkus.cache.CacheInvalidateAll(cacheName = "queue-summary")
     void onWorkItemLifecycle(
             @jakarta.enterprise.event.Observes(during = jakarta.enterprise.event.TransactionPhase.AFTER_SUCCESS)
-            io.casehub.work.runtime.event.WorkItemLifecycleEvent event) {
+            WorkItemLifecycleEvent event) {
     }
 
     public int countMembers(final SubjectViewSpec queue) {

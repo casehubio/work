@@ -12,8 +12,8 @@ target/
 /io/
 /application.properties
 /db/
-.worktrees/
 wksp
 docs/superpowers/specs/
 package-lock.json
 proj
+.mvn/slot-settings.xml

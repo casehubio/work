@@ -19,7 +19,11 @@ import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.runtime.service.LedgerMerkleTree;
 import io.casehub.work.ledger.model.WorkItemLedgerEntry;
 import io.casehub.work.ledger.repository.WorkItemLedgerEntryRepository;
+<<<<<<< HEAD
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+=======
+import io.casehub.work.api.WorkItemLifecycleEvent;
+>>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemRelation;

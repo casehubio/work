@@ -18,7 +18,11 @@ import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.event.SlaBreachEvent;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
+<<<<<<< HEAD
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+=======
+import io.casehub.work.api.WorkItemLifecycleEvent;
+>>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import jakarta.enterprise.context.ApplicationScoped;

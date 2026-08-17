@@ -1,5 +1,7 @@
 package io.casehub.work.api;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
 import io.casehub.work.api.spi.SlaBreachPolicy;
 
@@ -18,6 +20,14 @@ import java.util.Set;
  *     .thenOnBreach(new Fail("no-escalation-target-configured"))
  * </pre>
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = BreachDecision.Fail.class, name = "fail"),
+        @JsonSubTypes.Type(value = BreachDecision.EscalateTo.class, name = "escalate-to"),
+        @JsonSubTypes.Type(value = BreachDecision.Extend.class, name = "extend"),
+        @JsonSubTypes.Type(value = BreachDecision.Exhausted.class, name = "exhausted"),
+        @JsonSubTypes.Type(value = BreachDecision.Chained.class, name = "chained")
+})
 public sealed interface BreachDecision
         permits BreachDecision.Fail, BreachDecision.EscalateTo,
                 BreachDecision.Extend, BreachDecision.Exhausted, BreachDecision.Chained {

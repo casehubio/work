@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -19,7 +20,7 @@ import jakarta.ws.rs.core.Response;
  * <p>
  * The spec documents:
  * <ul>
- * <li>{@link io.casehub.work.runtime.event.WorkItemLifecycleEvent} —
+ * <li>{@link WorkItemLifecycleEvent} —
  * fired on every WorkItem state transition</li>
  * <li>{@code WorkItemQueueEvent} — fired on queue membership changes
  * (requires {@code quarkus-work-queues})</li>

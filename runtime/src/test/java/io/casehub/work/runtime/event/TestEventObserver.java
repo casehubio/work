@@ -3,6 +3,7 @@ package io.casehub.work.runtime.event;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 

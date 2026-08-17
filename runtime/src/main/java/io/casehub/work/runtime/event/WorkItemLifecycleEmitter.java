@@ -1,5 +1,6 @@
 package io.casehub.work.runtime.event;
 
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItemStatusEvent;
 import io.casehub.work.api.spi.WorkItemObserver;
 import jakarta.enterprise.context.ApplicationScoped;

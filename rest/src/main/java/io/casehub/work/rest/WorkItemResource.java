@@ -4,7 +4,7 @@ import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.event.WorkItemEventBroadcaster;
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.runtime.model.WorkItemLink;

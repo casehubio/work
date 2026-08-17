@@ -9,6 +9,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import io.casehub.work.api.WorkItem;
+<<<<<<< HEAD
+=======
+import io.casehub.work.api.WorkItemLifecycleEvent;
+>>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +39,7 @@ class WorkItemEventBroadcasterTest {
     @Test
     void broadcast_deliversEvent_toSubscriber() throws InterruptedException {
         final List<WorkItemLifecycleEvent> received = new CopyOnWriteArrayList<>();
-        final CountDownLatch latch = new CountDownLatch(1);
+        final CountDownLatch               latch    = new CountDownLatch(1);
 
         broadcaster.stream(null, null, "test-tenant")
                 .subscribe().with(e -> {

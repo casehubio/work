@@ -98,6 +98,14 @@
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-expression</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-callback-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-callback</artifactId>
+    </dependency>
 
     <!-- Testing -->
     <!-- Provides MockPreferenceProvider @DefaultBean so @QuarkusTest can satisfy PreferenceProvider injection -->

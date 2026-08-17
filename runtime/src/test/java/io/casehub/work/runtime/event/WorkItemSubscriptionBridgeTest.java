@@ -3,6 +3,7 @@ package io.casehub.work.runtime.event;
 import io.casehub.platform.api.datasource.DataSource;
 import io.casehub.platform.api.datasource.DataSourceRegistry;
 import io.casehub.platform.api.path.Path;
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.inject.Instance;

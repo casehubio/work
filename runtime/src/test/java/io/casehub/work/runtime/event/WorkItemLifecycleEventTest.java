@@ -1,5 +1,6 @@
 package io.casehub.work.runtime.event;
 
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.WorkItem;
 import org.junit.jupiter.api.Test;

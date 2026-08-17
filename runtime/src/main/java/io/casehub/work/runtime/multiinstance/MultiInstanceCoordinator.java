@@ -2,7 +2,11 @@ package io.casehub.work.runtime.multiinstance;
 
 import io.casehub.work.api.WorkItemGroupLifecycleEvent;
 import io.casehub.work.api.WorkItemStatus;
+<<<<<<< HEAD
 import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+=======
+import io.casehub.work.api.WorkItemLifecycleEvent;
+>>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import io.casehub.work.runtime.service.TenantContextRunner;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;

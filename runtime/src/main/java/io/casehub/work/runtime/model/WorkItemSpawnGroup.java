@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Enumerated;
@@ -46,7 +47,7 @@ import io.casehub.work.api.GroupStatus;
  * Non-multi-instance groups (where {@link #requiredCount} is {@code null}) carry no
  * completion semantics — the caller (CaseHub, application) decides what completing
  * child WorkItems means by observing
- * {@link io.casehub.work.runtime.event.WorkItemLifecycleEvent}s directly.
+ * {@link WorkItemLifecycleEvent}s directly.
  */
 @Entity
 @Table(name = "work_item_spawn_group", uniqueConstraints = {

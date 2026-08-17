@@ -10,7 +10,7 @@ import io.casehub.work.api.WorkItemLabelRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.queues.model.WorkItemQueueState;
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.runtime.repository.AuditEntryStore;

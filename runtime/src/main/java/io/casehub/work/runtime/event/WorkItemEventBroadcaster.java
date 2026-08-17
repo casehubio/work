@@ -2,6 +2,7 @@ package io.casehub.work.runtime.event;
 
 import java.util.UUID;
 
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.smallrye.mutiny.Multi;
 
 /**

@@ -15,7 +15,7 @@ import io.casehub.work.api.WorkEventType;
 import io.casehub.work.queues.event.QueueEventType;
 import io.casehub.work.queues.event.WorkItemQueueEvent;
 import io.casehub.work.runtime.event.WorkItemContextBuilder;
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.filter.LabelRuleEngine;
 import io.casehub.work.api.spi.WorkItemStore;
 

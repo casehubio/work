@@ -34,6 +34,7 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <module>postgres-broadcaster</module>
     <module>queues-postgres-broadcaster</module>
     <module>rest</module>
+    <module>graphql</module>
     <module>engine-adapter</module>
     <module>qhorus</module>
     <module>progress-api</module>
@@ -145,6 +146,16 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-view-inmem</artifactId>
+        <version>0.2-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-platform-callback-api</artifactId>
+        <version>0.2-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-platform-callback</artifactId>
         <version>0.2-SNAPSHOT</version>
       </dependency>
     </dependencies>

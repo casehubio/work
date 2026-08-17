@@ -5,6 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.UUID;
 
 import io.casehub.work.api.WorkItem;
+<<<<<<< HEAD
+=======
+import io.casehub.work.api.WorkItemLifecycleEvent;
+>>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.api.WorkItemStatus;

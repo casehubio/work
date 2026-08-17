@@ -7,6 +7,7 @@ import io.casehub.platform.api.subscription.EventTypeDescriptor;
 import io.casehub.platform.api.subscription.EventTypeRegistry;
 import io.casehub.work.api.WorkCloudEventTypes;
 import io.casehub.work.api.WorkEventType;
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
