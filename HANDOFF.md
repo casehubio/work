@@ -2,13 +2,15 @@
 
 ## Last Session
 
-Cleanup session. Discovered that all three queued issues (#333, #337, #340) were already completed and merged from the prior branch iteration — the `.plan` re-scaffolded last session was stale. Verified each issue against the codebase:
+Implemented #357 — two new queue endpoints for the scaffold console's Queues tab:
 
-- **#333** — Progress REST API docs already in `docs/api-reference.md` (lines 1696–2015, 18 endpoints)
-- **#337** — SPI extraction complete: `WorkItem` record, `WorkItemStore`/`CrossTenantWorkItemStore` interfaces, `WorkItemQuery`, `WorkItemLabel`, `LabelPatternMatcher` all in `api/`
-- **#340** — `HumanTaskScheduleHandler` already uses `event.resolvedScope()` with fallback in both inline (line 135) and template (line 243) modes
+1. **Enriched `GET /queues`** — each queue entry now includes a `summary` field with the full `WorkItemSummary` (total, byStatus, byPriority, overdue, claimDeadlineBreached, oldestCreatedAt). Reuses cached `QueueMembershipService.summarize()`.
 
-Removed stale `.plan`, `JOURNAL.md`, `.execute-progress` scaffold files. Pushed all pending commits to origin/main (8 commits covering SignalTarget fix, workspace cleanup, and scaffold removal).
+2. **`GET /queues/health`** — aggregates all per-queue summaries into a KPI metrics array (total, pending, active, overdue, claim SLA breaches) with status thresholds (critical/warning/neutral). Returns the `blocks-kpi-metric-row` format the console expects.
+
+Design decision: nest full `WorkItemSummary` rather than flatten to explicit fields — UI already consumes this shape from `/queues/{id}/summary`, and flattening would discard data the console will need soon.
+
+Also cleaned up stale `.plan` from prior session — #333/#337/#340 were already closed and merged.
 
 ## Cross-Module
 
@@ -17,4 +19,4 @@ Removed stale `.plan`, `JOURNAL.md`, `.execute-progress` scaffold files. Pushed 
 
 ## What's Next
 
-Pick new work from the open issue backlog. No queued issues remain from the prior plan.
+Pick new work from the open issue backlog. No queued issues remain.
