@@ -60,10 +60,16 @@ public class QueueResource {
     @GET
     @Transactional
     public List<Map<String, Object>> list() {
+        final Instant now = Instant.now();
         return viewStore.findByTenancy(currentPrincipal.tenancyId()).stream()
-                        .map(q -> Map.<String, Object>of(
-                                "id", q.id(), "name", q.name(), "labelPattern", q.labelPattern(),
-                                "scope", q.scope() != null ? q.scope().value() : "/"))
+                        .map(q -> {
+                            final var summary = membershipService.summarize(q, now);
+                            return Map.<String, Object>of(
+                                    "id", q.id(), "name", q.name(),
+                                    "labelPattern", q.labelPattern(),
+                                    "scope", q.scope() != null ? q.scope().value() : "/",
+                                    "summary", summary);
+                        })
                         .toList();
     }
 

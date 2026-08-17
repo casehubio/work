@@ -1120,10 +1120,20 @@ Ad-hoc expression evaluation without persisting a rule.
 
 ### GET /queues
 
-List all queue views.
+List all queue views with per-queue summary statistics.
 
 **Response:** `200 OK`
-**Body:** array — each: `id` (UUID), `name` (string), `labelPattern` (string), `scope` (string)
+**Body:** array — each:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID | |
+| `name` | string | |
+| `labelPattern` | string | |
+| `scope` | string | |
+| `summary` | WorkItemSummary | Per-queue aggregate (see [WorkItemSummary](#workitemsummary-1)) |
+
+WorkItemSummary fields: `total` (long), `byStatus` (map\<string, long\>), `byPriority` (map\<string, long\>), `overdue` (long), `claimDeadlineBreached` (long), `oldestCreatedAt` (instant, nullable). Same shape as `GET /queues/{id}/summary`.
 
 ---
 

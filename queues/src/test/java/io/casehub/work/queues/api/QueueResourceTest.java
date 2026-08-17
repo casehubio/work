@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
@@ -62,6 +63,33 @@ class QueueResourceTest {
     @Test
     void getQueueView_unknownId_returns404() {
         given().get("/queues/00000000-0000-0000-0000-000000000000").then().statusCode(404);
+    }
+
+    @Test
+    void listQueues_includesSummaryPerQueue() {
+        given().contentType(ContentType.JSON)
+               .body("""
+                     {"name":"Enriched list rule","scope":"ORG","conditionLanguage":"jexl",
+                      "conditionExpression":"priority == 'HIGH'",
+                      "actions":[{"type":"Add","label":"enriched-test/items"}]}""")
+               .post("/label-rules").then().statusCode(201);
+
+        given().contentType(ContentType.JSON)
+               .body("""
+                     {"name":"Enriched list queue","labelPattern":"enriched-test/**","scope":"ORG"}""")
+               .post("/queues").then().statusCode(201);
+
+        given().contentType(ContentType.JSON)
+               .body("""
+                     {"title":"Enriched list item","priority":"HIGH","createdBy":"alice"}""")
+               .post("/workitems").then().statusCode(201);
+
+        given().get("/queues").then()
+               .statusCode(200)
+               .body("find { it.name == 'Enriched list queue' }.summary.total",
+                     greaterThanOrEqualTo(1))
+               .body("find { it.name == 'Enriched list queue' }.summary.byStatus.PENDING",
+                     greaterThanOrEqualTo(1));
     }
 
     @Test
