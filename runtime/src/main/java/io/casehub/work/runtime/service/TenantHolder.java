@@ -1,10 +1,13 @@
 package io.casehub.work.runtime.service;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.RequestScoped;
+import jakarta.inject.Inject;
 
 import io.quarkus.arc.Unremovable;
 
 import io.casehub.platform.api.identity.TenancyConstants;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 /**
  * Request-scoped holder for the active tenant identity.
@@ -18,8 +21,18 @@ import io.casehub.platform.api.identity.TenancyConstants;
 @Unremovable
 public class TenantHolder {
 
-    private String tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
+    @Inject
+    @ConfigProperty(name = "casehub.tenancy.default-id",
+                    defaultValue = TenancyConstants.DEFAULT_TENANT_ID)
+    String configuredDefaultTenancyId;
+
+    private String tenancyId;
     private String actorId = "system";
+
+    @PostConstruct
+    void init() {
+        tenancyId = configuredDefaultTenancyId;
+    }
 
     public String getTenancyId() {
         return tenancyId;
