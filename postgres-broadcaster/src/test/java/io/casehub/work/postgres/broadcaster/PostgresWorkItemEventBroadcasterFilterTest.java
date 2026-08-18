@@ -11,11 +11,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-<<<<<<< HEAD
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-=======
 import io.casehub.work.api.WorkItemLifecycleEvent;
->>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemStatus;
 

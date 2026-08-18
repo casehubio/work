@@ -29,11 +29,7 @@ import dev.tamboui.widgets.table.Cell;
 import dev.tamboui.widgets.table.Row;
 import dev.tamboui.widgets.table.Table;
 import dev.tamboui.widgets.table.TableState;
-<<<<<<< HEAD
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-=======
 import io.casehub.work.api.WorkItemLifecycleEvent;
->>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.TenantContextRunner;

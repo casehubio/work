@@ -2,11 +2,7 @@ package io.casehub.work.runtime.service;
 
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.spi.WorkItemStore;
-<<<<<<< HEAD
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-=======
 import io.casehub.work.api.WorkItemLifecycleEvent;
->>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
