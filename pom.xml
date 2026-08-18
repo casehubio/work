@@ -149,6 +149,16 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
         <artifactId>casehub-platform-view-inmem</artifactId>
         <version>0.2-SNAPSHOT</version>
       </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-work-client</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-work-federation</artifactId>
+        <version>${project.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
