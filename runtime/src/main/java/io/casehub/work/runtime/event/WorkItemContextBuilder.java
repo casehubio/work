@@ -75,6 +75,9 @@ public final class WorkItemContextBuilder {
         map.put("candidateScores", workItem.candidateScores());
         map.put("routingExperiences", workItem.routingExperiences());
         map.put("version", workItem.version());
+        map.put("originServiceId", workItem.originServiceId());
+        map.put("originWorkItemId", workItem.originWorkItemId());
+        map.put("originVersion", workItem.originVersion());
         return map;
     }
 }

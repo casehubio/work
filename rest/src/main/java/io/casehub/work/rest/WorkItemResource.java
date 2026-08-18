@@ -19,7 +19,7 @@ import io.casehub.work.runtime.repository.WorkItemRelationStore;
 import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.LabelNotFoundException;
 import io.casehub.work.runtime.service.WorkItemNotFoundException;
-import io.casehub.work.runtime.service.WorkItemService;
+import io.casehub.work.api.spi.WorkItemOperations;
 import io.casehub.work.api.WorkItemSummary;
 import io.smallrye.mutiny.Multi;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -52,7 +52,7 @@ import java.util.stream.Stream;
 public class WorkItemResource {
 
     @Inject
-    WorkItemService workItemService;
+    WorkItemOperations workItemService;
 
     @Inject
     AuditEntryStore auditStore;

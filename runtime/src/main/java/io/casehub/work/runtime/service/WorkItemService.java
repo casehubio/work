@@ -17,6 +17,7 @@ import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.spi.BusinessCalendar;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
 import io.casehub.work.api.spi.ExclusionPolicy;
+import io.casehub.work.api.spi.WorkItemOperations;
 import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.core.strategy.CapabilityValidator;
 import io.casehub.work.runtime.config.WorkItemsConfig;
@@ -41,7 +42,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @ApplicationScoped
-public class WorkItemService {
+public class WorkItemService implements WorkItemOperations {
 
     private final WorkItemStore workItemStore;
     private final AuditEntryStore auditStore;

@@ -22,7 +22,7 @@ import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.spi.WorkItemStore;
-import io.casehub.work.runtime.service.WorkItemService;
+import io.casehub.work.api.spi.WorkItemOperations;
 
 /**
  * REST resource for managing WorkItem soft-assignment (queue state) flags.
@@ -43,7 +43,7 @@ public class QueueStateResource {
     QueueStateStore stateStore;
 
     @Inject
-    WorkItemService workItemService;
+    WorkItemOperations workItemService;
 
     @Inject
     WorkItemLifecycleEmitter lifecycleEmitter;

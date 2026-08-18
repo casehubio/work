@@ -37,6 +37,8 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <module>graphql</module>
     <module>engine-adapter</module>
     <module>qhorus</module>
+    <module>federation</module>
+    <module>client</module>
     <module>progress-api</module>
     <module>progress-core</module>
     <module>progress-runtime</module>
@@ -157,6 +159,16 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-callback</artifactId>
         <version>0.2-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-work-client</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.casehub</groupId>
+        <artifactId>casehub-work-federation</artifactId>
+        <version>${project.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

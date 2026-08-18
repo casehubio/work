@@ -14,7 +14,7 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import io.casehub.work.runtime.service.WorkItemService;
+import io.casehub.work.api.spi.WorkItemOperations;
 
 /**
  * Bulk operations on multiple WorkItems in a single request.
@@ -44,7 +44,7 @@ public class WorkItemBulkResource {
     static final int MAX_BATCH_SIZE = 100;
 
     @Inject
-    WorkItemService workItemService;
+    WorkItemOperations workItemService;
 
     /**
      * Bulk operation request.

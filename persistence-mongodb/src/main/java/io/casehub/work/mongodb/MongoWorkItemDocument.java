@@ -75,6 +75,10 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
     public String outcome;
     public String inputDataSchema;
     public String outputDataSchema;
+    public String originServiceId;
+    public String originWorkItemId;
+    public Long   originVersion;
+
 
     /** Embedded label document. */
     public static class MongoLabel {
@@ -126,6 +130,9 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
         doc.outcome                     = wi.outcome();
         doc.inputDataSchema             = wi.inputDataSchema();
         doc.outputDataSchema            = wi.outputDataSchema();
+        doc.originServiceId             = wi.originServiceId();
+        doc.originWorkItemId            = wi.originWorkItemId() != null ? wi.originWorkItemId().toString() : null;
+        doc.originVersion               = wi.originVersion();
         if (wi.labels() != null) {
             doc.labels = wi.labels().stream().map(l -> {
                 final MongoLabel ml = new MongoLabel();
@@ -182,6 +189,9 @@ public class MongoWorkItemDocument extends PanacheMongoEntityBase {
                                            .inputDataSchema(inputDataSchema)
                                            .outputDataSchema(outputDataSchema)
                                            .version(version)
+                                           .originServiceId(originServiceId)
+                                           .originWorkItemId(originWorkItemId != null ? UUID.fromString(originWorkItemId) : null)
+                                           .originVersion(originVersion)
                                            .labels(labels != null ? labels.stream().map(ml ->
                                                                                                 new io.casehub.work.api.WorkItemLabel(ml.path,
                                                                                                                                       ml.persistence != null ? LabelPersistence.valueOf(ml.persistence) : null,
