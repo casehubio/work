@@ -8,7 +8,7 @@ import org.jboss.logging.Logger;
 
 import io.casehub.work.ai.repository.EscalationSummaryStore;
 import io.casehub.work.api.WorkEventType;
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItem;
 
 /**
