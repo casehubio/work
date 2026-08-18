@@ -16,11 +16,7 @@ import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.event.WorkItemEventBroadcaster;
-<<<<<<< HEAD
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-=======
 import io.casehub.work.api.WorkItemLifecycleEvent;
->>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.api.WorkItemCreateRequest;

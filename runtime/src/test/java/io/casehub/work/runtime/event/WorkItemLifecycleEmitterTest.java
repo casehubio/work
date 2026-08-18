@@ -9,10 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.casehub.work.api.WorkItem;
-<<<<<<< HEAD
-=======
 import io.casehub.work.api.WorkItemLifecycleEvent;
->>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.inject.Instance;
 

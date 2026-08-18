@@ -6,11 +6,7 @@ import io.casehub.work.issuetracker.repository.IssueLinkStore;
 import io.casehub.work.issuetracker.spi.ExternalIssueRef;
 import io.casehub.work.issuetracker.spi.IssueTrackerException;
 import io.casehub.work.issuetracker.spi.IssueTrackerProvider;
-<<<<<<< HEAD
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
-=======
 import io.casehub.work.api.WorkItemLifecycleEvent;
->>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;

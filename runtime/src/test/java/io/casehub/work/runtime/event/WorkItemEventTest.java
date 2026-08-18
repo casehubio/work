@@ -9,11 +9,8 @@ import java.util.List;
 
 import io.casehub.work.api.WorkItem;
 import java.util.UUID;
-<<<<<<< HEAD
-=======
 
 import io.casehub.work.api.WorkItemLifecycleEvent;
->>>>>>> 10ac6d40 (feat(#405): dual-mode work — GraphQL, MCP, callback adapters)
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;
