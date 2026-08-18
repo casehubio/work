@@ -15,8 +15,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
 
 class FederationIntegrationTest {
 
@@ -41,6 +42,11 @@ class FederationIntegrationTest {
         setField(receiver, "workItemStore", guardedStore);
         setField(receiver, "objectMapper", objectMapper);
         setField(receiver, "subscriptionService", subscriptionService);
+
+        var tenantRunner = mock(io.casehub.work.runtime.service.TenantContextRunner.class);
+        doAnswer(inv -> { ((Runnable) inv.getArgument(1)).run(); return null; })
+                .when(tenantRunner).runInTenantContext(any(String.class), any(Runnable.class));
+        setField(receiver, "tenantContextRunner", tenantRunner);
     }
 
     @Test

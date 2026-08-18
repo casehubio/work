@@ -18,11 +18,15 @@ public class FederationEventResource {
     @POST
     @Consumes("application/cloudevents+json")
     public Response receiveEvent(String cloudEventJson,
-                                  @HeaderParam("X-Federation-Signature") String signature,
-                                  @HeaderParam("X-Federation-Peer-Id") String peerId) {
+                                 @HeaderParam("X-Federation-Signature") String signature,
+                                 @HeaderParam("X-Federation-Peer-Id") String peerId) {
+        if (peerId == null || peerId.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity("Missing X-Federation-Peer-Id header").build();
+        }
         if (signature == null || signature.isEmpty()) {
             return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity("Missing X-Federation-Signature header").build();
+                           .entity("Missing X-Federation-Signature header").build();
         }
 
         var subscriptions = FederationSubscriptionEntity.<FederationSubscriptionEntity>find(
@@ -31,11 +35,15 @@ public class FederationEventResource {
 
         if (subscriptions.isEmpty()) {
             return Response.status(Response.Status.FORBIDDEN)
-                    .entity("No active subscription for peer: " + peerId).build();
+                           .entity("No active subscription for peer: " + peerId).build();
         }
 
         byte[] hmacSecret = subscriptions.getFirst().hmacSecretEncrypted;
-        receiver.onEvent(cloudEventJson, signature, hmacSecret);
-        return Response.accepted().build();
+        try {
+            receiver.onEvent(cloudEventJson, signature, hmacSecret);
+            return Response.accepted().build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
+        }
     }
 }

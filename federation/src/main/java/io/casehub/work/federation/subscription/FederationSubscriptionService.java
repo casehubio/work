@@ -19,12 +19,14 @@ public class FederationSubscriptionService {
 
     @Transactional
     public FederationSubscriptionEntity register(String peerId, String callbackUrl,
-                                                  String tenancyId, SubscriptionFilter filter,
+                                                  String baseUrl, String tenancyId,
+                                                  SubscriptionFilter filter,
                                                   String capabilitiesJson, byte[] hmacSecret) {
         var entity = new FederationSubscriptionEntity();
         entity.id = UUID.randomUUID();
         entity.peerId = peerId;
         entity.callbackUrl = callbackUrl;
+        entity.baseUrl = baseUrl;
         entity.tenancyId = tenancyId;
         entity.filterJson = serializeFilter(filter);
         entity.capabilitiesJson = capabilitiesJson;
@@ -91,6 +93,7 @@ public class FederationSubscriptionService {
         FederationSubscriptionEntity sub = FederationSubscriptionEntity.findById(subscriptionId);
         if (sub != null) {
             sub.consecutiveFailures++;
+            sub.lastFailureAt = Instant.now();
             if (sub.consecutiveFailures >= 5) {
                 sub.status = FederationSubscriptionEntity.SubscriptionStatus.SUSPENDED;
             }

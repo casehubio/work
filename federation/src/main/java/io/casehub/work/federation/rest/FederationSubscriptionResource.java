@@ -36,7 +36,7 @@ public class FederationSubscriptionResource {
                 request.tenancyId());
 
         var entity = subscriptionService.register(
-                request.peerId(), request.callbackUrl(),
+                request.peerId(), request.callbackUrl(), request.baseUrl(),
                 request.tenancyId(), filter,
                 request.capabilitiesJson(), hmacSecret);
 
@@ -47,6 +47,7 @@ public class FederationSubscriptionResource {
 
     @DELETE
     @Path("/{id}")
+    @jakarta.transaction.Transactional
     public Response deregister(@PathParam("id") UUID id) {
         FederationSubscriptionEntity sub = FederationSubscriptionEntity.findById(id);
         if (sub == null) {
@@ -58,6 +59,7 @@ public class FederationSubscriptionResource {
 
     @PUT
     @Path("/{id}/reactivate")
+    @jakarta.transaction.Transactional
     public Response reactivate(@PathParam("id") UUID id) {
         FederationSubscriptionEntity sub = FederationSubscriptionEntity.findById(id);
         if (sub == null) {
@@ -71,6 +73,7 @@ public class FederationSubscriptionResource {
     public record SubscriptionRequest(
             String peerId,
             String callbackUrl,
+            String baseUrl,
             String tenancyId,
             FilterRequest filter,
             String capabilitiesJson,

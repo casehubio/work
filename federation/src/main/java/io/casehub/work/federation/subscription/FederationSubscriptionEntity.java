@@ -23,6 +23,9 @@ public class FederationSubscriptionEntity extends PanacheEntityBase {
 
     @Column(name = "callback_url", nullable = false, length = 1024)
     public String callbackUrl;
+    @Column(name = "base_url", nullable = false, length = 1024)
+    public String baseUrl;
+
 
     @Column(name = "tenancy_id", nullable = false)
     public String tenancyId;
@@ -42,6 +45,9 @@ public class FederationSubscriptionEntity extends PanacheEntityBase {
 
     @Column(name = "consecutive_failures", nullable = false)
     public int consecutiveFailures;
+    @Column(name = "last_failure_at")
+    public Instant lastFailureAt;
+
 
     @Column(name = "created_at", nullable = false)
     public Instant createdAt;

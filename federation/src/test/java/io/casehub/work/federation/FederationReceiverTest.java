@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class FederationReceiverTest {
@@ -35,6 +36,11 @@ class FederationReceiverTest {
         setField(receiver, "workItemStore", store);
         setField(receiver, "objectMapper", objectMapper);
         setField(receiver, "subscriptionService", subscriptionService);
+
+        var tenantRunner = mock(io.casehub.work.runtime.service.TenantContextRunner.class);
+        doAnswer(inv -> { ((Runnable) inv.getArgument(1)).run(); return null; })
+                .when(tenantRunner).runInTenantContext(any(String.class), any(Runnable.class));
+        setField(receiver, "tenantContextRunner", tenantRunner);
     }
 
     @Test
@@ -112,7 +118,8 @@ class FederationReceiverTest {
         String json = buildCloudEvent("io.casehub.work.federation.created",
                 "svc-a", UUID.randomUUID(), "tenant-1", 1L, WorkItemStatus.PENDING);
 
-        receiver.onEvent(json, "bad-signature", secret);
+        assertThrows(IllegalArgumentException.class,
+                () -> receiver.onEvent(json, "bad-signature", secret));
 
         verify(store, never()).put(any());
     }

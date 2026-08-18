@@ -29,19 +29,23 @@ public class WorkItemClient {
     }
 
     public ClientResponse complete(String baseUrl, String workItemId, String actorId,
-                                    String resolution, String outcome, String bearerToken) {
-        String url = baseUrl + "/workitems/" + workItemId + "/complete";
-        String body = String.format("{\"actorId\":\"%s\",\"resolution\":\"%s\",\"outcome\":\"%s\"}",
-                actorId, escapeJson(resolution), escapeJson(outcome));
-        return executePost(url, body, bearerToken);
+                                   String resolution, String outcome, String bearerToken) {
+        String url  = baseUrl + "/workitems/" + workItemId + "/complete";
+        var    body = objectMapper.createObjectNode();
+        body.put("actorId", actorId);
+        body.put("resolution", resolution);
+        body.put("outcome", outcome);
+        return executePost(url, body.toString(), bearerToken);
     }
 
     public ClientResponse reject(String baseUrl, String workItemId, String actorId,
-                                  String reason, String outcome, String bearerToken) {
-        String url = baseUrl + "/workitems/" + workItemId + "/reject";
-        String body = String.format("{\"actorId\":\"%s\",\"reason\":\"%s\",\"outcome\":\"%s\"}",
-                actorId, escapeJson(reason), escapeJson(outcome));
-        return executePost(url, body, bearerToken);
+                                 String reason, String outcome, String bearerToken) {
+        String url  = baseUrl + "/workitems/" + workItemId + "/reject";
+        var    body = objectMapper.createObjectNode();
+        body.put("actorId", actorId);
+        body.put("reason", reason);
+        body.put("outcome", outcome);
+        return executePost(url, body.toString(), bearerToken);
     }
 
     public ClientResponse delegate(String baseUrl, String workItemId, String actorId,
@@ -94,10 +98,6 @@ public class WorkItemClient {
         } catch (Exception e) {
             return new ClientResponse(503, null);
         }
-    }
-
-    private static String escapeJson(String value) {
-        return value != null ? value.replace("\"", "\\\"") : "";
     }
 
     public record ClientResponse(int statusCode, JsonNode body) {
