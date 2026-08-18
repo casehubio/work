@@ -36,6 +36,7 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <module>rest</module>
     <module>engine-adapter</module>
     <module>qhorus</module>
+    <module>federation</module>
     <module>progress-api</module>
     <module>progress-core</module>
     <module>progress-runtime</module>
