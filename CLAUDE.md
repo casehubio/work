@@ -73,7 +73,7 @@ type: java
 
 ## What This Project Is
 
-CaseHub Work is a **CaseHub platform module** providing **human-scale WorkItem lifecycle management**. It gives any Quarkus application a human task inbox with expiry, delegation, escalation, priority, and audit trail — usable independently or with an optional Quarkus-Flow integration. CaseHub and Qhorus adapters are planned but not yet built. It is hosted under the CaseHub organisation (`casehubio/work`), not submitted to Quarkiverse.
+CaseHub Work is a **CaseHub platform module** providing **human-scale WorkItem lifecycle management**. It gives any Quarkus application a human task inbox with expiry, delegation, escalation, priority, and audit trail — usable independently or with an optional Quarkus-Flow integration. CaseHub engine adapter (`casehub-work-engine-adapter`) and Qhorus bridge (`casehub-work-qhorus`) are shipped. It is hosted under the CaseHub organisation (`casehubio/work`), not submitted to Quarkiverse.
 
 **The core concept — WorkItem (not Task):**
 A `WorkItemEntity` is a unit of work requiring human attention or judgment. It is deliberately NOT called `Task` because:
@@ -223,9 +223,8 @@ filtering or dropping commits that touch these paths.
 
 | # | Epic | Status | Notes |
 |---|---|---|---|
-| #92 | Distributed WorkItems — clustering + federation | in progress | #93 ✅ WorkItem SSE done; #155 ✅ queue SSE done; broader federation deferred |
-| #79 | External System Integrations | blocked | CaseHub/Qhorus not stable |
-| #39 | ProvenanceLink (PROV-O causal graph) | blocked | Awaiting #79 |
+| #92 | Distributed WorkItems — clustering + federation | in progress | Single-cluster done; #95 federation + #332 rollback remain (slot 130) |
+| #39 | ProvenanceLink (PROV-O causal graph) | deferred | Awaiting production validation of simpler causal model |
 
 **Automatic behaviours (Claude follows these at all times in this project):**
 - **Before implementation begins** — check if an active issue exists. If not, run issue-workflow Phase 1 before writing any code. Create a child issue under the matching epic above.
