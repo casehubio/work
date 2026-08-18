@@ -33,6 +33,8 @@ Use `ide_find_class` / `ide_find_symbol` to locate specific classes. This file d
 | `postgres-broadcaster/` | Optional distributed SSE; PostgreSQL LISTEN/NOTIFY for WorkItem events (`casehub_work_events`) |
 | `queues-postgres-broadcaster/` | Optional distributed SSE for queue events (`casehub_work_queue_events`); depends on `casehub-work-queues` + `quarkus-reactive-pg-client` |
 | `issue-tracker/` | Optional issue-tracker link module; `IssueTrackerProvider` SPI; GitHub and Jira webhook handlers. Flyway V5000. |
+| `federation/` | Optional cross-service federation; `FederationGuardStore` (`@Decorator` on `WorkItemStore.put()`), `FederationReceiver` (inbound CloudEvents → shadow WorkItems), `FederationEventRouter` (outbound lifecycle events → subscriptions), `FederationProxyService` (`@Decorator` on `WorkItemOperations`), subscription model with filter-on-creation lock-on. Flyway V8000. |
+| `client/` | Lightweight REST client for remote WorkItem operations (claim, complete, reject, delegate, release). No JPA, no CDI, no Quarkus dependencies. Used by `FederationProxy` and standalone consumers. |
 | `examples/` | Runnable scenario demos; each runs via `POST /examples/{name}/run` |
 | `persistence-mongodb/` | Optional MongoDB-backed stores for all runtime/core/issue-tracker SPIs; Tier 2 `@Alternative @Priority(1)`. Drop-in replacement for JPA — add to classpath, no consumer changes needed. |
 | `integration-tests/` | `@QuarkusIntegrationTest` suite and native image validation |
