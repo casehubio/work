@@ -136,6 +136,16 @@ public class MongoWorkItemStore implements WorkItemStore {
     }
 
     @Override
+    public Optional<WorkItem> findByOrigin(String originServiceId, UUID originWorkItemId) {
+        final Document filter = new Document("originServiceId", originServiceId)
+                                        .append("originWorkItemId", originWorkItemId.toString())
+                                        .append("tenancyId", currentPrincipal.tenancyId());
+        final MongoWorkItemDocument doc = MongoWorkItemDocument.find(filter).firstResult();
+        return Optional.ofNullable(doc).map(MongoWorkItemDocument::toDomain);
+    }
+
+
+    @Override
     public List<WorkItem> findByParentId(final UUID parentId) {
         final Document filter = new Document("parentId", parentId.toString())
                 .append("tenancyId", currentPrincipal.tenancyId());

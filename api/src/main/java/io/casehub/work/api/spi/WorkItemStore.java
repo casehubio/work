@@ -1,16 +1,16 @@
 package io.casehub.work.api.spi;
 
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.WorkItemRootView;
+import io.casehub.work.api.WorkItemStatus;
+import io.casehub.work.api.WorkItemSummary;
+import io.casehub.work.api.WorkItemSummaryBuilder;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
-import io.casehub.work.api.WorkItemQuery;
-import io.casehub.work.api.WorkItemSummary;
-import io.casehub.work.api.WorkItem;
-import io.casehub.work.api.WorkItemRootView;
-import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.api.WorkItemSummaryBuilder;
 
 /**
  * KV-native store SPI for {@link WorkItem} persistence.
@@ -166,6 +166,27 @@ public interface WorkItemStore {
                 .filter(wi -> wi.status() != null && wi.status().isActive())
                 .max(java.util.Comparator.comparing(wi -> wi.createdAt()));
     }
+
+    /**
+     * Find a shadow WorkItem by its origin coordinates — the service ID and WorkItem ID
+     * on the owning service. Used by the federation receiver to locate existing shadows
+     * for upsert.
+     *
+     * <p>
+     * The default implementation performs a linear scan via {@link #scanAll()} — override in
+     * JPA/SQL stores for an indexed query on {@code (origin_service_id, origin_work_item_id)}.
+     *
+     * @param originServiceId  the owning service's identifier
+     * @param originWorkItemId the WorkItem ID on the owning service
+     * @return an {@link Optional} containing the matching shadow, or empty if not found
+     */
+    default Optional<WorkItem> findByOrigin(String originServiceId, UUID originWorkItemId) {
+        return scanAll().stream()
+                        .filter(w -> originServiceId.equals(w.originServiceId())
+                                     && originWorkItemId.equals(w.originWorkItemId()))
+                        .findFirst();
+    }
+
 
     /**
      * Return root WorkItems (parentId IS NULL) visible to the caller, enriched with aggregate stats.

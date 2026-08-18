@@ -1,13 +1,7 @@
 package io.casehub.work.runtime.model;
 
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-
 import io.casehub.work.api.spi.ClaimSlaPolicy;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -22,7 +16,12 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Core entity representing a unit of work requiring human attention or judgment.
@@ -360,6 +359,13 @@ public class WorkItemEntity extends PanacheEntityBase {
 
     @Column(name = "routing_experiences", columnDefinition = "TEXT")
     public String routingExperiences;
+    @Column(name = "origin_service_id")
+    public String originServiceId;
+    @Column(name = "origin_work_item_id")
+    public UUID   originWorkItemId;
+    @Column(name = "origin_version")
+    public Long   originVersion;
+
 
     // -------------------------------------------------------------------------
     // JPA lifecycle callbacks

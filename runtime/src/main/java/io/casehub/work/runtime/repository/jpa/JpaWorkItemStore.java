@@ -98,6 +98,16 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                                                      .map(WorkItemEntityMapper::toDomain));
     }
 
+    @Override
+    public Optional<WorkItem> findByOrigin(String originServiceId, UUID originWorkItemId) {
+        return withTenantQuery(() ->
+                                       WorkItemEntity.<WorkItemEntity>find("originServiceId = ?1 AND originWorkItemId = ?2 AND tenancyId = ?3",
+                                                                           originServiceId, originWorkItemId, currentPrincipal.tenancyId())
+                                                     .firstResultOptional()
+                                                     .map(WorkItemEntityMapper::toDomain));
+    }
+
+
     private record JpqlAndParams(String jpql, Map<String, Object> params) {}
 
     private JpqlAndParams buildScanJpql(final WorkItemQuery query) {
