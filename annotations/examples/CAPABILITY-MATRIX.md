@@ -47,7 +47,7 @@ Maps annotation features to example modules and deployment tests.
 | `@HumanApproval` alone | ✅ | | | ✅ |
 | `@HumanApproval` + `@Escalate` | | | ✅ | |
 | `@HumanApproval` + `@RequiresQuorum` + `@Escalate` + `@SkillMatch` | | ✅ | | |
-| Meta-annotation composition | | | | **gap** — needs `@Target(ANNOTATION_TYPE)` on all annotations |
+| Meta-annotation composition | | | ✅ | |
 | Multiple methods per bean | | | ✅ | |
 | `@Escalate` alone (build error) | | | | ✅ |
 | `@SkillMatch` alone (build error) | | | | ✅ |
