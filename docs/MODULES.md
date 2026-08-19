@@ -22,6 +22,7 @@ Use `ide_find_class` / `ide_find_symbol` to locate specific classes. This file d
 | `engine-adapter/` | CaseHub engine adapter; creates WorkItems from HumanTask/ActionGate bindings, translates lifecycle events back to PlanItem transitions. Relocated from `casehub-engine-work-adapter`. |
 | `qhorus/` | Qhorus bridge; MCP tools for agent→WorkItem requests (`request_human_work`, `check_work_status`, `wait_for_work`), outbound lifecycle adapter posts terminal speech acts to originating channels. |
 | `flow/` | Quarkus-Flow CDI bridge (`HumanTaskFlowBridge`, `PendingWorkItemRegistry`, `WorkItemFlowEventListener`) |
+| `annotations/` | Annotation-driven human-in-the-loop model (`@HumanApproval`, `@RequiresQuorum`, `@Escalate`, `@SkillMatch`). CDI interceptor for standalone use; descriptor build items for blocks-engine-adapter composition. |
 | `flow-examples/` | Example scenarios for the Quarkus-Flow integration |
 | `ledger/` | Optional accountability module (command/event ledger, hash chain, attestation, EigenTrust) |
 | `queues/` | Optional label-based queue module; label filter chains, queue views, JEXL/JQ expression evaluation |

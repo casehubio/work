@@ -200,6 +200,25 @@ Outbound: `QhorusWorkItemLifecycleAdapter` implements `WorkItemObserver`, posts 
 
 ---
 
+## annotations Module
+
+Annotation-driven human-in-the-loop model (`casehub-work-annotations`, package `io.casehub.work.annotations`). Part of the blocks#115 annotation-driven agent programming model epic (#356).
+
+Four composable annotations reduce 15-30 lines of programmatic WorkItem configuration to 1-4 annotations:
+
+| Annotation | Purpose | Maps to |
+|---|---|---|
+| `@HumanApproval` | Per-WorkItem configuration | `WorkItemCreateRequest` |
+| `@RequiresQuorum` | Multi-instance coordination | `MultiInstanceConfig` |
+| `@Escalate` | Escalation policy | `SlaBreachPolicy` SPI |
+| `@SkillMatch` | Routing strategy selection | `WorkerSelectionStrategy` SPI |
+
+**Dual-path execution:** Standalone path generates CDI interceptors via Gizmo at build time (any Quarkus app). Blocks composition path produces `WorkAnnotationsProcessedBuildItem` for blocks-engine-adapter to wire governance interceptors on `@Worker`/`@*Agent` methods.
+
+**Module structure:** Follows engine-annotations pattern (parent → runtime + deployment). Runtime defines `@interface`s and descriptor records. Deployment provides `WorkAnnotationsProcessor` `@BuildStep` (scan, validate, produce build items).
+
+---
+
 ## Project Artifacts
 
 Paths that are project content (not workspace noise). Skills use this to avoid
