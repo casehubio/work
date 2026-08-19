@@ -1,19 +1,18 @@
 package io.casehub.work.flow;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemLifecycleEvent;
+import io.casehub.work.api.WorkItemStatus;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import io.casehub.work.api.WorkItem;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import io.casehub.work.api.WorkItemLifecycleEvent;
-import io.casehub.work.api.WorkItemStatus;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WorkItemFlowEventListenerTest {
 
@@ -98,4 +97,27 @@ class WorkItemFlowEventListenerTest {
                 .hasCauseInstanceOf(WorkItemResolutionException.class)
                 .hasMessageContaining("rejected");
     }
+
+    @Test
+    void expiredEvent_failsRegisteredFuture() {
+        UUID                      id     = UUID.randomUUID();
+        CompletableFuture<String> future = registry.register(id);
+        listener.onWorkItemEvent(event("io.casehub.work.workitem.expired", id, null));
+        assertThat(future.isCompletedExceptionally()).isTrue();
+        assertThatThrownBy(future::get)
+                .hasCauseInstanceOf(WorkItemResolutionException.class)
+                .hasMessageContaining("expired");
+    }
+
+    @Test
+    void escalatedEvent_failsRegisteredFuture() {
+        UUID                      id     = UUID.randomUUID();
+        CompletableFuture<String> future = registry.register(id);
+        listener.onWorkItemEvent(event("io.casehub.work.workitem.escalated", id, "escalated to managers"));
+        assertThat(future.isCompletedExceptionally()).isTrue();
+        assertThatThrownBy(future::get)
+                .hasCauseInstanceOf(WorkItemResolutionException.class)
+                .hasMessageContaining("escalated to managers");
+    }
+
 }
