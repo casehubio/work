@@ -6,17 +6,17 @@
 
     <parent>
         <groupId>io.casehub</groupId>
-        <artifactId>casehub-work-parent</artifactId>
+        <artifactId>casehub-work-annotations-parent</artifactId>
         <version>0.2-SNAPSHOT</version>
     </parent>
 
-    <artifactId>casehub-work-annotations-parent</artifactId>
+    <artifactId>casehub-work-annotations-examples</artifactId>
     <packaging>pom</packaging>
-    <name>CaseHub Work :: Annotations</name>
+    <name>CaseHub Work :: Annotations :: Examples</name>
 
     <modules>
-        <module>runtime</module>
-        <module>deployment</module>
-        <module>examples</module>
+        <module>approval-gate-annotated</module>
+        <module>quorum-review-annotated</module>
+        <module>escalation-gate-annotated</module>
     </modules>
 </project>

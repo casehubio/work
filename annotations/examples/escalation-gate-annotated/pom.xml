@@ -10,8 +10,8 @@
         <version>0.2-SNAPSHOT</version>
     </parent>
 
-    <artifactId>casehub-work-example-approval-gate-annotated</artifactId>
-    <name>CaseHub Work :: Examples :: Approval Gate (Annotated)</name>
+    <artifactId>casehub-work-example-escalation-gate-annotated</artifactId>
+    <name>CaseHub Work :: Examples :: Escalation Gate (Annotated)</name>
 
     <dependencies>
         <dependency>
