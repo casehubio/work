@@ -72,7 +72,9 @@ public class WorkItemAssignmentService {
                 workItem.candidateUsers(),
                 workItem.title(),
                 workItem.description(),
-                workItem.excludedUsers());
+                workItem.excludedUsers(),
+                null,
+                null);
 
         final AssignmentDecision decision = workBroker.apply(context, trigger, candidates, strategy);
         return applyDecision(workItem, decision);

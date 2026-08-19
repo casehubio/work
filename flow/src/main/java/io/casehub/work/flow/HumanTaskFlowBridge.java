@@ -1,13 +1,12 @@
 package io.casehub.work.flow;
 
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.smallrye.mutiny.Uni;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /**
  * CDI bridge for integrating human task inbox with Quarkus Flow workflows.
@@ -102,4 +101,10 @@ public class HumanTaskFlowBridge {
         final WorkItem workItem = workItemService.create(request);
         return Uni.createFrom().completionStage(registry.register(workItem.id()));
     }
+
+    public Uni<String> requestApproval(final WorkItemCreateRequest request) {
+        final WorkItem workItem = workItemService.create(request);
+        return Uni.createFrom().completionStage(registry.register(workItem.id()));
+    }
+
 }

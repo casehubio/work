@@ -49,6 +49,9 @@ public final class WorkItemCreateRequest {
     public final String resolutionTypeName;
     public final String candidateScores;
     public final String routingExperiences;
+    public final String routingStrategy;
+    public final Double minimumScore;
+
 
     private WorkItemCreateRequest(final Builder b) {
         this.title                      = b.title;
@@ -83,6 +86,8 @@ public final class WorkItemCreateRequest {
         this.resolutionTypeName         = b.resolutionTypeName;
         this.candidateScores            = b.candidateScores;
         this.routingExperiences         = b.routingExperiences;
+        this.routingStrategy            = b.routingStrategy;
+        this.minimumScore               = b.minimumScore;
     }
 
     public static Builder builder() {
@@ -95,52 +100,55 @@ public final class WorkItemCreateRequest {
 
     @Override
     public boolean equals(final Object o) {
-        if (this == o) return true;
-        if (!(o instanceof WorkItemCreateRequest r)) return false;
+        if (this == o) {return true;}
+        if (!(o instanceof WorkItemCreateRequest r)) {return false;}
         return Objects.equals(title, r.title)
-                && Objects.equals(description, r.description)
-                && Objects.equals(types, r.types)
-                && Objects.equals(formKey, r.formKey)
-                && Objects.equals(priority, r.priority)
-                && Objects.equals(assigneeId, r.assigneeId)
-                && Objects.equals(candidateGroups, r.candidateGroups)
-                && Objects.equals(candidateUsers, r.candidateUsers)
-                && Objects.equals(requiredCapabilities, r.requiredCapabilities)
-                && Objects.equals(createdBy, r.createdBy)
-                && Objects.equals(payload, r.payload)
-                && Objects.equals(claimDeadline, r.claimDeadline)
-                && Objects.equals(expiresAt, r.expiresAt)
-                && Objects.equals(followUpDate, r.followUpDate)
-                && Objects.equals(labels, r.labels)
-                && Objects.equals(confidenceScore, r.confidenceScore)
-                && Objects.equals(callerRef, r.callerRef)
-                && Objects.equals(claimDeadlineBusinessHours, r.claimDeadlineBusinessHours)
-                && Objects.equals(expiresAtBusinessHours, r.expiresAtBusinessHours)
-                && Objects.equals(templateId, r.templateId)
-                && Objects.equals(permittedOutcomes, r.permittedOutcomes)
-                && Objects.equals(inputDataSchema, r.inputDataSchema)
-                && Objects.equals(outputDataSchema, r.outputDataSchema)
-                && Objects.equals(excludedUsers, r.excludedUsers)
-                && Objects.equals(scope, r.scope)
-                && Objects.equals(auditDetail, r.auditDetail)
-                && Objects.equals(templateVersion, r.templateVersion)
-                && Objects.equals(tenancyId, r.tenancyId)
-                && Objects.equals(payloadTypeName, r.payloadTypeName)
-                && Objects.equals(resolutionTypeName, r.resolutionTypeName)
-                && Objects.equals(candidateScores, r.candidateScores)
-                && Objects.equals(routingExperiences, r.routingExperiences);
+               && Objects.equals(description, r.description)
+               && Objects.equals(types, r.types)
+               && Objects.equals(formKey, r.formKey)
+               && Objects.equals(priority, r.priority)
+               && Objects.equals(assigneeId, r.assigneeId)
+               && Objects.equals(candidateGroups, r.candidateGroups)
+               && Objects.equals(candidateUsers, r.candidateUsers)
+               && Objects.equals(requiredCapabilities, r.requiredCapabilities)
+               && Objects.equals(createdBy, r.createdBy)
+               && Objects.equals(payload, r.payload)
+               && Objects.equals(claimDeadline, r.claimDeadline)
+               && Objects.equals(expiresAt, r.expiresAt)
+               && Objects.equals(followUpDate, r.followUpDate)
+               && Objects.equals(labels, r.labels)
+               && Objects.equals(confidenceScore, r.confidenceScore)
+               && Objects.equals(callerRef, r.callerRef)
+               && Objects.equals(claimDeadlineBusinessHours, r.claimDeadlineBusinessHours)
+               && Objects.equals(expiresAtBusinessHours, r.expiresAtBusinessHours)
+               && Objects.equals(templateId, r.templateId)
+               && Objects.equals(permittedOutcomes, r.permittedOutcomes)
+               && Objects.equals(inputDataSchema, r.inputDataSchema)
+               && Objects.equals(outputDataSchema, r.outputDataSchema)
+               && Objects.equals(excludedUsers, r.excludedUsers)
+               && Objects.equals(scope, r.scope)
+               && Objects.equals(auditDetail, r.auditDetail)
+               && Objects.equals(templateVersion, r.templateVersion)
+               && Objects.equals(tenancyId, r.tenancyId)
+               && Objects.equals(payloadTypeName, r.payloadTypeName)
+               && Objects.equals(resolutionTypeName, r.resolutionTypeName)
+               && Objects.equals(candidateScores, r.candidateScores)
+               && Objects.equals(routingExperiences, r.routingExperiences)
+               && Objects.equals(routingStrategy, r.routingStrategy)
+               && Objects.equals(minimumScore, r.minimumScore);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(title, description, types, formKey, priority,
-                assigneeId, candidateGroups, candidateUsers, requiredCapabilities,
-                createdBy, payload, claimDeadline, expiresAt, followUpDate, labels,
-                confidenceScore, callerRef, claimDeadlineBusinessHours, expiresAtBusinessHours,
-                templateId, permittedOutcomes, inputDataSchema, outputDataSchema, excludedUsers, scope,
-                auditDetail, templateVersion, tenancyId,
-                payloadTypeName, resolutionTypeName,
-                candidateScores, routingExperiences);
+                            assigneeId, candidateGroups, candidateUsers, requiredCapabilities,
+                            createdBy, payload, claimDeadline, expiresAt, followUpDate, labels,
+                            confidenceScore, callerRef, claimDeadlineBusinessHours, expiresAtBusinessHours,
+                            templateId, permittedOutcomes, inputDataSchema, outputDataSchema, excludedUsers, scope,
+                            auditDetail, templateVersion, tenancyId,
+                            payloadTypeName, resolutionTypeName,
+                            candidateScores, routingExperiences,
+                            routingStrategy, minimumScore);
     }
 
     /** Intentionally omits payload, schemas, callerRef, and credentials — log-safety. */
@@ -185,6 +193,9 @@ public final class WorkItemCreateRequest {
         private String resolutionTypeName;
         private String candidateScores;
         private String routingExperiences;
+        private String routingStrategy;
+        private Double minimumScore;
+
 
         private Builder() {}
 
@@ -221,6 +232,8 @@ public final class WorkItemCreateRequest {
             this.resolutionTypeName         = src.resolutionTypeName;
             this.candidateScores            = src.candidateScores;
             this.routingExperiences         = src.routingExperiences;
+            this.routingStrategy            = src.routingStrategy;
+            this.minimumScore               = src.minimumScore;
         }
 
         public Builder title(final String v)                          { this.title = v; return this; }
@@ -255,6 +268,17 @@ public final class WorkItemCreateRequest {
         public Builder resolutionTypeName(final String v)            { this.resolutionTypeName = v; return this; }
         public Builder candidateScores(final String v)              { this.candidateScores = v; return this; }
         public Builder routingExperiences(final String v)           { this.routingExperiences = v; return this; }
+
+        public Builder routingStrategy(final String v)              {
+                                                                        this.routingStrategy = v;
+                                                                        return this;
+                                                                    }
+
+        public Builder minimumScore(final Double v)                 {
+                                                                        this.minimumScore = v;
+                                                                        return this;
+                                                                    }
+
 
         public WorkItemCreateRequest build() {
             if (templateId == null && (title == null || title.isBlank()))

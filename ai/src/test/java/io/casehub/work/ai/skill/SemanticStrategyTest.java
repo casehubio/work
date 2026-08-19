@@ -20,7 +20,7 @@ class SemanticStrategyTest {
     @BeforeEach
     void setUp() {
         ctx = new SelectionContext(List.of("legal"), "HIGH", Set.of(), null, "alice,bob",
-                "Review NDA", "Review the NDA for Acme Corp.", null);
+                "Review NDA", "Review the NDA for Acme Corp.", null, null, null);
     }
 
     private WorkerCandidate candidate(final String id) {

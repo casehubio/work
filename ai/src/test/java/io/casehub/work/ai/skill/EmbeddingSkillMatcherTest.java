@@ -33,7 +33,7 @@ class EmbeddingSkillMatcherTest {
         final EmbeddingModel model = mock(EmbeddingModel.class);
         when(model.embed(anyString())).thenReturn(resp(1f, 0f, 0f));
 
-        final var ctx = new SelectionContext(List.of(), null, Set.of(), null, null, "T", "D", null);
+        final var ctx = new SelectionContext(List.of(), null, Set.of(), null, null, "T", "D", null, null, null);
         final double score = matcher(model).score(SkillProfile.ofNarrative("expert"), ctx);
         assertThat(score).isCloseTo(1.0, within(0.001));
     }
@@ -46,7 +46,7 @@ class EmbeddingSkillMatcherTest {
         when(model.embed("worker narrative")).thenReturn(resp(1f, 0f));
 
         final var profile = SkillProfile.ofNarrative("worker narrative");
-        final var ctx = new SelectionContext(List.of("cat"), null, Set.of(Capability.of("legal")), null, null, "title", "desc", null);
+        final var ctx = new SelectionContext(List.of("cat"), null, Set.of(Capability.of("legal")), null, null, "title", "desc", null, null, null);
         final double score = matcher(model).score(profile, ctx);
         assertThat(score).isCloseTo(0.0, within(0.001));
     }
@@ -56,7 +56,7 @@ class EmbeddingSkillMatcherTest {
         final EmbeddingModel model = mock(EmbeddingModel.class);
         when(model.embed(anyString())).thenThrow(new RuntimeException("API down"));
 
-        final var ctx = new SelectionContext(List.of(), null, Set.of(), null, null, "T", "D", null);
+        final var ctx = new SelectionContext(List.of(), null, Set.of(), null, null, "T", "D", null, null, null);
         final double score = matcher(model).score(SkillProfile.ofNarrative("expert"), ctx);
         assertThat(score).isEqualTo(-1.0);
     }
@@ -66,7 +66,7 @@ class EmbeddingSkillMatcherTest {
         final EmbeddingModel model = mock(EmbeddingModel.class);
         when(model.embed(anyString())).thenReturn(resp(0f, 0f, 1f));
 
-        final var ctx = new SelectionContext(List.of(), null, Set.of(), null, null, null, null, null);
+        final var ctx = new SelectionContext(List.of(), null, Set.of(), null, null, null, null, null, null, null);
         final double score = matcher(model).score(SkillProfile.ofNarrative(""), ctx);
         assertThat(score).isCloseTo(1.0, within(0.001));
     }
@@ -76,7 +76,7 @@ class EmbeddingSkillMatcherTest {
         final EmbeddingModel model = mock(EmbeddingModel.class);
         when(model.embed(anyString())).thenReturn(resp(0f, 0f, 0f));
 
-        final var ctx = new SelectionContext(List.of(), null, Set.of(), null, null, "T", null, null);
+        final var ctx = new SelectionContext(List.of(), null, Set.of(), null, null, "T", null, null, null, null);
         final double score = matcher(model).score(SkillProfile.ofNarrative("text"), ctx);
         assertThat(score).isEqualTo(0.0);
     }
@@ -93,7 +93,7 @@ class EmbeddingSkillMatcherTest {
         });
 
         final var ctx = new SelectionContext(List.of("contract"), null, Set.of(Capability.of("legal")), null, null,
-                "Review NDA", null, null);
+                "Review NDA", null, null, null, null);
         matcher(model).score(SkillProfile.ofNarrative("worker"), ctx);
 
         // Requirement text should combine title + requiredCapabilities + category (non-null only)

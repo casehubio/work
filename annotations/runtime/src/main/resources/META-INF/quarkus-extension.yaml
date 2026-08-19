@@ -1,0 +1,4 @@
+name: casehub-work-annotations
+description: Annotation-driven human-in-the-loop model for CaseHub work
+metadata:
+  status: preview

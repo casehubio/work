@@ -35,7 +35,7 @@ class RoundRobinStrategyTest {
     }
 
     private static SelectionContext ctx() {
-        return new SelectionContext(null, null, null, null, null, null, null, null);
+        return new SelectionContext(null, null, null, null, null, null, null, null, null, null);
     }
 
     private static WorkerCandidate candidate(final String id) {

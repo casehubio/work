@@ -19,6 +19,8 @@ import java.util.Set;
  * @param title work item title — used by semantic matchers (may be null)
  * @param description work item description — used by semantic matchers (may be null)
  * @param excludedUsers comma-separated user IDs excluded from this WorkItem (may be null)
+ * @param routingStrategy per-WorkItem {@link WorkerSelectionStrategy} id override (null = use global config)
+ * @param minimumScore per-WorkItem score floor for scoring strategies (null = no floor)
  */
 public record SelectionContext(
         List<String> types,
@@ -28,5 +30,7 @@ public record SelectionContext(
         String candidateUsers,
         String title,
         String description,
-        String excludedUsers) {
+        String excludedUsers,
+        String routingStrategy,
+        Double minimumScore) {
 }

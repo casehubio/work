@@ -115,7 +115,7 @@ class CallbackWorkerSelectionStrategyDecoratorTest {
     private static SelectionContext testContext() {
         return new SelectionContext(
                 List.of("review"), "MEDIUM", Set.of(),
-                "reviewers", null, "Review task", null, null);
+                "reviewers", null, "Review task", null, null, null, null);
     }
 
     private static List<WorkerCandidate> testCandidates() {

@@ -1,11 +1,11 @@
 package io.casehub.work.api;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class SelectionContextTest {
 
@@ -14,7 +14,7 @@ class SelectionContextTest {
         final SelectionContext ctx = new SelectionContext(
                 List.of("finance"), "HIGH",
                 Set.of(Capability.of("audit"), Capability.of("legal")),
-                "finance-team", "alice,bob", null, null, null);
+                "finance-team", "alice,bob", null, null, null, null, null);
         assertThat(ctx.types()).isEqualTo(List.of("finance"));
         assertThat(ctx.priority()).isEqualTo("HIGH");
         assertThat(ctx.requiredCapabilities()).containsExactlyInAnyOrder(
@@ -25,7 +25,7 @@ class SelectionContextTest {
 
     @Test
     void constructor_acceptsNullFields() {
-        final SelectionContext ctx = new SelectionContext(null, null, Set.of(), null, null, null, null, null);
+        final SelectionContext ctx = new SelectionContext(null, null, Set.of(), null, null, null, null, null, null, null);
         assertThat(ctx.types()).isNull();
         assertThat(ctx.candidateGroups()).isNull();
     }
@@ -33,27 +33,45 @@ class SelectionContextTest {
     @Test
     void record_storesNewFields() {
         final var ctx = new SelectionContext(null, null, Set.of(), null, null,
-                "Review NDA", "Please review this NDA.", null);
+                "Review NDA", "Please review this NDA.", null, null, null);
         assertThat(ctx.title()).isEqualTo("Review NDA");
         assertThat(ctx.description()).isEqualTo("Please review this NDA.");
     }
 
     @Test
     void record_newFieldsNullable() {
-        final var ctx = new SelectionContext(null, null, Set.of(), null, null, null, null, null);
+        final var ctx = new SelectionContext(null, null, Set.of(), null, null, null, null, null, null, null);
         assertThat(ctx.title()).isNull();
         assertThat(ctx.description()).isNull();
     }
 
     @Test
     void record_excludedUsersStored() {
-        final var ctx = new SelectionContext(null, null, Set.of(), null, null, null, null, "dave,eve");
+        final var ctx = new SelectionContext(null, null, Set.of(), null, null, null, null, "dave,eve", null, null);
         assertThat(ctx.excludedUsers()).isEqualTo("dave,eve");
     }
 
     @Test
     void record_excludedUsersNullable() {
-        final var ctx = new SelectionContext(null, null, Set.of(), null, null, null, null, null);
+        final var ctx = new SelectionContext(null, null, Set.of(), null, null, null, null, null, null, null);
         assertThat(ctx.excludedUsers()).isNull();
+    }
+
+    @Test
+    void record_routingStrategyAndMinimumScore() {
+        final var ctx = new SelectionContext(
+                List.of(), "MEDIUM", Set.of(), null, null,
+                null, null, null, "semantic", 0.8);
+        assertThat(ctx.routingStrategy()).isEqualTo("semantic");
+        assertThat(ctx.minimumScore()).isEqualTo(0.8);
+    }
+
+    @Test
+    void record_routingStrategyAndMinimumScoreNullable() {
+        final var ctx = new SelectionContext(
+                null, null, Set.of(), null, null,
+                null, null, null, null, null);
+        assertThat(ctx.routingStrategy()).isNull();
+        assertThat(ctx.minimumScore()).isNull();
     }
 }
