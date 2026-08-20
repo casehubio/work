@@ -160,10 +160,46 @@ class WorkAnnotationsProcessorTest {
         public String approve(String input) { return null; }
     }
 
+    @Test
+    void labelWithWhitespace_throwsError() throws IOException {
+        Index index = indexClasses(WhitespaceLabelService.class,
+                HumanApproval.class, WorkItemPriority.class);
+        Map<String, MethodInfo> methods = new HashMap<>();
+        processor.collectAnnotatedMethods(index, WorkAnnotationsProcessor.HUMAN_APPROVAL, methods);
+        assertThat(methods).hasSize(1);
+        assertThatThrownBy(() -> processor.validateMethod(methods.values().iterator().next(), index))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("contains whitespace");
+    }
+
+    @Test
+    void validLabelsAndTypes_noError() throws IOException {
+        Index index = indexClasses(LabeledApprovalService.class,
+                HumanApproval.class, WorkItemPriority.class);
+        Map<String, MethodInfo> methods = new HashMap<>();
+        processor.collectAnnotatedMethods(index, WorkAnnotationsProcessor.HUMAN_APPROVAL, methods);
+        assertThat(methods).hasSize(1);
+        assertThatCode(() -> processor.validateMethod(methods.values().iterator().next(), index))
+                .doesNotThrowAnyException();
+    }
+
     @ApplicationScoped
     public static class MinScoreOutOfRangeService {
         @HumanApproval(title = "Bad", candidateGroups = "team")
         @SkillMatch(minimumScore = 1.5)
+        public String approve(String input) { return null; }
+    }
+
+    @ApplicationScoped
+    public static class WhitespaceLabelService {
+        @HumanApproval(title = "Bad", candidateGroups = "team", labels = {"finance /approval"})
+        public String approve(String input) { return null; }
+    }
+
+    @ApplicationScoped
+    public static class LabeledApprovalService {
+        @HumanApproval(title = "Good", candidateGroups = "team",
+                        types = {"finance", "expense"}, labels = {"finance/approval", "intake/pending"})
         public String approve(String input) { return null; }
     }
 }

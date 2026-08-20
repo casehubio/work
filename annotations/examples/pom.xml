@@ -18,5 +18,6 @@
         <module>approval-gate-annotated</module>
         <module>quorum-review-annotated</module>
         <module>escalation-gate-annotated</module>
+        <module>queue-integrated-annotated</module>
     </modules>
 </project>

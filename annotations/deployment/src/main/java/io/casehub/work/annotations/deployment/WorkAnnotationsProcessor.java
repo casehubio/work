@@ -98,6 +98,7 @@ public class WorkAnnotationsProcessor {
             AnnotationInstance approvalAnn = method.annotation(HUMAN_APPROVAL);
             validateDuration(approvalAnn, index, "claimDeadline", methodRef, "@HumanApproval.claimDeadline");
             validateDuration(approvalAnn, index, "expiresAt", methodRef, "@HumanApproval.expiresAt");
+            validateLabels(approvalAnn, index, methodRef);
         }
 
         if (hasEscalate) {
@@ -161,4 +162,19 @@ public class WorkAnnotationsProcessor {
             }
         }
     }
+
+    private void validateLabels(AnnotationInstance ann, IndexView index,
+                                String methodRef) {
+        AnnotationValue value = ann.valueWithDefault(index, "labels");
+        if (value != null) {
+            for (String label : value.asStringArray()) {
+                if (label.contains(" ") || label.contains("\t")) {
+                    throw new IllegalStateException(
+                            "@HumanApproval.labels on method '" + methodRef
+                            + "' contains whitespace: '" + label + "'");
+                }
+            }
+        }
+    }
+
 }

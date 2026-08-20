@@ -16,4 +16,6 @@ public @interface HumanApproval {
     String claimDeadline() default "";
     String expiresAt() default "";
     String description() default "";
+    String[] types() default {};
+    String[] labels() default {};
 }

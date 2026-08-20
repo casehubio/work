@@ -12,7 +12,8 @@ class CompositeWorkItemDescriptorTest {
     void singleApprovalDescriptor() {
         var approval = new HumanApprovalDescriptor(
             "Review", List.of("team-a"), List.of(), WorkItemPriority.HIGH,
-            "PT1H", "PT24H", "", "approve", "com.example.Svc", "com.example.Decision");
+            "PT1H", "PT24H", "", "approve", "com.example.Svc", "com.example.Decision",
+            List.of(), List.of());
         var composite = new CompositeWorkItemDescriptor(
             approval, null, null, null, "approve", "com.example.Svc", "com.example.Decision");
         assertThat(composite.approval()).isNotNull();
@@ -25,7 +26,8 @@ class CompositeWorkItemDescriptorTest {
     void fullCompositeDescriptor() {
         var approval = new HumanApprovalDescriptor(
             "Review", List.of("team-a"), List.of(), WorkItemPriority.HIGH,
-            "", "", "", "review", "com.example.Svc", "com.example.Outcome");
+            "", "", "", "review", "com.example.Svc", "com.example.Outcome",
+            List.of("finance"), List.of("finance/approval"));
         var quorum = new QuorumDescriptor(3, 2, List.of(), OnThresholdReached.KEEP, false);
         var escalation = new EscalationDescriptor("managers", "", "PT4H", true);
         var skillMatch = new SkillMatchDescriptor("semantic", List.of("analysis"), 0.7);

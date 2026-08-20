@@ -13,5 +13,7 @@ public record HumanApprovalDescriptor(
     String description,
     String methodName,
     String declaringClass,
-    String returnTypeName
+    String returnTypeName,
+    List<String> types,
+    List<String> labels
 ) {}
