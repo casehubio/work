@@ -1,18 +1,29 @@
-# HANDOFF — 2026-08-17
+# HANDOFF — 2026-08-21
 
 ## Last Session
 
-Extended workspace compositor (#312) with recursive sub-frames, unified toolbar, and mode switching. 13 commits: organiser toolbar with `[⊞] [☰] [+]`, recursive sub-frame creation with full chrome (close, pin, tabs, resize), move & resize zone picker, responsive snapping, accordion ↔ free-layout mode switching with state preservation across all tabs. Then designed the unified container model — every frame is a recursive container (free/tabbed/accordion/content) with the same toolbar at every level. Spec reviewed (light, 10 findings — 3 addressed, rest deferred). Implementation plan written: 5 tasks across 3 batches.
+Audited all slots for unmerged work — found 4 slots (54, 46, 57, 84) where work-end stamped branches closed and closed GitHub issues but never merged code to main. ~8,800 lines across 4 repos. Started fixing slot 54 (engine#813, db-scheduler alternative scheduler). Designed, reviewed, and planned the full reimplementation. Executed Batches 1-2: replaced Quartz-leaked `jobClass` with `JobType` enum, added `WorkerTaskData`/`RescheduleCallback`/`RetryHandler` types, extracted `WorkerExecutionOrchestrator` and `RetryOrchestrator` from Quartz classes into `common/`. All 15 scheduler-quartz tests pass. Branch reset to main HEAD with 4 clean commits.
 
 ## Immediate Next Step
 
-Run `/work continue` on `issue-312-workspace-compositor`. Execute the implementation plan at `plans/2026-08-17-unified-container-toolbar.md` — Batch 1 Task 1: add `"content"` to OrganiserType and rewrite the toolbar.
+Continue implementing #813 in slot 54. Run `/work` on `issue-813-alternative-scheduler-spi`. Next is Batch 3: extract `ScheduledTriggerOrchestrator` (from 3 Quartz job classes) and `MilestoneSLAOrchestrator`. Plan at `plans/2026-08-21-db-scheduler-alternative.md`.
+
+## Cross-Module
+
+No cross-module changes this session. db-scheduler module (Phase 2) will add a new Maven module but no cross-repo dependencies.
+
+## Unmerged Slots (needs attention)
+
+- Slot 46 (`issue-797-humantask-cbr-routing`, work repo) — 19 files, +3590/-82
+- Slot 57 (`issue-48-dspy-prompt-optimisation`, blocks repo) — 43 files, +2218/-123
+- Slot 84 (`issue-91-conversation-orchestrator`, blocks repo) — 7 files, +108
 
 ## References
 
-| Artifact | Path |
-|----------|------|
-| Spec | `specs/issue-312-workspace-compositor/2026-08-17-unified-container-toolbar-design.md` |
-| Plan | `plans/2026-08-17-unified-container-toolbar.md` |
-| Decisions | `specs/issue-312-workspace-compositor/decisions.md` (D15-D18) |
-| Review | `/Users/mdproctor/reviews/casehub-pages/unified-container-toolbar-20260817-184350/` |
+| Doc | Path |
+|-----|------|
+| Design spec | `specs/issue-813-alternative-scheduler-spi/2026-08-21-db-scheduler-alternative-design.md` |
+| Decisions | `specs/issue-813-alternative-scheduler-spi/decisions.md` |
+| Plan | `plans/2026-08-21-db-scheduler-alternative.md` |
+| Design review | `/Users/mdproctor/reviews/casehub-slots/issue-813-db-scheduler-20260821-065603/` |
+| Backup branch | `backup/issue-813-original` (original unmerged work for code reuse reference) |
