@@ -1,22 +1,16 @@
-# HANDOFF — 2026-08-21
+# HANDOFF — 2026-08-22
 
 ## Last Session
 
-Audited all slots for unmerged work — found 4 slots (54, 46, 57, 84) where work-end stamped branches closed and closed GitHub issues but never merged code to main. ~8,800 lines across 4 repos. Started fixing slot 54 (engine#813, db-scheduler alternative scheduler). Designed, reviewed, and planned the full reimplementation. Executed Batches 1-2: replaced Quartz-leaked `jobClass` with `JobType` enum, added `WorkerTaskData`/`RescheduleCallback`/`RetryHandler` types, extracted `WorkerExecutionOrchestrator` and `RetryOrchestrator` from Quartz classes into `common/`. All 15 scheduler-quartz tests pass. Branch reset to main HEAD with 4 clean commits.
+Completed Phase 1 of issue #813 (db-scheduler alternative scheduler SPI). Extracted `ScheduledTriggerOrchestrator` and `MilestoneSLAOrchestrator` from 4 Quartz job classes into `common/internal/executor/`, with 3 data records (`ScheduledTriggerData`, `ScheduledSignalData`, `MilestoneSLAData`). All 6 Quartz job/service classes are now thin shims delegating to scheduler-agnostic orchestrators. 5 commits on branch, 243 tests green.
 
 ## Immediate Next Step
 
-Continue implementing #813 in slot 54. Run `/work` on `issue-813-alternative-scheduler-spi`. Next is Batch 3: extract `ScheduledTriggerOrchestrator` (from 3 Quartz job classes) and `MilestoneSLAOrchestrator`. Plan at `plans/2026-08-21-db-scheduler-alternative.md`.
+Begin Phase 2: create the `scheduler-dbscheduler` Maven module. Design spec at `specs/issue-813-alternative-scheduler-spi/2026-08-21-db-scheduler-alternative-design.md` section 2. Key deliverables: `DbSchedulerJobScheduler`, `DbSchedulerWorkerExecutionManager`, 5 task handlers, H2 in-memory default with PostgreSQL opt-in.
 
 ## Cross-Module
 
-No cross-module changes this session. db-scheduler module (Phase 2) will add a new Maven module but no cross-repo dependencies.
-
-## Unmerged Slots (needs attention)
-
-- Slot 46 (`issue-797-humantask-cbr-routing`, work repo) — 19 files, +3590/-82
-- Slot 57 (`issue-48-dspy-prompt-optimisation`, blocks repo) — 43 files, +2218/-123
-- Slot 84 (`issue-91-conversation-orchestrator`, blocks repo) — 7 files, +108
+No cross-module changes. Phase 2 adds a new Maven module within this repo only.
 
 ## References
 
@@ -24,6 +18,3 @@ No cross-module changes this session. db-scheduler module (Phase 2) will add a n
 |-----|------|
 | Design spec | `specs/issue-813-alternative-scheduler-spi/2026-08-21-db-scheduler-alternative-design.md` |
 | Decisions | `specs/issue-813-alternative-scheduler-spi/decisions.md` |
-| Plan | `plans/2026-08-21-db-scheduler-alternative.md` |
-| Design review | `/Users/mdproctor/reviews/casehub-slots/issue-813-db-scheduler-20260821-065603/` |
-| Backup branch | `backup/issue-813-original` (original unmerged work for code reuse reference) |
