@@ -1,9 +1,0 @@
-branch: issue-813-alternative-scheduler-spi
-project-sha: slot-creation
-date: 2026-07-29
-issue: 813
-issue-repo: casehubio/engine
-covers: 813
-flyway-next-v: unknown
-design-repo: project
-design-section-hashes: 
