@@ -2,11 +2,20 @@
 
 ## Last Session
 
-Completed Phase 1 of issue #813 (db-scheduler alternative scheduler SPI). Extracted `ScheduledTriggerOrchestrator` and `MilestoneSLAOrchestrator` from 4 Quartz job classes into `common/internal/executor/`, with 3 data records (`ScheduledTriggerData`, `ScheduledSignalData`, `MilestoneSLAData`). All 6 Quartz job/service classes are now thin shims delegating to scheduler-agnostic orchestrators. 5 commits on branch, 243 tests green.
+Phase 2 of issue #813 (db-scheduler alternative scheduler SPI) is in progress. Created the `scheduler-dbscheduler` Maven module with all core classes:
+
+- **ScheduledJobData** — Serializable task data carrier with static factories for all 5 job types
+- **DbSchedulerLifecycle** — Creates H2 in-memory DataSource, registers 5 OneTimeTask definitions, manages Scheduler start/stop
+- **DbSchedulerJobScheduler** — `JobScheduler` SPI implementation (schedule/cancel/cancelGroup/exists)
+- **DbSchedulerWorkerExecutionManager** — `@WorkerBackend @Priority(10)` with in-memory active work tracking
+- **DbSchedulerRetryService** — `RetryHandler` wrapping `RetryOrchestrator` with db-scheduler reschedule callback
+- **CronUtils** — Next-execution computation using db-scheduler's shaded cron-utils
+
+7 commits on branch (5 Phase 1 + 2 Phase 2). 17 new tests all green. Quartz (15 tests) and common (228 tests) also green.
 
 ## Immediate Next Step
 
-Begin Phase 2: create the `scheduler-dbscheduler` Maven module. Design spec at `specs/issue-813-alternative-scheduler-spi/2026-08-21-db-scheduler-alternative-design.md` section 2. Key deliverables: `DbSchedulerJobScheduler`, `DbSchedulerWorkerExecutionManager`, 5 task handlers, H2 in-memory default with PostgreSQL opt-in.
+Add integration tests: a `@QuarkusTest` that starts a case, dispatches a worker via db-scheduler, and verifies completion through the orchestrator pipeline. Then update CLAUDE.md with the new module documentation.
 
 ## Cross-Module
 
