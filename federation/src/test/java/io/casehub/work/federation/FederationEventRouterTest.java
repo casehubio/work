@@ -7,7 +7,7 @@ import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.federation.subscription.FederationSubscriptionEntity;
 import io.casehub.work.federation.subscription.FederationSubscriptionService;
 import io.casehub.work.federation.transport.FederationTransport;
-import io.casehub.work.runtime.event.WorkItemLifecycleEvent;
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
