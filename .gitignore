@@ -17,3 +17,4 @@ docs/superpowers/specs/
 package-lock.json
 proj
 .mvn/slot-settings.xml
+.workspace
