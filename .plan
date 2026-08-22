@@ -2,7 +2,7 @@
 
 ## State
 branch: issue-813-alternative-scheduler-spi
-state: active
+state: closing:review
 project-sha: d3dd4ddaa325d1a08e97bdc4818fa14485c3eb2f
 date: 2026-08-21
 issue-repo: casehubio/engine
@@ -10,6 +10,7 @@ covers: 813
 design-repo: project
 flyway-next-v: none
 
+evidence-era: true
 ## Queue
 - [ ] casehubio/engine#813 — Issue #813 ← active
   - [ ] Batch 1: Batch 3
