@@ -2,7 +2,7 @@
 
 ## State
 branch: issue-813-alternative-scheduler-spi
-state: closing:review
+state: closing:verified
 project-sha: d3dd4ddaa325d1a08e97bdc4818fa14485c3eb2f
 date: 2026-08-21
 issue-repo: casehubio/engine
