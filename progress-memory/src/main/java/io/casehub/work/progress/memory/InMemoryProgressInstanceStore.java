@@ -2,11 +2,10 @@ package io.casehub.work.progress.memory;
 
 import io.casehub.work.progress.ProgressInstance;
 import io.casehub.work.progress.spi.ProgressInstanceStore;
+import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
-import jakarta.annotation.Priority;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -56,6 +55,18 @@ public class InMemoryProgressInstanceStore implements ProgressInstanceStore {
                 .filter(p -> parentProgressId.equals(p.parentProgressId()))
                 .toList();
     }
+
+    @Override
+    public List<ProgressInstance> findDescendantsOf(UUID parentId) {
+        List<ProgressInstance> result   = new java.util.ArrayList<>();
+        List<ProgressInstance> children = findByParentProgressId(parentId);
+        result.addAll(children);
+        for (ProgressInstance child : children) {
+            result.addAll(findDescendantsOf(child.id()));
+        }
+        return result;
+    }
+
 
     public void clear() {
         store.clear();

@@ -50,4 +50,7 @@ public class ProgressEventEntity extends PanacheEntityBase {
 
     @Column(name = "occurred_at", nullable = false)
     public Instant occurredAt;
+    @Column(name = "operation_id")
+    public UUID    operationId;
+
 }

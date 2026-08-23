@@ -12,6 +12,8 @@ public interface ProgressEventStore {
 
     Optional<ProgressUpdatedEvent> findById(UUID eventId);
 
+    Optional<ProgressUpdatedEvent> findLastEventAtOrBefore(UUID progressId, Instant cutoff);
+
 
     List<ProgressUpdatedEvent> findByProgressId(UUID progressId);
 

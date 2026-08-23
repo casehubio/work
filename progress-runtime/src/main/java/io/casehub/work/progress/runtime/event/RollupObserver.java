@@ -47,8 +47,11 @@ public class RollupObserver {
         if (event.parentProgressId() == null) {
             return;
         }
+        if (event.operationId() != null) {
+            return;
+        }
         tenantContextRunner.runInTenantContext(event.tenancyId(), () ->
-                recomputeWithRetry(event.parentProgressId(), event.tenancyId()));
+                                                                          recomputeWithRetry(event.parentProgressId(), event.tenancyId()));
     }
 
     @Transactional
@@ -92,8 +95,9 @@ public class RollupObserver {
                     parent.parentProgressId(), parent.rootProgressId(),
                     parent.shapeType(), previousState, newState,
                     parent.status(), ProgressChangeType.STATE_UPDATED,
-                    Instant.now());
+                    Instant.now(), null);
             eventStore.append(rollupEvent);
             cdiEvent.fireAsync(rollupEvent);
-        }}
+        }
+    }
 }

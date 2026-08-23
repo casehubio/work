@@ -11,6 +11,7 @@ import io.casehub.work.progress.ProgressInstance;
 import io.casehub.work.progress.ProgressSnapshot;
 import io.casehub.work.progress.ProgressStatus;
 import io.casehub.work.progress.ProgressUpdatedEvent;
+import io.casehub.work.progress.rollup.RollupEngine;
 import io.casehub.work.progress.memory.InMemoryProgressEventStore;
 import io.casehub.work.progress.memory.InMemoryProgressInstanceStore;
 import io.casehub.work.progress.validation.CountValidator;
@@ -53,7 +54,8 @@ class ProgressServiceTest {
                 instanceStore, eventStore, validators,
                 new StepValidator(), new StepShapeValidator(),
                 new RollbackDetector(), conditionEvaluator,
-                emittedEvents::add);}
+                emittedEvents::add, new RollupEngine());
+    }
 
     private ProgressCreateRequest percentageRequest(int value) {
         return new ProgressCreateRequest("tenant1", "workitem", UUID.randomUUID().toString(),

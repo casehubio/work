@@ -89,6 +89,59 @@ class InMemoryProgressInstanceStoreTest {
         assertThat(results).extracting(ProgressInstance::id).containsExactlyInAnyOrder(child1, child2);
     }
 
+
+    @Test
+    void findDescendantsOf_threeLevelTree_returnsAllDescendants() {
+        UUID rootId       = UUID.randomUUID();
+        UUID child1Id     = UUID.randomUUID();
+        UUID child2Id     = UUID.randomUUID();
+        UUID grandchildId = UUID.randomUUID();
+        store.put(instance(rootId, "workitem", "root", null));
+        store.put(instance(child1Id, "workitem", "c1", rootId));
+        store.put(instance(child2Id, "workitem", "c2", rootId));
+        store.put(instance(grandchildId, "workitem", "gc1", child1Id));
+
+        var descendants = store.findDescendantsOf(rootId);
+        assertThat(descendants).hasSize(3);
+        assertThat(descendants).extracting(ProgressInstance::id)
+                               .containsExactlyInAnyOrder(child1Id, child2Id, grandchildId);
+    }
+
+    @Test
+    void findDescendantsOf_doesNotIncludeRoot() {
+        UUID rootId  = UUID.randomUUID();
+        UUID childId = UUID.randomUUID();
+        store.put(instance(rootId, "workitem", "root", null));
+        store.put(instance(childId, "workitem", "c1", rootId));
+
+        var descendants = store.findDescendantsOf(rootId);
+        assertThat(descendants).extracting(ProgressInstance::id).doesNotContain(rootId);
+    }
+
+    @Test
+    void findDescendantsOf_midTreeNode_onlyReturnsTargetSubtree() {
+        UUID rootId    = UUID.randomUUID();
+        UUID branch1Id = UUID.randomUUID();
+        UUID branch2Id = UUID.randomUUID();
+        UUID leaf1Id   = UUID.randomUUID();
+        store.put(instance(rootId, "workitem", "root", null));
+        store.put(instance(branch1Id, "workitem", "b1", rootId));
+        store.put(instance(branch2Id, "workitem", "b2", rootId));
+        store.put(instance(leaf1Id, "workitem", "l1", branch1Id));
+
+        var descendants = store.findDescendantsOf(branch1Id);
+        assertThat(descendants).hasSize(1);
+        assertThat(descendants.get(0).id()).isEqualTo(leaf1Id);
+    }
+
+    @Test
+    void findDescendantsOf_leafNode_returnsEmpty() {
+        UUID rootId = UUID.randomUUID();
+        store.put(instance(rootId, "workitem", "root", null));
+
+        assertThat(store.findDescendantsOf(rootId)).isEmpty();
+    }
+
     @Test
     void putUpdatesExisting() {
         UUID             id       = UUID.randomUUID();

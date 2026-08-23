@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,9 +25,9 @@ class InMemoryProgressEventStoreTest {
 
     private ProgressUpdatedEvent event(UUID progressId, UUID rootId, Instant timestamp) {
         return new ProgressUpdatedEvent(UUID.randomUUID(), progressId, "t1", "workitem", "wi-1",
-                                        null, rootId, "percentage", null,
-                                        mapper.createObjectNode().put("value", 50),
-                                        ProgressStatus.ACTIVE, ProgressChangeType.STATE_UPDATED, timestamp);}
+                                        null, rootId, "percentage", null, null,
+                                        ProgressStatus.ACTIVE, ProgressChangeType.STATE_UPDATED, timestamp, null);
+    }
 
     @Test
     void appendAndFindByProgressId() {
@@ -82,5 +83,63 @@ class InMemoryProgressEventStoreTest {
 
         var results = store.findByProgressId(pid);
         assertThat(results.get(0).timestamp()).isBefore(results.get(1).timestamp());
+    }
+
+    @Test
+    void findLastEventAtOrBefore_returnsEventAtExactCutoff() {
+        UUID    progressId = UUID.randomUUID();
+        UUID    rootId     = UUID.randomUUID();
+        Instant t1         = Instant.parse("2026-01-01T10:00:00Z");
+        Instant t2         = Instant.parse("2026-01-01T11:00:00Z");
+        store.append(event(progressId, rootId, t1));
+        store.append(event(progressId, rootId, t2));
+
+        Optional<ProgressUpdatedEvent> result = store.findLastEventAtOrBefore(progressId, t2);
+        assertThat(result).isPresent();
+        assertThat(result.get().timestamp()).isEqualTo(t2);
+    }
+
+    @Test
+    void findLastEventAtOrBefore_returnsLatestBeforeCutoff() {
+        UUID    progressId = UUID.randomUUID();
+        UUID    rootId     = UUID.randomUUID();
+        Instant t1         = Instant.parse("2026-01-01T10:00:00Z");
+        Instant t2         = Instant.parse("2026-01-01T11:00:00Z");
+        Instant t3         = Instant.parse("2026-01-01T12:00:00Z");
+        store.append(event(progressId, rootId, t1));
+        store.append(event(progressId, rootId, t2));
+        store.append(event(progressId, rootId, t3));
+
+        Instant                        cutoff = Instant.parse("2026-01-01T11:30:00Z");
+        Optional<ProgressUpdatedEvent> result = store.findLastEventAtOrBefore(progressId, cutoff);
+        assertThat(result).isPresent();
+        assertThat(result.get().timestamp()).isEqualTo(t2);
+    }
+
+    @Test
+    void findLastEventAtOrBefore_noEventBeforeCutoff_returnsEmpty() {
+        UUID    progressId = UUID.randomUUID();
+        UUID    rootId     = UUID.randomUUID();
+        Instant t1         = Instant.parse("2026-01-01T10:00:00Z");
+        store.append(event(progressId, rootId, t1));
+
+        Instant cutoff = Instant.parse("2026-01-01T09:00:00Z");
+        assertThat(store.findLastEventAtOrBefore(progressId, cutoff)).isEmpty();
+    }
+
+    @Test
+    void findLastEventAtOrBefore_filteredByProgressId() {
+        UUID    id1    = UUID.randomUUID();
+        UUID    id2    = UUID.randomUUID();
+        UUID    rootId = UUID.randomUUID();
+        Instant t1     = Instant.parse("2026-01-01T10:00:00Z");
+        Instant t2     = Instant.parse("2026-01-01T11:00:00Z");
+        store.append(event(id1, rootId, t1));
+        store.append(event(id2, rootId, t2));
+
+        Instant                        cutoff = Instant.parse("2026-01-01T12:00:00Z");
+        Optional<ProgressUpdatedEvent> result = store.findLastEventAtOrBefore(id1, cutoff);
+        assertThat(result).isPresent();
+        assertThat(result.get().progressId()).isEqualTo(id1);
     }
 }

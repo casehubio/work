@@ -31,6 +31,15 @@ public class InMemoryProgressEventStore implements ProgressEventStore {
                      .findFirst();
     }
 
+    @Override
+    public Optional<ProgressUpdatedEvent> findLastEventAtOrBefore(UUID progressId, Instant cutoff) {
+        return events.stream()
+                     .filter(e -> e.progressId().equals(progressId))
+                     .filter(e -> !e.timestamp().isAfter(cutoff))
+                     .max(java.util.Comparator.comparing(ProgressUpdatedEvent::timestamp)
+                                              .thenComparing(ProgressUpdatedEvent::id));
+    }
+
 
     @Override
     public List<ProgressUpdatedEvent> findByProgressId(UUID progressId) {

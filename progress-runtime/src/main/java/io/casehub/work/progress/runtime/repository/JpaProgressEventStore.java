@@ -31,6 +31,15 @@ public class JpaProgressEventStore extends TenantAwareStore implements ProgressE
                                                           .map(this::toDomain));
     }
 
+    @Override
+    public Optional<ProgressUpdatedEvent> findLastEventAtOrBefore(UUID progressId, Instant cutoff) {
+        return ProgressEventEntity.<ProgressEventEntity>find(
+                                          "progressId = ?1 AND occurredAt <= ?2 ORDER BY occurredAt DESC, id DESC",
+                                          progressId, cutoff)
+                                  .firstResultOptional()
+                                  .map(this::toDomain);
+    }
+
 
     @Override
     public List<ProgressUpdatedEvent> findByProgressId(UUID progressId) {
@@ -80,7 +89,9 @@ public class JpaProgressEventStore extends TenantAwareStore implements ProgressE
         entity.currentState   = event.currentState();
         entity.status         = event.status().name();
         entity.occurredAt     = event.timestamp();
-        return entity;}
+        entity.operationId    = event.operationId();
+        return entity;
+    }
 
     private ProgressUpdatedEvent toDomain(ProgressEventEntity entity) {
         return new ProgressUpdatedEvent(
@@ -96,6 +107,7 @@ public class JpaProgressEventStore extends TenantAwareStore implements ProgressE
                 entity.currentState,
                 ProgressStatus.valueOf(entity.status),
                 ProgressChangeType.valueOf(entity.changeType),
-                entity.occurredAt
-        );}
+                entity.occurredAt,
+                entity.operationId);
+    }
 }

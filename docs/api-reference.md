@@ -1985,6 +1985,49 @@ curl -N "http://localhost:8080/progress/{id}/stream"
 
 ---
 
+### Subtree Rollback
+
+`POST /progress/{id}/rollback/subtree`
+
+Rolls back all descendants of a progress instance to their state at a given point in time. Leaf nodes are rolled back to their historical state; rollup parents are recomputed bottom-up from rolled-back children. Events emitted during the operation carry an `operationId` that suppresses the normal async rollup cascade.
+
+**Path parameter:** `id` — UUID of the subtree root
+
+**Query parameters (mutually exclusive, at least one required):**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `timestamp` | ISO-8601 Instant | conditional | Roll back to state at this timestamp |
+| `toEvent` | UUID | conditional | Roll back to state at this event's timestamp |
+
+**Response:** `SubtreeRollbackResult`
+
+| Field | Type | Description |
+|---|---|---|
+| `operationId` | UUID | Correlates all events emitted during this operation |
+| `rootId` | UUID | The root of the rolled-back subtree |
+| `targetTimestamp` | Instant | The target point in time |
+| `outcomes` | `List<NodeRollbackOutcome>` | Per-node results |
+
+**NodeRollbackOutcome:**
+
+| Field | Type | Description |
+|---|---|---|
+| `progressId` | UUID | The processed instance |
+| `outcome` | enum | `ROLLED_BACK`, `SKIPPED`, `FAILED` |
+| `reason` | string | null for ROLLED_BACK; explanation for SKIPPED/FAILED |
+| `previousState` | JSON | State before rollback (null if SKIPPED) |
+| `restoredState` | JSON | State after rollback (null if SKIPPED/FAILED) |
+| `policyBypassed` | boolean | True if rollbackPolicy=denied was bypassed |
+
+**Error codes:** 400 (both params or neither), 404 (instance not found)
+
+```bash
+curl -X POST "http://localhost:8080/progress/{id}/rollback/subtree?timestamp=2026-08-20T10:00:00Z"
+```
+
+---
+
 ### Response Types
 
 #### ProgressInstance

@@ -14,4 +14,7 @@ public interface ProgressInstanceStore {
     List<ProgressInstance> findByScopeTypeAndScopeId(String scopeType, String scopeId);
 
     List<ProgressInstance> findByParentProgressId(UUID parentProgressId);
+
+    List<ProgressInstance> findDescendantsOf(UUID parentId);
+
 }

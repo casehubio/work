@@ -4,6 +4,8 @@ import io.casehub.work.progress.ProgressCreateRequest;
 import io.casehub.work.progress.ProgressInstance;
 import io.casehub.work.progress.ProgressSnapshot;
 import io.casehub.work.progress.ProgressUpdatedEvent;
+import io.casehub.work.progress.SubtreeRollbackResult;
+import io.casehub.work.progress.runtime.service.SubtreeRollbackService;
 import io.casehub.work.progress.runtime.event.ProgressEventBroadcaster;
 import io.casehub.work.progress.runtime.service.ProgressService;
 import io.casehub.work.progress.spi.ProgressEventStore;
@@ -42,6 +44,9 @@ public class ProgressResource {
 
     @Inject
     ProgressEventBroadcaster broadcaster;
+    @Inject
+    SubtreeRollbackService   subtreeRollbackService;
+
 
     @POST
     public Response create(CreateProgressRequest request) {
@@ -105,11 +110,11 @@ public class ProgressResource {
     @Path("/{id}/tree")
     public Response getTree(@PathParam("id") UUID id) {
         return progressService.findById(id)
-                .map(root -> {
-                    List<ProgressInstance> descendants = collectDescendants(id);
-                    return Response.ok(new TreeResponse(root, descendants)).build();
-                })
-                .orElse(Response.status(Response.Status.NOT_FOUND).build());
+                              .map(root -> {
+                                  List<ProgressInstance> descendants = instanceStore.findDescendantsOf(id);
+                                  return Response.ok(new TreeResponse(root, descendants)).build();
+                              })
+                              .orElse(Response.status(Response.Status.NOT_FOUND).build());
     }
 
     @GET
@@ -141,6 +146,29 @@ public class ProgressResource {
         }
         return Response.ok(result).build();
     }
+
+    @POST
+    @Path("/{id}/rollback/subtree")
+    public Response rollbackSubtree(
+            @PathParam("id") UUID id,
+            @QueryParam("timestamp") String timestamp,
+            @QueryParam("toEvent") UUID toEventId) {
+        if (timestamp != null && toEventId != null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity("timestamp and toEvent are mutually exclusive").build();
+        }
+        SubtreeRollbackResult result;
+        if (toEventId != null) {
+            result = subtreeRollbackService.rollbackSubtreeToEvent(id, toEventId);
+        } else if (timestamp != null) {
+            result = subtreeRollbackService.rollbackSubtree(id, Instant.parse(timestamp));
+        } else {
+            return Response.status(Response.Status.BAD_REQUEST)
+                           .entity("timestamp or toEvent required").build();
+        }
+        return Response.ok(result).build();
+    }
+
 
     @GET
     @Path("/{id}/snapshots")
@@ -201,15 +229,6 @@ public class ProgressResource {
                                     UpdateStepDataRequest body) {
         ProgressInstance updated = progressService.updateStepState(id, stepName, body.data());
         return Response.ok(updated).build();
-    }
-
-    private List<ProgressInstance> collectDescendants(UUID rootId) {
-        List<ProgressInstance> children = instanceStore.findByParentProgressId(rootId);
-        List<ProgressInstance> result = new java.util.ArrayList<>(children);
-        for (ProgressInstance child : children) {
-            result.addAll(collectDescendants(child.id()));
-        }
-        return result;
     }
 
     public record TreeResponse(ProgressInstance root, List<ProgressInstance> descendants) {}

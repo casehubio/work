@@ -18,5 +18,6 @@ public record ProgressUpdatedEvent(
         JsonNode currentState,
         ProgressStatus status,
         ProgressChangeType changeType,
-        Instant timestamp
+        Instant timestamp,
+        UUID operationId
 ) {}

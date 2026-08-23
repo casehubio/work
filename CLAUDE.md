@@ -242,7 +242,7 @@ filtering or dropping commits that touch these paths.
 
 | # | Epic | Status | Notes |
 |---|---|---|---|
-| #92 | Distributed WorkItems — clustering + federation | in progress | Single-cluster done; #95 federation + #332 rollback remain (slot 130) |
+| #92 | Distributed WorkItems — clustering + federation | in progress | Single-cluster done; #332 coordinated rollback is the sole remaining child |
 | #39 | ProvenanceLink (PROV-O causal graph) | deferred | Awaiting production validation of simpler causal model |
 
 **Automatic behaviours (Claude follows these at all times in this project):**

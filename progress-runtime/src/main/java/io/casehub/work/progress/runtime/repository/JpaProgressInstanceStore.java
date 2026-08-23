@@ -1,8 +1,8 @@
 package io.casehub.work.progress.runtime.repository;
 
 import io.casehub.work.progress.ProgressInstance;
-import io.casehub.work.progress.spi.ProgressInstanceStore;
 import io.casehub.work.progress.runtime.model.ProgressInstanceEntity;
+import io.casehub.work.progress.spi.ProgressInstanceStore;
 import io.casehub.work.runtime.repository.jpa.TenantAwareStore;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -61,4 +61,16 @@ public class JpaProgressInstanceStore extends TenantAwareStore implements Progre
                         .map(ProgressInstanceMapper::toDomain)
                         .toList());
     }
+
+    @Override
+    public List<ProgressInstance> findDescendantsOf(UUID parentId) {
+        List<ProgressInstance> result   = new java.util.ArrayList<>();
+        List<ProgressInstance> children = findByParentProgressId(parentId);
+        result.addAll(children);
+        for (ProgressInstance child : children) {
+            result.addAll(findDescendantsOf(child.id()));
+        }
+        return result;
+    }
+
 }

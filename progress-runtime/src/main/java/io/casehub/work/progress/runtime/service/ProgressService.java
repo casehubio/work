@@ -9,6 +9,7 @@ import io.casehub.work.progress.ProgressInstance;
 import io.casehub.work.progress.ProgressSnapshot;
 import io.casehub.work.progress.ProgressStatus;
 import io.casehub.work.progress.ProgressUpdatedEvent;
+import io.casehub.work.progress.rollup.RollupEngine;
 import io.casehub.work.progress.StepDefinition;
 import io.casehub.work.progress.StepStatus;
 import io.casehub.work.progress.spi.ProgressEventStore;
@@ -38,6 +39,8 @@ public class ProgressService {
     private final RollbackDetector rollbackDetector;
     private final ConditionEvaluator conditionEvaluator;
     private final Consumer<ProgressUpdatedEvent> eventEmitter;
+    private final RollupEngine                   rollupEngine;
+
 
     public ProgressService(ProgressInstanceStore instanceStore,
                            ProgressEventStore eventStore,
@@ -46,16 +49,18 @@ public class ProgressService {
                            StepShapeValidator stepShapeValidator,
                            RollbackDetector rollbackDetector,
                            ConditionEvaluator conditionEvaluator,
-                           Consumer<ProgressUpdatedEvent> eventEmitter) {
-        this.instanceStore = instanceStore;
-        this.eventStore = eventStore;
-        this.validators = validators.stream()
-                .collect(Collectors.toMap(ShapeValidator::shapeType, v -> v));
-        this.stepValidator = stepValidator;
+                           Consumer<ProgressUpdatedEvent> eventEmitter,
+                           RollupEngine rollupEngine) {
+        this.instanceStore      = instanceStore;
+        this.eventStore         = eventStore;
+        this.validators         = validators.stream()
+                                            .collect(Collectors.toMap(ShapeValidator::shapeType, v -> v));
+        this.stepValidator      = stepValidator;
         this.stepShapeValidator = stepShapeValidator;
-        this.rollbackDetector = rollbackDetector;
+        this.rollbackDetector   = rollbackDetector;
         this.conditionEvaluator = conditionEvaluator;
-        this.eventEmitter = eventEmitter;
+        this.eventEmitter       = eventEmitter;
+        this.rollupEngine       = rollupEngine;
     }
 
     public ProgressInstance create(ProgressCreateRequest request) {
@@ -216,6 +221,35 @@ public class ProgressService {
         return applyRollbackState(instance, event.currentState());
     }
 
+    public ProgressInstance rollbackToTimestamp(UUID id, Instant target, UUID operationId) {
+        ProgressInstance instance = requireInstance(id);
+        ProgressUpdatedEvent event = eventStore.findLastEventAtOrBefore(id, target)
+                                               .orElseThrow(() -> new IllegalStateException("No event history at or before target"));
+
+        JsonNode targetState = event.currentState();
+        if (targetState.equals(instance.state())) {
+            return null;
+        }
+
+        return applyRollbackState(instance, targetState, operationId);
+    }
+
+    public ProgressInstance applyRollupState(UUID id, List<ProgressInstance> children, UUID operationId) {
+        ProgressInstance instance      = requireInstance(id);
+        JsonNode         previousState = instance.state();
+        JsonNode         newState      = rollupEngine.recompute(instance, children);
+
+        if (newState == null || !rollupEngine.hasStateChanged(previousState, newState)) {
+            return null;
+        }
+
+        ProgressInstance updated = withState(instance, newState, instance.status());
+        instanceStore.put(updated);
+        emitEvent(updated, previousState, ProgressChangeType.STATE_UPDATED, operationId);
+        return updated;
+    }
+
+
     public List<ProgressSnapshot> getSnapshots(UUID id, int limit) {
         return eventStore.findByProgressId(id).stream()
                          .map(e -> new ProgressSnapshot(e.id(), e.currentState(), e.status(), e.changeType(), e.timestamp()))
@@ -234,6 +268,18 @@ public class ProgressService {
         ProgressInstance updated = withState(instance, newState, newStatus);
         instanceStore.put(updated);
         emitEvent(updated, instance.state(), ProgressChangeType.ROLLED_BACK);
+        return updated;
+    }
+
+    private ProgressInstance applyRollbackState(ProgressInstance instance, JsonNode newState, UUID operationId) {
+        validateShape(instance.shapeType(), newState, instance.definition());
+        ProgressStatus newStatus = instance.status();
+        if (newStatus == ProgressStatus.PENDING) {
+            newStatus = ProgressStatus.ACTIVE;
+        }
+        ProgressInstance updated = withState(instance, newState, newStatus);
+        instanceStore.put(updated);
+        emitEvent(updated, instance.state(), ProgressChangeType.ROLLED_BACK, operationId);
         return updated;
     }
 
@@ -397,7 +443,22 @@ public class ProgressService {
                 instance.scopeType(), instance.scopeId(),
                 instance.parentProgressId(), instance.rootProgressId(),
                 instance.shapeType(), previousState, instance.state(),
-                instance.status(), changeType, Instant.now());
+                instance.status(), changeType, Instant.now(), null);
         eventStore.append(event);
-        eventEmitter.accept(event);}
+        eventEmitter.accept(event);
+    }
+
+    private void emitEvent(ProgressInstance instance, JsonNode previousState,
+                           ProgressChangeType changeType, UUID operationId) {
+        ProgressUpdatedEvent event = new ProgressUpdatedEvent(
+                UUID.randomUUID(),
+                instance.id(), instance.tenancyId(),
+                instance.scopeType(), instance.scopeId(),
+                instance.parentProgressId(), instance.rootProgressId(),
+                instance.shapeType(), previousState, instance.state(),
+                instance.status(), changeType, Instant.now(), operationId);
+        eventStore.append(event);
+        eventEmitter.accept(event);
+    }
+
 }
