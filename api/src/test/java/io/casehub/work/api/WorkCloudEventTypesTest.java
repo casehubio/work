@@ -25,6 +25,16 @@ class WorkCloudEventTypesTest {
     }
 
     @Test
+    void create_isNotInWorkEventType() {
+        assertThat(WorkCloudEventTypes.CREATE)
+                .isEqualTo("io.casehub.work.workitem.create");
+        for (final WorkEventType type : WorkEventType.values()) {
+            assertThat(type.name()).isNotEqualToIgnoringCase("create");
+        }
+    }
+
+
+    @Test
     void prefixFormat() {
         assertThat(WorkCloudEventTypes.PREFIX).isEqualTo("io.casehub.work.workitem.");
         assertThat(WorkCloudEventTypes.GROUP_PREFIX).isEqualTo("io.casehub.work.group.");
