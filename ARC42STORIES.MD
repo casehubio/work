@@ -1157,16 +1157,19 @@ Four targeted fixes delivered together. #243: `EXPIRED` added to `WorkItemStatus
 ### Chapter C36 — CloudEvent Adapter
 
 **Journey:** Platform Integration | **Sequence:** 1 of 1 | **Status:** ✅
-**Delivered:** 2026-06-23 | **Issues:** #273
+**Delivered:** 2026-06-23 | **Issues:** #273, #172, #299
 
 **What this delivers**
 Before this chapter, casehub-work lifecycle events were only observable by CDI beans that directly depend on `casehub-work` types. After: `WorkCloudEventAdapter` bridges `WorkItemLifecycleEvent` (24 CloudEvent types) and `WorkItemGroupLifecycleEvent` (3 CloudEvent types) to the platform `Event<CloudEvent>` bus, enabling casehub-ras and any future observer to react to WorkItem lifecycle transitions without coupling to casehub-work types.
 
 Additionally, `WorkItemLifecycleEmitter` and `WorkItemGroupLifecycleEmitter` structurally enforce dual-channel CDI firing (`fire()` + `fireAsync()`) at all lifecycle event sites, fixing a gap where `QueueDashboard` (`@ObservesAsync`) missed 13 non-terminal event types that were previously fired sync-only.
 
+**Inbound paths** (#172, #299): `WorkCloudEventInboundAdapter` handles two inbound CloudEvent types. `io.casehub.work.workitem.requested` (#172) creates WorkItems via template — `templateid` extension required, `ce.getId()` is callerRef. `io.casehub.work.workitem.create` (#299) creates WorkItems with full `WorkItemCreateRequest` control — no template required, data payload maps all request fields, `callerRef` from data (fallback to `ce.getId()`). Both types establish tenant context via `TenantContextRunner` and enforce idempotency via callerRef + partial unique index. The `CREATE` type enables distributed HumanTask patterns where the engine and work service run in separate Quarkus applications.
+
 **Accountability gaps closed**
 - `QueueDashboard` (`@ObservesAsync`) received only terminal events → all 24+ event types now reach async observers
 - No CloudEvent bridge existed → casehub-ras can observe WorkItem lifecycle without casehub-work type dependency
+- No async full-request WorkItem creation path existed → external services had to use synchronous REST API
 
 **Layer Impact**
 | Layer | Delta |
