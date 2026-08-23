@@ -18,8 +18,7 @@ package io.casehub.work.engine;
 import io.casehub.api.model.HumanTaskTarget;
 import io.casehub.api.model.TaskStatus;
 import io.casehub.api.spi.routing.RetrievedExperience;
-import io.casehub.engine.common.internal.event.EventBusAddresses;
-import io.casehub.engine.common.internal.event.HumanTaskScheduleEvent;
+import io.casehub.engine.common.spi.HumanTaskScheduleRequest;
 import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.engine.planning.plan.PlanItem;
 import io.casehub.engine.planning.registry.BlackboardRegistry;
@@ -33,7 +32,6 @@ import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.repository.WorkItemTemplateStore;
 import io.quarkus.test.junit.QuarkusTest;
-import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,15 +43,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 /**
- * Verifies HumanTaskScheduleHandler logic by invoking the handler directly (no event bus dispatch),
- * so all assertions are synchronous — no await or sleep needed. A single wiring test confirms
- * the @ConsumeEvent route is correctly registered.
+ * Verifies HumanTaskScheduleHandler logic by invoking the handler directly (direct SPI call),
+ * so all assertions are synchronous — no await or sleep needed.
  *
  * <p>Refs engine#290 (removed Thread.sleep), engine#291 (fixed detached entity in
  * templateMode_withInputData), engine#245.
@@ -64,7 +58,6 @@ class HumanTaskScheduleHandlerTest {
 
   @Inject HumanTaskScheduleHandler handler;
   @Inject BlackboardRegistry registry;
-  @Inject EventBus eventBus;
   @Inject WorkItemStore workItemStore;
   @Inject WorkItemTemplateStore templateStore;
   @Inject PlanItemStore planItemStore;
@@ -94,37 +87,6 @@ class HumanTaskScheduleHandlerTest {
     registry.evict(caseId);
   }
 
-  // ── Wiring ────────────────────────────────────────────────────────────────
-
-  @Test
-  void eventBus_routesHumanTaskScheduleEvent_toHandler() {
-    HumanTaskTarget target = HumanTaskTarget.inline().title("Smoke").build();
-    eventBus.publish(
-        EventBusAddresses.HUMAN_TASK_SCHEDULE,
-        new HumanTaskScheduleEvent(
-                caseId,
-                TENANCY_ID,
-                "irb-binding",
-                target,
-                Map.of(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ));
-    await()
-        .atMost(5, TimeUnit.SECONDS)
-        .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(TaskStatus.DELEGATED));
-  }
-
   // ── Inline mode ───────────────────────────────────────────────────────────
 
   @Test
@@ -136,15 +98,13 @@ class HumanTaskScheduleHandlerTest {
             .expiresIn(Duration.ofHours(72))
             .build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 target,
                 Map.of("caseRef", "T-42"),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -181,15 +141,13 @@ class HumanTaskScheduleHandlerTest {
   void templateMode_byUuid_createsWorkItem_andMarksPlanItemRunning() {
     WorkItemTemplate tmpl = persistTemplate("IRB Ethics Review Template");
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 HumanTaskTarget.template(tmpl.id.toString()).build(),
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -224,15 +182,13 @@ class HumanTaskScheduleHandlerTest {
   void templateMode_withInputData_inputDataOverridesTemplateDefaultPayload() {
     WorkItemTemplate tmpl = persistTemplate("Clinical Trial Consent", "{\"type\":\"default\"}");
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 HumanTaskTarget.template(tmpl.id.toString()).build(),
                 Map.of("trialId", "T-99", "phase", "III"),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -261,15 +217,13 @@ class HumanTaskScheduleHandlerTest {
   void templateMode_emptyInputData_usesTemplateDefaultPayload() {
     WorkItemTemplate tmpl = persistTemplate("Loan Approval", "{\"type\":\"loan\"}");
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 HumanTaskTarget.template(tmpl.id.toString()).build(),
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -295,15 +249,13 @@ class HumanTaskScheduleHandlerTest {
 
   @Test
   void templateMode_templateNotFound_planItemStaysPending() {
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 HumanTaskTarget.template(UUID.randomUUID().toString()).build(),
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -322,15 +274,13 @@ class HumanTaskScheduleHandlerTest {
 
   @Test
   void templateMode_invalidUuidRef_planItemStaysPending() {
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 HumanTaskTarget.template("not-a-uuid").build(),
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -358,8 +308,8 @@ class HumanTaskScheduleHandlerTest {
             .expiresIn(Duration.ofHours(72))
             .build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
@@ -370,8 +320,6 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 budgetDeadline,
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -394,8 +342,8 @@ class HumanTaskScheduleHandlerTest {
             .expiresIn(Duration.ofMinutes(30))
             .build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
@@ -406,8 +354,6 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 budgetDeadline,
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -426,15 +372,13 @@ class HumanTaskScheduleHandlerTest {
     HumanTaskTarget target =
         HumanTaskTarget.inline().title("Unbounded Review").expiresIn(Duration.ofHours(48)).build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 target,
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -457,8 +401,8 @@ class HumanTaskScheduleHandlerTest {
     Instant deadline = Instant.now().plusSeconds(3600);
     HumanTaskTarget target = HumanTaskTarget.inline().title("IND Filing").build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
@@ -470,8 +414,6 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 deadline,
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -496,8 +438,8 @@ class HumanTaskScheduleHandlerTest {
             .expiresIn(Duration.ofDays(7)) // 7d — later
             .build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
@@ -509,8 +451,6 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 absoluteDeadline,
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -532,8 +472,8 @@ class HumanTaskScheduleHandlerTest {
     Instant budgetDeadline = Instant.now().plusSeconds(3600); // 1h — earlier
     HumanTaskTarget target = HumanTaskTarget.inline().title("IND Filing").build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
@@ -545,8 +485,6 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 budgetDeadline,
                 absoluteDeadline,
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -568,15 +506,13 @@ class HumanTaskScheduleHandlerTest {
         HumanTaskTarget.inline().title("IND Filing").expiresIn(Duration.ofHours(24)).build();
 
     Instant before = Instant.now().plusSeconds(23 * 3600);
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 target,
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -605,15 +541,13 @@ class HumanTaskScheduleHandlerTest {
   void noPlanForCaseId_eventIgnored() {
     UUID unknownCaseId = UUID.randomUUID();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 unknownCaseId,
                 TENANCY_ID,
                 "irb-binding",
                 HumanTaskTarget.inline().title("Review").build(),
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -632,15 +566,13 @@ class HumanTaskScheduleHandlerTest {
 
   @Test
   void noPlanItemForBindingName_eventIgnored() {
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "unknown-binding",
                 HumanTaskTarget.inline().title("Review").build(),
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -667,15 +599,13 @@ class HumanTaskScheduleHandlerTest {
             .scope("casehubio/clinical/adverse-event")
             .build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 target,
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -698,15 +628,13 @@ class HumanTaskScheduleHandlerTest {
   void inlineMode_withoutScope_workItemScopeIsNull() {
     HumanTaskTarget target = HumanTaskTarget.inline().title("IRB Ethics Review").build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 target,
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -734,15 +662,13 @@ class HumanTaskScheduleHandlerTest {
             .scope("casehubio/clinical/adverse-event")
             .build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 target,
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -767,15 +693,13 @@ class HumanTaskScheduleHandlerTest {
 
     HumanTaskTarget target = HumanTaskTarget.template(tmpl.id.toString()).build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 target,
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -803,11 +727,11 @@ class HumanTaskScheduleHandlerTest {
                                .scope("static-scope")
                                .build();
 
-        handler.onHumanTaskSchedule(
-                new HumanTaskScheduleEvent(
+        handler.schedule(
+                new HumanTaskScheduleRequest(
                         caseId, TENANCY_ID, "irb-binding", target, Map.of(),
                         null, null, null, null, null, null,
-                        null, "dynamic-scope", null, null, null, null));
+                        null, "dynamic-scope", null, null));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
@@ -822,11 +746,11 @@ class HumanTaskScheduleHandlerTest {
                                .scope("static-scope")
                                .build();
 
-        handler.onHumanTaskSchedule(
-                new HumanTaskScheduleEvent(
+        handler.schedule(
+                new HumanTaskScheduleRequest(
                         caseId, TENANCY_ID, "irb-binding", target, Map.of(),
                         null, null, null, null, null, null,
-                        null, null, null, null, null, null));
+                        null, null, null, null));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
@@ -842,11 +766,11 @@ class HumanTaskScheduleHandlerTest {
                                .scope("static-scope")
                                .build();
 
-        handler.onHumanTaskSchedule(
-                new HumanTaskScheduleEvent(
+        handler.schedule(
+                new HumanTaskScheduleRequest(
                         caseId, TENANCY_ID, "irb-binding", target, Map.of(),
                         null, null, null, null, null, null,
-                        null, "dynamic-scope", null, null, null, null));
+                        null, "dynamic-scope", null, null));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
@@ -862,11 +786,11 @@ class HumanTaskScheduleHandlerTest {
                                .title("Static Title")
                                .build();
 
-        handler.onHumanTaskSchedule(
-                new HumanTaskScheduleEvent(
+        handler.schedule(
+                new HumanTaskScheduleRequest(
                         caseId, TENANCY_ID, "irb-binding", target, Map.of(),
                         null, null, null, null, null, null,
-                        "Dynamic Title", null, null, null, null, null));
+                        "Dynamic Title", null, null, null));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
@@ -880,11 +804,11 @@ class HumanTaskScheduleHandlerTest {
                                .title("Static Title")
                                .build();
 
-        handler.onHumanTaskSchedule(
-                new HumanTaskScheduleEvent(
+        handler.schedule(
+                new HumanTaskScheduleRequest(
                         caseId, TENANCY_ID, "irb-binding", target, Map.of(),
                         null, null, null, null, null, null,
-                        null, null, null, null, null, null));
+                        null, null, null, null));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
@@ -900,11 +824,11 @@ class HumanTaskScheduleHandlerTest {
                                .title("Static Title")
                                .build();
 
-        handler.onHumanTaskSchedule(
-                new HumanTaskScheduleEvent(
+        handler.schedule(
+                new HumanTaskScheduleRequest(
                         caseId, TENANCY_ID, "irb-binding", target, Map.of(),
                         null, null, null, null, null, null,
-                        "Dynamic Title", null, null, null, null, null));
+                        "Dynamic Title", null, null, null));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElse(null);
         assertThat(created).isNotNull();
@@ -918,8 +842,8 @@ class HumanTaskScheduleHandlerTest {
   void inlineMode_resolvedCandidateGroups_passedToWorkItem() {
     HumanTaskTarget target = HumanTaskTarget.inline().title("IRB Review").build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
@@ -928,8 +852,6 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 Set.of("irb-committee"),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -953,15 +875,13 @@ class HumanTaskScheduleHandlerTest {
   void inlineMode_nullResolvedCandidateGroups_workItemHasNullGroups() {
     HumanTaskTarget target = HumanTaskTarget.inline().title("Open Review").build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 target,
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -990,8 +910,8 @@ class HumanTaskScheduleHandlerTest {
   void templateMode_resolvedCandidateGroups_overridesTemplateDefaults() {
     WorkItemTemplate tmpl = persistTemplate("IRB Review Template");
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
@@ -1000,8 +920,6 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 Set.of("committee-a", "committee-b"),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -1025,8 +943,8 @@ class HumanTaskScheduleHandlerTest {
   void templateMode_nullResolvedCandidateGroups_keepsTemplateDefaults() {
     WorkItemTemplate tmpl = persistTemplate("IRB Review Template");
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
@@ -1037,8 +955,6 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 // spec absent — do not override template defaults
             null,
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -1063,8 +979,8 @@ class HumanTaskScheduleHandlerTest {
   void inlineMode_resolvedCandidateUsers_passedToWorkItem() {
     HumanTaskTarget target = HumanTaskTarget.inline().title("IRB Review").build();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
@@ -1074,8 +990,6 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 Set.of("user-a"),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -1100,8 +1014,8 @@ class HumanTaskScheduleHandlerTest {
   void templateMode_resolvedCandidateUsers_overridesTemplateDefaults() {
     WorkItemTemplate tmpl = persistTemplate("IRB Review Template");
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
@@ -1111,8 +1025,6 @@ class HumanTaskScheduleHandlerTest {
                 null,
                 null,
                 Set.of("user-x", "user-y"),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -1134,21 +1046,19 @@ class HumanTaskScheduleHandlerTest {
 
   @Test
   void inlineMode_skipsWorkItemCreation_whenPlanItemAlreadyRunning() {
-    // The handler guard (!= PENDING) protects against duplicate event delivery —
-    // at-least-once event bus semantics mean the same HumanTaskScheduleEvent could
+    // The handler guard (!= PENDING) protects against duplicate call delivery —
+    // at-least-once semantics mean the same HumanTaskScheduleRequest could
     // theoretically be dispatched twice. A DELEGATED PlanItem means WorkItem was already
     // created; the handler must be a no-op in that case.
     planItem.markDelegated();
 
-    handler.onHumanTaskSchedule(
-        new HumanTaskScheduleEvent(
+    handler.schedule(
+        new HumanTaskScheduleRequest(
                 caseId,
                 TENANCY_ID,
                 "irb-binding",
                 HumanTaskTarget.inline().title("Review").build(),
                 Map.of(),
-                null,
-                null,
                 null,
                 null,
                 null,
@@ -1178,11 +1088,11 @@ class HumanTaskScheduleHandlerTest {
                         "similar case", "applied plan A", "COMPLETED", 0.9, 0.85,
                         Map.of("domain", "clinical"), List.of(), Map.of()));
 
-        handler.onHumanTaskSchedule(
-                new HumanTaskScheduleEvent(
+        handler.schedule(
+                new HumanTaskScheduleRequest(
                         caseId, TENANCY_ID, "irb-binding", target, Map.of(),
-                        null, null, null, null, null, null, null, null, null,
-                        experiences, scores, null));
+                        null, null, null, null, null, null, null, null,
+                        experiences, scores));
 
         String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
         WorkItem created = workItemStore.scanAll().stream()
@@ -1199,11 +1109,11 @@ class HumanTaskScheduleHandlerTest {
     void inlineMode_nullScoresAndExperiences_workItemFieldsAreNull() {
         HumanTaskTarget target = HumanTaskTarget.inline().title("No Routing Context").build();
 
-        handler.onHumanTaskSchedule(
-                new HumanTaskScheduleEvent(
+        handler.schedule(
+                new HumanTaskScheduleRequest(
                         caseId, TENANCY_ID, "irb-binding", target, Map.of(),
-                        null, null, null, null, null, null, null, null, null,
-                        null, null, null));
+                        null, null, null, null, null, null, null, null,
+                        null, null));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElseThrow();
         assertThat(created.candidateScores()).isNull();
@@ -1219,12 +1129,12 @@ class HumanTaskScheduleHandlerTest {
                         "past case", "used plan B", "FAULTED", 0.3, 0.60,
                         Map.of(), List.of(), Map.of()));
 
-        handler.onHumanTaskSchedule(
-                new HumanTaskScheduleEvent(
+        handler.schedule(
+                new HumanTaskScheduleRequest(
                         caseId, TENANCY_ID, "irb-binding",
                         HumanTaskTarget.template(tmpl.id.toString()).build(),
-                        Map.of(), null, null, null, null, null, null, null, null, null,
-                        experiences, scores, null));
+                        Map.of(), null, null, null, null, null, null, null, null,
+                        experiences, scores));
 
         WorkItem created = workItemStore.scanAll().stream().findFirst().orElseThrow();
         assertThat(created.candidateScores()).contains("charlie").contains("0.95");
