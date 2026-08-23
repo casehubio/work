@@ -21,38 +21,34 @@ import io.casehub.api.model.HumanTaskTarget;
 import io.casehub.api.model.TaskStatus;
 import io.casehub.api.model.evaluator.JQExpressionEvaluator;
 import io.casehub.api.spi.routing.RetrievedExperience;
+import io.casehub.engine.common.internal.model.PlanItemSaveRequest;
+import io.casehub.engine.common.internal.model.TargetType;
+import io.casehub.engine.common.spi.HumanTaskScheduleRequest;
+import io.casehub.engine.common.spi.HumanTaskScheduler;
+import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.engine.planning.plan.CasePlanModel;
 import io.casehub.engine.planning.plan.PlanItem;
 import io.casehub.engine.planning.registry.BlackboardRegistry;
-import io.casehub.engine.common.internal.event.EventBusAddresses;
-import io.casehub.engine.common.internal.event.HumanTaskScheduleEvent;
-import io.casehub.engine.common.internal.model.PlanItemSaveRequest;
-import io.casehub.engine.common.internal.model.TargetType;
-import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.work.api.Outcome;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.spi.WorkItemCreator;
-import io.quarkus.vertx.ConsumeEvent;
-import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.jboss.logging.Logger;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.jboss.logging.Logger;
 
 /**
- * Handles outbound human task creation when a {@link HumanTaskTarget} binding is selected.
+ * Schedules human task work items when a {@link HumanTaskTarget} binding is selected.
  *
- * <p>Receives {@link HumanTaskScheduleEvent} from the engine event bus, looks up the {@link
- * PlanItem} in the {@link BlackboardRegistry} by binding name, creates a WorkItem via {@link
- * WorkItemCreator} (inline mode with direct request, or template mode with {@code templateId} set
- * on the request), persists the DELEGATED status to {@link PlanItemStore}, then marks the in-memory
- * PlanItem DELEGATED.
+ * <p>Implements {@link HumanTaskScheduler} — discovered by the engine runtime via CDI {@code
+ * Instance<HumanTaskScheduler>}. Looks up the {@link PlanItem} in the {@link BlackboardRegistry} by
+ * binding name, creates a WorkItem via {@link WorkItemCreator} (inline or template mode), persists
+ * DELEGATED status to {@link PlanItemStore}, then marks the in-memory PlanItem DELEGATED.
  *
  * <p>All three steps — WorkItem creation, {@code planItemStore.save(...DELEGATED...)}, and {@code
  * item.markDelegated()} — execute in a single {@code @Transactional} boundary. If WorkItem creation
@@ -61,10 +57,10 @@ import java.util.UUID;
  *
  * <p>The {@code callerRef} encodes {@code case:{caseId}/pi:{planItemId}} so that {@link
  * WorkItemLifecycleAdapter} can route the completion event back to the correct case and plan item.
- * Refs engine#245.
+ * Refs engine#245, work#298.
  */
 @ApplicationScoped
-public class HumanTaskScheduleHandler {
+public class HumanTaskScheduleHandler implements HumanTaskScheduler {
 
   private static final Logger LOG = Logger.getLogger(HumanTaskScheduleHandler.class);
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -73,41 +69,41 @@ public class HumanTaskScheduleHandler {
   @Inject WorkItemCreator workItemCreator;
   @Inject PlanItemStore planItemStore;
 
-  @ConsumeEvent(value = EventBusAddresses.HUMAN_TASK_SCHEDULE)
-  @RunOnVirtualThread
+  @Override
   @Transactional
-  public void onHumanTaskSchedule(HumanTaskScheduleEvent event) {
-    CasePlanModel plan = registry.get(event.caseId()).orElse(null);
+  public void schedule(HumanTaskScheduleRequest request) {
+    CasePlanModel plan = registry.get(request.caseId()).orElse(null);
     if (plan == null) {
       LOG.warnf(
           "No CasePlanModel for caseId=%s — case may not use blackboard or has completed",
-          event.caseId());
+          request.caseId());
       return;
     }
 
-    PlanItem item = plan.getPlanItemByBindingName(event.bindingName()).orElse(null);
+    PlanItem item = plan.getPlanItemByBindingName(request.bindingName()).orElse(null);
     if (item == null) {
       LOG.warnf(
-          "PlanItem for binding '%s' not found in case %s", event.bindingName(), event.caseId());
+          "PlanItem for binding '%s' not found in case %s",
+          request.bindingName(), request.caseId());
       return;
     }
 
     if (item.getStatus() != TaskStatus.DISPATCHING) {
       LOG.warnf(
           "PlanItem for binding '%s' case %s is not DISPATCHING (status=%s) — skipping",
-          event.bindingName(), event.caseId(), item.getStatus());
+          request.bindingName(), request.caseId(), item.getStatus());
       return;
     }
 
-    if (event.target().isTemplateMode()) {
-      handleTemplateMode(item, event);
+    if (request.target().isTemplateMode()) {
+      handleTemplateMode(item, request);
     } else {
-      handleInlineMode(item, event);
+      handleInlineMode(item, request);
     }
   }
 
-  private void handleTemplateMode(PlanItem item, HumanTaskScheduleEvent event) {
-    final HumanTaskTarget target = event.target();
+  private void handleTemplateMode(PlanItem item, HumanTaskScheduleRequest request) {
+    final HumanTaskTarget target = request.target();
 
     final UUID templateId;
     try {
@@ -115,32 +111,33 @@ public class HumanTaskScheduleHandler {
     } catch (IllegalArgumentException e) {
       LOG.warnf(
           "templateRef '%s' is not a valid UUID for binding '%s' case %s — reverting to PENDING",
-          target.templateRef(), event.bindingName(), event.caseId());
+          target.templateRef(), request.bindingName(), request.caseId());
       item.revertDispatching();
       return;
     }
 
-    final String callerRef = PlanItemCallerRef.encode(event.caseId(), item.getPlanItemId());
+    final String callerRef = PlanItemCallerRef.encode(request.caseId(), item.getPlanItemId());
     final String payload =
-        (event.inputData() != null && !event.inputData().isEmpty())
-            ? serializePayload(event.inputData())
+        (request.inputData() != null && !request.inputData().isEmpty())
+            ? serializePayload(request.inputData())
             : null;
 
     final WorkItemCreateRequest.Builder requestBuilder =
         WorkItemCreateRequest.builder()
             .templateId(templateId)
-            .title(event.resolvedTitle() != null ? event.resolvedTitle() : target.title())
+            .title(
+                request.resolvedTitle() != null ? request.resolvedTitle() : target.title())
             .createdBy("casehub-engine")
             .callerRef(callerRef)
-            .scope(event.resolvedScope() != null ? event.resolvedScope() : target.scope())
+            .scope(request.resolvedScope() != null ? request.resolvedScope() : target.scope())
             .payload(payload)
-            .candidateGroups(toCsv(event.resolvedCandidateGroups()))
-            .candidateUsers(toCsv(event.resolvedCandidateUsers()))
-            .expiresAt(earliestOf(event.expiresAtDeadline(), event.caseBudgetDeadline()))
-            .payloadTypeName(event.payloadTypeName())
-            .resolutionTypeName(event.resolutionTypeName())
-            .candidateScores(serializeScores(event.candidateScores()))
-            .routingExperiences(serializeExperiences(event.experiences()));
+            .candidateGroups(toCsv(request.resolvedCandidateGroups()))
+            .candidateUsers(toCsv(request.resolvedCandidateUsers()))
+            .expiresAt(earliestOf(request.expiresAtDeadline(), request.caseBudgetDeadline()))
+            .payloadTypeName(request.payloadTypeName())
+            .resolutionTypeName(request.resolutionTypeName())
+            .candidateScores(serializeScores(request.candidateScores()))
+            .routingExperiences(serializeExperiences(request.experiences()));
     if (target.outcomes() != null && !target.outcomes().isEmpty()) {
       requestBuilder.permittedOutcomes(toOutcomeList(target.outcomes()));
     }
@@ -150,63 +147,67 @@ public class HumanTaskScheduleHandler {
     } catch (final Exception e) {
       LOG.warnf(
           "Failed to create WorkItem from template '%s' binding '%s' case %s — reverting to PENDING: %s",
-          target.templateRef(), event.bindingName(), event.caseId(), e.getMessage());
+          target.templateRef(), request.bindingName(), request.caseId(), e.getMessage());
       item.revertDispatching();
       return;
     }
 
     planItemStore.save(
         PlanItemSaveRequest.primitive(
-            event.caseId(),
+            request.caseId(),
             item.getPlanItemId(),
             item.getBindingName(),
             TaskStatus.DELEGATED,
             item.getCreatedAt(),
             TargetType.HUMAN_TASK,
-            extractOutputMappingExpression(event.target()),
-            event.tenancyId(),
-            null, null, null),
-        event.tenancyId());
+            extractOutputMappingExpression(request.target()),
+            request.tenancyId(),
+            null,
+            null,
+            null),
+        request.tenancyId());
     item.markDelegated();
     LOG.infof("WorkItem created (template) for binding callerRef=%s", callerRef);
   }
 
-  private void handleInlineMode(PlanItem item, HumanTaskScheduleEvent event) {
-    String callerRef = PlanItemCallerRef.encode(event.caseId(), item.getPlanItemId());
+  private void handleInlineMode(PlanItem item, HumanTaskScheduleRequest request) {
+    String callerRef = PlanItemCallerRef.encode(request.caseId(), item.getPlanItemId());
     try {
       createInline(
-          event.target(),
-          event.inputData(),
-          event.resolvedCandidateGroups(),
-          event.resolvedCandidateUsers(),
+          request.target(),
+          request.inputData(),
+          request.resolvedCandidateGroups(),
+          request.resolvedCandidateUsers(),
           callerRef,
-          event.expiresAtDeadline(),
-          event.caseBudgetDeadline(),
-          event.payloadTypeName(),
-          event.resolutionTypeName(),
-          event.candidateScores(),
-          event.experiences(),
-          event.resolvedTitle(),
-          event.resolvedScope());
+          request.expiresAtDeadline(),
+          request.caseBudgetDeadline(),
+          request.payloadTypeName(),
+          request.resolutionTypeName(),
+          request.candidateScores(),
+          request.experiences(),
+          request.resolvedTitle(),
+          request.resolvedScope());
     } catch (Exception e) {
       LOG.warnf(
           "Failed to create inline WorkItem for binding '%s' case %s — reverting to PENDING: %s",
-          event.bindingName(), event.caseId(), e.getMessage());
+          request.bindingName(), request.caseId(), e.getMessage());
       item.revertDispatching();
       return;
     }
     planItemStore.save(
         PlanItemSaveRequest.primitive(
-            event.caseId(),
+            request.caseId(),
             item.getPlanItemId(),
             item.getBindingName(),
             TaskStatus.DELEGATED,
             item.getCreatedAt(),
             TargetType.HUMAN_TASK,
-            extractOutputMappingExpression(event.target()),
-            event.tenancyId(),
-            null, null, null),
-        event.tenancyId());
+            extractOutputMappingExpression(request.target()),
+            request.tenancyId(),
+            null,
+            null,
+            null),
+        request.tenancyId());
     item.markDelegated();
   }
 
@@ -248,9 +249,9 @@ public class HumanTaskScheduleHandler {
     if (target.outcomes() != null && !target.outcomes().isEmpty()) {
       requestBuilder.permittedOutcomes(toOutcomeList(target.outcomes()));
     }
-    WorkItemCreateRequest request = requestBuilder.build();
+    WorkItemCreateRequest workItemRequest = requestBuilder.build();
 
-    workItemCreator.create(request);
+    workItemCreator.create(workItemRequest);
     LOG.infof(
         "WorkItem created (inline) for binding callerRef=%s title='%s' expiresAt=%s",
         callerRef, target.title(), effectiveDeadline);
@@ -272,28 +273,27 @@ public class HumanTaskScheduleHandler {
     }
   }
 
-    private String serializeScores(Map<String, Double> scores) {
-        if (scores == null || scores.isEmpty()) {return null;}
-        try {
-            return MAPPER.writeValueAsString(scores);
-        } catch (JsonProcessingException e) {
-            LOG.warnf(e, "Failed to serialize candidateScores — using null");
-            return null;
-        }
+  private String serializeScores(Map<String, Double> scores) {
+    if (scores == null || scores.isEmpty()) return null;
+    try {
+      return MAPPER.writeValueAsString(scores);
+    } catch (JsonProcessingException e) {
+      LOG.warnf(e, "Failed to serialize candidateScores — using null");
+      return null;
     }
+  }
 
-    private String serializeExperiences(List<RetrievedExperience> experiences) {
-        if (experiences == null || experiences.isEmpty()) {return null;}
-        try {
-            return MAPPER.writeValueAsString(experiences);
-        } catch (JsonProcessingException e) {
-            LOG.warnf(e, "Failed to serialize routing experiences — using null");
-            return null;
-        }
+  private String serializeExperiences(List<RetrievedExperience> experiences) {
+    if (experiences == null || experiences.isEmpty()) return null;
+    try {
+      return MAPPER.writeValueAsString(experiences);
+    } catch (JsonProcessingException e) {
+      LOG.warnf(e, "Failed to serialize routing experiences — using null");
+      return null;
     }
+  }
 
-
-    private static List<Outcome> toOutcomeList(Set<String> outcomeNames) {
+  private static List<Outcome> toOutcomeList(Set<String> outcomeNames) {
     return outcomeNames.stream().map(name -> new Outcome(name, null, null)).toList();
   }
 

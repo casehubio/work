@@ -15,14 +15,15 @@
  */
 package io.casehub.work.engine;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.casehub.api.model.HumanTaskTarget;
 import io.casehub.api.model.TaskStatus;
+import io.casehub.engine.common.internal.model.PlanItemRecord;
+import io.casehub.engine.common.spi.HumanTaskScheduleRequest;
+import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.engine.planning.plan.PlanItem;
 import io.casehub.engine.planning.registry.BlackboardRegistry;
-import io.casehub.engine.common.internal.event.EventBusAddresses;
-import io.casehub.engine.common.internal.event.HumanTaskScheduleEvent;
-import io.casehub.engine.common.internal.model.PlanItemRecord;
-import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.ledger.testing.NoOpLedgerEntryRepository;
 import io.casehub.persistence.memory.InMemoryCaseInstanceRepository;
 import io.casehub.persistence.memory.InMemoryCaseMetaModelRepository;
@@ -35,16 +36,11 @@ import io.casehub.work.api.spi.WorkItemStore;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -52,11 +48,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Verifies that a WorkItem creation failure leaves PlanItem PENDING and does not write a RUNNING
@@ -74,8 +69,6 @@ class HumanTaskScheduleHandlerAtomicityTest {
   public static class Profile implements QuarkusTestProfile {
     @Override
     public Set<Class<?>> getEnabledAlternatives() {
-      // getEnabledAlternatives() replaces quarkus.arc.selected-alternatives — must include all
-      // alternatives required for deployment, not just the ones specific to this test.
       return Set.of(
           FailingWorkItemStore.class,
           InMemoryCaseInstanceRepository.class,
@@ -88,20 +81,14 @@ class HumanTaskScheduleHandlerAtomicityTest {
     }
   }
 
-  /**
-   * WorkItemStore substitute that throws on put() when shouldFail is true. Activated only via
-   * Profile — not listed in the global selected-alternatives.
-   */
   @ApplicationScoped
   @Alternative
   @Priority(2)
   public static class FailingWorkItemStore implements WorkItemStore {
 
     public static final AtomicBoolean shouldFail = new AtomicBoolean(false);
-    public static volatile CountDownLatch putAttemptLatch = new CountDownLatch(1);
 
-    private final java.util.Map<UUID, WorkItem> store =
-        new ConcurrentHashMap<>();
+    private final java.util.Map<UUID, WorkItem> store = new ConcurrentHashMap<>();
 
     public void clear() {
       store.clear();
@@ -109,7 +96,6 @@ class HumanTaskScheduleHandlerAtomicityTest {
 
     @Override
     public WorkItem put(WorkItem w) {
-      putAttemptLatch.countDown(); // signal that handler reached put() before any throw
       if (shouldFail.get()) throw new RuntimeException("Simulated WorkItemStore failure");
       WorkItem stored = w;
       if (stored.id() == null) stored = stored.toBuilder().id(UUID.randomUUID()).build();
@@ -129,7 +115,7 @@ class HumanTaskScheduleHandlerAtomicityTest {
   }
 
   @Inject BlackboardRegistry registry;
-  @Inject EventBus eventBus;
+  @Inject HumanTaskScheduleHandler handler;
   @Inject WorkItemStore workItemStore;
   @Inject PlanItemStore planItemStore;
 
@@ -143,12 +129,13 @@ class HumanTaskScheduleHandlerAtomicityTest {
     FailingWorkItemStore failing = (FailingWorkItemStore) workItemStore;
     failing.clear();
     FailingWorkItemStore.shouldFail.set(false);
-    FailingWorkItemStore.putAttemptLatch = new CountDownLatch(1);
     if (planItemStore instanceof InMemoryPlanItemStore mem) {
       mem.clear();
     }
     caseId = UUID.randomUUID();
-    planItem = PlanItem.create("irb-binding", io.casehub.api.model.ExecutorRef.of("unused-worker"), 5);
+    planItem =
+        PlanItem.create(
+            "irb-binding", io.casehub.api.model.ExecutorRef.of("unused-worker"), 5);
     assertThat(planItem.tryMarkDispatching()).isTrue();
     registry.getOrCreate(caseId, "test-tenant").addPlanItem(planItem);
   }
@@ -164,24 +151,12 @@ class HumanTaskScheduleHandlerAtomicityTest {
 
     FailingWorkItemStore.shouldFail.set(true);
     try {
-      eventBus.publish(
-          EventBusAddresses.HUMAN_TASK_SCHEDULE,
-          new HumanTaskScheduleEvent(
-              caseId, TENANCY_ID, "irb-binding", target, Map.of(),
-              null, null, null, null, null, null, null, null, null,
-              null, null, null));
+      handler.schedule(
+          new HumanTaskScheduleRequest(
+              caseId, TENANCY_ID, "irb-binding", target, Map.of(), null, null, null, null, null,
+              null, null, null, null, null));
 
-      try {
-        assertThat(FailingWorkItemStore.putAttemptLatch.await(5, TimeUnit.SECONDS))
-            .as("Handler must attempt WorkItemStore.put() within 5 seconds")
-            .isTrue();
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException("Interrupted waiting for put() attempt", e);
-      }
-
-      org.awaitility.Awaitility.await().atMost(2, TimeUnit.SECONDS)
-          .untilAsserted(() -> assertThat(planItem.getStatus()).isEqualTo(TaskStatus.PENDING));
+      assertThat(planItem.getStatus()).isEqualTo(TaskStatus.PENDING);
       assertThat(workItemStore.scanAll()).isEmpty();
       List<PlanItemRecord> records = planItemStore.findByCaseId(caseId, "test-tenant");
       assertThat(records)

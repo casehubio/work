@@ -51,8 +51,8 @@ class HumanTaskPlannerIntegrationTest {
 
   @Test
   void humanTask_binding_creates_workItem_via_full_planner_handler_flow() {
-    // Planner selects the humanTask binding → publishes HumanTaskScheduleEvent →
-    // handler must receive a PENDING PlanItem and create a WorkItem.
+    // Planner selects the humanTask binding → HumanTaskScheduler.schedule() →
+    // handler must receive a DISPATCHING PlanItem and create a WorkItem.
     // Before engine#312 fix: planner marked RUNNING → handler skipped → no WorkItem.
     approvalCase.startCase(Map.of("status", "pending"));
 
