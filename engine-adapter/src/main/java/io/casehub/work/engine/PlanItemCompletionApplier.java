@@ -191,7 +191,7 @@ public class PlanItemCompletionApplier {
                 };
         if (ht == null) {return;}
         if (ht.outputMapping() == null) {return;}
-        if (ref == null || ref.resolution() == null) {return;}
+        if (ref == null) {return;}
 
         if (!(ht.outputMapping() instanceof JQExpressionEvaluator jq)) {
             LOG.warnf(
@@ -201,8 +201,10 @@ public class PlanItemCompletionApplier {
         }
 
         try {
-            JsonNode         resolutionNode = MAPPER.readTree(ref.resolution());
-            ValidationResult vr             = jqEvaluator.eval(jq.expression(), resolutionNode);
+            JsonNode resolutionNode = ref.resolution() != null
+                    ? MAPPER.readTree(ref.resolution())
+                    : MAPPER.createObjectNode();
+            ValidationResult vr = jqEvaluator.eval(jq.expression(), resolutionNode);
             if (!vr.ok() || vr.output() == null || vr.output().isEmpty()) {
                 LOG.warnf(
                         "outputMapping jq expression returned no result for PlanItem %s: %s",

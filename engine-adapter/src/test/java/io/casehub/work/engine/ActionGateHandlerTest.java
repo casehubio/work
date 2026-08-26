@@ -21,13 +21,13 @@ import io.casehub.engine.common.internal.event.ActionGateApprovedEvent;
 import io.casehub.engine.common.internal.event.ActionGateCancelledEvent;
 import io.casehub.engine.common.internal.event.ActionGateExpiredEvent;
 import io.casehub.engine.common.internal.event.ActionGateRejectedEvent;
-import io.casehub.engine.common.internal.event.ActionGateScheduleEvent;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
+import io.casehub.engine.common.spi.ActionGateScheduleRequest;
+import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.memory.InMemoryWorkItemStore;
-import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.spi.WorkItemStore;
+import io.casehub.work.memory.InMemoryWorkItemStore;
 import io.casehub.worker.api.PlannedAction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.vertx.ConsumeEvent;
@@ -61,200 +61,203 @@ import static org.awaitility.Awaitility.await;
 @QuarkusTest
 class ActionGateHandlerTest {
 
-  private static final String TENANCY_ID = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
+    private static final String TENANCY_ID = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
 
-  @Inject ActionGateWorkItemHandler actionGateWorkItemHandler;
-  @Inject ActionGateCompletionApplier actionGateCompletionApplier;
-  @Inject WorkItemStore workItemStore;
+    @Inject
+    ActionGateWorkItemHandler   actionGateWorkItemHandler;
+    @Inject
+    ActionGateCompletionApplier actionGateCompletionApplier;
+    @Inject
+    WorkItemStore               workItemStore;
 
-  private static WorkItemRef toRef(final WorkItem wi) {
-    return new WorkItemRef(
-        wi.id(),
-        wi.status(),
-        wi.callerRef(),
-        wi.assigneeId(),
-        wi.resolution(),
-        wi.candidateGroups(),
-        wi.outcome(),
-        wi.tenancyId(),
-        wi.payload(),
-        wi.payloadTypeName(),
-        wi.resolutionTypeName());
-  }
-
-  @BeforeEach
-  void setUp() {
-    GateEventRecorder.reset();
-    if (workItemStore instanceof InMemoryWorkItemStore mem) {
-      mem.clear();
+    private static WorkItemRef toRef(final WorkItem wi) {
+        return new WorkItemRef(
+                wi.id(),
+                wi.status(),
+                wi.callerRef(),
+                wi.assigneeId(),
+                wi.resolution(),
+                wi.candidateGroups(),
+                wi.outcome(),
+                wi.tenancyId(),
+                wi.payload(),
+                wi.payloadTypeName(),
+                wi.resolutionTypeName());
     }
-  }
 
-  // --- ActionGateWorkItemHandler ---
-
-  @AfterEach
-  @Transactional
-  void tearDown() {
-    if (workItemStore instanceof InMemoryWorkItemStore mem) {
-      mem.clear();
+    @BeforeEach
+    void setUp() {
+        GateEventRecorder.reset();
+        if (workItemStore instanceof InMemoryWorkItemStore mem) {
+            mem.clear();
+        }
     }
-  }
 
-  @Test
-  @Transactional
-  void onActionGateSchedule_createsWorkItemWithGateCallerRef() {
-    final UUID caseId = UUID.randomUUID();
-    final long gateId = 42L;
-    final GateRequired gate =
-        new GateRequired(
-            "SAR filing requires MLRO sign-off",
-            false,
-            StaticSetStrategy.of("mlro", "analyst"),
-            null, null, null, null);
-    final PlannedAction action =
-        PlannedAction.of("File SAR", "sar.file", Map.of("accountId", "ACC-123"));
+    // --- ActionGateWorkItemHandler ---
 
-    actionGateWorkItemHandler.onActionGateSchedule(
-        new ActionGateScheduleEvent(
-            caseId, TENANCY_ID, gateId, action, gate, Set.of("mlro", "analyst"), null));
+    @AfterEach
+    @Transactional
+    void tearDown() {
+        if (workItemStore instanceof InMemoryWorkItemStore mem) {
+            mem.clear();
+        }
+    }
 
-    final String   expectedCallerRef = GateCallerRef.encode(caseId, gateId);
-    final WorkItem workItem          = workItemStore.findByCallerRef(expectedCallerRef).orElse(null);
+    @Test
+    @Transactional
+    void onActionGateSchedule_createsWorkItemWithGateCallerRef() {
+        final UUID caseId = UUID.randomUUID();
+        final long gateId = 42L;
+        final GateRequired gate =
+                new GateRequired(
+                        "SAR filing requires MLRO sign-off",
+                        false,
+                        StaticSetStrategy.of("mlro", "analyst"),
+                        null, null, null, null);
+        final PlannedAction action =
+                PlannedAction.of("File SAR", "sar.file", Map.of("accountId", "ACC-123"));
 
-    assertThat(workItem).isNotNull();
-    assertThat(workItem.callerRef()).isEqualTo(expectedCallerRef);
-    assertThat(workItem.title()).isEqualTo("SAR filing requires MLRO sign-off");
-    assertThat(workItem.candidateGroups()).isEqualTo("analyst,mlro");
-    assertThat(workItem.payload()).contains("sar.file");
-    assertThat(workItem.payload()).contains("ACC-123");
-    assertThat(workItem.payload()).contains("File SAR");
-  }
+        actionGateWorkItemHandler.schedule(
+                new ActionGateScheduleRequest(
+                        caseId, TENANCY_ID, gateId, action, gate, Set.of("mlro", "analyst"), null));
 
-  @Test
-  @Transactional
-  void onActionGateSchedule_noExpiresAt_whenExpiresInIsNull() {
-    final UUID caseId = UUID.randomUUID();
-    final GateRequired gate = new GateRequired("Confirm action", true, null, null, null, null, null);
-    final PlannedAction action = PlannedAction.of("Do something", "action.type", Map.of());
+        final String   expectedCallerRef = GateCallerRef.encode(caseId, gateId);
+        final WorkItem workItem          = workItemStore.findByCallerRef(expectedCallerRef).orElse(null);
 
-    actionGateWorkItemHandler.onActionGateSchedule(
-        new ActionGateScheduleEvent(caseId, TENANCY_ID, 99L, action, gate, Set.of(), null));
+        assertThat(workItem).isNotNull();
+        assertThat(workItem.callerRef()).isEqualTo(expectedCallerRef);
+        assertThat(workItem.title()).isEqualTo("SAR filing requires MLRO sign-off");
+        assertThat(workItem.candidateGroups()).isEqualTo("analyst,mlro");
+        assertThat(workItem.payload()).contains("sar.file");
+        assertThat(workItem.payload()).contains("ACC-123");
+        assertThat(workItem.payload()).contains("File SAR");
+    }
 
-    final String   callerRef = GateCallerRef.encode(caseId, 99L);
-    final WorkItem workItem  = workItemStore.findByCallerRef(callerRef).orElse(null);
-    assertThat(workItem).isNotNull();
-    // candidateGroups is null when not specified — WorkItemService does not add defaults
-    assertThat(workItem.candidateGroups()).isNull();
-    // expiresAt may be set by WorkItemService defaults; we don't assert null here
-  }
+    @Test
+    @Transactional
+    void onActionGateSchedule_noExpiresAt_whenExpiresInIsNull() {
+        final UUID          caseId = UUID.randomUUID();
+        final GateRequired  gate   = new GateRequired("Confirm action", true, null, null, null, null, null);
+        final PlannedAction action = PlannedAction.of("Do something", "action.type", Map.of());
 
-  // --- ActionGateCompletionApplier ---
+        actionGateWorkItemHandler.schedule(
+                new ActionGateScheduleRequest(caseId, TENANCY_ID, 99L, action, gate, Set.of(), null));
 
-  @Test
-  @Transactional
-  void onActionGateSchedule_withExpiresIn_setsExpiresAt() {
-    final UUID caseId = UUID.randomUUID();
-    final Instant before = Instant.now();
-    final GateRequired gate =
-        new GateRequired(
-            "Urgent review", false, StaticSetStrategy.of("mlro"), Duration.ofHours(24), null, null, null);
+        final String   callerRef = GateCallerRef.encode(caseId, 99L);
+        final WorkItem workItem  = workItemStore.findByCallerRef(callerRef).orElse(null);
+        assertThat(workItem).isNotNull();
+        // candidateGroups is null when not specified — WorkItemService does not add defaults
+        assertThat(workItem.candidateGroups()).isNull();
+        // expiresAt may be set by WorkItemService defaults; we don't assert null here
+    }
 
-    actionGateWorkItemHandler.onActionGateSchedule(
-        new ActionGateScheduleEvent(
-            caseId, TENANCY_ID, 77L, PlannedAction.of("d", "t", Map.of()), gate, Set.of("mlro"), null));
+    // --- ActionGateCompletionApplier ---
 
-    final WorkItem workItem =
-        workItemStore.findByCallerRef(GateCallerRef.encode(caseId, 77L)).orElse(null);
-    assertThat(workItem).isNotNull();
-    assertThat(workItem.expiresAt()).isNotNull();
-    assertThat(workItem.expiresAt()).isAfter(before.plus(Duration.ofHours(23)));
-    assertThat(workItem.expiresAt()).isBefore(before.plus(Duration.ofHours(25)));
-  }
+    @Test
+    @Transactional
+    void onActionGateSchedule_withExpiresIn_setsExpiresAt() {
+        final UUID    caseId = UUID.randomUUID();
+        final Instant before = Instant.now();
+        final GateRequired gate =
+                new GateRequired(
+                        "Urgent review", false, StaticSetStrategy.of("mlro"), Duration.ofHours(24), null, null, null);
 
-  @Test
-  void completionApplier_completed_publishesApprovedEvent() {
-    final UUID caseId = UUID.randomUUID();
-    final long     gateId   = 10L;
-    final WorkItem workItem = WorkItem.builder()
-        .callerRef(GateCallerRef.encode(caseId, gateId))
-        .assigneeId("user-mlro-001")
-        .resolution("{\"note\": \"approved\"}")
-        .build();
+        actionGateWorkItemHandler.schedule(
+                new ActionGateScheduleRequest(
+                        caseId, TENANCY_ID, 77L, PlannedAction.of("d", "t", Map.of()), gate, Set.of("mlro"), null));
 
-    actionGateCompletionApplier.apply(
-        new GateCallerRef(caseId, gateId), WorkItemStatus.COMPLETED, toRef(workItem), "test-tenant");
+        final WorkItem workItem =
+                workItemStore.findByCallerRef(GateCallerRef.encode(caseId, 77L)).orElse(null);
+        assertThat(workItem).isNotNull();
+        assertThat(workItem.expiresAt()).isNotNull();
+        assertThat(workItem.expiresAt()).isAfter(before.plus(Duration.ofHours(23)));
+        assertThat(workItem.expiresAt()).isBefore(before.plus(Duration.ofHours(25)));
+    }
 
-    await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.approvedEvents.isEmpty());
+    @Test
+    void completionApplier_completed_publishesApprovedEvent() {
+        final UUID caseId = UUID.randomUUID();
+        final long gateId = 10L;
+        final WorkItem workItem = WorkItem.builder()
+                                          .callerRef(GateCallerRef.encode(caseId, gateId))
+                                          .assigneeId("user-mlro-001")
+                                          .resolution("{\"note\": \"approved\"}")
+                                          .build();
 
-    assertThat(GateEventRecorder.approvedEvents).hasSize(1);
-    assertThat(GateEventRecorder.approvedEvents.get(0).caseId()).isEqualTo(caseId);
-    assertThat(GateEventRecorder.approvedEvents.get(0).gateId()).isEqualTo(gateId);
-    assertThat(GateEventRecorder.approvedEvents.get(0).approvedBy())
-        .isEqualTo("user-mlro-001"); // from assigneeId
-    assertThat(GateEventRecorder.rejectedEvents).isEmpty();
-    assertThat(GateEventRecorder.expiredEvents).isEmpty();
-  }
+        actionGateCompletionApplier.apply(
+                new GateCallerRef(caseId, gateId), WorkItemStatus.COMPLETED, toRef(workItem), "test-tenant");
 
-  @Test
-  void completionApplier_rejected_publishesRejectedEvent() {
-    final UUID caseId = UUID.randomUUID();
-    final long     gateId   = 20L;
-    final WorkItem workItem = WorkItem.builder()
-        .callerRef(GateCallerRef.encode(caseId, gateId))
-        .assigneeId("user-mlro-002")
-        .resolution("{\"reason\": \"rejected\"}")
-        .build();
+        await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.approvedEvents.isEmpty());
 
-    actionGateCompletionApplier.apply(
-        new GateCallerRef(caseId, gateId), WorkItemStatus.REJECTED, toRef(workItem), "test-tenant");
+        assertThat(GateEventRecorder.approvedEvents).hasSize(1);
+        assertThat(GateEventRecorder.approvedEvents.get(0).caseId()).isEqualTo(caseId);
+        assertThat(GateEventRecorder.approvedEvents.get(0).gateId()).isEqualTo(gateId);
+        assertThat(GateEventRecorder.approvedEvents.get(0).approvedBy())
+                .isEqualTo("user-mlro-001"); // from assigneeId
+        assertThat(GateEventRecorder.rejectedEvents).isEmpty();
+        assertThat(GateEventRecorder.expiredEvents).isEmpty();
+    }
 
-    await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.rejectedEvents.isEmpty());
+    @Test
+    void completionApplier_rejected_publishesRejectedEvent() {
+        final UUID caseId = UUID.randomUUID();
+        final long gateId = 20L;
+        final WorkItem workItem = WorkItem.builder()
+                                          .callerRef(GateCallerRef.encode(caseId, gateId))
+                                          .assigneeId("user-mlro-002")
+                                          .resolution("{\"reason\": \"rejected\"}")
+                                          .build();
 
-    assertThat(GateEventRecorder.rejectedEvents).hasSize(1);
-    assertThat(GateEventRecorder.rejectedEvents.get(0).caseId()).isEqualTo(caseId);
-    assertThat(GateEventRecorder.rejectedEvents.get(0).rejectedBy()).isEqualTo("user-mlro-002");
-    assertThat(GateEventRecorder.approvedEvents).isEmpty();
-  }
+        actionGateCompletionApplier.apply(
+                new GateCallerRef(caseId, gateId), WorkItemStatus.REJECTED, toRef(workItem), "test-tenant");
 
-  @Test
-  void completionApplier_cancelled_publishesRejectedEvent() {
-    final UUID     caseId   = UUID.randomUUID();
-    final WorkItem workItem = WorkItem.builder()
-        .callerRef(GateCallerRef.encode(caseId, 30L))
-        .build();
+        await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.rejectedEvents.isEmpty());
 
-    actionGateCompletionApplier.apply(
-        new GateCallerRef(caseId, 30L), WorkItemStatus.CANCELLED, toRef(workItem), "test-tenant");
+        assertThat(GateEventRecorder.rejectedEvents).hasSize(1);
+        assertThat(GateEventRecorder.rejectedEvents.get(0).caseId()).isEqualTo(caseId);
+        assertThat(GateEventRecorder.rejectedEvents.get(0).rejectedBy()).isEqualTo("user-mlro-002");
+        assertThat(GateEventRecorder.approvedEvents).isEmpty();
+    }
 
-    await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.rejectedEvents.isEmpty());
-    assertThat(GateEventRecorder.rejectedEvents).hasSize(1);
-    assertThat(GateEventRecorder.rejectedEvents.get(0).caseId()).isEqualTo(caseId);
-  }
+    @Test
+    void completionApplier_cancelled_publishesRejectedEvent() {
+        final UUID caseId = UUID.randomUUID();
+        final WorkItem workItem = WorkItem.builder()
+                                          .callerRef(GateCallerRef.encode(caseId, 30L))
+                                          .build();
 
-  // --- Recording CDI beans — @ConsumeEvent causes Quarkus to register codecs for event types ---
+        actionGateCompletionApplier.apply(
+                new GateCallerRef(caseId, 30L), WorkItemStatus.CANCELLED, toRef(workItem), "test-tenant");
 
-  @Test
-  void completionApplier_expired_publishesExpiredEvent() {
-    final UUID     caseId   = UUID.randomUUID();
-    final WorkItem workItem = WorkItem.builder()
-        .callerRef(GateCallerRef.encode(caseId, 40L))
-        .build();
+        await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.rejectedEvents.isEmpty());
+        assertThat(GateEventRecorder.rejectedEvents).hasSize(1);
+        assertThat(GateEventRecorder.rejectedEvents.get(0).caseId()).isEqualTo(caseId);
+    }
 
-    actionGateCompletionApplier.apply(
-        new GateCallerRef(caseId, 40L), WorkItemStatus.EXPIRED, toRef(workItem), "test-tenant");
+    // --- Recording CDI beans — @ConsumeEvent causes Quarkus to register codecs for event types ---
 
-    await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.expiredEvents.isEmpty());
-    assertThat(GateEventRecorder.expiredEvents).hasSize(1);
-    assertThat(GateEventRecorder.expiredEvents.get(0).caseId()).isEqualTo(caseId);
-    assertThat(GateEventRecorder.expiredEvents.get(0).gateId()).isEqualTo(40L);
-  }
+    @Test
+    void completionApplier_expired_publishesExpiredEvent() {
+        final UUID caseId = UUID.randomUUID();
+        final WorkItem workItem = WorkItem.builder()
+                                          .callerRef(GateCallerRef.encode(caseId, 40L))
+                                          .build();
+
+        actionGateCompletionApplier.apply(
+                new GateCallerRef(caseId, 40L), WorkItemStatus.EXPIRED, toRef(workItem), "test-tenant");
+
+        await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.expiredEvents.isEmpty());
+        assertThat(GateEventRecorder.expiredEvents).hasSize(1);
+        assertThat(GateEventRecorder.expiredEvents.get(0).caseId()).isEqualTo(caseId);
+        assertThat(GateEventRecorder.expiredEvents.get(0).gateId()).isEqualTo(40L);
+    }
 
     @Test
     void completionApplier_escalated_publishesExpiredEvent() {
-        final UUID     caseId   = UUID.randomUUID();
+        final UUID caseId = UUID.randomUUID();
         final WorkItem workItem = WorkItem.builder()
-                .callerRef(GateCallerRef.encode(caseId, 42L))
-                .build();
+                                          .callerRef(GateCallerRef.encode(caseId, 42L))
+                                          .build();
 
         actionGateCompletionApplier.apply(
                 new GateCallerRef(caseId, 42L), WorkItemStatus.ESCALATED, toRef(workItem), "test-tenant");
@@ -267,38 +270,38 @@ class ActionGateHandlerTest {
 
 
     @ApplicationScoped
-  static class GateEventRecorder {
+    static class GateEventRecorder {
 
-    static final List<ActionGateApprovedEvent> approvedEvents = new CopyOnWriteArrayList<>();
-    static final List<ActionGateRejectedEvent> rejectedEvents = new CopyOnWriteArrayList<>();
-    static final List<ActionGateExpiredEvent> expiredEvents = new CopyOnWriteArrayList<>();
-    static final List<ActionGateCancelledEvent> cancelledEvents = new CopyOnWriteArrayList<>();
+        static final List<ActionGateApprovedEvent>  approvedEvents  = new CopyOnWriteArrayList<>();
+        static final List<ActionGateRejectedEvent>  rejectedEvents  = new CopyOnWriteArrayList<>();
+        static final List<ActionGateExpiredEvent>   expiredEvents   = new CopyOnWriteArrayList<>();
+        static final List<ActionGateCancelledEvent> cancelledEvents = new CopyOnWriteArrayList<>();
 
-    static void reset() {
-      approvedEvents.clear();
-      rejectedEvents.clear();
-      expiredEvents.clear();
-      cancelledEvents.clear();
+        static void reset() {
+            approvedEvents.clear();
+            rejectedEvents.clear();
+            expiredEvents.clear();
+            cancelledEvents.clear();
+        }
+
+        @ConsumeEvent(EventBusAddresses.ACTION_GATE_APPROVED)
+        void onApproved(final ActionGateApprovedEvent event) {
+            approvedEvents.add(event);
+        }
+
+        @ConsumeEvent(EventBusAddresses.ACTION_GATE_REJECTED)
+        void onRejected(final ActionGateRejectedEvent event) {
+            rejectedEvents.add(event);
+        }
+
+        @ConsumeEvent(EventBusAddresses.ACTION_GATE_EXPIRED)
+        void onExpired(final ActionGateExpiredEvent event) {
+            expiredEvents.add(event);
+        }
+
+        @ConsumeEvent(EventBusAddresses.ACTION_GATE_CANCELLED)
+        void onCancelled(final ActionGateCancelledEvent event) {
+            cancelledEvents.add(event);
+        }
     }
-
-    @ConsumeEvent(EventBusAddresses.ACTION_GATE_APPROVED)
-    void onApproved(final ActionGateApprovedEvent event) {
-      approvedEvents.add(event);
-    }
-
-    @ConsumeEvent(EventBusAddresses.ACTION_GATE_REJECTED)
-    void onRejected(final ActionGateRejectedEvent event) {
-      rejectedEvents.add(event);
-    }
-
-    @ConsumeEvent(EventBusAddresses.ACTION_GATE_EXPIRED)
-    void onExpired(final ActionGateExpiredEvent event) {
-      expiredEvents.add(event);
-    }
-
-    @ConsumeEvent(EventBusAddresses.ACTION_GATE_CANCELLED)
-    void onCancelled(final ActionGateCancelledEvent event) {
-      cancelledEvents.add(event);
-    }
-  }
 }

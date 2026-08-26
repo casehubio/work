@@ -176,12 +176,12 @@ Configuration properties: [`README.md`](README.md#configuration)
 
 CaseHub engine adapter (`casehub-work-engine-adapter`, package `io.casehub.work.engine`). Bridges casehub-work WorkItem lifecycle with CaseHub engine planning PlanItem lifecycle. Relocated from `casehub-engine-work-adapter` in the engine repo (Refs #290).
 
-Activated by adding `casehub-work-engine-adapter` to the consumer's classpath (transitively brings `casehub-engine-planning`). Required for any runtime that uses `humanTask` YAML bindings — without it, `HumanTaskScheduleEvent` is published but never handled and WorkItems are never created.
+Activated by adding `casehub-work-engine-adapter` to the consumer's classpath (transitively brings `casehub-engine-planning`). Required for any runtime that uses `humanTask` or action gate YAML bindings. `HumanTaskScheduleHandler` implements `HumanTaskScheduler` SPI; `ActionGateWorkItemHandler` implements `ActionGateScheduler` SPI. Both are discovered by the engine runtime via CDI `Instance<>` — no Vert.x event bus.
 
-**Routing context threading (engine#756):** `HumanTaskScheduleHandler` serializes `candidateScores` (`Map<String, Double>`) and `experiences` (`List<RetrievedExperience>`) from `HumanTaskScheduleEvent` to JSON strings and passes them through `WorkItemCreateRequest` → `WorkItemService` → `WorkItemEntity` entity (TEXT columns, V44 migration) → REST API responses. Both inline and template modes thread the data. `WorkItemTemplateService.mergeRequestWithTemplate()` passes both fields through unchanged. The work repo treats both as opaque JSON — no engine type dependencies in work-api or work-runtime.
+**Routing context threading (engine#756):** `HumanTaskScheduleHandler` serializes `candidateScores` (`Map<String, Double>`) and `experiences` (`List<RetrievedExperience>`) from `HumanTaskScheduleRequest` to JSON strings and passes them through `WorkItemCreateRequest` → `WorkItemService` → `WorkItemEntity` entity (TEXT columns, V44 migration) → REST API responses. Both inline and template modes thread the data. `WorkItemTemplateService.mergeRequestWithTemplate()` passes both fields through unchanged. The work repo treats both as opaque JSON — no engine type dependencies in work-api or work-runtime.
 
 Two-way bridge:
-- **Outbound** (`HumanTaskScheduleHandler`, `ActionGateWorkItemHandler`) — consumes engine event bus messages, creates WorkItems
+- **Outbound** (`HumanTaskScheduleHandler`, `ActionGateWorkItemHandler`) — implements engine SPIs (`HumanTaskScheduler`, `ActionGateScheduler`), creates WorkItems
 - **Inbound** (`WorkItemLifecycleAdapter`) — observes `WorkItemEvent`, translates terminal events to PlanItem transitions via `PlanItemCompletionApplier`
 
 `callerRef` format: `case:{caseId}/pi:{planItemId}` (HumanTask) or `case:{caseId}/gate:{gateId}` (ActionGate). Use `CallerRef.parse()` / `PlanItemCallerRef.encode()` / `GateCallerRef.encode()`.

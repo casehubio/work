@@ -18,14 +18,12 @@ package io.casehub.work.engine;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.casehub.engine.common.internal.event.ActionGateScheduleEvent;
-import io.casehub.engine.common.internal.event.EventBusAddresses;
+import io.casehub.engine.common.spi.ActionGateScheduleRequest;
+import io.casehub.engine.common.spi.ActionGateScheduler;
 import io.casehub.work.api.MultiInstanceConfig;
 import io.casehub.work.api.ParentRole;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.spi.WorkItemCreator;
-import io.quarkus.vertx.ConsumeEvent;
-import io.smallrye.common.annotation.RunOnVirtualThread;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -37,7 +35,8 @@ import java.util.Set;
 /**
  * Creates a WorkItem when an action gate fires.
  *
- * <p>Consumes {@link ActionGateScheduleEvent} on {@link EventBusAddresses#ACTION_GATE_SCHEDULE}.
+ * <p>Implements {@link ActionGateScheduler} — discovered by the engine runtime via CDI
+ * {@code Instance<ActionGateScheduler>}.
  * Creates a WorkItem with:
  *
  * <ul>
@@ -53,17 +52,31 @@ import java.util.Set;
  * engine#402.
  */
 @ApplicationScoped
-public class ActionGateWorkItemHandler {
+public class ActionGateWorkItemHandler implements ActionGateScheduler {
 
-  private static final Logger LOG = Logger.getLogger(ActionGateWorkItemHandler.class);
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Logger       LOG    = Logger.getLogger(ActionGateWorkItemHandler.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
-  @Inject WorkItemCreator workItemCreator;
+    @Inject
+    WorkItemCreator workItemCreator;
 
-    @ConsumeEvent(value = EventBusAddresses.ACTION_GATE_SCHEDULE)
-    @RunOnVirtualThread
+    private static String buildPayload(final ActionGateScheduleRequest event) {
+        final ObjectNode root = MAPPER.createObjectNode();
+        root.put("description", event.plannedAction().description());
+        root.put("actionType", event.plannedAction().actionType());
+        root.put("reversible", event.gateRequired().reversible());
+        root.set("context", MAPPER.valueToTree(event.plannedAction().parameters()));
+        try {
+            return MAPPER.writeValueAsString(root);
+        } catch (final JsonProcessingException e) {
+            LOG.warnf(e, "Failed to serialize gate payload for gateId=%d — using null", event.gateId());
+            return null;
+        }
+    }
+
+    @Override
     @Transactional
-    public void onActionGateSchedule(final ActionGateScheduleEvent event) {
+    public void schedule(final ActionGateScheduleRequest event) {
         final String callerRef = GateCallerRef.encode(event.caseId(), event.gateId());
         final Instant expiresAt =
                 event.gateRequired().expiresIn() != null
@@ -112,18 +125,4 @@ public class ActionGateWorkItemHandler {
                     event.caseId(), event.gateId(), callerRef, expiresAt);
         }
     }
-
-  private static String buildPayload(final ActionGateScheduleEvent event) {
-    final ObjectNode root = MAPPER.createObjectNode();
-    root.put("description", event.plannedAction().description());
-    root.put("actionType", event.plannedAction().actionType());
-    root.put("reversible", event.gateRequired().reversible());
-    root.set("context", MAPPER.valueToTree(event.plannedAction().parameters()));
-    try {
-      return MAPPER.writeValueAsString(root);
-    } catch (final JsonProcessingException e) {
-      LOG.warnf(e, "Failed to serialize gate payload for gateId=%d — using null", event.gateId());
-      return null;
-    }
-  }
 }
