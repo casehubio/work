@@ -81,6 +81,6 @@ class WorkItemEventPublisherTest {
             "urn:casehub:work", "workitem/" + workItemId,
             workItemId, WorkItemStatus.PENDING, java.time.Instant.now(),
             "actor-1", null, null, null, null, "tenant-1",
-            null, null, null, null, null);
+            null, null, null, null, null, null);
     }
 }

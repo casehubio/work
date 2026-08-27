@@ -96,6 +96,6 @@ class WorkItemSubscriptionResolverTest {
             "urn:casehub:work", "workitem/" + workItemId,
             workItemId, WorkItemStatus.PENDING, Instant.now(),
             "actor-1", null, null, null, null, "tenant-1",
-            null, assigneeId, null, null, null);
+            null, assigneeId, null, null, null, null);
     }
 }

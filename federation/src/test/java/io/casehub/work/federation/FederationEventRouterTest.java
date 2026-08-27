@@ -58,7 +58,7 @@ class FederationEventRouterTest {
         var event = WorkItemLifecycleEvent.fromWire(
                 "io.casehub.work.workitem.created", "/workitems/x", "x",
                 UUID.randomUUID(), WorkItemStatus.PENDING, java.time.Instant.now(),
-                "sys", null, null, null, null, "t1", null, null, null, null, List.of());
+                "sys", null, null, null, null, "t1", null, null, null, null, List.of(), null);
         router.onWorkItemLifecycle(event);
         verifyNoInteractions(transport);
     }

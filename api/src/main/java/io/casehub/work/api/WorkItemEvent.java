@@ -24,4 +24,7 @@ public interface WorkItemEvent {
     default String outcome() { return ref().outcome(); }
     default String tenancyId() { return ref().tenancyId(); }
     default String resolutionTypeName() { return ref().resolutionTypeName(); }
+
+    default java.util.UUID ledgerEntryId() {return null;}
+
 }

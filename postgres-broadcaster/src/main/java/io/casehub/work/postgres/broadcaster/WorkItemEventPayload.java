@@ -57,6 +57,6 @@ public record WorkItemEventPayload(
     WorkItemLifecycleEvent toEvent() {
         return WorkItemLifecycleEvent.fromWire(type, source, subject,
                 workItemId, status, occurredAt, actor, detail, rationale, planRef, outcome, tenancyId,
-                callerRef, assigneeId, resolution, candidateGroups, types);
+                callerRef, assigneeId, resolution, candidateGroups, types, null);
     }
 }

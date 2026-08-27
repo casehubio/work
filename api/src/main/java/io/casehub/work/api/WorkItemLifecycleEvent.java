@@ -30,6 +30,8 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent, Subscribable
     private final String         candidateGroups;
     private final List<String>   types;
     private final WorkItem workItem;
+    private       UUID     ledgerEntryId;
+
 
     private WorkItemLifecycleEvent(final String type, final String sourceUri, final String subject,
                                    final UUID workItemId, final WorkItemStatus status, final Instant occurredAt,
@@ -101,10 +103,12 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent, Subscribable
                                                   final Instant occurredAt, final String actor, final String detail,
                                                   final String rationale, final String planRef, final String outcome, final String tenancyId,
                                                   final String callerRef, final String assigneeId, final String resolution, final String candidateGroups,
-                                                  final List<String> types) {
-        return new WorkItemLifecycleEvent(type, sourceUri, subject, workItemId, status,
+                                                  final List<String> types, final UUID ledgerEntryId) {
+        var event = new WorkItemLifecycleEvent(type, sourceUri, subject, workItemId, status,
                                           occurredAt, actor, detail, rationale, planRef, outcome, tenancyId,
                                           callerRef, assigneeId, resolution, candidateGroups, types, null);
+        event.ledgerEntryId = ledgerEntryId;
+        return event;
     }
 
     // ---- Existing accessors preserved (same names as old record components) ----
@@ -269,6 +273,25 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent, Subscribable
     public List<String> types() {
         return types;
     }
+
+    /**
+     * The work-ledger entry ID for this lifecycle transition. Set by
+     * {@code LedgerEventCapture} after persisting the entry — null if
+     * the ledger module is absent or this event was constructed without one.
+     */
+    @Override
+    public UUID ledgerEntryId() {
+        return ledgerEntryId;
+    }
+
+    /**
+     * Returns the SPI accessor for setting ledgerEntryId on an event. Only
+     * {@code LedgerEventCapture} should call this — the public event API stays immutable.
+     */
+    public static LedgerEntryIdSetter ledgerEntryIdSetter() {
+        return (event, id) -> event.ledgerEntryId = id;
+    }
+
 
     // ---- WorkItemEvent interface implementation ----
 
