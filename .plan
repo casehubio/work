@@ -1,0 +1,10 @@
+# Work Plan — Platform Provenance Gaps
+
+## State
+started: 2026-08-27
+
+## Queue
+- [ ] casehubio/work#365 — thread work-ledger entry ID back to engine on completion
+- [ ] casehubio/work#366 — typed CrossSystemRef replacing callerRef parsing
+- [ ] casehubio/engine#1007 — link reasoning traces to lineage DAG
+- [ ] casehubio/parent#431 — PROV-DM export for platform-wide DecisionLineageService
