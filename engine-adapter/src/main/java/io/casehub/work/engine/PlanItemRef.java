@@ -25,7 +25,11 @@ import java.util.UUID;
  * <p>Routes WorkItem lifecycle events back to the associated PlanItem in the blackboard. Refs
  * casehubio/work#136, engine#245.
  */
-public record PlanItemCallerRef(UUID caseId, String planItemId) implements CallerRef {
+public record PlanItemRef(UUID caseId, String planItemId) implements CallerRef {
+
+
+  @Override
+  public String encode() {return encode(caseId, planItemId);}
 
   public static String encode(final UUID caseId, final String planItemId) {
     return "case:" + caseId + "/pi:" + planItemId;

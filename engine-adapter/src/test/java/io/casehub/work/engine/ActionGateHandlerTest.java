@@ -121,7 +121,7 @@ class ActionGateHandlerTest {
                 new ActionGateScheduleRequest(
                         caseId, TENANCY_ID, gateId, action, gate, Set.of("mlro", "analyst"), null));
 
-        final String   expectedCallerRef = GateCallerRef.encode(caseId, gateId);
+        final String   expectedCallerRef = GateRef.encode(caseId, gateId);
         final WorkItem workItem          = workItemStore.findByCallerRef(expectedCallerRef).orElse(null);
 
         assertThat(workItem).isNotNull();
@@ -143,7 +143,7 @@ class ActionGateHandlerTest {
         actionGateWorkItemHandler.schedule(
                 new ActionGateScheduleRequest(caseId, TENANCY_ID, 99L, action, gate, Set.of(), null));
 
-        final String   callerRef = GateCallerRef.encode(caseId, 99L);
+        final String   callerRef = GateRef.encode(caseId, 99L);
         final WorkItem workItem  = workItemStore.findByCallerRef(callerRef).orElse(null);
         assertThat(workItem).isNotNull();
         // candidateGroups is null when not specified — WorkItemService does not add defaults
@@ -167,7 +167,7 @@ class ActionGateHandlerTest {
                         caseId, TENANCY_ID, 77L, PlannedAction.of("d", "t", Map.of()), gate, Set.of("mlro"), null));
 
         final WorkItem workItem =
-                workItemStore.findByCallerRef(GateCallerRef.encode(caseId, 77L)).orElse(null);
+                workItemStore.findByCallerRef(GateRef.encode(caseId, 77L)).orElse(null);
         assertThat(workItem).isNotNull();
         assertThat(workItem.expiresAt()).isNotNull();
         assertThat(workItem.expiresAt()).isAfter(before.plus(Duration.ofHours(23)));
@@ -179,13 +179,13 @@ class ActionGateHandlerTest {
         final UUID caseId = UUID.randomUUID();
         final long gateId = 10L;
         final WorkItem workItem = WorkItem.builder()
-                                          .callerRef(GateCallerRef.encode(caseId, gateId))
+                                          .callerRef(GateRef.encode(caseId, gateId))
                                           .assigneeId("user-mlro-001")
                                           .resolution("{\"note\": \"approved\"}")
                                           .build();
 
         actionGateCompletionApplier.apply(
-                new GateCallerRef(caseId, gateId), WorkItemStatus.COMPLETED, toRef(workItem), "test-tenant");
+                new GateRef(caseId, gateId), WorkItemStatus.COMPLETED, toRef(workItem), "test-tenant");
 
         await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.approvedEvents.isEmpty());
 
@@ -203,13 +203,13 @@ class ActionGateHandlerTest {
         final UUID caseId = UUID.randomUUID();
         final long gateId = 20L;
         final WorkItem workItem = WorkItem.builder()
-                                          .callerRef(GateCallerRef.encode(caseId, gateId))
+                                          .callerRef(GateRef.encode(caseId, gateId))
                                           .assigneeId("user-mlro-002")
                                           .resolution("{\"reason\": \"rejected\"}")
                                           .build();
 
         actionGateCompletionApplier.apply(
-                new GateCallerRef(caseId, gateId), WorkItemStatus.REJECTED, toRef(workItem), "test-tenant");
+                new GateRef(caseId, gateId), WorkItemStatus.REJECTED, toRef(workItem), "test-tenant");
 
         await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.rejectedEvents.isEmpty());
 
@@ -223,11 +223,11 @@ class ActionGateHandlerTest {
     void completionApplier_cancelled_publishesRejectedEvent() {
         final UUID caseId = UUID.randomUUID();
         final WorkItem workItem = WorkItem.builder()
-                                          .callerRef(GateCallerRef.encode(caseId, 30L))
+                                          .callerRef(GateRef.encode(caseId, 30L))
                                           .build();
 
         actionGateCompletionApplier.apply(
-                new GateCallerRef(caseId, 30L), WorkItemStatus.CANCELLED, toRef(workItem), "test-tenant");
+                new GateRef(caseId, 30L), WorkItemStatus.CANCELLED, toRef(workItem), "test-tenant");
 
         await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.rejectedEvents.isEmpty());
         assertThat(GateEventRecorder.rejectedEvents).hasSize(1);
@@ -240,11 +240,11 @@ class ActionGateHandlerTest {
     void completionApplier_expired_publishesExpiredEvent() {
         final UUID caseId = UUID.randomUUID();
         final WorkItem workItem = WorkItem.builder()
-                                          .callerRef(GateCallerRef.encode(caseId, 40L))
+                                          .callerRef(GateRef.encode(caseId, 40L))
                                           .build();
 
         actionGateCompletionApplier.apply(
-                new GateCallerRef(caseId, 40L), WorkItemStatus.EXPIRED, toRef(workItem), "test-tenant");
+                new GateRef(caseId, 40L), WorkItemStatus.EXPIRED, toRef(workItem), "test-tenant");
 
         await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.expiredEvents.isEmpty());
         assertThat(GateEventRecorder.expiredEvents).hasSize(1);
@@ -256,11 +256,11 @@ class ActionGateHandlerTest {
     void completionApplier_escalated_publishesExpiredEvent() {
         final UUID caseId = UUID.randomUUID();
         final WorkItem workItem = WorkItem.builder()
-                                          .callerRef(GateCallerRef.encode(caseId, 42L))
+                                          .callerRef(GateRef.encode(caseId, 42L))
                                           .build();
 
         actionGateCompletionApplier.apply(
-                new GateCallerRef(caseId, 42L), WorkItemStatus.ESCALATED, toRef(workItem), "test-tenant");
+                new GateRef(caseId, 42L), WorkItemStatus.ESCALATED, toRef(workItem), "test-tenant");
 
         await().atMost(2, TimeUnit.SECONDS).until(() ->
                                                           GateEventRecorder.expiredEvents.stream().anyMatch(e -> e.gateId() == 42L));

@@ -52,7 +52,7 @@ public class ActionGateCancelledHandler {
   @RunOnVirtualThread
   @Transactional
   public void onActionGateCancelled(final ActionGateCancelledEvent event) {
-    final String callerRef = GateCallerRef.encode(event.caseId(), event.gateId());
+    final String callerRef = GateRef.encode(event.caseId(), event.gateId());
     final Optional<WorkItemRef> refOpt = workItemCreator.findByCallerRef(callerRef);
 
     if (refOpt.isEmpty()) {

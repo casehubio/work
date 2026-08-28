@@ -77,7 +77,7 @@ public class ActionGateWorkItemHandler implements ActionGateScheduler {
     @Override
     @Transactional
     public void schedule(final ActionGateScheduleRequest event) {
-        final String callerRef = GateCallerRef.encode(event.caseId(), event.gateId());
+        final String callerRef = GateRef.encode(event.caseId(), event.gateId());
         final Instant expiresAt =
                 event.gateRequired().expiresIn() != null
                 ? Instant.now().plus(event.gateRequired().expiresIn())

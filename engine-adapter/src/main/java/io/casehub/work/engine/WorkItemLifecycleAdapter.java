@@ -82,12 +82,12 @@ public class WorkItemLifecycleAdapter {
     final CallerRef ref = CallerRef.parse(wie.callerRef());
     if (ref == null) return;
 
-    if (ref instanceof GateCallerRef gateRef) {
+    if (ref instanceof GateRef gateRef) {
       routeGate(gateRef, status, wie.ref(), wie.tenancyId());
       return;
     }
 
-    if (!(ref instanceof PlanItemCallerRef piRef)) return;
+    if (!(ref instanceof PlanItemRef piRef)) return;
 
     if (registry.get(piRef.caseId()).isEmpty()) {
       LOG.debugf(
@@ -104,7 +104,7 @@ public class WorkItemLifecycleAdapter {
     if (!status.isTerminal()) return;
 
     CallerRef ref = CallerRef.parse(event.callerRef());
-    if (!(ref instanceof PlanItemCallerRef piRef)) return;
+    if (!(ref instanceof PlanItemRef piRef)) return;
 
     CasePlanModel plan = registry.get(piRef.caseId()).orElse(null);
     if (plan == null) {
@@ -156,7 +156,7 @@ public class WorkItemLifecycleAdapter {
 
   private void handleSuspension(final WorkItemEvent event) {
     final CallerRef ref = CallerRef.parse(event.callerRef());
-    if (!(ref instanceof PlanItemCallerRef piRef)) return;
+    if (!(ref instanceof PlanItemRef piRef)) return;
 
     final CasePlanModel plan = registry.get(piRef.caseId()).orElse(null);
     if (plan == null) return;
@@ -177,7 +177,7 @@ public class WorkItemLifecycleAdapter {
 
   private void handlePossibleResume(final WorkItemEvent event) {
     final CallerRef ref = CallerRef.parse(event.callerRef());
-    if (!(ref instanceof PlanItemCallerRef piRef)) return;
+    if (!(ref instanceof PlanItemRef piRef)) return;
 
     final CasePlanModel plan = registry.get(piRef.caseId()).orElse(null);
     if (plan == null) return;
@@ -193,7 +193,7 @@ public class WorkItemLifecycleAdapter {
   }
 
     private void routeGate(
-            final GateCallerRef gateRef, final WorkItemStatus status, final WorkItemRef ref,
+            final GateRef gateRef, final WorkItemStatus status, final WorkItemRef ref,
             final String tenancyId) {
         gateApplier.apply(gateRef, status, ref, tenancyId);
     }

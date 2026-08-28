@@ -15,6 +15,8 @@
  */
 package io.casehub.work.engine;
 
+import io.casehub.work.api.CrossSystemRef;
+
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,9 +28,9 @@ import java.util.regex.Pattern;
  * <p>Two concrete types:
  *
  * <ul>
- *   <li>{@link PlanItemCallerRef} — {@code "case:{caseId}/pi:{planItemId}"} — standard WorkItem
+ *   <li>{@link PlanItemRef} — {@code "case:{caseId}/pi:{planItemId}"} — standard WorkItem
  *       created from a humanTask YAML binding. Routes back to a blackboard PlanItem.
- *   <li>{@link GateCallerRef} — {@code "case:{caseId}/gate:{gateId}"} — WorkItem created for an
+ *   <li>{@link GateRef} — {@code "case:{caseId}/gate:{gateId}"} — WorkItem created for an
  *       action gate. Routes to {@code ActionGateCompletionApplier}; bypasses the blackboard guard
  *       in {@code WorkItemLifecycleAdapter}.
  * </ul>
@@ -36,9 +38,12 @@ import java.util.regex.Pattern;
  * <p>CaseHub owns the semantics of these opaque strings — quarkus-work stores them unchanged on the
  * WorkItem and echoes them back in every WorkItemLifecycleEvent. Refs casehubio/work#136.
  */
-public sealed interface CallerRef permits PlanItemCallerRef, GateCallerRef {
+public sealed interface CallerRef extends CrossSystemRef permits PlanItemRef, GateRef {
 
   UUID caseId();
+
+  @Override
+  default String system() { return "engine"; }
 
   /**
    * Parses a callerRef string, returning {@code null} if the string is not a recognised CaseHub
@@ -49,7 +54,7 @@ public sealed interface CallerRef permits PlanItemCallerRef, GateCallerRef {
     final Matcher pi = Patterns.PI.matcher(raw);
     if (pi.matches()) {
       try {
-        return new PlanItemCallerRef(UUID.fromString(pi.group(1)), pi.group(2));
+        return new PlanItemRef(UUID.fromString(pi.group(1)), pi.group(2));
       } catch (IllegalArgumentException e) {
         return null;
       }
@@ -57,7 +62,7 @@ public sealed interface CallerRef permits PlanItemCallerRef, GateCallerRef {
     final Matcher gate = Patterns.GATE.matcher(raw);
     if (gate.matches()) {
       try {
-        return new GateCallerRef(UUID.fromString(gate.group(1)), Long.parseLong(gate.group(2)));
+        return new GateRef(UUID.fromString(gate.group(1)), Long.parseLong(gate.group(2)));
       } catch (IllegalArgumentException e) {
         return null; // covers both UUID parse and number parse errors
       }

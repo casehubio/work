@@ -58,7 +58,7 @@ public class ActionGateCompletionApplier {
   @Inject EventBus eventBus;
 
     public void apply(
-            final GateCallerRef gateRef, final WorkItemStatus status, final WorkItemRef ref,
+            final GateRef gateRef, final WorkItemStatus status, final WorkItemRef ref,
             final String tenancyId) {
         switch (status) {
             case COMPLETED -> handleApproved(gateRef, ref, tenancyId);
@@ -70,7 +70,7 @@ public class ActionGateCompletionApplier {
         }
     }
 
-    public void applyGroupCompletion(final GateCallerRef gateRef,
+    public void applyGroupCompletion(final GateRef gateRef,
                                      final io.casehub.work.api.GroupStatus status,
                                      final String approvedBy,
                                      final String resolutionTypeName,
@@ -100,8 +100,8 @@ public class ActionGateCompletionApplier {
     }
 
 
-    private void handleApproved(final GateCallerRef gateRef, final WorkItemRef ref,
-                              final String tenancyId) {
+    private void handleApproved(final GateRef gateRef, final WorkItemRef ref,
+                                final String tenancyId) {
     final String approvedBy = resolveActorId(ref);
     eventBus.publish(
             EventBusAddresses.ACTION_GATE_APPROVED,
@@ -114,7 +114,7 @@ public class ActionGateCompletionApplier {
             gateRef.caseId(), gateRef.gateId(), approvedBy);
   }
 
-  private void handleRejected(final GateCallerRef gateRef, final WorkItemRef ref,
+  private void handleRejected(final GateRef gateRef, final WorkItemRef ref,
                               final String tenancyId) {
     final String rejectedBy = resolveActorId(ref);
     eventBus.publish(
@@ -126,7 +126,7 @@ public class ActionGateCompletionApplier {
             gateRef.caseId(), gateRef.gateId(), rejectedBy);
   }
 
-  private void handleExpired(final GateCallerRef gateRef, final String tenancyId) {
+  private void handleExpired(final GateRef gateRef, final String tenancyId) {
     eventBus.publish(
             EventBusAddresses.ACTION_GATE_EXPIRED,
             new ActionGateExpiredEvent(gateRef.caseId(), tenancyId, gateRef.gateId()));

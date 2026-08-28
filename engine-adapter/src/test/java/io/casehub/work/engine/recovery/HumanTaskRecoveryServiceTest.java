@@ -27,7 +27,7 @@ import io.casehub.engine.common.spi.PlanItemStore;
 import io.casehub.engine.internal.context.CaseContextImpl;
 import io.casehub.persistence.memory.InMemoryPlanItemStore;
 import io.casehub.work.api.WorkItemStatus;
-import io.casehub.work.engine.PlanItemCallerRef;
+import io.casehub.work.engine.PlanItemRef;
 import io.casehub.work.memory.InMemoryWorkItemStore;
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.spi.WorkItemStore;
@@ -72,7 +72,7 @@ class HumanTaskRecoveryServiceTest {
     }
     caseId = UUID.randomUUID();
     planItemId = UUID.randomUUID().toString();
-    callerRef = PlanItemCallerRef.encode(caseId, planItemId);
+    callerRef = PlanItemRef.encode(caseId, planItemId);
 
     planItemStore.save(
         PlanItemSaveRequest.primitive(

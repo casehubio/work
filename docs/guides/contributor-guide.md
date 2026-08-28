@@ -29,7 +29,7 @@
 
 | Module | Artifact | Type | Purpose |
 |--------|----------|------|---------|
-| `engine-adapter/` | `casehub-work-engine-adapter` | Bridge | Two-way bridge between engine PlanItems and work WorkItems. Contains: `HumanTaskScheduleHandler` (outbound: engine -> work), `WorkItemLifecycleAdapter` (inbound: work -> engine), `PlanItemCompletionApplier` (transition routing), `ActionGateWorkItemHandler` + `ActionGateCompletionApplier` + `ActionGateCancelledHandler` (oversight gate bridge), `WorkStrategyContributor` (NamedStrategy registration), `HumanTaskRecoveryService` (startup recovery), `JpaPlanItemStore`, `WorkAdapterPlanItemEntity`, `CallerRef` sealed interface with `PlanItemCallerRef` + `GateCallerRef` variants. Lives here (not in engine) because the bridge owns the WorkItem entity and transaction boundaries. |
+| `engine-adapter/` | `casehub-work-engine-adapter` | Bridge | Two-way bridge between engine PlanItems and work WorkItems. Contains: `HumanTaskScheduleHandler` (outbound: engine -> work), `WorkItemLifecycleAdapter` (inbound: work -> engine), `PlanItemCompletionApplier` (transition routing), `ActionGateWorkItemHandler` + `ActionGateCompletionApplier` + `ActionGateCancelledHandler` (oversight gate bridge), `WorkStrategyContributor` (NamedStrategy registration), `HumanTaskRecoveryService` (startup recovery), `JpaPlanItemStore`, `WorkAdapterPlanItemEntity`, `CallerRef` sealed interface with `PlanItemRef` + `GateRef` variants. Lives here (not in engine) because the bridge owns the WorkItem entity and transaction boundaries. |
 | `flow/` | `casehub-work-flow` | Jandex library | `WorkItemsFlow` (extends Quarkus-Flow's `Flow`), `HumanTaskFlowBridge` (CDI bridge creating WorkItems and returning `Uni<String>` that suspends the workflow), `WorkItemTaskBuilder` (fluent DSL: `.title()`, `.description()`, `.assigneeId()`, `.candidateGroups()`, `.priority()`, `.payloadFrom()`, `.buildTask()`), `PendingWorkItemRegistry` (in-memory CompletableFuture registry), `WorkItemFlowEventListener` (lifecycle observer that resolves pending futures), `WorkItemResolutionException`. |
 | `ledger/` | `casehub-work-ledger` | Optional | `LedgerEventCapture` (observes lifecycle events, writes ledger entries), `WorkItemLedgerEntry` entity, `WorkItemLedgerEntryRepository` SPI + `JpaWorkItemLedgerEntryRepository`, REST: `LedgerResource` (queries, provenance, attestation), `ActorTrustResource` (trust scores), DTOs for attestation and provenance. |
 | `queues/` | `casehub-work-queues` | Optional | `QueueMembershipService`, `FilterEvaluationObserver`, `QueueSnapshotJob` (scheduled trend data collection), `WorkItemQueueEventBroadcaster` SPI + `LocalWorkItemQueueEventBroadcaster`, `WorkItemQueueMetrics`, `QueueResource` + `QueueStateResource` (REST), `WorkItemQueueState` + `QueueSnapshot` entities, `QueueSnapshotStore` + `QueueStateStore` + `WorkItemViewQuery` repositories, `QueueSnapshotInterval` + `QueueTrendRetention` config, `QueuesRlsPolicyApplicator`. |
@@ -71,7 +71,7 @@
 
 The two-way bridge between engine PlanItems and work WorkItems was relocated from engine (#290). It lives in casehub-work because the bridge owns the WorkItem entity and transaction boundaries.
 
-**Outbound (engine -> work):** `HumanTaskScheduleHandler` receives `HumanTaskScheduleEvent` from the engine and creates a WorkItem via `WorkItemCreator.create()`. Uses `CallerRef` sealed interface with two variants: `PlanItemCallerRef` (standard human tasks) and `GateCallerRef` (oversight gates). Threads `candidateScores` and `routingExperiences` from the engine's evaluation context.
+**Outbound (engine -> work):** `HumanTaskScheduleHandler` receives `HumanTaskScheduleEvent` from the engine and creates a WorkItem via `WorkItemCreator.create()`. Uses `CallerRef` sealed interface with two variants: `PlanItemRef` (standard human tasks) and `GateRef` (oversight gates). Threads `candidateScores` and `routingExperiences` from the engine's evaluation context.
 
 **Inbound (work -> engine):** `WorkItemLifecycleAdapter` observes `WorkItemLifecycleEvent` CDI events and routes terminal transitions back to the engine via `PlanItemCompletionApplier`. Handles resolution data, outcome, rationale, and planRef fields. For multi-approver gates, aggregates `approvedBy` from child WorkItems via `WorkItemCreator.findChildApprovers()`.
 
@@ -81,7 +81,7 @@ The two-way bridge between engine PlanItems and work WorkItems was relocated fro
 
 **Strategy registration:** `WorkStrategyContributor` contributes work-module NamedStrategy beans to the engine's `EngineStrategyResolver`.
 
-**CallerRef format:** `PlanItemCallerRef` encodes `case:{caseId}/pi:{planItemId}`. `GateCallerRef` encodes `case:{caseId}/gate:{planItemId}`. Both parse via the `CallerRef` sealed interface.
+**CallerRef format:** `PlanItemRef` encodes `case:{caseId}/pi:{planItemId}`. `GateRef` encodes `case:{caseId}/gate:{planItemId}`. Both parse via the `CallerRef` sealed interface.
 
 **Planning module dependency:** The adapter was migrated from `casehub-engine-blackboard` to `casehub-engine-planning` (#322).
 

@@ -116,7 +116,7 @@ public class HumanTaskScheduleHandler implements HumanTaskScheduler {
       return;
     }
 
-    final String callerRef = PlanItemCallerRef.encode(request.caseId(), item.getPlanItemId());
+    final String callerRef = PlanItemRef.encode(request.caseId(), item.getPlanItemId());
     final String payload =
         (request.inputData() != null && !request.inputData().isEmpty())
             ? serializePayload(request.inputData())
@@ -171,7 +171,7 @@ public class HumanTaskScheduleHandler implements HumanTaskScheduler {
   }
 
   private void handleInlineMode(PlanItem item, HumanTaskScheduleRequest request) {
-    String callerRef = PlanItemCallerRef.encode(request.caseId(), item.getPlanItemId());
+    String callerRef = PlanItemRef.encode(request.caseId(), item.getPlanItemId());
     try {
       createInline(
           request.target(),

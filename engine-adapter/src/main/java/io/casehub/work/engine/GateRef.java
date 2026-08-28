@@ -29,7 +29,11 @@ import java.util.UUID;
  * no associated PlanItem. The routing check must happen before the blackboard guard. Refs
  * engine#402.
  */
-public record GateCallerRef(UUID caseId, long gateId) implements CallerRef {
+public record GateRef(UUID caseId, long gateId) implements CallerRef {
+
+
+  @Override
+  public String encode() {return encode(caseId, gateId);}
 
   public static String encode(final UUID caseId, final long gateId) {
     return "case:" + caseId + "/gate:" + gateId;

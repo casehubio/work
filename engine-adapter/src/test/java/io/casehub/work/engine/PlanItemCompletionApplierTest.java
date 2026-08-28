@@ -74,7 +74,7 @@ class PlanItemCompletionApplierTest {
         UUID workItemId = UUID.randomUUID();
         WorkItemRef ref = new WorkItemRef(
                 workItemId, WorkItemStatus.ESCALATED,
-                PlanItemCallerRef.encode(caseId, planItemId),
+                PlanItemRef.encode(caseId, planItemId),
                 null, null, "committee-a,committee-b",
                 null, "test-tenant", null, null, null);
 
@@ -102,7 +102,7 @@ class PlanItemCompletionApplierTest {
         UUID workItemId = UUID.randomUUID();
         WorkItemRef ref = new WorkItemRef(
                 workItemId, WorkItemStatus.ESCALATED,
-                PlanItemCallerRef.encode(caseId, planItemId),
+                PlanItemRef.encode(caseId, planItemId),
                 null,
                 "{\"partial\": \"data\"}",
                 "committee-a",

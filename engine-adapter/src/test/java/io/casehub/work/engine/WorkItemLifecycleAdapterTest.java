@@ -114,7 +114,7 @@ class WorkItemLifecycleAdapterTest {
     WorkItem workItem = WorkItem.builder()
         .id(UUID.randomUUID())
         .status(WorkItemStatus.REJECTED)
-        .callerRef(PlanItemCallerRef.encode(caseId, delegatedItemId))
+        .callerRef(PlanItemRef.encode(caseId, delegatedItemId))
         .build();
     lifecycleEvents.fireAsync(
         WorkItemLifecycleEvent.of("workitem.rejected", workItem, "system", null));
@@ -137,7 +137,7 @@ class WorkItemLifecycleAdapterTest {
     WorkItem workItem = WorkItem.builder()
         .id(UUID.randomUUID())
         .status(WorkItemStatus.EXPIRED)
-        .callerRef(PlanItemCallerRef.encode(caseId, delegatedItemId))
+        .callerRef(PlanItemRef.encode(caseId, delegatedItemId))
         .build();
     lifecycleEvents.fireAsync(
         WorkItemLifecycleEvent.of("workitem.expired", workItem, "system", null));
@@ -159,7 +159,7 @@ class WorkItemLifecycleAdapterTest {
     WorkItem workItem = WorkItem.builder()
         .id(UUID.randomUUID())
         .status(WorkItemStatus.FAULTED)
-        .callerRef(PlanItemCallerRef.encode(caseId, delegatedItemId))
+        .callerRef(PlanItemRef.encode(caseId, delegatedItemId))
         .build();
     lifecycleEvents.fireAsync(
         WorkItemLifecycleEvent.of("workitem.faulted", workItem, "system", null));
@@ -181,7 +181,7 @@ class WorkItemLifecycleAdapterTest {
     WorkItem workItem = WorkItem.builder()
         .id(UUID.randomUUID())
         .status(WorkItemStatus.OBSOLETE)
-        .callerRef(PlanItemCallerRef.encode(caseId, delegatedItemId))
+        .callerRef(PlanItemRef.encode(caseId, delegatedItemId))
         .build();
     lifecycleEvents.fireAsync(
         WorkItemLifecycleEvent.of("workitem.obsolete", workItem, "system", null));
@@ -205,7 +205,7 @@ class WorkItemLifecycleAdapterTest {
         .id(UUID.randomUUID())
         .status(WorkItemStatus.ESCALATED)
         .candidateGroups("committee-a,committee-b")
-        .callerRef(PlanItemCallerRef.encode(caseId, delegatedItemId))
+        .callerRef(PlanItemRef.encode(caseId, delegatedItemId))
         .build();
 
     lifecycleEvents.fireAsync(
@@ -240,7 +240,7 @@ class WorkItemLifecycleAdapterTest {
     WorkItem workItem = WorkItem.builder()
         .id(UUID.randomUUID())
         .status(WorkItemStatus.SUSPENDED)
-        .callerRef(PlanItemCallerRef.encode(caseId, delegatedItemId))
+        .callerRef(PlanItemRef.encode(caseId, delegatedItemId))
         .build();
     lifecycleEvents.fireAsync(
         WorkItemLifecycleEvent.of("workitem.suspended", workItem, "system", null));
@@ -263,7 +263,7 @@ class WorkItemLifecycleAdapterTest {
     WorkItem workItem = WorkItem.builder()
         .id(UUID.randomUUID())
         .status(WorkItemStatus.IN_PROGRESS)
-        .callerRef(PlanItemCallerRef.encode(caseId, delegatedItemId))
+        .callerRef(PlanItemRef.encode(caseId, delegatedItemId))
         .build();
     lifecycleEvents.fireAsync(
         WorkItemLifecycleEvent.of("workitem.resumed", workItem, "system", null));
@@ -341,7 +341,7 @@ class WorkItemLifecycleAdapterTest {
     WorkItem workItem = WorkItem.builder()
         .id(UUID.randomUUID())
         .status(WorkItemStatus.COMPLETED)
-        .callerRef(PlanItemCallerRef.encode(caseId, htPlanItem.getPlanItemId()))
+        .callerRef(PlanItemRef.encode(caseId, htPlanItem.getPlanItemId()))
         .resolution("{ \"decision\": \"Approved\" }")
         .build();
 
@@ -376,7 +376,7 @@ class WorkItemLifecycleAdapterTest {
     WorkItem workItem = WorkItem.builder()
         .id(UUID.randomUUID())
         .status(WorkItemStatus.COMPLETED)
-        .callerRef(PlanItemCallerRef.encode(caseId, htPlanItem.getPlanItemId()))
+        .callerRef(PlanItemRef.encode(caseId, htPlanItem.getPlanItemId()))
         .resolution("{}")
         .build();
 
@@ -404,7 +404,7 @@ class WorkItemLifecycleAdapterTest {
     WorkItem workItem = WorkItem.builder()
         .id(UUID.randomUUID())
         .status(WorkItemStatus.COMPLETED)
-        .callerRef(PlanItemCallerRef.encode(caseId, htPlanItem.getPlanItemId()))
+        .callerRef(PlanItemRef.encode(caseId, htPlanItem.getPlanItemId()))
         .resolution("{ \"decision\": \"approved\" }")
         .build();
 
@@ -469,15 +469,15 @@ class WorkItemLifecycleAdapterTest {
 
     groupLifecycleEvents.fireAsync(
         WorkItemGroupLifecycleEvent.of(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            3,
-            2,
-            0,
-            3,
-            GroupStatus.REJECTED,
-            PlanItemCallerRef.encode(caseId, delegatedItemId),
-            "test-tenant"));
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                3,
+                2,
+                0,
+                3,
+                GroupStatus.REJECTED,
+                PlanItemRef.encode(caseId, delegatedItemId),
+                "test-tenant"));
 
     await()
         .atMost(5, TimeUnit.SECONDS)
@@ -527,7 +527,7 @@ class WorkItemLifecycleAdapterTest {
     WorkItem workItem = WorkItem.builder()
         .id(UUID.randomUUID())
         .status(status)
-        .callerRef(PlanItemCallerRef.encode(caseId, planItemId))
+        .callerRef(PlanItemRef.encode(caseId, planItemId))
         .resolution(resolution)
         .build();
     return WorkItemLifecycleEvent.of(
@@ -536,14 +536,14 @@ class WorkItemLifecycleAdapterTest {
 
   private WorkItemGroupLifecycleEvent buildGroupEvent(GroupStatus status) {
     return WorkItemGroupLifecycleEvent.of(
-        UUID.randomUUID(),
-        UUID.randomUUID(),
-        3,
-        2,
-        2,
-        0,
-        status,
-        PlanItemCallerRef.encode(caseId, planItemId),
-        "test-tenant");
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            3,
+            2,
+            2,
+            0,
+            status,
+            PlanItemRef.encode(caseId, planItemId),
+            "test-tenant");
   }
 }

@@ -15,10 +15,11 @@
  */
 package io.casehub.work.engine;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
-import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class CallerRefTest {
 
@@ -27,7 +28,7 @@ class CallerRefTest {
   @Test
   void planItemCallerRef_encode_hasExpectedFormat() {
     final UUID caseId = UUID.fromString("00000000-0000-0000-0000-000000000001");
-    final String encoded = PlanItemCallerRef.encode(caseId, "plan-item-abc");
+    final String encoded = PlanItemRef.encode(caseId, "plan-item-abc");
 
     assertThat(encoded).isEqualTo("case:00000000-0000-0000-0000-000000000001/pi:plan-item-abc");
   }
@@ -35,12 +36,12 @@ class CallerRefTest {
   @Test
   void planItemCallerRef_parse_roundTrip() {
     final UUID caseId = UUID.randomUUID();
-    final String encoded = PlanItemCallerRef.encode(caseId, "item-99");
+    final String encoded = PlanItemRef.encode(caseId, "item-99");
 
     final CallerRef parsed = CallerRef.parse(encoded);
 
-    assertThat(parsed).isInstanceOf(PlanItemCallerRef.class);
-    final PlanItemCallerRef pi = (PlanItemCallerRef) parsed;
+    assertThat(parsed).isInstanceOf(PlanItemRef.class);
+    final PlanItemRef pi = (PlanItemRef) parsed;
     assertThat(pi.caseId()).isEqualTo(caseId);
     assertThat(pi.planItemId()).isEqualTo("item-99");
   }
@@ -48,7 +49,7 @@ class CallerRefTest {
   @Test
   void planItemCallerRef_caseId_isAccessibleViaInterface() {
     final UUID caseId = UUID.randomUUID();
-    final CallerRef ref = CallerRef.parse(PlanItemCallerRef.encode(caseId, "pi-1"));
+    final CallerRef ref = CallerRef.parse(PlanItemRef.encode(caseId, "pi-1"));
 
     assertThat(ref.caseId()).isEqualTo(caseId);
   }
@@ -58,7 +59,7 @@ class CallerRefTest {
   @Test
   void gateCallerRef_encode_hasExpectedFormat() {
     final UUID caseId = UUID.fromString("00000000-0000-0000-0000-000000000002");
-    final String encoded = GateCallerRef.encode(caseId, 42L);
+    final String encoded = GateRef.encode(caseId, 42L);
 
     assertThat(encoded).isEqualTo("case:00000000-0000-0000-0000-000000000002/gate:42");
   }
@@ -67,12 +68,12 @@ class CallerRefTest {
   void gateCallerRef_parse_roundTrip() {
     final UUID caseId = UUID.randomUUID();
     final long gateId = 9_876_543L;
-    final String encoded = GateCallerRef.encode(caseId, gateId);
+    final String encoded = GateRef.encode(caseId, gateId);
 
     final CallerRef parsed = CallerRef.parse(encoded);
 
-    assertThat(parsed).isInstanceOf(GateCallerRef.class);
-    final GateCallerRef gate = (GateCallerRef) parsed;
+    assertThat(parsed).isInstanceOf(GateRef.class);
+    final GateRef gate = (GateRef) parsed;
     assertThat(gate.caseId()).isEqualTo(caseId);
     assertThat(gate.gateId()).isEqualTo(gateId);
   }
@@ -80,7 +81,7 @@ class CallerRefTest {
   @Test
   void gateCallerRef_caseId_isAccessibleViaInterface() {
     final UUID caseId = UUID.randomUUID();
-    final CallerRef ref = CallerRef.parse(GateCallerRef.encode(caseId, 1L));
+    final CallerRef ref = CallerRef.parse(GateRef.encode(caseId, 1L));
 
     assertThat(ref.caseId()).isEqualTo(caseId);
   }
@@ -89,16 +90,16 @@ class CallerRefTest {
 
   @Test
   void parse_piFormat_isNotGateCallerRef() {
-    final CallerRef ref = CallerRef.parse(PlanItemCallerRef.encode(UUID.randomUUID(), "x"));
+    final CallerRef ref = CallerRef.parse(PlanItemRef.encode(UUID.randomUUID(), "x"));
 
-    assertThat(ref).isNotInstanceOf(GateCallerRef.class);
+    assertThat(ref).isNotInstanceOf(GateRef.class);
   }
 
   @Test
   void parse_gateFormat_isNotPlanItemCallerRef() {
-    final CallerRef ref = CallerRef.parse(GateCallerRef.encode(UUID.randomUUID(), 5L));
+    final CallerRef ref = CallerRef.parse(GateRef.encode(UUID.randomUUID(), 5L));
 
-    assertThat(ref).isNotInstanceOf(PlanItemCallerRef.class);
+    assertThat(ref).isNotInstanceOf(PlanItemRef.class);
   }
 
   // --- Null and invalid input ---
@@ -140,8 +141,26 @@ class CallerRefTest {
   void gateCallerRef_gateId_preservesLargeValue() {
     final long largeId = Long.MAX_VALUE;
     final UUID caseId = UUID.randomUUID();
-    final CallerRef ref = CallerRef.parse(GateCallerRef.encode(caseId, largeId));
+    final CallerRef ref = CallerRef.parse(GateRef.encode(caseId, largeId));
 
-    assertThat(((GateCallerRef) ref).gateId()).isEqualTo(largeId);
+    assertThat(((GateRef) ref).gateId()).isEqualTo(largeId);
   }
+
+    @Test
+    void planItemRef_implementsCrossSystemRef() {
+        UUID        caseId = UUID.randomUUID();
+        PlanItemRef ref    = new PlanItemRef(caseId, "pi-1");
+        assertThat(ref.system()).isEqualTo("engine");
+        assertThat(ref.encode()).isEqualTo(PlanItemRef.encode(caseId, "pi-1"));
+        assertThat(ref).isInstanceOf(io.casehub.work.api.CrossSystemRef.class);
+    }
+
+    @Test
+    void gateRef_implementsCrossSystemRef() {
+        UUID    caseId = UUID.randomUUID();
+        GateRef ref    = new GateRef(caseId, 42L);
+        assertThat(ref.system()).isEqualTo("engine");
+        assertThat(ref.encode()).isEqualTo(GateRef.encode(caseId, 42L));
+        assertThat(ref).isInstanceOf(io.casehub.work.api.CrossSystemRef.class);
+    }
 }

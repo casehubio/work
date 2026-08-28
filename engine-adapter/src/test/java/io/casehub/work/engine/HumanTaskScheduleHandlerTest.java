@@ -117,7 +117,7 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
+    String expectedCallerRef = PlanItemRef.encode(caseId, planItem.getPlanItemId());
 
     WorkItem created =
         workItemStore.scanAll().stream()
@@ -160,7 +160,7 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
+    String expectedCallerRef = PlanItemRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
             .filter(w -> expectedCallerRef.equals(w.callerRef()))
@@ -420,7 +420,7 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
+    String expectedCallerRef = PlanItemRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
             .filter(w -> expectedCallerRef.equals(w.callerRef()))
@@ -457,7 +457,7 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
+    String expectedCallerRef = PlanItemRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
             .filter(w -> expectedCallerRef.equals(w.callerRef()))
@@ -491,7 +491,7 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
+    String expectedCallerRef = PlanItemRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
             .filter(w -> expectedCallerRef.equals(w.callerRef()))
@@ -526,7 +526,7 @@ class HumanTaskScheduleHandlerTest {
             ));
     Instant after = Instant.now().plusSeconds(25 * 3600);
 
-    String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
+    String expectedCallerRef = PlanItemRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
             .filter(w -> expectedCallerRef.equals(w.callerRef()))
@@ -861,7 +861,7 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
+    String expectedCallerRef = PlanItemRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
             .filter(w -> expectedCallerRef.equals(w.callerRef()))
@@ -894,7 +894,7 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
+    String expectedCallerRef = PlanItemRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
             .filter(w -> expectedCallerRef.equals(w.callerRef()))
@@ -998,7 +998,7 @@ class HumanTaskScheduleHandlerTest {
                 null
             ));
 
-    String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
+    String expectedCallerRef = PlanItemRef.encode(caseId, planItem.getPlanItemId());
     WorkItem created =
         workItemStore.scanAll().stream()
             .filter(w -> expectedCallerRef.equals(w.callerRef()))
@@ -1094,7 +1094,7 @@ class HumanTaskScheduleHandlerTest {
                         null, null, null, null, null, null, null, null,
                         experiences, scores));
 
-        String expectedCallerRef = PlanItemCallerRef.encode(caseId, planItem.getPlanItemId());
+        String expectedCallerRef = PlanItemRef.encode(caseId, planItem.getPlanItemId());
         WorkItem created = workItemStore.scanAll().stream()
                                               .filter(w -> expectedCallerRef.equals(w.callerRef()))
                                               .findFirst().orElseThrow();
