@@ -37,7 +37,7 @@ class QhorusWorkItemLifecycleAdapterTest {
     @Test
     void terminalCompletedPostsDone() {
         var channelId = UUID.randomUUID();
-        var callerRef = new QhorusCallerRef(channelId, 42L, "corr-1").encode();
+        var callerRef = new QhorusRef(channelId, 42L, "corr-1").encode();
 
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.COMPLETED, UUID.randomUUID(), WorkItemStatus.COMPLETED,
@@ -55,7 +55,7 @@ class QhorusWorkItemLifecycleAdapterTest {
 
     @Test
     void rejectedPostsFailure() {
-        var callerRef = new QhorusCallerRef(UUID.randomUUID(), 1L, "corr-2").encode();
+        var callerRef = new QhorusRef(UUID.randomUUID(), 1L, "corr-2").encode();
 
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.REJECTED, UUID.randomUUID(), WorkItemStatus.REJECTED,
@@ -68,7 +68,7 @@ class QhorusWorkItemLifecycleAdapterTest {
 
     @Test
     void cancelledPostsDecline() {
-        var callerRef = new QhorusCallerRef(UUID.randomUUID(), 1L, "corr-3").encode();
+        var callerRef = new QhorusRef(UUID.randomUUID(), 1L, "corr-3").encode();
 
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.CANCELLED, UUID.randomUUID(), WorkItemStatus.CANCELLED,
@@ -81,7 +81,7 @@ class QhorusWorkItemLifecycleAdapterTest {
 
     @Test
     void expiredPostsDecline() {
-        var callerRef = new QhorusCallerRef(UUID.randomUUID(), 1L, "corr-4").encode();
+        var callerRef = new QhorusRef(UUID.randomUUID(), 1L, "corr-4").encode();
 
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.EXPIRED, UUID.randomUUID(), WorkItemStatus.EXPIRED,
@@ -94,7 +94,7 @@ class QhorusWorkItemLifecycleAdapterTest {
 
     @Test
     void escalatedPostsFailure() {
-        var callerRef = new QhorusCallerRef(UUID.randomUUID(), 1L, "corr-5").encode();
+        var callerRef = new QhorusRef(UUID.randomUUID(), 1L, "corr-5").encode();
 
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.ESCALATED, UUID.randomUUID(), WorkItemStatus.ESCALATED,
@@ -127,7 +127,7 @@ class QhorusWorkItemLifecycleAdapterTest {
 
     @Test
     void nonTerminalStatusIsIgnored() {
-        var callerRef = new QhorusCallerRef(UUID.randomUUID(), 1L, "corr-6").encode();
+        var callerRef = new QhorusRef(UUID.randomUUID(), 1L, "corr-6").encode();
 
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.ASSIGNED, UUID.randomUUID(), WorkItemStatus.ASSIGNED,
@@ -143,7 +143,7 @@ class QhorusWorkItemLifecycleAdapterTest {
             throw new RuntimeException("Channel not found");
         };
 
-        var callerRef = new QhorusCallerRef(UUID.randomUUID(), 1L, "corr-7").encode();
+        var callerRef = new QhorusRef(UUID.randomUUID(), 1L, "corr-7").encode();
 
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.COMPLETED, UUID.randomUUID(), WorkItemStatus.COMPLETED,

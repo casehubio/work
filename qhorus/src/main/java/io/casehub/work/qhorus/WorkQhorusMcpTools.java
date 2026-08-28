@@ -50,7 +50,7 @@ public class WorkQhorusMcpTools {
                 .tenancyId(currentPrincipal.tenancyId())
                 .build());
 
-        final String callerRef = new QhorusCallerRef(ch.id(), queryResult.messageId(), correlationId).encode();
+        final String callerRef = new QhorusRef(ch.id(), queryResult.messageId(), correlationId).encode();
 
         final WorkItemCreateRequest.Builder requestBuilder = WorkItemCreateRequest.builder()
                 .title(title)

@@ -110,8 +110,8 @@ class WorkQhorusMcpToolsTest {
         assertThat(result.correlationId()).isNotNull();
         assertThat(result.status()).isEqualTo("PENDING");
 
-        assertThat(QhorusCallerRef.isQhorus(result.callerRef())).isTrue();
-        var ref = QhorusCallerRef.parse(result.callerRef());
+        assertThat(QhorusRef.isQhorus(result.callerRef())).isTrue();
+        var ref = QhorusRef.parse(result.callerRef());
         assertThat(ref.channelId()).isEqualTo(testChannelId);
         assertThat(ref.messageId()).isEqualTo(100L);
         assertThat(ref.correlationId()).isEqualTo(result.correlationId());

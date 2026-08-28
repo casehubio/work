@@ -22,14 +22,14 @@ public class QhorusWorkItemLifecycleAdapter implements WorkItemObserver {
     @Override
     public void onStatusChange(final WorkItemStatusEvent event) {
         try {
-            if (!QhorusCallerRef.isQhorus(event.callerRef())) {
+            if (!QhorusRef.isQhorus(event.callerRef())) {
                 return;
             }
             if (!event.status().isTerminal()) {
                 return;
             }
 
-            final QhorusCallerRef ref = QhorusCallerRef.parse(event.callerRef());
+            final QhorusRef   ref       = QhorusRef.parse(event.callerRef());
             final MessageType speechAct = mapToSpeechAct(event.eventType());
             if (speechAct == null) {
                 return;
