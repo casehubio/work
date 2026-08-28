@@ -83,7 +83,7 @@ public class WorkItemLifecycleAdapter {
     if (ref == null) return;
 
     if (ref instanceof GateRef gateRef) {
-      routeGate(gateRef, status, wie.ref(), wie.tenancyId());
+      routeGate(gateRef, status, wie.ref(), wie.tenancyId(), wie.ledgerEntryId());
       return;
     }
 
@@ -96,7 +96,7 @@ public class WorkItemLifecycleAdapter {
       return;
     }
 
-    applier.apply(piRef.caseId(), piRef.planItemId(), status, wie.ref());
+    applier.apply(piRef.caseId(), piRef.planItemId(), status, wie.ref(), wie.ledgerEntryId());
   }
 
   public void onWorkItemGroupLifecycle(@ObservesAsync WorkItemGroupLifecycleEvent event) {
@@ -194,7 +194,7 @@ public class WorkItemLifecycleAdapter {
 
     private void routeGate(
             final GateRef gateRef, final WorkItemStatus status, final WorkItemRef ref,
-            final String tenancyId) {
-        gateApplier.apply(gateRef, status, ref, tenancyId);
+            final String tenancyId, final java.util.UUID workLedgerEntryId) {
+        gateApplier.apply(gateRef, status, ref, tenancyId, workLedgerEntryId);
     }
 }

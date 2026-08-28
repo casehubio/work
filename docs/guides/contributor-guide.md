@@ -73,7 +73,7 @@ The two-way bridge between engine PlanItems and work WorkItems was relocated fro
 
 **Outbound (engine -> work):** `HumanTaskScheduleHandler` receives `HumanTaskScheduleEvent` from the engine and creates a WorkItem via `WorkItemCreator.create()`. Uses `CallerRef` sealed interface with two variants: `PlanItemRef` (standard human tasks) and `GateRef` (oversight gates). Threads `candidateScores` and `routingExperiences` from the engine's evaluation context.
 
-**Inbound (work -> engine):** `WorkItemLifecycleAdapter` observes `WorkItemLifecycleEvent` CDI events and routes terminal transitions back to the engine via `PlanItemCompletionApplier`. Handles resolution data, outcome, rationale, and planRef fields. For multi-approver gates, aggregates `approvedBy` from child WorkItems via `WorkItemCreator.findChildApprovers()`.
+**Inbound (work -> engine):** `WorkItemLifecycleAdapter` observes `WorkItemLifecycleEvent` CDI events and routes terminal transitions back to the engine via `PlanItemCompletionApplier`. Threads `ledgerEntryId` (set by `LedgerEventCapture` on the event via `LedgerEntryIdSetter` SPI) through to both `PlanItemCompletionApplier` and `ActionGateCompletionApplier` for cross-ledger causal linking. Handles resolution data, outcome, rationale, and planRef fields. For multi-approver gates, aggregates `approvedBy` from child WorkItems via `WorkItemCreator.findChildApprovers()`.
 
 **Action gates:** `ActionGateWorkItemHandler` creates WorkItems for oversight gates (human approval before automated actions). `ActionGateCompletionApplier` routes gate completions. `ActionGateCancelledHandler` handles gate cancellation.
 
@@ -81,7 +81,7 @@ The two-way bridge between engine PlanItems and work WorkItems was relocated fro
 
 **Strategy registration:** `WorkStrategyContributor` contributes work-module NamedStrategy beans to the engine's `EngineStrategyResolver`.
 
-**CallerRef format:** `PlanItemRef` encodes `case:{caseId}/pi:{planItemId}`. `GateRef` encodes `case:{caseId}/gate:{planItemId}`. Both parse via the `CallerRef` sealed interface.
+**CallerRef format:** `PlanItemRef` encodes `case:{caseId}/pi:{planItemId}`. `GateRef` encodes `case:{caseId}/gate:{gateId}`. Both parse via the `CallerRef` sealed interface, which extends `CrossSystemRef` (work-api) with `system()="engine"`. The qhorus module's `QhorusRef` similarly implements `CrossSystemRef` with `system()="qhorus"`.
 
 **Planning module dependency:** The adapter was migrated from `casehub-engine-blackboard` to `casehub-engine-planning` (#322).
 

@@ -46,11 +46,11 @@ class QhorusRefTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     void qhorusRef_implementsCrossSystemRef() {
-        var ref = new QhorusRef(java.util.UUID.randomUUID(), 1L, "c1");
-        org.assertj.core.api.Assertions.assertThat(ref.system()).isEqualTo("qhorus");
-        org.assertj.core.api.Assertions.assertThat(ref).isInstanceOf(io.casehub.work.api.CrossSystemRef.class);
-        org.assertj.core.api.Assertions.assertThat(ref.encode()).startsWith("qhorus:");
+        var ref = new QhorusRef(UUID.randomUUID(), 1L, "c1");
+        assertThat(ref.system()).isEqualTo("qhorus");
+        assertThat(ref).isInstanceOf(io.casehub.work.api.CrossSystemRef.class);
+        assertThat(ref.encode()).startsWith("qhorus:");
     }
 }

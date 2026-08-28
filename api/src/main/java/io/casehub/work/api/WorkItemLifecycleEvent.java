@@ -288,8 +288,10 @@ public final class WorkItemLifecycleEvent implements WorkItemEvent, Subscribable
      * Returns the SPI accessor for setting ledgerEntryId on an event. Only
      * {@code LedgerEventCapture} should call this — the public event API stays immutable.
      */
+    private static final LedgerEntryIdSetter LEDGER_ENTRY_ID_SETTER = (event, id) -> event.ledgerEntryId = id;
+
     public static LedgerEntryIdSetter ledgerEntryIdSetter() {
-        return (event, id) -> event.ledgerEntryId = id;
+        return LEDGER_ENTRY_ID_SETTER;
     }
 
 

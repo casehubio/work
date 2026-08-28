@@ -185,7 +185,7 @@ class ActionGateHandlerTest {
                                           .build();
 
         actionGateCompletionApplier.apply(
-                new GateRef(caseId, gateId), WorkItemStatus.COMPLETED, toRef(workItem), "test-tenant");
+                new GateRef(caseId, gateId), WorkItemStatus.COMPLETED, toRef(workItem), "test-tenant", null);
 
         await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.approvedEvents.isEmpty());
 
@@ -209,7 +209,7 @@ class ActionGateHandlerTest {
                                           .build();
 
         actionGateCompletionApplier.apply(
-                new GateRef(caseId, gateId), WorkItemStatus.REJECTED, toRef(workItem), "test-tenant");
+                new GateRef(caseId, gateId), WorkItemStatus.REJECTED, toRef(workItem), "test-tenant", null);
 
         await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.rejectedEvents.isEmpty());
 
@@ -227,7 +227,7 @@ class ActionGateHandlerTest {
                                           .build();
 
         actionGateCompletionApplier.apply(
-                new GateRef(caseId, 30L), WorkItemStatus.CANCELLED, toRef(workItem), "test-tenant");
+                new GateRef(caseId, 30L), WorkItemStatus.CANCELLED, toRef(workItem), "test-tenant", null);
 
         await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.rejectedEvents.isEmpty());
         assertThat(GateEventRecorder.rejectedEvents).hasSize(1);
@@ -244,7 +244,7 @@ class ActionGateHandlerTest {
                                           .build();
 
         actionGateCompletionApplier.apply(
-                new GateRef(caseId, 40L), WorkItemStatus.EXPIRED, toRef(workItem), "test-tenant");
+                new GateRef(caseId, 40L), WorkItemStatus.EXPIRED, toRef(workItem), "test-tenant", null);
 
         await().atMost(2, TimeUnit.SECONDS).until(() -> !GateEventRecorder.expiredEvents.isEmpty());
         assertThat(GateEventRecorder.expiredEvents).hasSize(1);
@@ -260,7 +260,7 @@ class ActionGateHandlerTest {
                                           .build();
 
         actionGateCompletionApplier.apply(
-                new GateRef(caseId, 42L), WorkItemStatus.ESCALATED, toRef(workItem), "test-tenant");
+                new GateRef(caseId, 42L), WorkItemStatus.ESCALATED, toRef(workItem), "test-tenant", null);
 
         await().atMost(2, TimeUnit.SECONDS).until(() ->
                                                           GateEventRecorder.expiredEvents.stream().anyMatch(e -> e.gateId() == 42L));

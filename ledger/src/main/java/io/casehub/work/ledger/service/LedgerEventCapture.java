@@ -147,6 +147,8 @@ public class LedgerEventCapture {
 
         ledgerRepo.save(entry, entry.tenancyId);
 
+        WorkItemLifecycleEvent.ledgerEntryIdSetter().set(event, entry.id);
+
         // Causal chain: when SPAWNED fires on the parent, point each child's CREATED
         // ledger entry at this parent SPAWNED entry via causedByEntryId.
         // PART_OF links (child → parent) are persisted before SPAWNED fires, so they

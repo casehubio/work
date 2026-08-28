@@ -91,7 +91,7 @@ public class HumanTaskRecoveryService {
     LOG.infof(
         "Recovering PlanItem %s in case %s — WorkItem %s was %s during downtime",
         r.planItemId(), r.caseId(), ref.id(), ref.status());
-    applier.apply(r.caseId(), r.planItemId(), ref.status(), ref);
+    applier.apply(r.caseId(), r.planItemId(), ref.status(), ref, null);
     return true;
   }
 }

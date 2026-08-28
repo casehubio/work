@@ -21,6 +21,8 @@ import io.casehub.engine.common.internal.event.ActionGateRejectedEvent;
 import io.casehub.engine.common.internal.event.EventBusAddresses;
 import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.api.WorkItemStatus;
+
+import java.util.UUID;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -59,7 +61,8 @@ public class ActionGateCompletionApplier {
 
     public void apply(
             final GateRef gateRef, final WorkItemStatus status, final WorkItemRef ref,
-            final String tenancyId) {
+            final String tenancyId, final UUID workLedgerEntryId) {
+        LOG.debugf("Gate %d completion: workLedgerEntryId=%s", gateRef.gateId(), workLedgerEntryId);
         switch (status) {
             case COMPLETED -> handleApproved(gateRef, ref, tenancyId);
             case REJECTED, CANCELLED, OBSOLETE -> handleRejected(gateRef, ref, tenancyId);

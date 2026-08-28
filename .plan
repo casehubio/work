@@ -13,13 +13,13 @@ flyway-next-v: none
 
 ## Queue
 - [ ] casehubio/work#365 — Issue #365 ← active
-  - [ ] Batch 1: Foundation
-    - [ ] Task 1: CrossSystemRef+LedgerEntryIdSetter in work-api
-  - [ ] Batch 2: Renames
-    - [ ] Task 2: PlanItemCallerRef→PlanItemRef GateCallerRef→GateRef
-    - [ ] Task 3: QhorusCallerRef→QhorusRef
-  - [ ] Batch 3: Threading
-    - [ ] Task 4: Wire LedgerEventCapture to set ledgerEntryId
-    - [ ] Task 5: Thread ledgerEntryId through adapters to appliers
-  - [ ] Batch 4: Verification
-    - [ ] Task 6: Integration test + docs
+  - [x] Batch 1: Foundation
+    - [x] Task 1: CrossSystemRef+LedgerEntryIdSetter in work-api
+  - [x] Batch 2: Renames
+    - [x] Task 2: PlanItemCallerRef→PlanItemRef GateCallerRef→GateRef
+    - [x] Task 3: QhorusCallerRef→QhorusRef
+  - [x] Batch 3: Threading
+    - [x] Task 4: Wire LedgerEventCapture to set ledgerEntryId
+    - [x] Task 5: Thread ledgerEntryId through adapters to appliers
+  - [x] Batch 4: Verification
+    - [x] Task 6: Integration test + docs

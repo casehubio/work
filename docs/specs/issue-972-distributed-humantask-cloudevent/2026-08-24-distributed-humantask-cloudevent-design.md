@@ -163,7 +163,7 @@ The callerRef format is a shared convention between engine emitter and engine co
 - PlanItem: `case:{caseId}/pi:{planItemId}`
 - Gate: `case:{caseId}/gate:{gateId}`
 
-The encoding/parsing logic lives in `CallerRefParser` (engine-common/spi/) — the authoritative implementation. The work-engine-adapter has its own copies (`PlanItemCallerRef`, `GateCallerRef`, `CallerRef`), which it can migrate to the shared parser in a future work-repo PR.
+The encoding/parsing logic lives in `CallerRefParser` (engine-common/spi/) — the authoritative implementation. The work-engine-adapter has its own copies (`PlanItemRef`, `GateRef`, `CallerRef`), which it can migrate to the shared parser in a future work-repo PR.
 
 ### Error Handling
 

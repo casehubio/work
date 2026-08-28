@@ -78,7 +78,7 @@ class PlanItemCompletionApplierTest {
                 null, null, "committee-a,committee-b",
                 null, "test-tenant", null, null, null);
 
-        applier.apply(caseId, planItemId, WorkItemStatus.ESCALATED, ref);
+        applier.apply(caseId, planItemId, WorkItemStatus.ESCALATED, ref, null);
 
         assertThat(planItem.getStatus()).isEqualTo(TaskStatus.FAULTED);
 
@@ -109,7 +109,7 @@ class PlanItemCompletionApplierTest {
                 null, "test-tenant", null, null,
                 "io.casehub.SomeResolutionType");
 
-        applier.apply(caseId, planItemId, WorkItemStatus.ESCALATED, ref);
+        applier.apply(caseId, planItemId, WorkItemStatus.ESCALATED, ref, null);
 
         assertThat(planItem.getStatus())
                 .as("ESCALATED must bypass resolution validation")

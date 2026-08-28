@@ -1,33 +1,31 @@
 package io.casehub.work.ledger;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.ledger.api.model.AttestationVerdict;
+import io.casehub.ledger.api.model.LedgerAttestation;
+import io.casehub.ledger.api.model.LedgerEntryType;
+import io.casehub.ledger.api.model.supplement.ProvenanceSupplement;
+import io.casehub.ledger.runtime.service.LedgerMerkleTree;
+import io.casehub.platform.api.identity.ActorType;
+import io.casehub.work.api.DeclineTarget;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemCreateRequest;
+import io.casehub.work.api.WorkItemLifecycleEvent;
+import io.casehub.work.api.WorkItemPriority;
+import io.casehub.work.ledger.model.WorkItemLedgerEntry;
+import io.casehub.work.ledger.repository.WorkItemLedgerEntryRepository;
+import io.casehub.work.runtime.model.WorkItemRelation;
+import io.casehub.work.runtime.model.WorkItemRelationType;
+import io.casehub.work.runtime.service.WorkItemService;
+import io.quarkus.test.TestTransaction;
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.enterprise.event.Event;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.UUID;
 
-import io.casehub.work.api.WorkItem;
-import jakarta.enterprise.event.Event;
-import jakarta.inject.Inject;
-
-import org.junit.jupiter.api.Test;
-
-import io.casehub.platform.api.identity.ActorType;
-import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.api.model.supplement.ProvenanceSupplement;
-import io.casehub.ledger.api.model.LedgerAttestation;
-import io.casehub.ledger.runtime.service.LedgerMerkleTree;
-import io.casehub.work.ledger.model.WorkItemLedgerEntry;
-import io.casehub.work.ledger.repository.WorkItemLedgerEntryRepository;
-import io.casehub.work.api.WorkItemLifecycleEvent;
-import io.casehub.work.api.WorkItemCreateRequest;
-import io.casehub.work.api.WorkItemPriority;
-import io.casehub.work.runtime.model.WorkItemRelation;
-import io.casehub.work.runtime.model.WorkItemRelationType;
-import io.casehub.work.api.DeclineTarget;
-import io.casehub.work.runtime.service.WorkItemService;
-import io.quarkus.test.TestTransaction;
-import io.quarkus.test.junit.QuarkusTest;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for the WorkItems Ledger module.
@@ -559,5 +557,27 @@ class LedgerIntegrationTest {
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         assertThat(entries).hasSize(1);
         assertThat(entries.get(0).provenance()).isEmpty();
+    }
+
+// -------------------------------------------------------------------------
+// LedgerEntryId threading (#365) — LedgerEventCapture sets event.ledgerEntryId
+// -------------------------------------------------------------------------
+
+    @Test
+    void ledgerEntryWritten_setsLedgerEntryIdOnEvent() {
+        final WorkItem               item  = workItemService.create(basicRequest("LedgerEntryId test"));
+        final WorkItemLifecycleEvent event = WorkItemLifecycleEvent.of("completed", item, "alice", null);
+
+        lifecycleEvent.fire(event);
+
+        assertThat(event.ledgerEntryId())
+                .as("LedgerEventCapture should set ledgerEntryId on the event after persisting")
+                .isNotNull();
+
+        final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
+        final WorkItemLedgerEntry completedEntry = entries.stream()
+                                                          .filter(e -> "WorkItemCompleted".equals(e.eventType))
+                                                          .findFirst().orElseThrow();
+        assertThat(event.ledgerEntryId()).isEqualTo(completedEntry.id);
     }
 }

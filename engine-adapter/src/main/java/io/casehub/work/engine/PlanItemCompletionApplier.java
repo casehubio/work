@@ -87,9 +87,12 @@ public class PlanItemCompletionApplier {
      * @param planItemId the PlanItem to transition
      * @param status     the terminal WorkItemStatus to apply
      * @param ref        the source WorkItemRef (for outputMapping resolution JSON); may be null
+     * @param workLedgerEntryId the work-ledger entry ID for this terminal transition; may be null
      */
     @Transactional
-    public void apply(UUID caseId, String planItemId, WorkItemStatus status, WorkItemRef ref) {
+    public void apply(UUID caseId, String planItemId, WorkItemStatus status, WorkItemRef ref,
+                      UUID workLedgerEntryId) {
+        LOG.debugf("PlanItem %s completion: workLedgerEntryId=%s", planItemId, workLedgerEntryId);
         PlanItem item = registry.get(caseId).flatMap(plan -> plan.getPlanItem(planItemId)).orElse(null);
 
         if (item == null) {
