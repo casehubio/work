@@ -101,8 +101,10 @@ public final class WorkItemMapper {
                 .expiresAtBusinessHours(req.expiresAtBusinessHours())
                 .excludedUsers(req.excludedUsers())
                 .scope(req.scope())
-                // templateId, permittedOutcomes, inputDataSchema, outputDataSchema intentionally
-                // omitted — populated from a WorkItemTemplate at instantiation time, not on direct REST creation
+                .escalationOnExpiry(req.escalationOnExpiry())
+                .escalationOnClaimDeadline(req.escalationOnClaimDeadline())
+                .escalationDeadline(req.escalationDeadline())
+                .escalationGenerateSummary(req.escalationGenerateSummary())
                 .build();
     }
 
