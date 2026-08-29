@@ -70,6 +70,10 @@ public final class WorkItemEntityMapper {
                        .originServiceId(entity.originServiceId)
                        .originWorkItemId(entity.originWorkItemId)
                        .originVersion(entity.originVersion)
+                       .escalationOnExpiry(entity.escalationOnExpiry)
+                       .escalationOnClaimDeadline(entity.escalationOnClaimDeadline)
+                       .escalationDeadline(entity.escalationDeadline)
+                       .escalationGenerateSummary(entity.escalationGenerateSummary)
                        .build();}
 
     public static WorkItemEntity toEntity(WorkItem domain) {
@@ -135,5 +139,9 @@ public final class WorkItemEntityMapper {
         entity.routingExperiences          = domain.routingExperiences();
         entity.originServiceId             = domain.originServiceId();
         entity.originWorkItemId            = domain.originWorkItemId();
-        entity.originVersion               = domain.originVersion();}
+        entity.originVersion               = domain.originVersion();
+        entity.escalationOnExpiry          = domain.escalationOnExpiry();
+        entity.escalationOnClaimDeadline   = domain.escalationOnClaimDeadline();
+        entity.escalationDeadline          = domain.escalationDeadline();
+        entity.escalationGenerateSummary   = domain.escalationGenerateSummary();}
 }

@@ -10,6 +10,7 @@ import io.casehub.work.api.BreachType;
 import io.casehub.work.api.BreachedTask;
 import io.casehub.work.api.ClaimSlaContext;
 import io.casehub.work.api.SlaBreachContext;
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
@@ -18,7 +19,6 @@ import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.event.SlaBreachEvent;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
-import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -89,7 +89,7 @@ public class ExpiryLifecycleService {
         for (final io.casehub.work.api.WorkItem item : workItemStore.scan(WorkItemQuery.expired(now))) {
             try {
                 final SlaBreachContext ctx  = buildBreachContext(item, BreachType.COMPLETION_EXPIRED, now);
-                final BreachDecision   leaf = executeBreachDecision(item, slaBreachPolicy.onBreach(ctx), ctx, now);
+                final BreachDecision   leaf = executeBreachDecision(item, resolveBreachDecision(item, ctx), ctx, now);
                 slaBreachEventBus.fire(new SlaBreachEvent(ctx, leaf, item.tenancyId()));
             } catch (final BreachExecutionFailed e) {
                 LOG.errorf("SLA breach policy misconfigured for WorkItem %s — skipping this tick: %s",
@@ -115,7 +115,7 @@ public class ExpiryLifecycleService {
                 }
                 fireLifecycleEvent("CLAIM_EXPIRED", updated);
                 final SlaBreachContext ctx  = buildBreachContext(updated, BreachType.CLAIM_EXPIRED, now);
-                final BreachDecision   leaf = executeBreachDecision(updated, slaBreachPolicy.onBreach(ctx), ctx, now);
+                final BreachDecision   leaf = executeBreachDecision(updated, resolveBreachDecision(updated, ctx), ctx, now);
                 slaBreachEventBus.fire(new SlaBreachEvent(ctx, leaf, updated.tenancyId()));
             } catch (final BreachExecutionFailed e) {
                 LOG.errorf("SLA breach policy misconfigured for WorkItem %s (claim) — skipping: %s",
@@ -138,7 +138,7 @@ public class ExpiryLifecycleService {
             if (!item.status().isTerminal() && item.expiresAt() != null && !item.expiresAt().isAfter(now)) {
                 try {
                     final SlaBreachContext ctx  = buildBreachContext(item, BreachType.COMPLETION_EXPIRED, now);
-                    final BreachDecision   leaf = executeBreachDecision(item, slaBreachPolicy.onBreach(ctx), ctx, now);
+                    final BreachDecision   leaf = executeBreachDecision(item, resolveBreachDecision(item, ctx), ctx, now);
                     slaBreachEventBus.fire(new SlaBreachEvent(ctx, leaf, item.tenancyId()));
                 } catch (final BreachExecutionFailed e) {
                     LOG.errorf("SLA breach policy misconfigured for WorkItem %s — skipping: %s",
@@ -166,7 +166,7 @@ public class ExpiryLifecycleService {
                     }
                     fireLifecycleEvent("CLAIM_EXPIRED", updated);
                     final SlaBreachContext ctx  = buildBreachContext(updated, BreachType.CLAIM_EXPIRED, now);
-                    final BreachDecision   leaf = executeBreachDecision(updated, slaBreachPolicy.onBreach(ctx), ctx, now);
+                    final BreachDecision   leaf = executeBreachDecision(updated, resolveBreachDecision(updated, ctx), ctx, now);
                     slaBreachEventBus.fire(new SlaBreachEvent(ctx, leaf, updated.tenancyId()));
                 } catch (final BreachExecutionFailed e) {
                     LOG.errorf("SLA breach policy misconfigured for WorkItem %s (claim) — skipping: %s",
@@ -178,6 +178,32 @@ public class ExpiryLifecycleService {
     }
 
     // ── Decision execution ───────────────────────────────────────────────────
+
+
+    private BreachDecision resolveBreachDecision(io.casehub.work.api.WorkItem item, SlaBreachContext ctx) {
+        String target = switch (ctx.breachType()) {
+            case COMPLETION_EXPIRED -> item.escalationOnExpiry();
+            case CLAIM_EXPIRED -> item.escalationOnClaimDeadline();
+        };
+        if (target != null) {
+            Set<String> currentGroups = parseCandidateGroups(item.candidateGroups());
+            if (currentGroups.equals(Set.of(target))) {
+                return slaBreachPolicy.onBreach(ctx);
+            }
+            Duration deadline = null;
+            if (item.escalationDeadline() != null) {
+                try {
+                    deadline = Duration.parse(item.escalationDeadline());
+                } catch (java.time.format.DateTimeParseException e) {
+                    LOG.warnf("WorkItem %s has invalid escalationDeadline '%s' — ignoring per-item deadline",
+                              item.id(), item.escalationDeadline());
+                }
+            }
+            var decision = BreachDecision.EscalateTo.to(target);
+            return deadline != null ? decision.withDeadline(deadline) : decision;
+        }
+        return slaBreachPolicy.onBreach(ctx);
+    }
 
     private BreachDecision executeBreachDecision(
             final io.casehub.work.api.WorkItem item, final BreachDecision decision,

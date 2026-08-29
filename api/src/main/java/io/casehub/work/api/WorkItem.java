@@ -57,7 +57,11 @@ public record WorkItem(
         Long version,
         String originServiceId,
         UUID originWorkItemId,
-        Long originVersion
+        Long originVersion,
+        String escalationOnExpiry,
+        String escalationOnClaimDeadline,
+        String escalationDeadline,
+        Boolean escalationGenerateSummary
 ) {
 
     public WorkItem {
@@ -93,7 +97,11 @@ public record WorkItem(
                        .candidateScores(candidateScores).routingExperiences(routingExperiences)
                        .version(version)
                        .originServiceId(originServiceId).originWorkItemId(originWorkItemId)
-                       .originVersion(originVersion);
+                       .originVersion(originVersion)
+                       .escalationOnExpiry(escalationOnExpiry)
+                       .escalationOnClaimDeadline(escalationOnClaimDeadline)
+                       .escalationDeadline(escalationDeadline)
+                       .escalationGenerateSummary(escalationGenerateSummary);
     }
 
     public static final class Builder {
@@ -147,6 +155,10 @@ public record WorkItem(
         private String              originServiceId;
         private UUID                originWorkItemId;
         private Long                originVersion;
+        private String              escalationOnExpiry;
+        private String              escalationOnClaimDeadline;
+        private String              escalationDeadline;
+        private Boolean             escalationGenerateSummary;
 
         public Builder id(UUID v)                               {
                                                                     this.id = v;
@@ -398,6 +410,11 @@ public record WorkItem(
                                                                     return this;
                                                                 }
 
+        public Builder escalationOnExpiry(String v)             { this.escalationOnExpiry = v; return this; }
+        public Builder escalationOnClaimDeadline(String v)      { this.escalationOnClaimDeadline = v; return this; }
+        public Builder escalationDeadline(String v)             { this.escalationDeadline = v; return this; }
+        public Builder escalationGenerateSummary(Boolean v)     { this.escalationGenerateSummary = v; return this; }
+
         public WorkItem build() {
             return new WorkItem(
                     id, tenancyId, title, description, formKey, status, priority,
@@ -412,7 +429,9 @@ public record WorkItem(
                     outcome, inputDataSchema, outputDataSchema,
                     payloadTypeName, resolutionTypeName,
                     candidateScores, routingExperiences, version,
-                    originServiceId, originWorkItemId, originVersion);
+                    originServiceId, originWorkItemId, originVersion,
+                    escalationOnExpiry, escalationOnClaimDeadline,
+                    escalationDeadline, escalationGenerateSummary);
         }
     }
 }

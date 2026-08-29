@@ -137,9 +137,23 @@ public class HumanTaskScheduleHandler implements HumanTaskScheduler {
             .payloadTypeName(request.payloadTypeName())
             .resolutionTypeName(request.resolutionTypeName())
             .candidateScores(serializeScores(request.candidateScores()))
-            .routingExperiences(serializeExperiences(request.experiences()));
+            .routingExperiences(serializeExperiences(request.experiences()))
+            .claimDeadlineBusinessHours(target.claimDeadlineHours());
     if (target.outcomes() != null && !target.outcomes().isEmpty()) {
       requestBuilder.permittedOutcomes(toOutcomeList(target.outcomes()));
+    }
+    if (target.escalation() != null) {
+      requestBuilder
+          .escalationOnExpiry(target.escalation().onExpiry())
+          .escalationOnClaimDeadline(target.escalation().onClaimDeadline())
+          .escalationDeadline(target.escalation().deadline())
+          .escalationGenerateSummary(target.escalation().generateSummary());
+    }
+    if (target.skillMatch() != null) {
+      requestBuilder
+          .routingStrategy(target.skillMatch().strategy())
+          .requiredCapabilities(toCsv(target.skillMatch().requiredCapabilities()))
+          .minimumScore(target.skillMatch().minimumScore());
     }
 
     try {
@@ -248,6 +262,19 @@ public class HumanTaskScheduleHandler implements HumanTaskScheduler {
             .routingExperiences(serializeExperiences(experiences));
     if (target.outcomes() != null && !target.outcomes().isEmpty()) {
       requestBuilder.permittedOutcomes(toOutcomeList(target.outcomes()));
+    }
+    if (target.escalation() != null) {
+      requestBuilder
+          .escalationOnExpiry(target.escalation().onExpiry())
+          .escalationOnClaimDeadline(target.escalation().onClaimDeadline())
+          .escalationDeadline(target.escalation().deadline())
+          .escalationGenerateSummary(target.escalation().generateSummary());
+    }
+    if (target.skillMatch() != null) {
+      requestBuilder
+          .routingStrategy(target.skillMatch().strategy())
+          .requiredCapabilities(toCsv(target.skillMatch().requiredCapabilities()))
+          .minimumScore(target.skillMatch().minimumScore());
     }
     WorkItemCreateRequest workItemRequest = requestBuilder.build();
 

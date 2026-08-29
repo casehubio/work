@@ -1,15 +1,13 @@
 package io.casehub.work.ai.escalation;
 
+import io.casehub.work.ai.repository.EscalationSummaryStore;
+import io.casehub.work.api.WorkEventType;
+import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.WorkItemLifecycleEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
-
 import org.jboss.logging.Logger;
-
-import io.casehub.work.ai.repository.EscalationSummaryStore;
-import io.casehub.work.api.WorkEventType;
-import io.casehub.work.api.WorkItemLifecycleEvent;
-import io.casehub.work.api.WorkItem;
 
 /**
  * CDI observer that generates an LLM escalation summary when a WorkItem
@@ -31,24 +29,30 @@ public class EscalationSummaryObserver {
     @Inject
     EscalationSummaryStore summaryStore;
 
-    /**
-     * React to escalation events and generate a summary.
-     *
-     * @param event the lifecycle event; EXPIRED and CLAIM_EXPIRED are handled
-     */
     void onEscalation(@Observes final WorkItemLifecycleEvent event) {
         final WorkEventType type = event.eventType();
-        if (type != WorkEventType.EXPIRED && type != WorkEventType.CLAIM_EXPIRED) {
-            return;
-        }
+        final WorkItem      wi   = event.workItem();
+        if (wi == null) {return;}
+
         try {
-            final WorkItem wi = event.workItem();
-            if (wi != null) {
-                summaryStore.put(summaryService.buildSummary(wi.id(), type.name()));
+            switch (type) {
+                case SLA_REASSIGNED -> {
+                    if (Boolean.TRUE.equals(wi.escalationGenerateSummary())) {
+                        summaryStore.put(summaryService.buildSummary(wi.id(), type.name()));
+                    }
+                }
+                case EXPIRED, CLAIM_EXPIRED -> {
+                    if (Boolean.FALSE.equals(wi.escalationGenerateSummary())) {return;}
+                    if (type == WorkEventType.CLAIM_EXPIRED
+                        && wi.escalationOnClaimDeadline() != null
+                        && wi.escalationGenerateSummary() != null) {return;}
+                    summaryStore.put(summaryService.buildSummary(wi.id(), type.name()));
+                }
+                default -> {}
             }
         } catch (final Exception e) {
             LOG.warnf("Failed to generate escalation summary for event %s: %s",
-                    type, e.getMessage());
+                      type, e.getMessage());
         }
     }
 }

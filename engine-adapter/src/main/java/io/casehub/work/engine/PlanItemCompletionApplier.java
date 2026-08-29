@@ -25,6 +25,7 @@ import io.casehub.api.model.CaseDefinition;
 import io.casehub.api.model.ConflictResolver;
 import io.casehub.api.model.ExtensionTarget;
 import io.casehub.api.model.HumanTaskTarget;
+import io.casehub.api.model.JudgmentTarget;
 import io.casehub.api.model.SignalTarget;
 import io.casehub.api.model.SubCaseTarget;
 import io.casehub.api.model.TaskStatus;
@@ -191,6 +192,7 @@ public class PlanItemCompletionApplier {
                     case SubCaseTarget ignored -> null;
                     case ExtensionTarget ignored -> null;
                     case SignalTarget ignored -> null;
+                    case JudgmentTarget ignored -> null;
                 };
         if (ht == null) {return;}
         if (ht.outputMapping() == null) {return;}

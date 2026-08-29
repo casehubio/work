@@ -366,6 +366,18 @@ public class WorkItemEntity extends PanacheEntityBase {
     @Column(name = "origin_version")
     public Long   originVersion;
 
+    @Column(name = "escalation_on_expiry")
+    public String escalationOnExpiry;
+
+    @Column(name = "escalation_on_claim_deadline")
+    public String escalationOnClaimDeadline;
+
+    @Column(name = "escalation_deadline", length = 32)
+    public String escalationDeadline;
+
+    @Column(name = "escalation_generate_summary")
+    public Boolean escalationGenerateSummary;
+
 
     // -------------------------------------------------------------------------
     // JPA lifecycle callbacks

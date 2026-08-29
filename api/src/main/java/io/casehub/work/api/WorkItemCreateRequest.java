@@ -51,6 +51,10 @@ public final class WorkItemCreateRequest {
     public final String routingExperiences;
     public final String routingStrategy;
     public final Double minimumScore;
+    public final String escalationOnExpiry;
+    public final String escalationOnClaimDeadline;
+    public final String escalationDeadline;
+    public final Boolean escalationGenerateSummary;
 
 
     private WorkItemCreateRequest(final Builder b) {
@@ -88,6 +92,10 @@ public final class WorkItemCreateRequest {
         this.routingExperiences         = b.routingExperiences;
         this.routingStrategy            = b.routingStrategy;
         this.minimumScore               = b.minimumScore;
+        this.escalationOnExpiry         = b.escalationOnExpiry;
+        this.escalationOnClaimDeadline  = b.escalationOnClaimDeadline;
+        this.escalationDeadline         = b.escalationDeadline;
+        this.escalationGenerateSummary  = b.escalationGenerateSummary;
     }
 
     public static Builder builder() {
@@ -135,7 +143,11 @@ public final class WorkItemCreateRequest {
                && Objects.equals(candidateScores, r.candidateScores)
                && Objects.equals(routingExperiences, r.routingExperiences)
                && Objects.equals(routingStrategy, r.routingStrategy)
-               && Objects.equals(minimumScore, r.minimumScore);
+               && Objects.equals(minimumScore, r.minimumScore)
+               && Objects.equals(escalationOnExpiry, r.escalationOnExpiry)
+               && Objects.equals(escalationOnClaimDeadline, r.escalationOnClaimDeadline)
+               && Objects.equals(escalationDeadline, r.escalationDeadline)
+               && Objects.equals(escalationGenerateSummary, r.escalationGenerateSummary);
     }
 
     @Override
@@ -148,7 +160,9 @@ public final class WorkItemCreateRequest {
                             auditDetail, templateVersion, tenancyId,
                             payloadTypeName, resolutionTypeName,
                             candidateScores, routingExperiences,
-                            routingStrategy, minimumScore);
+                            routingStrategy, minimumScore,
+                            escalationOnExpiry, escalationOnClaimDeadline,
+                            escalationDeadline, escalationGenerateSummary);
     }
 
     /** Intentionally omits payload, schemas, callerRef, and credentials — log-safety. */
@@ -195,6 +209,10 @@ public final class WorkItemCreateRequest {
         private String routingExperiences;
         private String routingStrategy;
         private Double minimumScore;
+        private String escalationOnExpiry;
+        private String escalationOnClaimDeadline;
+        private String escalationDeadline;
+        private Boolean escalationGenerateSummary;
 
 
         private Builder() {}
@@ -234,6 +252,10 @@ public final class WorkItemCreateRequest {
             this.routingExperiences         = src.routingExperiences;
             this.routingStrategy            = src.routingStrategy;
             this.minimumScore               = src.minimumScore;
+            this.escalationOnExpiry         = src.escalationOnExpiry;
+            this.escalationOnClaimDeadline  = src.escalationOnClaimDeadline;
+            this.escalationDeadline         = src.escalationDeadline;
+            this.escalationGenerateSummary  = src.escalationGenerateSummary;
         }
 
         public Builder title(final String v)                          { this.title = v; return this; }
@@ -278,6 +300,11 @@ public final class WorkItemCreateRequest {
                                                                         this.minimumScore = v;
                                                                         return this;
                                                                     }
+
+        public Builder escalationOnExpiry(final String v)          { this.escalationOnExpiry = v; return this; }
+        public Builder escalationOnClaimDeadline(final String v)   { this.escalationOnClaimDeadline = v; return this; }
+        public Builder escalationDeadline(final String v)          { this.escalationDeadline = v; return this; }
+        public Builder escalationGenerateSummary(final Boolean v)  { this.escalationGenerateSummary = v; return this; }
 
 
         public WorkItemCreateRequest build() {
