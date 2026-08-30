@@ -1,0 +1,29 @@
+workItemTemplates:
+  - name: test-basic
+    description: "Basic test template"
+    candidateGroups: "reviewers"
+    defaultExpiryHours: 48
+    outcomes: '[{"name":"APPROVED"},{"name":"REJECTED"}]'
+
+  - name: test-full
+    description: "Full-field test template"
+    priority: URGENT
+    candidateGroups: "ethics-committee,senior-reviewers"
+    candidateUsers: "dr-smith"
+    requiredCapabilities: "clinical-review"
+    defaultExpiryHours: 72
+    defaultClaimHours: 24
+    defaultPayload: '{"formType": "irb"}'
+    labelPaths: '["clinical/irb","compliance/required"]'
+    typePaths: '["irb","ethics"]'
+    outcomes: '[{"name":"APPROVED"},{"name":"REJECTED"},{"name":"DEFERRED"}]'
+    excludedUsers: "trial-pi"
+    scope: "casehubio/clinical"
+    instanceCount: 3
+    requiredCount: 2
+    onThresholdReached: KEEP
+    assignmentStrategy: "round-robin"
+
+  - name: test-interpolated
+    description: "Template with env interpolation"
+    candidateGroups: "${env.TEST_REVIEW_TEAM}"

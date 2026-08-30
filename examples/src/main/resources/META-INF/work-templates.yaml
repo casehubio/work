@@ -1,0 +1,22 @@
+# Example WorkItemTemplate declarations for casehub-work tutorials.
+# Place this file at META-INF/work-templates.yaml on your classpath.
+# Templates are loaded at startup and available via humanTask.templateRef in CaseDefinition YAML.
+
+workItemTemplates:
+  - name: document-review
+    description: "Standard document review — 48h deadline, escalates to senior-reviewers"
+    candidateGroups: "reviewers"
+    defaultExpiryHours: 48
+    defaultClaimHours: 8
+    outcomes: '[{"name":"APPROVED"},{"name":"REJECTED"},{"name":"NEEDS_REVISION"}]'
+    labelPaths: '["review/pending"]'
+    typePaths: '["review","document"]'
+
+  - name: urgent-approval
+    description: "Urgent approval with 4-hour claim deadline"
+    priority: URGENT
+    candidateGroups: "approvers"
+    defaultExpiryHours: 24
+    defaultClaimHours: 4
+    outcomes: '[{"name":"APPROVED"},{"name":"REJECTED"}]'
+    scope: "default/approvals"

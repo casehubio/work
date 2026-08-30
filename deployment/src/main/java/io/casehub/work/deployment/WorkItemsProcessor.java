@@ -28,6 +28,13 @@ class WorkItemsProcessor {
     }
 
     @BuildStep
+    NativeImageResourcePatternsBuildItem registerTemplateResources() {
+        return NativeImageResourcePatternsBuildItem.builder()
+                .includeGlob("META-INF/work-templates.yaml")
+                .build();
+    }
+
+    @BuildStep
     AdditionalBeanBuildItem registerStrategyBeans() {
         return AdditionalBeanBuildItem.builder()
                 .addBeanClasses(
