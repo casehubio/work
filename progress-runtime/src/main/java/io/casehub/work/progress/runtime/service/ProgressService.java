@@ -5,13 +5,15 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.casehub.work.progress.ConditionEvaluator;
 import io.casehub.work.progress.ProgressChangeType;
 import io.casehub.work.progress.ProgressCreateRequest;
+import io.casehub.work.progress.ProgressDefinition;
+import io.casehub.work.progress.ProgressDefinitionRegistry;
 import io.casehub.work.progress.ProgressInstance;
 import io.casehub.work.progress.ProgressSnapshot;
 import io.casehub.work.progress.ProgressStatus;
 import io.casehub.work.progress.ProgressUpdatedEvent;
-import io.casehub.work.progress.rollup.RollupEngine;
 import io.casehub.work.progress.StepDefinition;
 import io.casehub.work.progress.StepStatus;
+import io.casehub.work.progress.rollup.RollupEngine;
 import io.casehub.work.progress.spi.ProgressEventStore;
 import io.casehub.work.progress.spi.ProgressInstanceStore;
 import io.casehub.work.progress.validation.RollbackDetector;
@@ -40,6 +42,7 @@ public class ProgressService {
     private final ConditionEvaluator conditionEvaluator;
     private final Consumer<ProgressUpdatedEvent> eventEmitter;
     private final RollupEngine                   rollupEngine;
+    private final ProgressDefinitionRegistry     definitionRegistry;
 
 
     public ProgressService(ProgressInstanceStore instanceStore,
@@ -51,6 +54,20 @@ public class ProgressService {
                            ConditionEvaluator conditionEvaluator,
                            Consumer<ProgressUpdatedEvent> eventEmitter,
                            RollupEngine rollupEngine) {
+        this(instanceStore, eventStore, validators, stepValidator, stepShapeValidator,
+             rollbackDetector, conditionEvaluator, eventEmitter, rollupEngine, null);
+    }
+
+    public ProgressService(ProgressInstanceStore instanceStore,
+                           ProgressEventStore eventStore,
+                           List<ShapeValidator> validators,
+                           StepValidator stepValidator,
+                           StepShapeValidator stepShapeValidator,
+                           RollbackDetector rollbackDetector,
+                           ConditionEvaluator conditionEvaluator,
+                           Consumer<ProgressUpdatedEvent> eventEmitter,
+                           RollupEngine rollupEngine,
+                           ProgressDefinitionRegistry definitionRegistry) {
         this.instanceStore      = instanceStore;
         this.eventStore         = eventStore;
         this.validators         = validators.stream()
@@ -61,18 +78,35 @@ public class ProgressService {
         this.conditionEvaluator = conditionEvaluator;
         this.eventEmitter       = eventEmitter;
         this.rollupEngine       = rollupEngine;
+        this.definitionRegistry = definitionRegistry;
     }
 
+
     public ProgressInstance create(ProgressCreateRequest request) {
-        if ("step".equals(request.shapeType()) && request.definition() == null) {
+        String                                  shapeType         = request.shapeType();
+        JsonNode definition = request.definition();
+        String                                  rollbackPolicy    = request.rollbackPolicy();
+        String                                  visualisationMode = request.visualisationMode();
+
+        if (request.definitionName() != null && definitionRegistry != null) {
+            ProgressDefinition def = definitionRegistry.get(request.definitionName())
+                                                                                .orElseThrow(() -> new IllegalArgumentException(
+                                                                                        "Unknown progress definition: " + request.definitionName()));
+            if (shapeType == null) {shapeType = def.shapeType();}
+            if (definition == null) {definition = def.definition();}
+            if (rollbackPolicy == null) {rollbackPolicy = def.rollbackPolicy();}
+            if (visualisationMode == null) {visualisationMode = def.visualisationMode();}
+        }
+
+        if ("step".equals(shapeType) && definition == null) {
             throw new IllegalArgumentException("Step shape requires a 'definition' field");
         }
 
-        if ("step".equals(request.shapeType())) {
-            stepShapeValidator.validateDefinition(request.definition());
+        if ("step".equals(shapeType)) {
+            stepShapeValidator.validateDefinition(definition);
         }
 
-        validateShape(request.shapeType(), request.state(), request.definition());
+        validateShape(shapeType, request.state(), definition);
 
         UUID    id  = UUID.randomUUID();
         Instant now = Instant.now();
@@ -88,14 +122,15 @@ public class ProgressService {
         ProgressInstance instance = new ProgressInstance(
                 id, request.tenancyId(), request.scopeType(), request.scopeId(),
                 request.parentProgressId(), rootProgressId,
-                request.shapeType(), request.definition(), request.state(),
+                shapeType, definition, request.state(),
                 ProgressStatus.PENDING, request.rollupStrategyId(),
-                request.rollbackPolicy(), request.visualisationMode(),
+                rollbackPolicy, visualisationMode,
                 now, now);
 
         instanceStore.put(instance);
         emitEvent(instance, null, ProgressChangeType.CREATED);
-        return instance;}
+        return instance;
+    }
 
     public ProgressInstance updateState(UUID id, JsonNode newState) {
         ProgressInstance instance = requireInstance(id);
@@ -161,7 +196,7 @@ public class ProgressService {
                 childRequest.tenancyId(), childRequest.scopeType(), childRequest.scopeId(),
                 childRequest.shapeType(), childRequest.state(),
                 parentId, childRequest.rollupStrategyId(), childRequest.definition(),
-                childRequest.rollbackPolicy(), childRequest.visualisationMode());
+                childRequest.rollbackPolicy(), childRequest.visualisationMode(), childRequest.definitionName());
 
         ProgressInstance child = create(withParent);
 

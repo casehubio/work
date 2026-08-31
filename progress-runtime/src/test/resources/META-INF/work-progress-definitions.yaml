@@ -1,0 +1,17 @@
+progressDefinitions:
+  - name: document-review
+    shapeType: step
+    stages:
+      - name: received
+      - name: in-review
+      - name: approved
+      - name: rejected
+        optional: true
+    transitions:
+      received: [in-review]
+      in-review: [approved, rejected, received]
+    rollbackPolicy: revert-to-previous
+    visualisationMode: linear
+
+  - name: simple-percentage
+    shapeType: percentage

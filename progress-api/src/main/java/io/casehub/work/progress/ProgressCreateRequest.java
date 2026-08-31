@@ -14,7 +14,8 @@ public record ProgressCreateRequest(
         String rollupStrategyId,
         JsonNode definition,
         String rollbackPolicy,
-        String visualisationMode
+        String visualisationMode,
+        String definitionName
 ) {
     public ProgressCreateRequest {
         if (tenancyId == null || tenancyId.isBlank()) {
@@ -26,8 +27,8 @@ public record ProgressCreateRequest(
         if (scopeId == null || scopeId.isBlank()) {
             throw new IllegalArgumentException("scopeId is required");
         }
-        if (shapeType == null || shapeType.isBlank()) {
-            throw new IllegalArgumentException("shapeType is required");
+        if (definitionName == null && (shapeType == null || shapeType.isBlank())) {
+            throw new IllegalArgumentException("shapeType is required when definitionName is not set");
         }
         if (state == null) {
             throw new IllegalArgumentException("state is required");

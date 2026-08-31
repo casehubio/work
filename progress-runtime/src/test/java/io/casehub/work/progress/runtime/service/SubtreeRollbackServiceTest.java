@@ -125,7 +125,7 @@ class SubtreeRollbackServiceTest {
     void rollbackSubtree_policyBypassedFlagged() {
         ProgressInstance root = progressService.create(
                 new ProgressCreateRequest("t1", "workitem", "root", "percentage", percentageState(0),
-                        null, null, null, "denied", null));
+                        null, null, null, "denied", null, null));
         Instant targetTime = Instant.now();
         progressService.updateState(root.id(), percentageState(50));
 
@@ -153,7 +153,7 @@ class SubtreeRollbackServiceTest {
 
     private ProgressCreateRequest percentageRequest(String scopeId, int value) {
         return new ProgressCreateRequest("t1", "workitem", scopeId, "percentage",
-                percentageState(value), null, null, null, null, null);
+                percentageState(value), null, null, null, null, null, null);
     }
 
     private JsonNode percentageState(int value) {

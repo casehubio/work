@@ -62,7 +62,10 @@ public class StepShapeValidator implements ShapeValidator {
 
     public static List<StepDefinition> parseDefinition(JsonNode definition) {
         try {
-            return MAPPER.readerForListOf(StepDefinition.class).readValue(definition);
+            JsonNode steps = definition.isObject() && definition.has("steps")
+                             ? definition.get("steps")
+                             : definition;
+            return MAPPER.readerForListOf(StepDefinition.class).readValue(steps);
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid step definition: " + e.getMessage(), e);
         }

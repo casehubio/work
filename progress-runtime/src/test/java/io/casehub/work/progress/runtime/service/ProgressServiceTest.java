@@ -38,12 +38,14 @@ class ProgressServiceTest {
     private InMemoryProgressEventStore eventStore;
     private List<ProgressUpdatedEvent> emittedEvents;
     private ProgressService service;
+    private io.casehub.work.progress.ProgressDefinitionRegistry registry;
 
     @BeforeEach
     void setUp() {
         instanceStore = new InMemoryProgressInstanceStore();
         eventStore    = new InMemoryProgressEventStore();
         emittedEvents = new ArrayList<>();
+        registry      = new io.casehub.work.progress.ProgressDefinitionRegistry();
 
         List<ShapeValidator> validators = List.of(
                 new PercentageValidator(), new CountValidator(),
@@ -54,18 +56,18 @@ class ProgressServiceTest {
                 instanceStore, eventStore, validators,
                 new StepValidator(), new StepShapeValidator(),
                 new RollbackDetector(), conditionEvaluator,
-                emittedEvents::add, new RollupEngine());
+                emittedEvents::add, new RollupEngine(), registry);
     }
 
     private ProgressCreateRequest percentageRequest(int value) {
         return new ProgressCreateRequest("tenant1", "workitem", UUID.randomUUID().toString(),
                                          "percentage", mapper.createObjectNode().put("value", value),
-                                         null, null, null, null, null);}
+                                         null, null, null, null, null, null);}
 
     private ProgressCreateRequest countRequest(int current, int total) {
         return new ProgressCreateRequest("tenant1", "workitem", UUID.randomUUID().toString(),
                                          "count", mapper.createObjectNode().put("current", current).put("total", total),
-                                         null, null, null, null, null);}
+                                         null, null, null, null, null, null);}
 
     private ProgressCreateRequest stepRequest() {
         ArrayNode def = mapper.createArrayNode();
@@ -80,7 +82,7 @@ class ProgressServiceTest {
         steps.putObject("c").put("status", "pending");
 
         return new ProgressCreateRequest("tenant1", "workitem", UUID.randomUUID().toString(),
-                                         "step", state, null, null, def, null, null);}
+                                         "step", state, null, null, def, null, null, null);}
 
     // --- CREATE ---
 
@@ -100,7 +102,7 @@ class ProgressServiceTest {
         ProgressCreateRequest childReq = new ProgressCreateRequest("tenant1", "workitem",
                                                                    UUID.randomUUID().toString(), "percentage",
                                                                    mapper.createObjectNode().put("value", 0),
-                                                                   parent.id(), null, null, null, null);
+                                                                   parent.id(), null, null, null, null, null);
         ProgressInstance child = service.create(childReq);
         assertThat(child.parentProgressId()).isEqualTo(parent.id());
         assertThat(child.rootProgressId()).isEqualTo(parent.rootProgressId());}
@@ -110,7 +112,7 @@ class ProgressServiceTest {
         ObjectNode state = mapper.createObjectNode();
         state.putObject("steps").putObject("a").put("status", "pending");
         ProgressCreateRequest req = new ProgressCreateRequest("tenant1", "workitem",
-                                                              UUID.randomUUID().toString(), "step", state, null, null, null, null, null);
+                                                              UUID.randomUUID().toString(), "step", state, null, null, null, null, null, null);
         assertThatThrownBy(() -> service.create(req))
                 .isInstanceOf(IllegalArgumentException.class);}
 
@@ -119,7 +121,7 @@ class ProgressServiceTest {
         ProgressCreateRequest req = new ProgressCreateRequest("tenant1", "workitem",
                                                               UUID.randomUUID().toString(), "percentage",
                                                               mapper.createObjectNode().put("value", 150),
-                                                              null, null, null, null, null);
+                                                              null, null, null, null, null, null);
         assertThatThrownBy(() -> service.create(req))
                 .isInstanceOf(IllegalArgumentException.class);}
 
@@ -207,7 +209,7 @@ class ProgressServiceTest {
         ProgressCreateRequest childReq = new ProgressCreateRequest("tenant1", "workitem",
                                                                    UUID.randomUUID().toString(), "percentage",
                                                                    mapper.createObjectNode().put("value", 0),
-                                                                   null, null, null, null, null);
+                                                                   null, null, null, null, null, null);
         ProgressInstance child = service.attachChild(parent.id(), childReq);
 
         assertThat(child.parentProgressId()).isEqualTo(parent.id());
@@ -235,10 +237,10 @@ class ProgressServiceTest {
         String scopeId = UUID.randomUUID().toString();
         ProgressCreateRequest req1 = new ProgressCreateRequest("tenant1", "workitem", scopeId,
                                                                "percentage", mapper.createObjectNode().put("value", 10),
-                                                               null, null, null, null, null);
+                                                               null, null, null, null, null, null);
         ProgressCreateRequest req2 = new ProgressCreateRequest("tenant1", "workitem", scopeId,
                                                                "percentage", mapper.createObjectNode().put("value", 20),
-                                                               null, null, null, null, null);
+                                                               null, null, null, null, null, null);
         ProgressInstance first  = service.create(req1);
         ProgressInstance second = service.create(req2);
 
@@ -287,7 +289,7 @@ class ProgressServiceTest {
         steps.putObject("b").put("status", "pending");
 
         ProgressCreateRequest req = new ProgressCreateRequest("tenant1", "workitem",
-                                                              UUID.randomUUID().toString(), "step", state, null, null, def, null, null);
+                                                              UUID.randomUUID().toString(), "step", state, null, null, def, null, null, null);
         ProgressInstance inst = service.create(req);
 
         service.startStep(inst.id(), "b");
@@ -357,7 +359,7 @@ class ProgressServiceTest {
         ObjectNode state = mapper.createObjectNode().put("value", 50);
         ProgressCreateRequest request = new ProgressCreateRequest(
                 "tenant1", "workitem", "wi-1", "percentage", state,
-                null, null, null, null, "gauge");
+                null, null, null, null, "gauge", null);
         ProgressInstance instance = service.create(request);
         assertThat(instance.visualisationMode()).isEqualTo("gauge");
     }
@@ -373,7 +375,7 @@ class ProgressServiceTest {
         ObjectNode state = mapper.createObjectNode().put("value", 50);
         ProgressCreateRequest request = new ProgressCreateRequest(
                 "tenant1", "workitem", "wi-1", "percentage", state,
-                null, null, null, null, "gantt");
+                null, null, null, null, "gantt", null);
         ProgressInstance instance = service.create(request);
         assertThat(instance.visualisationMode()).isEqualTo("gantt");
     }
@@ -383,7 +385,7 @@ class ProgressServiceTest {
         ObjectNode state = mapper.createObjectNode().put("value", 50);
         ProgressCreateRequest request = new ProgressCreateRequest(
                 "tenant1", "workitem", "wi-1", "percentage", state,
-                null, null, null, null, "timeline");
+                null, null, null, null, "timeline", null);
         ProgressInstance instance = service.create(request);
 
         ObjectNode       newState = mapper.createObjectNode().put("value", 75);
@@ -398,7 +400,7 @@ class ProgressServiceTest {
         ObjectNode state = mapper.createObjectNode().put("value", 80);
         ProgressCreateRequest request = new ProgressCreateRequest(
                 "tenant1", "workitem", "wi-1", "percentage", state,
-                null, null, null, "denied", null);
+                null, null, null, "denied", null, null);
         ProgressInstance instance = service.create(request);
 
         ObjectNode backward = mapper.createObjectNode().put("value", 60);
@@ -412,7 +414,7 @@ class ProgressServiceTest {
         ObjectNode state = mapper.createObjectNode().put("value", 60);
         ProgressCreateRequest request = new ProgressCreateRequest(
                 "tenant1", "workitem", "wi-1", "percentage", state,
-                null, null, null, "denied", null);
+                null, null, null, "denied", null, null);
         ProgressInstance instance = service.create(request);
 
         ObjectNode forward = mapper.createObjectNode().put("value", 80);
@@ -446,7 +448,7 @@ class ProgressServiceTest {
         ObjectNode state = mapper.createObjectNode().put("value", 50);
         ProgressCreateRequest request = new ProgressCreateRequest(
                 "tenant1", "workitem", "wi-1", "percentage", state,
-                null, null, null, "denied", null);
+                null, null, null, "denied", null, null);
         ProgressInstance instance = service.create(request);
         service.updateState(instance.id(), mapper.createObjectNode().put("value", 80));
 
@@ -519,12 +521,69 @@ class ProgressServiceTest {
         ObjectNode state = mapper.createObjectNode().put("value", 100);
         ProgressCreateRequest request = new ProgressCreateRequest(
                 "tenant1", "workitem", "wi-1", "percentage", state,
-                null, null, null, "denied", null);
+                null, null, null, "denied", null, null);
         ProgressInstance instance = service.create(request);
         service.updateState(instance.id(), mapper.createObjectNode().put("value", 100));
         service.complete(instance.id());
 
         ProgressInstance reactivated = service.reactivate(instance.id());
         assertThat(reactivated.status()).isEqualTo(ProgressStatus.ACTIVE);
+    }
+
+    // --- DEFINITION NAME RESOLUTION ---
+
+    @Test
+    void createWithDefinitionNameResolvesFromRegistry() {
+        com.fasterxml.jackson.databind.node.ArrayNode def = mapper.createArrayNode();
+        def.addObject().put("name", "draft").put("optional", false).putArray("dependsOn");
+        def.addObject().put("name", "review").put("optional", false).putArray("dependsOn").add("draft");
+
+        com.fasterxml.jackson.databind.node.ObjectNode fullDef = mapper.createObjectNode();
+        fullDef.set("steps", def);
+
+        registry.register(new io.casehub.work.progress.ProgressDefinition(
+                "my-workflow", "step", fullDef, "revert-to-previous", "linear"));
+
+        com.fasterxml.jackson.databind.node.ObjectNode state = mapper.createObjectNode();
+        com.fasterxml.jackson.databind.node.ObjectNode steps = state.putObject("steps");
+        steps.putObject("draft").put("status", "pending");
+        steps.putObject("review").put("status", "pending");
+
+        ProgressCreateRequest request = new ProgressCreateRequest(
+                "tenant1", "workitem", java.util.UUID.randomUUID().toString(),
+                null, state, null, null, null, null, null, "my-workflow");
+
+        ProgressInstance instance = service.create(request);
+        assertThat(instance.shapeType()).isEqualTo("step");
+        assertThat(instance.definition()).isEqualTo(fullDef);
+        assertThat(instance.rollbackPolicy()).isEqualTo("revert-to-previous");
+        assertThat(instance.visualisationMode()).isEqualTo("linear");
+    }
+
+    @Test
+    void createWithDefinitionNameRequestOverridesTemplate() {
+        registry.register(new io.casehub.work.progress.ProgressDefinition(
+                "pct", "percentage", null, "revert-to-previous", "linear"));
+
+        ProgressCreateRequest request = new ProgressCreateRequest(
+                "tenant1", "workitem", java.util.UUID.randomUUID().toString(),
+                "percentage", mapper.createObjectNode().put("value", 0),
+                null, null, null, "custom-rollback", null, "pct");
+
+        ProgressInstance instance = service.create(request);
+        assertThat(instance.rollbackPolicy()).isEqualTo("custom-rollback");
+        assertThat(instance.visualisationMode()).isEqualTo("linear");
+    }
+
+    @Test
+    void createWithUnknownDefinitionNameThrows() {
+        ProgressCreateRequest request = new ProgressCreateRequest(
+                "tenant1", "workitem", java.util.UUID.randomUUID().toString(),
+                null, mapper.createObjectNode().put("value", 0),
+                null, null, null, null, null, "nonexistent");
+
+        assertThatThrownBy(() -> service.create(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unknown progress definition");
     }
 }

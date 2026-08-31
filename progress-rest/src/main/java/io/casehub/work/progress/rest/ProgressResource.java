@@ -55,7 +55,7 @@ public class ProgressResource {
                 request.shapeType(), request.state(),
                 request.parentProgressId(), request.rollupStrategyId(),
                 request.definition(), request.rollbackPolicy(),
-                request.visualisationMode());
+                request.visualisationMode(), null);
         ProgressInstance instance = progressService.create(domainReq);
         return Response.status(Response.Status.CREATED).entity(instance).build();}
 
@@ -94,7 +94,7 @@ public class ProgressResource {
                 request.tenancyId(), request.scopeType(), request.scopeId(),
                 request.shapeType(), request.state(),
                 null, request.rollupStrategyId(), request.definition(),
-                request.rollbackPolicy(), request.visualisationMode());
+                request.rollbackPolicy(), request.visualisationMode(), null);
         ProgressInstance child = progressService.attachChild(parentId, domainReq);
         return Response.status(Response.Status.CREATED).entity(child).build();}
 
