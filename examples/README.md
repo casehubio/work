@@ -13,11 +13,16 @@ logs a narrative to stdout, and returns the result as JSON.
 ## Running
 
 ```bash
-# Start in dev mode (H2 in-memory, auto-restart)
+# Core scenarios only (no ledger, AI, or queues dependencies)
 JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -pl examples
+
+# Full scenario suite (all optional modules)
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -pl examples -Pfull
 ```
 
-Quarkus starts on `http://localhost:8080`. All 17 scenarios are ready immediately.
+**Core profile (default):** 11 scenarios covering lifecycle, escalation, forms, labels, vocabulary, spawn, and business hours. No `casehub-work-ledger`, `casehub-work-ai`, or `casehub-work-queues` dependency — ideal for getting started.
+
+**Full profile (`-Pfull`):** All 17 scenarios including ledger audit trails, AI content moderation, semantic skill routing, and queue operations.
 
 ## Scenarios
 

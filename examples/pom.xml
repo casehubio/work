@@ -22,21 +22,8 @@ logs a narrative to stdout, and returns the full ledger trail as JSON.</descript
       <artifactId>casehub-work</artifactId>
       <version>${project.version}</version>
     </dependency>
-    <dependency>
-      <groupId>io.casehub</groupId>
-      <artifactId>casehub-work-ledger</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.casehub</groupId>
-      <artifactId>casehub-work-ai</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.casehub</groupId>
-      <artifactId>casehub-work-queues</artifactId>
-      <version>${project.version}</version>
-    </dependency>
+    <!-- Optional modules — only present with -Pfull -->
+    
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-jdbc-h2</artifactId>
@@ -92,6 +79,77 @@ logs a narrative to stdout, and returns the full ledger trail as JSON.</descript
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/ScenarioResponse.java</exclude>
+            <exclude>**/QueueScenarioResponse.java</exclude>
+            <exclude>**/credit/**</exclude>
+            <exclude>**/expense/**</exclude>
+            <exclude>**/moderation/**</exclude>
+            <exclude>**/queue/**</exclude>
+            <exclude>**/queues/**</exclude>
+            <exclude>**/semantic/**</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/credit/**</exclude>
+            <exclude>**/expense/**</exclude>
+            <exclude>**/moderation/**</exclude>
+            <exclude>**/queue/**</exclude>
+            <exclude>**/queues/**</exclude>
+            <exclude>**/semantic/**</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>full</id>
+      <dependencies>
+        <dependency>
+          <groupId>io.casehub</groupId>
+          <artifactId>casehub-work-ledger</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>io.casehub</groupId>
+          <artifactId>casehub-work-ai</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>io.casehub</groupId>
+          <artifactId>casehub-work-queues</artifactId>
+          <version>${project.version}</version>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes combine.self="override"/>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <excludes combine.self="override"/>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
