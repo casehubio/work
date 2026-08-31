@@ -167,6 +167,67 @@ public interface WorkItemsConfig {
          */
         @WithDefault("no-op")
         String breachPolicy();
+
+        /**
+         * Declarative SLA policy configuration.
+         *
+         * @return the declarative policy config group
+         */
+        DeclarativeConfig declarative();
+
+        /**
+         * Configuration for the declarative SLA breach policy.
+         */
+        interface DeclarativeConfig {
+            /**
+             * Fallback policy id when no YAML scope or default matches.
+             *
+             * @return policy id; defaults to {@code "no-op"}
+             */
+            @WithDefault("no-op")
+            String fallback();
+
+            /**
+             * Config property overrides for SLA defaults.
+             *
+             * @return the defaults config group
+             */
+            DefaultsConfig defaults();
+
+            /**
+             * Config property overrides for deployment-wide SLA defaults.
+             */
+            interface DefaultsConfig {
+                /**
+                 * Default action on completion expiry (colon-delimited syntax).
+                 *
+                 * @return action string if configured
+                 */
+                java.util.Optional<String> onCompletionExpiry();
+
+                /**
+                 * Default action on claim expiry (colon-delimited syntax).
+                 *
+                 * @return action string if configured
+                 */
+                java.util.Optional<String> onClaimExpiry();
+
+                /**
+                 * Extension hours for {@code extend} actions.
+                 *
+                 * @return hours if configured
+                 */
+                java.util.OptionalInt extensionHours();
+
+                /**
+                 * Claim extension hours for claim-expiry {@code extend} actions.
+                 *
+                 * @return hours if configured
+                 */
+                java.util.OptionalInt claimExtensionHours();
+            }
+        }
+
     }
 
     /**

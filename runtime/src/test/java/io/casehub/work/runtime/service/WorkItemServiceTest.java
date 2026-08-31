@@ -189,6 +189,15 @@ class WorkItemServiceTest {
                 return new SlaConfig() {
                     @Override public String claimPolicy() { return "continuation"; }
                     @Override public String breachPolicy() { return "no-op"; }
+                    @Override public DeclarativeConfig declarative() { return new DeclarativeConfig() {
+                        @Override public String fallback() { return "no-op"; }
+                        @Override public DefaultsConfig defaults() { return new DefaultsConfig() {
+                            @Override public java.util.Optional<String> onCompletionExpiry() { return java.util.Optional.empty(); }
+                            @Override public java.util.Optional<String> onClaimExpiry() { return java.util.Optional.empty(); }
+                            @Override public java.util.OptionalInt extensionHours() { return java.util.OptionalInt.empty(); }
+                            @Override public java.util.OptionalInt claimExtensionHours() { return java.util.OptionalInt.empty(); }
+                        }; }
+                    }; }
                 };
             }
 
@@ -1276,6 +1285,15 @@ class WorkItemServiceTest {
                 return new SlaConfig() {
                     @Override public String claimPolicy() { return "continuation"; }
                     @Override public String breachPolicy() { return "no-op"; }
+                    @Override public DeclarativeConfig declarative() { return new DeclarativeConfig() {
+                        @Override public String fallback() { return "no-op"; }
+                        @Override public DefaultsConfig defaults() { return new DefaultsConfig() {
+                            @Override public java.util.Optional<String> onCompletionExpiry() { return java.util.Optional.empty(); }
+                            @Override public java.util.Optional<String> onClaimExpiry() { return java.util.Optional.empty(); }
+                            @Override public java.util.OptionalInt extensionHours() { return java.util.OptionalInt.empty(); }
+                            @Override public java.util.OptionalInt claimExtensionHours() { return java.util.OptionalInt.empty(); }
+                        }; }
+                    }; }
                 };
             }
 

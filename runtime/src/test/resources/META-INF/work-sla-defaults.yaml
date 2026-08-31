@@ -1,0 +1,16 @@
+sla:
+  defaults:
+    onCompletionExpiry: fail
+    onClaimExpiry: extend
+    extensionHours: 4
+    claimExtensionHours: 8
+  scopes:
+    casehubio/clinical:
+      onCompletionExpiry:
+        escalateTo: senior-reviewers
+        deadline: PT24H
+      onClaimExpiry:
+        escalateTo: team-leads
+    casehubio/clinical/triage:
+      onCompletionExpiry:
+        exhausted: triage-sla-exceeded
