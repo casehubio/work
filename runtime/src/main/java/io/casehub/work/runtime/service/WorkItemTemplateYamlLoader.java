@@ -15,11 +15,14 @@ import org.jboss.logging.Logger;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import io.casehub.yaml.core.resolver.VariableResolver;
+import io.casehub.yaml.core.resolver.VariableSource;
+
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Set;
 
 @ApplicationScoped
 @Startup
@@ -27,8 +30,10 @@ public class WorkItemTemplateYamlLoader {
 
     private static final Logger LOG = Logger.getLogger(WorkItemTemplateYamlLoader.class);
     private static final String RESOURCE_PATH = "META-INF/work-templates.yaml";
-    private static final Pattern VAR_PATTERN = Pattern.compile("\\$\\{(env|sys)\\.([^:}]+)(?::-((?:[^}]*)))?}");
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
+    public static final VariableResolver RESOLVER = new VariableResolver(
+            Map.of("env", VariableSource.env(), "sys", VariableSource.systemProperty()),
+            Set.of());
 
     @PostConstruct
     @Transactional
@@ -65,18 +70,18 @@ public class WorkItemTemplateYamlLoader {
 
     private WorkItemTemplate mapToEntity(JsonNode node) {
         WorkItemTemplate t = new WorkItemTemplate();
-        t.name = interpolate(textOrNull(node, "name"));
-        t.description = interpolate(textOrNull(node, "description"));
-        t.candidateGroups = interpolate(textOrNull(node, "candidateGroups"));
-        t.candidateUsers = interpolate(textOrNull(node, "candidateUsers"));
-        t.requiredCapabilities = interpolate(textOrNull(node, "requiredCapabilities"));
+        t.name = resolveOrNull(textOrNull(node, "name"));
+        t.description = resolveOrNull(textOrNull(node, "description"));
+        t.candidateGroups = resolveOrNull(textOrNull(node, "candidateGroups"));
+        t.candidateUsers = resolveOrNull(textOrNull(node, "candidateUsers"));
+        t.requiredCapabilities = resolveOrNull(textOrNull(node, "requiredCapabilities"));
         t.defaultPayload = textOrNull(node, "defaultPayload");
         t.labelPaths = textOrNull(node, "labelPaths");
         t.typePaths = textOrNull(node, "typePaths");
         t.outcomes = textOrNull(node, "outcomes");
-        t.excludedUsers = interpolate(textOrNull(node, "excludedUsers"));
-        t.excludedGroups = interpolate(textOrNull(node, "excludedGroups"));
-        t.scope = interpolate(textOrNull(node, "scope"));
+        t.excludedUsers = resolveOrNull(textOrNull(node, "excludedUsers"));
+        t.excludedGroups = resolveOrNull(textOrNull(node, "excludedGroups"));
+        t.scope = resolveOrNull(textOrNull(node, "scope"));
         t.inputDataSchema = textOrNull(node, "inputDataSchema");
         t.outputDataSchema = textOrNull(node, "outputDataSchema");
         t.assignmentStrategy = textOrNull(node, "assignmentStrategy");
@@ -112,22 +117,9 @@ public class WorkItemTemplateYamlLoader {
         LOG.infof("Loaded WorkItemTemplate '%s' (id=%s)", template.name, template.id);
     }
 
-    static String interpolate(String value) {
+    public static String resolveOrNull(String value) {
         if (value == null) return null;
-        Matcher m = VAR_PATTERN.matcher(value);
-        StringBuilder sb = new StringBuilder();
-        while (m.find()) {
-            String type = m.group(1);
-            String key = m.group(2);
-            String resolved = "env".equals(type) ? System.getenv(key) : System.getProperty(key);
-            if (resolved == null) {
-                String defaultValue = m.group(3);
-                resolved = defaultValue != null ? defaultValue : m.group(0);
-            }
-            m.appendReplacement(sb, Matcher.quoteReplacement(resolved));
-        }
-        m.appendTail(sb);
-        return sb.toString();
+        return (String) RESOLVER.resolve(value);
     }
 
     private static String textOrNull(JsonNode node, String field) {

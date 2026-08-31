@@ -1,0 +1,15 @@
+# Work Plan — issue-379-yaml-core-migration
+
+## State
+branch: issue-379-yaml-core-migration
+state: scaffolded
+project-sha: 147a79db49375c56e67d517676a6faf83f3026bc
+date: 2026-08-31
+issue-repo: casehubio/work
+covers: 379
+design-repo: project
+design-section-hashes: 4d2cc5ab:##
+flyway-next-v: none
+
+## Queue
+- [ ] casehubio/work#379 — Issue #379 ← active

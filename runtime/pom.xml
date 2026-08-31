@@ -98,6 +98,11 @@
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-expression</artifactId>
     </dependency>
+    <!-- Platform YAML core — VariableResolver for ${env.*} / ${sys.*} interpolation -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-platform-yaml-core</artifactId>
+    </dependency>
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-callback-api</artifactId>

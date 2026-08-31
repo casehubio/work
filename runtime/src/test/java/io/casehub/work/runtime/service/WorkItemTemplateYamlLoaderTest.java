@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.casehub.yaml.core.resolver.UnresolvedVariableException;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -13,28 +14,35 @@ import java.io.InputStream;
 class WorkItemTemplateYamlLoaderTest {
 
     @Test
-    void interpolateResolvesEnvVars() {
-        String result = WorkItemTemplateYamlLoader.interpolate("team-${env.PATH}-end");
+    void resolveOrNullResolvesEnvVars() {
+        String result = WorkItemTemplateYamlLoader.resolveOrNull("team-${env.PATH}-end");
         assertThat(result).doesNotContain("${env.PATH}");
         assertThat(result).startsWith("team-");
     }
 
     @Test
-    void interpolateLeavesUnresolvedVarsAsIs() {
-        String result = WorkItemTemplateYamlLoader.interpolate("${env.NONEXISTENT_VAR_XYZ_12345}");
-        assertThat(result).isEqualTo("${env.NONEXISTENT_VAR_XYZ_12345}");
+    void resolveOrNullThrowsOnUnresolvedVar() {
+        assertThatThrownBy(() -> WorkItemTemplateYamlLoader.resolveOrNull("${env.NONEXISTENT_VAR_XYZ_12345}"))
+                .isInstanceOf(UnresolvedVariableException.class)
+                .hasMessageContaining("NONEXISTENT_VAR_XYZ_12345");
     }
 
     @Test
-    void interpolateHandlesNull() {
-        assertThat(WorkItemTemplateYamlLoader.interpolate(null)).isNull();
+    void resolveOrNullUsesDefaultForMissing() {
+        String result = WorkItemTemplateYamlLoader.resolveOrNull("${env.NONEXISTENT_VAR_XYZ_12345:-fallback}");
+        assertThat(result).isEqualTo("fallback");
     }
 
     @Test
-    void interpolateResolvesSysProps() {
+    void resolveOrNullHandlesNull() {
+        assertThat(WorkItemTemplateYamlLoader.resolveOrNull(null)).isNull();
+    }
+
+    @Test
+    void resolveOrNullResolvesSysProps() {
         System.setProperty("test.yaml.loader.prop", "resolved-value");
         try {
-            String result = WorkItemTemplateYamlLoader.interpolate("prefix-${sys.test.yaml.loader.prop}-suffix");
+            String result = WorkItemTemplateYamlLoader.resolveOrNull("prefix-${sys.test.yaml.loader.prop}-suffix");
             assertThat(result).isEqualTo("prefix-resolved-value-suffix");
         } finally {
             System.clearProperty("test.yaml.loader.prop");
@@ -42,8 +50,8 @@ class WorkItemTemplateYamlLoaderTest {
     }
 
     @Test
-    void interpolateHandlesPlainStringWithoutVars() {
-        assertThat(WorkItemTemplateYamlLoader.interpolate("plain-string")).isEqualTo("plain-string");
+    void resolveOrNullHandlesPlainString() {
+        assertThat(WorkItemTemplateYamlLoader.resolveOrNull("plain-string")).isEqualTo("plain-string");
     }
 
     @Test

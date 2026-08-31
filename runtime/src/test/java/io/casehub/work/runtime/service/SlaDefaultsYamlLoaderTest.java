@@ -44,10 +44,10 @@ class SlaDefaultsYamlLoaderTest {
     }
 
     @Test
-    void variableInterpolation() {
+    void variableResolution() {
         System.setProperty("test.sla.group", "interpolated-group");
         try {
-            String result = SlaDefaultsYamlLoader.interpolate("${sys.test.sla.group}");
+            String result = WorkItemTemplateYamlLoader.resolveOrNull("${sys.test.sla.group}");
             assertThat(result).isEqualTo("interpolated-group");
         } finally {
             System.clearProperty("test.sla.group");
@@ -55,26 +55,26 @@ class SlaDefaultsYamlLoaderTest {
     }
 
     @Test
-    void interpolateNull() {
-        assertThat(SlaDefaultsYamlLoader.interpolate(null)).isNull();
+    void resolveNull() {
+        assertThat(WorkItemTemplateYamlLoader.resolveOrNull(null)).isNull();
     }
 
     @Test
-    void interpolatePlainString() {
-        assertThat(SlaDefaultsYamlLoader.interpolate("plain-string")).isEqualTo("plain-string");
+    void resolvePlainString() {
+        assertThat(WorkItemTemplateYamlLoader.resolveOrNull("plain-string")).isEqualTo("plain-string");
     }
 
     @Test
-    void interpolateDefaultValueUsedWhenUnset() {
-        assertThat(SlaDefaultsYamlLoader.interpolate("${env.NONEXISTENT_VAR_XYZ_99:-fallback-group}"))
+    void resolveDefaultValueUsedWhenUnset() {
+        assertThat(WorkItemTemplateYamlLoader.resolveOrNull("${env.NONEXISTENT_VAR_XYZ_99:-fallback-group}"))
                 .isEqualTo("fallback-group");
     }
 
     @Test
-    void interpolateDefaultValueIgnoredWhenSet() {
+    void resolveDefaultValueIgnoredWhenSet() {
         System.setProperty("test.sla.default", "real-value");
         try {
-            assertThat(SlaDefaultsYamlLoader.interpolate("${sys.test.sla.default:-ignored}"))
+            assertThat(WorkItemTemplateYamlLoader.resolveOrNull("${sys.test.sla.default:-ignored}"))
                     .isEqualTo("real-value");
         } finally {
             System.clearProperty("test.sla.default");
@@ -82,14 +82,14 @@ class SlaDefaultsYamlLoaderTest {
     }
 
     @Test
-    void interpolateDefaultValueEmpty() {
-        assertThat(SlaDefaultsYamlLoader.interpolate("${env.NONEXISTENT_VAR_XYZ_99:-}"))
+    void resolveDefaultValueEmpty() {
+        assertThat(WorkItemTemplateYamlLoader.resolveOrNull("${env.NONEXISTENT_VAR_XYZ_99:-}"))
                 .isEqualTo("");
     }
 
     @Test
-    void interpolateDefaultValueWithColons() {
-        assertThat(SlaDefaultsYamlLoader.interpolate("${env.NONEXISTENT_VAR_XYZ_99:-host:8080}"))
+    void resolveDefaultValueWithColons() {
+        assertThat(WorkItemTemplateYamlLoader.resolveOrNull("${env.NONEXISTENT_VAR_XYZ_99:-host:8080}"))
                 .isEqualTo("host:8080");
     }
 

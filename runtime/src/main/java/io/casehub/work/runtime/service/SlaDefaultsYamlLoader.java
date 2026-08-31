@@ -18,8 +18,6 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @ApplicationScoped
 @Startup
@@ -27,7 +25,6 @@ public class SlaDefaultsYamlLoader {
 
     private static final Logger LOG = Logger.getLogger(SlaDefaultsYamlLoader.class);
     static final String RESOURCE_PATH = "META-INF/work-sla-defaults.yaml";
-    private static final Pattern VAR_PATTERN = Pattern.compile("\\$\\{(env|sys)\\.([^:}]+)(?::-((?:[^}]*)))?}");
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
 
     @Inject
@@ -188,7 +185,7 @@ public class SlaDefaultsYamlLoader {
     private BreachAction parseNodeAction(JsonNode node) {
         Object value = YAML_MAPPER.convertValue(node, Object.class);
         if (value instanceof String s) {
-            return BreachAction.parse(interpolate(s));
+            return BreachAction.parse(WorkItemTemplateYamlLoader.resolveOrNull(s));
         }
         return BreachAction.parse(value);
     }
@@ -217,23 +214,5 @@ public class SlaDefaultsYamlLoader {
             }
         }
         return new SlaDeclarativeConfig.ScopeConfig(onCompletion, onClaim, extHours, claimExtHours);
-    }
-
-    static String interpolate(String value) {
-        if (value == null) return null;
-        Matcher m = VAR_PATTERN.matcher(value);
-        StringBuilder sb = new StringBuilder();
-        while (m.find()) {
-            String type = m.group(1);
-            String key = m.group(2);
-            String resolved = "env".equals(type) ? System.getenv(key) : System.getProperty(key);
-            if (resolved == null) {
-                String defaultValue = m.group(3);
-                resolved = defaultValue != null ? defaultValue : m.group(0);
-            }
-            m.appendReplacement(sb, Matcher.quoteReplacement(resolved));
-        }
-        m.appendTail(sb);
-        return sb.toString();
     }
 }

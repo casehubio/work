@@ -17,12 +17,15 @@ import org.jboss.logging.Logger;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import io.casehub.yaml.core.resolver.VariableResolver;
+import io.casehub.yaml.core.resolver.VariableSource;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Map;
+import java.util.Set;
 
 @ApplicationScoped
 @Startup
@@ -30,8 +33,10 @@ public class ProgressDefinitionYamlLoader {
 
     private static final Logger LOG = Logger.getLogger(ProgressDefinitionYamlLoader.class);
     static final String RESOURCE_PATH = "META-INF/work-progress-definitions.yaml";
-    private static final Pattern VAR_PATTERN = Pattern.compile("\\$\\{(env|sys)\\.([^:}]+)(?::-((?:[^}]*)))?}");
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
+    private static final VariableResolver RESOLVER = new VariableResolver(
+            Map.of("env", VariableSource.env(), "sys", VariableSource.systemProperty()),
+            Set.of());
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
     private static final StepDefinitionValidator STEP_VALIDATOR = new StepDefinitionValidator();
 
@@ -73,7 +78,7 @@ public class ProgressDefinitionYamlLoader {
     }
 
     private ProgressDefinition parseDefinition(JsonNode node) {
-        String name = interpolate(textOrNull(node, "name"));
+        String name = resolveOrNull(textOrNull(node, "name"));
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("progressDefinition entry missing required 'name'");
         }
@@ -94,8 +99,8 @@ public class ProgressDefinitionYamlLoader {
         }
 
         return new ProgressDefinition(name, shapeType, definition,
-                interpolate(textOrNull(node, "rollbackPolicy")),
-                interpolate(textOrNull(node, "visualisationMode")));
+                resolveOrNull(textOrNull(node, "rollbackPolicy")),
+                resolveOrNull(textOrNull(node, "visualisationMode")));
     }
 
     private JsonNode buildStepDefinition(String defName, JsonNode stagesNode, JsonNode transitionsNode) {
@@ -107,9 +112,9 @@ public class ProgressDefinitionYamlLoader {
             String condition = null;
 
             if (stage.isTextual()) {
-                stageName = interpolate(stage.asText());
+                stageName = resolveOrNull(stage.asText());
             } else {
-                stageName = interpolate(textOrNull(stage, "name"));
+                stageName = resolveOrNull(textOrNull(stage, "name"));
                 if (stage.has("optional")) optional = stage.get("optional").asBoolean();
                 if (stage.has("dependsOn")) {
                     List<String> deps = new ArrayList<>();
@@ -157,21 +162,8 @@ public class ProgressDefinitionYamlLoader {
         return node.has(field) && !node.get(field).isNull() ? node.get(field).asText() : null;
     }
 
-    static String interpolate(String value) {
+    static String resolveOrNull(String value) {
         if (value == null) return null;
-        Matcher m = VAR_PATTERN.matcher(value);
-        StringBuilder sb = new StringBuilder();
-        while (m.find()) {
-            String type = m.group(1);
-            String key = m.group(2);
-            String resolved = "env".equals(type) ? System.getenv(key) : System.getProperty(key);
-            if (resolved == null) {
-                String defaultValue = m.group(3);
-                resolved = defaultValue != null ? defaultValue : m.group(0);
-            }
-            m.appendReplacement(sb, Matcher.quoteReplacement(resolved));
-        }
-        m.appendTail(sb);
-        return sb.toString();
+        return (String) RESOLVER.resolve(value);
     }
 }

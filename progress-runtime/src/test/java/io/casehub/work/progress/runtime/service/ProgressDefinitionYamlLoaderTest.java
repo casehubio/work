@@ -72,10 +72,10 @@ class ProgressDefinitionYamlLoaderTest {
     }
 
     @Test
-    void variableInterpolation() {
+    void variableResolution() {
         System.setProperty("test.progress.name", "interpolated");
         try {
-            String result = ProgressDefinitionYamlLoader.interpolate("${sys.test.progress.name}");
+            String result = ProgressDefinitionYamlLoader.resolveOrNull("${sys.test.progress.name}");
             assertThat(result).isEqualTo("interpolated");
         } finally {
             System.clearProperty("test.progress.name");
@@ -83,7 +83,7 @@ class ProgressDefinitionYamlLoaderTest {
     }
 
     @Test
-    void interpolateNull() {
-        assertThat(ProgressDefinitionYamlLoader.interpolate(null)).isNull();
+    void resolveNull() {
+        assertThat(ProgressDefinitionYamlLoader.resolveOrNull(null)).isNull();
     }
 }
