@@ -1,12 +1,11 @@
 package io.casehub.work.runtime.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.platform.api.path.Path;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
-import org.junit.jupiter.api.Test;
-
-import io.casehub.platform.api.path.Path;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class SlaDefaultsYamlLoaderTest {
 
@@ -64,4 +63,46 @@ class SlaDefaultsYamlLoaderTest {
     void interpolatePlainString() {
         assertThat(SlaDefaultsYamlLoader.interpolate("plain-string")).isEqualTo("plain-string");
     }
+
+    @Test
+    void interpolateDefaultValueUsedWhenUnset() {
+        assertThat(SlaDefaultsYamlLoader.interpolate("${env.NONEXISTENT_VAR_XYZ_99:-fallback-group}"))
+                .isEqualTo("fallback-group");
+    }
+
+    @Test
+    void interpolateDefaultValueIgnoredWhenSet() {
+        System.setProperty("test.sla.default", "real-value");
+        try {
+            assertThat(SlaDefaultsYamlLoader.interpolate("${sys.test.sla.default:-ignored}"))
+                    .isEqualTo("real-value");
+        } finally {
+            System.clearProperty("test.sla.default");
+        }
+    }
+
+    @Test
+    void interpolateDefaultValueEmpty() {
+        assertThat(SlaDefaultsYamlLoader.interpolate("${env.NONEXISTENT_VAR_XYZ_99:-}"))
+                .isEqualTo("");
+    }
+
+    @Test
+    void interpolateDefaultValueWithColons() {
+        assertThat(SlaDefaultsYamlLoader.interpolate("${env.NONEXISTENT_VAR_XYZ_99:-host:8080}"))
+                .isEqualTo("host:8080");
+    }
+
+    @Test
+    void reloadRefreshesConfig() {
+        SlaDefaultsYamlLoader loader = new SlaDefaultsYamlLoader();
+        SlaDeclarativeConfig  first  = loader.loadFromClasspath();
+        assertThat(first).isNotNull();
+
+        SlaDeclarativeConfig second = loader.loadFromClasspath();
+        assertThat(second).isNotNull();
+        assertThat(second.defaultOnCompletionExpiry()).isEqualTo(first.defaultOnCompletionExpiry());
+    }
+
+
 }

@@ -30,7 +30,7 @@ public class ProgressDefinitionYamlLoader {
 
     private static final Logger LOG = Logger.getLogger(ProgressDefinitionYamlLoader.class);
     static final String RESOURCE_PATH = "META-INF/work-progress-definitions.yaml";
-    private static final Pattern VAR_PATTERN = Pattern.compile("\\$\\{(env|sys)\\.([^}]+)}");
+    private static final Pattern VAR_PATTERN = Pattern.compile("\\$\\{(env|sys)\\.([^:}]+)(?::-((?:[^}]*)))?}");
     private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
     private static final StepDefinitionValidator STEP_VALIDATOR = new StepDefinitionValidator();
@@ -165,7 +165,11 @@ public class ProgressDefinitionYamlLoader {
             String type = m.group(1);
             String key = m.group(2);
             String resolved = "env".equals(type) ? System.getenv(key) : System.getProperty(key);
-            m.appendReplacement(sb, Matcher.quoteReplacement(resolved != null ? resolved : m.group(0)));
+            if (resolved == null) {
+                String defaultValue = m.group(3);
+                resolved = defaultValue != null ? defaultValue : m.group(0);
+            }
+            m.appendReplacement(sb, Matcher.quoteReplacement(resolved));
         }
         m.appendTail(sb);
         return sb.toString();
