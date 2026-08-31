@@ -1,14 +1,13 @@
 package io.casehub.work.runtime.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import io.casehub.work.api.BreachDecision;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.Map;
 
-import org.junit.jupiter.api.Test;
-
-import io.casehub.work.api.BreachDecision;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class BreachActionTest {
 
@@ -231,4 +230,42 @@ class BreachActionTest {
         BreachDecision d = new BreachAction.ExhaustedAction("reason").toBreachDecision(null, 24);
         assertThat(d).isEqualTo(new BreachDecision.Exhausted("reason"));
     }
+// ── List (Chained) parsing ──
+
+    @Test
+    void parseListTwoElements() {
+        BreachAction action = BreachAction.parse(java.util.List.of(
+                java.util.Map.of("escalateTo", "senior-reviewers", "deadline", "PT24H"),
+                "fail"));
+        assertThat(action).isInstanceOf(BreachAction.ChainedAction.class);
+        var chained = (BreachAction.ChainedAction) action;
+        assertThat(chained.primary()).isEqualTo(new BreachAction.EscalateToAction("senior-reviewers", Duration.ofHours(24)));
+        assertThat(chained.fallback()).isEqualTo(new BreachAction.FailAction("sla-breach"));
+    }
+
+    @Test
+    void parseListSingleElementUnwraps() {
+        BreachAction action = BreachAction.parse(java.util.List.of("fail"));
+        assertThat(action).isEqualTo(new BreachAction.FailAction("sla-breach"));
+    }
+
+    @Test
+    void parseListEmptyThrows() {
+        assertThatThrownBy(() -> BreachAction.parse(java.util.List.of()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("empty");
+    }
+
+    @Test
+    void chainedToBreachDecision() {
+        var chained = new BreachAction.ChainedAction(
+                new BreachAction.EscalateToAction("sr", Duration.ofHours(4)),
+                new BreachAction.FailAction("exhausted"));
+        BreachDecision d = chained.toBreachDecision(null, 24);
+        assertThat(d).isInstanceOf(BreachDecision.Chained.class);
+        var c = (BreachDecision.Chained) d;
+        assertThat(c.primary()).isEqualTo(BreachDecision.EscalateTo.to("sr").withDeadline(Duration.ofHours(4)));
+        assertThat(c.fallback()).isEqualTo(new BreachDecision.Fail("exhausted"));
+    }
+
 }

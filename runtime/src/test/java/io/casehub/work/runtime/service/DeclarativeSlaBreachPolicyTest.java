@@ -1,6 +1,13 @@
 package io.casehub.work.runtime.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import io.casehub.platform.api.path.Path;
+import io.casehub.platform.api.preferences.MapPreferences;
+import io.casehub.work.api.BreachDecision;
+import io.casehub.work.api.BreachType;
+import io.casehub.work.api.BreachedTask;
+import io.casehub.work.api.SlaBreachContext;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
@@ -8,15 +15,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import io.casehub.platform.api.path.Path;
-import io.casehub.platform.api.preferences.MapPreferences;
-import io.casehub.work.api.BreachDecision;
-import io.casehub.work.api.BreachType;
-import io.casehub.work.api.BreachedTask;
-import io.casehub.work.api.SlaBreachContext;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class DeclarativeSlaBreachPolicyTest {
 
@@ -143,6 +142,23 @@ class DeclarativeSlaBreachPolicyTest {
         BreachDecision d = policy.onBreach(ctxAtTarget);
         assertThat(d).isEqualTo(new BreachDecision.Fail("fallback-fired"));
     }
+
+    @Test
+    void chainedUnwrapsWhenPrimaryAlreadyAtTarget() {
+        java.util.Map<io.casehub.platform.api.path.Path, SlaDeclarativeConfig.ScopeConfig> scopes = new java.util.LinkedHashMap<>();
+        scopes.put(io.casehub.platform.api.path.Path.parse("casehubio/clinical"), new SlaDeclarativeConfig.ScopeConfig(
+                new BreachAction.ChainedAction(
+                        new BreachAction.EscalateToAction("senior-reviewers", java.time.Duration.ofHours(24)),
+                        new BreachAction.FailAction("escalation-exhausted")),
+                null, null, null));
+        loader.loadedConfig = new SlaDeclarativeConfig(null, null, null, null, scopes);
+
+        var ctxAtTarget = ctx("casehubio/clinical", io.casehub.work.api.BreachType.COMPLETION_EXPIRED,
+                              java.util.Set.of("senior-reviewers"));
+        io.casehub.work.api.BreachDecision d = policy.onBreach(ctxAtTarget);
+        assertThat(d).isEqualTo(new io.casehub.work.api.BreachDecision.Fail("escalation-exhausted"));
+    }
+
 
     // ── extensionHours resolution ──
 

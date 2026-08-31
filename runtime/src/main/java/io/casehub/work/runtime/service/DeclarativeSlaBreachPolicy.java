@@ -66,10 +66,7 @@ public class DeclarativeSlaBreachPolicy implements SlaBreachPolicy {
                 case COMPLETION_EXPIRED -> cfg.defaultOnCompletionExpiry();
                 case CLAIM_EXPIRED -> cfg.defaultOnClaimExpiry();
             };
-            if (action instanceof BreachAction.EscalateToAction esc
-                    && groups.contains(esc.group())) {
-                action = null;
-            }
+            action = unwrapSelfEscalation(action, groups);
         }
 
         if (action == null) return fallbackPolicy().onBreach(context);
@@ -89,12 +86,10 @@ public class DeclarativeSlaBreachPolicy implements SlaBreachPolicy {
                     case CLAIM_EXPIRED -> sc.onClaimExpiry();
                 };
                 if (action != null) {
-                    if (action instanceof BreachAction.EscalateToAction esc
-                            && candidateGroups.contains(esc.group())) {
-                        current = current.parent();
-                        continue;
-                    }
-                    return action;
+                    action = unwrapSelfEscalation(action, candidateGroups);
+                    if (action != null) return action;
+                    current = current.parent();
+                    continue;
                 }
             }
             current = current.parent();
@@ -118,4 +113,17 @@ public class DeclarativeSlaBreachPolicy implements SlaBreachPolicy {
                 ? (cfg.claimExtensionHours() != null ? cfg.claimExtensionHours() : cfg.extensionHours())
                 : cfg.extensionHours();
     }
+
+    private static BreachAction unwrapSelfEscalation(BreachAction action, Set<String> candidateGroups) {
+        if (action instanceof BreachAction.EscalateToAction esc && candidateGroups.contains(esc.group())) {
+            return null;
+        }
+        if (action instanceof BreachAction.ChainedAction chained) {
+            if (chained.primary() instanceof BreachAction.EscalateToAction esc && candidateGroups.contains(esc.group())) {
+                return chained.fallback();
+            }
+        }
+        return action;
+    }
+
 }

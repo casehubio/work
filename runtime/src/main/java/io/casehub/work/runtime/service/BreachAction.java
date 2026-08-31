@@ -11,6 +11,7 @@ public sealed interface BreachAction {
     record ExtendAction(Duration explicitDuration) implements BreachAction {}
     record EscalateToAction(String group, Duration deadline) implements BreachAction {}
     record ExhaustedAction(String reason) implements BreachAction {}
+    record ChainedAction(BreachAction primary, BreachAction fallback) implements BreachAction {}
 
     @SuppressWarnings("unchecked")
     static BreachAction parse(Object yamlValue) {
@@ -26,8 +27,21 @@ public sealed interface BreachAction {
         if (yamlValue instanceof Map<?, ?> map) {
             return parseMap((Map<String, Object>) map);
         }
+        if (yamlValue instanceof java.util.List<?> list) {
+            if (list.isEmpty()) {
+                throw new IllegalArgumentException("SLA action list must not be empty");
+            }
+            if (list.size() == 1) {
+                return parse(list.get(0));
+            }
+            BreachAction result = parse(list.get(list.size() - 1));
+            for (int i = list.size() - 2; i >= 0; i--) {
+                result = new ChainedAction(parse(list.get(i)), result);
+            }
+            return result;
+        }
         throw new IllegalArgumentException(
-                "SLA action must be a string or object, got: " + yamlValue.getClass().getSimpleName());
+                "SLA action must be a string, object, or list, got: " + yamlValue.getClass().getSimpleName());
     }
 
     private static BreachAction parseMap(Map<String, Object> map) {
@@ -115,6 +129,9 @@ public sealed interface BreachAction {
                 yield decision.withDeadline(Duration.ofHours(hours));
             }
             case ExhaustedAction e -> new BreachDecision.Exhausted(e.reason());
+            case ChainedAction c -> new BreachDecision.Chained(
+                    c.primary().toBreachDecision(fallbackExtensionHours, defaultExpiryHours),
+                    c.fallback().toBreachDecision(fallbackExtensionHours, defaultExpiryHours));
         };
     }
 }
