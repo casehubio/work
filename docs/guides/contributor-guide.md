@@ -142,8 +142,12 @@ The filter engine was migrated from a custom `FilterScope` enum to platform `Lab
 `WorkPreferenceRegistrar` (#197) registers work preference schemas at startup via the platform `PreferenceProvider`. Preference keys are declared in `WorkPreferenceKeys`:
 - `casehub.work/sla.default-hours` (default: 24)
 - `casehub.work/sla.default-claim-hours` (default: 4)
+- `casehub.work/sla.on-completion-expiry` (per-tenant SLA breach action override, #375)
+- `casehub.work/sla.on-claim-expiry` (per-tenant SLA breach action override, #375)
+- `casehub.work/sla.extension-hours` (per-tenant extension hours override, #375)
+- `casehub.work/sla.claim-extension-hours` (per-tenant claim extension hours override, #375)
 
-These enable per-scope override of SLA defaults via the platform preference hierarchy.
+These enable per-scope override of SLA defaults via the platform preference hierarchy. The breach action keys (#375) use colon-delimited syntax matching config properties (`fail`, `extend:PT6H`, `escalateTo:group:PT4H`, `exhausted:reason`). `PreferenceSlaBreachPolicyDecorator` (`@Priority APPLICATION+200`) checks these before delegating to the config-selected policy.
 
 ## Business Calendar
 
