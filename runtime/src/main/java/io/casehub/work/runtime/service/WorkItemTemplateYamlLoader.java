@@ -58,6 +58,9 @@ public class WorkItemTemplateYamlLoader {
             for (JsonNode node : templates) {
                 WorkItemTemplate template = mapToEntity(node);
                 template.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
+                if (template.createdBy == null) {
+                    template.createdBy = "system:yaml-loader";
+                }
                 upsertByName(template, url.toString());
             }
         } catch (IOException e) {
