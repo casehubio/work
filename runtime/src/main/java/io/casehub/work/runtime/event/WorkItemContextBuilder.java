@@ -78,6 +78,10 @@ public final class WorkItemContextBuilder {
         map.put("originServiceId", workItem.originServiceId());
         map.put("originWorkItemId", workItem.originWorkItemId());
         map.put("originVersion", workItem.originVersion());
+        map.put("escalationOnExpiry", workItem.escalationOnExpiry());
+        map.put("escalationOnClaimDeadline", workItem.escalationOnClaimDeadline());
+        map.put("escalationDeadline", workItem.escalationDeadline());
+        map.put("escalationGenerateSummary", workItem.escalationGenerateSummary());
         return map;
     }
 }

@@ -26,4 +26,4 @@ workItemTemplates:
 
   - name: test-interpolated
     description: "Template with env interpolation"
-    candidateGroups: "${env.TEST_REVIEW_TEAM}"
+    candidateGroups: "${env.TEST_REVIEW_TEAM:-test-reviewers}"
