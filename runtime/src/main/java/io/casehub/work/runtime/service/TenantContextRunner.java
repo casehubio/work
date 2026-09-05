@@ -1,9 +1,9 @@
 package io.casehub.work.runtime.service;
 
-import jakarta.enterprise.context.ApplicationScoped;
-
+import io.casehub.work.api.spi.TenantContextExecutor;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
+import jakarta.enterprise.context.ApplicationScoped;
 
 /**
  * Establishes a per-tenant CDI request context for async/background work.
@@ -25,7 +25,7 @@ import io.quarkus.arc.ManagedContext;
  * }</pre>
  */
 @ApplicationScoped
-public class TenantContextRunner {
+public class TenantContextRunner implements TenantContextExecutor {
 
     /**
      * Run {@code work} in a request context scoped to the given tenant.
@@ -33,6 +33,7 @@ public class TenantContextRunner {
      * @param tenancyId  the tenant identity to establish
      * @param work       the unit of work to execute
      */
+    @Override
     public void runInTenantContext(String tenancyId, Runnable work) {
         runInTenantContext(tenancyId, "system", work);
     }
