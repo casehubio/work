@@ -69,7 +69,7 @@ class WorkQhorusMcpToolsTest {
                 created.add(request);
                 var ref = new WorkItemRef(UUID.randomUUID(), WorkItemStatus.PENDING,
                         request.callerRef, null, null, request.candidateGroups,
-                        null, request.tenancyId, request.payload, null, null);
+                        null, request.tenancyId, request.payload, null, null, null);
                 storedRef.set(ref);
                 return ref;
             }

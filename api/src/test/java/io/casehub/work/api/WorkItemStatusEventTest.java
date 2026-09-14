@@ -16,7 +16,7 @@ class WorkItemStatusEventTest {
         final WorkItemStatusEvent event = new WorkItemStatusEvent(
                 WorkEventType.COMPLETED, id, WorkItemStatus.COMPLETED,
                 "alice", "done", "caller-1", "alice", "team-a",
-                "approved", "tenant-1", now);
+                "approved", "tenant-1", now, null);
 
         assertThat(event.eventType()).isEqualTo(WorkEventType.COMPLETED);
         assertThat(event.workItemId()).isEqualTo(id);
@@ -35,7 +35,7 @@ class WorkItemStatusEventTest {
     void record_handlesNullFields() {
         final WorkItemStatusEvent event = new WorkItemStatusEvent(
                 WorkEventType.CREATED, UUID.randomUUID(), WorkItemStatus.PENDING,
-                "system", null, null, null, null, null, null, Instant.now());
+                "system", null, null, null, null, null, null, Instant.now(), null);
 
         assertThat(event.detail()).isNull();
         assertThat(event.callerRef()).isNull();

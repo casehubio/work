@@ -84,6 +84,7 @@ public final class WorkItemContextBuilder {
         map.put("escalationGenerateSummary", workItem.escalationGenerateSummary());
         map.put("compensationStatus", workItem.compensationStatus() != null ? workItem.compensationStatus().name() : "NONE");
         map.put("compensatesWorkItemId", workItem.compensatesWorkItemId());
+        map.put("originRef", workItem.originRef());
         return map;
     }
 }

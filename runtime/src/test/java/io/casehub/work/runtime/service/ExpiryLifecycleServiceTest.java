@@ -206,7 +206,7 @@ class ExpiryLifecycleServiceTest {
                 org.mockito.ArgumentMatchers.eq(WorkerSelectionStrategy.class),
                 org.mockito.ArgumentMatchers.anyString())).thenReturn(noOpStrategy);
         service.assignmentService = new WorkItemAssignmentService(
-                assignmentResolver, WorkItemServiceTest.testConfig(),
+                assignmentResolver, "least-loaded",
                 group -> java.util.List.of(),
                 id -> 0,
                 (userId, excluded) -> PolicyDecision.ALLOW);
@@ -361,7 +361,7 @@ class ExpiryLifecycleServiceTest {
                 org.mockito.ArgumentMatchers.eq(WorkerSelectionStrategy.class),
                 org.mockito.ArgumentMatchers.anyString())).thenReturn(capturing);
         service.assignmentService = new WorkItemAssignmentService(
-                capturingResolver, WorkItemServiceTest.testConfig(),
+                capturingResolver, "least-loaded",
                 group -> java.util.List.of(WorkerCandidate.of("escalation-worker")),
                 id -> 0,
                 (userId, excluded) -> PolicyDecision.ALLOW);
@@ -541,7 +541,7 @@ class ExpiryLifecycleServiceTest {
                 org.mockito.ArgumentMatchers.eq(WorkerSelectionStrategy.class),
                 org.mockito.ArgumentMatchers.anyString())).thenReturn(capturing);
         service.assignmentService = new WorkItemAssignmentService(
-                capturingResolver, WorkItemServiceTest.testConfig(),
+                capturingResolver, "least-loaded",
                 group -> java.util.List.of(WorkerCandidate.of("escalation-worker")),
                 id -> 0,
                 (userId, excluded) -> PolicyDecision.ALLOW);

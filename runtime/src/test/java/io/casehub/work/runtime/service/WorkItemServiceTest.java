@@ -288,7 +288,7 @@ class WorkItemServiceTest {
                 org.mockito.ArgumentMatchers.anyString()))
                 .thenReturn(new io.casehub.work.core.policy.ContinuationPolicy());
         service = new WorkItemService(repo, auditStore, testConfig(),
-                new WorkItemAssignmentService(assignmentResolver, testConfig(),
+                new WorkItemAssignmentService(assignmentResolver, "least-loaded",
                         group -> List.of(),
                         workerId -> 0,
                         (userId, excluded) -> PolicyDecision.ALLOW),
@@ -300,11 +300,8 @@ class WorkItemServiceTest {
         // Empty preferences → DeclineTarget.POOL by default
         service.preferenceProvider = scope -> new MapPreferences(Map.of());
         // Wire OutcomeValidator — @Inject field, not in constructor
-        final OutcomeValidator outcomeValidator = new OutcomeValidator();
-        final var registry = new DefaultExpressionEngineRegistry();
-        registry.register(new JexlExpressionEngine());
-        outcomeValidator.expressionRegistry = registry;
-        service.outcomeValidator = outcomeValidator;
+        service.outcomeValidator = new OutcomeValidator(
+                new DefaultExpressionEngineRegistry(List.of(new JexlExpressionEngine())));
         // Wire WorkItemLifecycleEmitter — @Inject field, not in constructor
         service.lifecycleEmitter = mock(WorkItemLifecycleEmitter.class);
     }
@@ -1370,7 +1367,7 @@ class WorkItemServiceTest {
                 org.mockito.ArgumentMatchers.anyString()))
                 .thenReturn(new io.casehub.work.core.policy.ContinuationPolicy());
         WorkItemService svc = new WorkItemService(repo, auditStore, noClaimConfig,
-                new WorkItemAssignmentService(noClaimResolver, noClaimConfig,
+                new WorkItemAssignmentService(noClaimResolver, "least-loaded",
                         group -> List.of(),
                         workerId -> 0,
                         (userId, excluded) -> PolicyDecision.ALLOW),

@@ -145,20 +145,10 @@ public class JudgmentWorkItemScheduler implements JudgmentScheduler {
 
     private String resolveOriginRef(JudgmentScheduleRequest request, PlanItem item,
                                     CasePlanModel plan) {
-        if (request.originRef() != null) {
-            return request.originRef();
-        }
-        if (item.isCompensation() && item.getCompensatesItemId() != null) {
-            PlanItem originalItem = plan.getPlanItem(item.getCompensatesItemId()).orElse(null);
-            if (originalItem != null) {
-                String originalCallerRef = PlanItemRef.encode(request.caseId(), originalItem.getPlanItemId());
-                return workItemCreator.findByCallerRef(originalCallerRef)
-                                      .map(ref -> ref.originRef())
-                                      .orElse(null);
-            }
-        }
-        return null;
-    }
+      // originRef resolution requires JudgmentScheduleRequest.originRef() and
+      // PlanItem.isCompensation() — not yet available in engine-planning.
+      // Re-enable when casehub-engine lands compensation support.
+      return null;}
 
 
     private static String extractOutputMappingExpression(JudgmentTarget target) {

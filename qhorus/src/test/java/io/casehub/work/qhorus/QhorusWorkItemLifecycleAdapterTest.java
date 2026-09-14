@@ -42,7 +42,7 @@ class QhorusWorkItemLifecycleAdapterTest {
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.COMPLETED, UUID.randomUUID(), WorkItemStatus.COMPLETED,
                 "human-1", "Approved", callerRef, "human-1", "reviewers",
-                "approved", "default", Instant.now()));
+                "approved", "default", Instant.now(), null));
 
         assertThat(dispatched).hasSize(1);
         assertThat(dispatched.get(0).type()).isEqualTo(MessageType.DONE);
@@ -60,7 +60,7 @@ class QhorusWorkItemLifecycleAdapterTest {
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.REJECTED, UUID.randomUUID(), WorkItemStatus.REJECTED,
                 "human-1", "Cannot complete", callerRef, "human-1", null,
-                null, "default", Instant.now()));
+                null, "default", Instant.now(), null));
 
         assertThat(dispatched).hasSize(1);
         assertThat(dispatched.get(0).type()).isEqualTo(MessageType.FAILURE);
@@ -73,7 +73,7 @@ class QhorusWorkItemLifecycleAdapterTest {
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.CANCELLED, UUID.randomUUID(), WorkItemStatus.CANCELLED,
                 "system", "Cancelled", callerRef, null, null,
-                null, "default", Instant.now()));
+                null, "default", Instant.now(), null));
 
         assertThat(dispatched).hasSize(1);
         assertThat(dispatched.get(0).type()).isEqualTo(MessageType.DECLINE);
@@ -86,7 +86,7 @@ class QhorusWorkItemLifecycleAdapterTest {
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.EXPIRED, UUID.randomUUID(), WorkItemStatus.EXPIRED,
                 "system", "Deadline passed", callerRef, null, null,
-                null, "default", Instant.now()));
+                null, "default", Instant.now(), null));
 
         assertThat(dispatched).hasSize(1);
         assertThat(dispatched.get(0).type()).isEqualTo(MessageType.DECLINE);
@@ -99,7 +99,7 @@ class QhorusWorkItemLifecycleAdapterTest {
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.ESCALATED, UUID.randomUUID(), WorkItemStatus.ESCALATED,
                 "system", "Escalated", callerRef, null, null,
-                null, "default", Instant.now()));
+                null, "default", Instant.now(), null));
 
         assertThat(dispatched).hasSize(1);
         assertThat(dispatched.get(0).type()).isEqualTo(MessageType.FAILURE);
@@ -110,7 +110,7 @@ class QhorusWorkItemLifecycleAdapterTest {
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.COMPLETED, UUID.randomUUID(), WorkItemStatus.COMPLETED,
                 "human-1", "Done", "case:abc/pi:def", "human-1", null,
-                "done", "default", Instant.now()));
+                "done", "default", Instant.now(), null));
 
         assertThat(dispatched).isEmpty();
     }
@@ -120,7 +120,7 @@ class QhorusWorkItemLifecycleAdapterTest {
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.COMPLETED, UUID.randomUUID(), WorkItemStatus.COMPLETED,
                 "human-1", "Done", null, "human-1", null,
-                "done", "default", Instant.now()));
+                "done", "default", Instant.now(), null));
 
         assertThat(dispatched).isEmpty();
     }
@@ -132,7 +132,7 @@ class QhorusWorkItemLifecycleAdapterTest {
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.ASSIGNED, UUID.randomUUID(), WorkItemStatus.ASSIGNED,
                 "human-1", "Claimed", callerRef, "human-1", null,
-                null, "default", Instant.now()));
+                null, "default", Instant.now(), null));
 
         assertThat(dispatched).isEmpty();
     }
@@ -148,6 +148,6 @@ class QhorusWorkItemLifecycleAdapterTest {
         adapter.onStatusChange(new WorkItemStatusEvent(
                 WorkEventType.COMPLETED, UUID.randomUUID(), WorkItemStatus.COMPLETED,
                 "human-1", "Done", callerRef, "human-1", null,
-                "done", "default", Instant.now()));
+                "done", "default", Instant.now(), null));
     }
 }
