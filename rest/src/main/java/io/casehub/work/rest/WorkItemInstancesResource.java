@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.UUID;
 
 import io.casehub.work.api.WorkItem;
+import io.casehub.work.api.view.WorkItemView;
+import io.casehub.work.rest.service.ViewMapper;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -55,7 +57,7 @@ public class WorkItemInstancesResource {
             int completedCount,
             int rejectedCount,
             String groupStatus,
-            List<WorkItemResponse> instances) {
+            List<WorkItemView> instances) {
     }
 
     /**
@@ -88,6 +90,6 @@ public class WorkItemInstancesResource {
                 group.completedCount,
                 group.rejectedCount,
                 status.name(),
-                children.stream().map(WorkItemMapper::toResponse).toList())).build();
+                children.stream().map(ViewMapper::toView).toList())).build();
     }
 }

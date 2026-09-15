@@ -575,7 +575,7 @@ public class WorkItemTemplateResource {
                     .build();
             final var wi = templateService.createFromTemplate(createRequest);
             return Response.status(Response.Status.CREATED)
-                           .entity(WorkItemMapper.toResponse(wi)).build();
+                           .entity(io.casehub.work.rest.service.ViewMapper.toView(wi)).build();
         } catch (IllegalArgumentException e) {
             return Response.status(e.getMessage().startsWith("Template not found")
                     ? Response.Status.NOT_FOUND : Response.Status.BAD_REQUEST)

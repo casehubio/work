@@ -16,11 +16,11 @@ import io.casehub.work.runtime.model.WorkItemLink;
 import io.casehub.work.runtime.model.WorkItemNote;
 import io.casehub.work.runtime.model.WorkItemRelation;
 
-final class ViewMapper {
+public final class ViewMapper {
 
     private ViewMapper() {}
 
-    static WorkItemView toView(WorkItem wi) {
+    public static WorkItemView toView(WorkItem wi) {
         return new WorkItemView(
                 wi.id(), wi.title(), wi.description(),
                 wi.types() == null ? List.of() : List.copyOf(wi.types()),
