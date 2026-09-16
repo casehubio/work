@@ -38,14 +38,6 @@ class WorkItemsProcessor {
     AdditionalBeanBuildItem registerStrategyBeans() {
         return AdditionalBeanBuildItem.builder()
                 .addBeanClasses(
-                        "io.casehub.work.core.strategy.LeastLoadedStrategy",
-                        "io.casehub.work.core.strategy.ClaimFirstStrategy",
-                        "io.casehub.work.core.strategy.RoundRobinStrategy",
-                        "io.casehub.work.core.policy.ContinuationPolicy",
-                        "io.casehub.work.core.policy.FreshClockPolicy",
-                        "io.casehub.work.core.policy.SingleBudgetPolicy",
-                        "io.casehub.work.core.policy.PhaseClockPolicy",
-                        "io.casehub.work.runtime.service.NoOpSlaBreachPolicy",
                         "io.casehub.work.runtime.multiinstance.PoolAssignmentStrategy",
                         "io.casehub.work.runtime.multiinstance.RoundRobinAssignmentStrategy",
                         "io.casehub.work.runtime.multiinstance.ExplicitListAssignmentStrategy",
