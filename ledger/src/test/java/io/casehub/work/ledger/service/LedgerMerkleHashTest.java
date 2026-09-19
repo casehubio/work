@@ -9,8 +9,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.ledger.api.model.LedgerEntryType;
-import io.casehub.ledger.runtime.model.LedgerMerkleFrontier;
-import io.casehub.ledger.runtime.service.LedgerMerkleTree;
+import io.casehub.ledger.api.model.LedgerMerkleFrontier;
+import io.casehub.ledger.core.merkle.LedgerMerkleTree;
 import io.casehub.work.ledger.model.WorkItemLedgerEntry;
 
 /**

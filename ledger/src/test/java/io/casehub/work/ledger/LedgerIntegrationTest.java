@@ -4,7 +4,7 @@ import io.casehub.ledger.api.model.AttestationVerdict;
 import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.api.model.supplement.ProvenanceSupplement;
-import io.casehub.ledger.runtime.service.LedgerMerkleTree;
+import io.casehub.ledger.core.merkle.LedgerMerkleTree;
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.work.api.DeclineTarget;
 import io.casehub.work.api.WorkItem;
