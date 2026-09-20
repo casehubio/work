@@ -67,6 +67,16 @@ public class JpaWorkItemSpawnGroupStore extends TenantAwareStore implements Work
     }
 
     @Override
+    public Optional<WorkItemSpawnGroup> findMultiInstanceByParentIdForUpdate(final UUID parentId) {
+        return withTenantQuery(() ->
+                WorkItemSpawnGroup.find(
+                        "parentId = ?1 AND requiredCount IS NOT NULL AND tenancyId = ?2",
+                        parentId, currentPrincipal.tenancyId())
+                        .withLock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+                        .firstResultOptional());
+    }
+
+    @Override
     public boolean delete(final UUID id) {
         return withTenantQuery(() -> {
             final long deleted = WorkItemSpawnGroup.delete("id = ?1 AND tenancyId = ?2",

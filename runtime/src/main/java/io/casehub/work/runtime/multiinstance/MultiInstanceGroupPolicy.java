@@ -35,7 +35,7 @@ public class MultiInstanceGroupPolicy {
         final io.casehub.work.api.WorkItem child = workItemStore.get(childId).orElse(null);
         if (child == null) {return null;}
 
-        final WorkItemSpawnGroup group = spawnGroupStore.findMultiInstanceByParentId(child.parentId()).orElse(null);
+        final WorkItemSpawnGroup group = spawnGroupStore.findMultiInstanceByParentIdForUpdate(child.parentId()).orElse(null);
         if (group == null) {return null;}
         if (group.policyTriggered) {return null;}
 

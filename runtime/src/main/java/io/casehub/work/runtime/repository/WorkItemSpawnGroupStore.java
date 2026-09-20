@@ -74,6 +74,23 @@ public interface WorkItemSpawnGroupStore {
     Optional<WorkItemSpawnGroup> findMultiInstanceByParentId(UUID parentId);
 
     /**
+     * Find the multi-instance spawn group for a parent, acquiring a pessimistic
+     * write lock. Use this when updating group counters under concurrent access
+     * (e.g., multiple children completing simultaneously).
+     *
+     * <p>The default implementation delegates to {@link #findMultiInstanceByParentId}
+     * without locking — suitable for in-memory stores where JVM synchronization
+     * handles concurrency. JPA implementations override with
+     * {@code PESSIMISTIC_WRITE} to serialize database-level access.
+     *
+     * @param parentId the parent WorkItem UUID
+     * @return an {@link Optional} containing the locked multi-instance group, or empty
+     */
+    default Optional<WorkItemSpawnGroup> findMultiInstanceByParentIdForUpdate(UUID parentId) {
+        return findMultiInstanceByParentId(parentId);
+    }
+
+    /**
      * Delete a WorkItemSpawnGroup by ID, scoped to the current tenant.
      *
      * @param id the UUID primary key
