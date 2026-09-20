@@ -35,7 +35,9 @@ A `WorkItemEntity` is deliberately NOT called `Task` — CNCF Serverless Workflo
 | `progress-core/` | `casehub-work-progress-core` | compile (opt-in) | Rollup strategies (AveragePercentage, CountCompleted, WeightedPercentage), shape validators, rollback detection. |
 | `progress-runtime/` | `casehub-work-progress-runtime` | compile (opt-in) | `ProgressService`, JPA entities (`ProgressInstanceEntity`, `ProgressEventEntity`), SSE broadcasting, rollup observer. Requires datasource. |
 | `progress-rest/` | `casehub-work-progress-rest` | compile (opt-in) | REST endpoints for progress tracking — create, update state, complete, fail, reactivate, attach children, step lifecycle, SSE streaming, tree queries. |
-| `persistence-mongodb/` | `casehub-work-persistence-mongodb` | compile (opt-in) | MongoDB store implementations for all runtime repository interfaces. Tenant-scoped. |
+| `persistence-mongodb-core/` | `casehub-work-persistence-mongodb-core` | (transitive) | Framework-neutral MongoDB store POJOs using MongoClient directly. Shared by Quarkus and Spring modules. |
+| `persistence-mongodb/` | `casehub-work-persistence-mongodb` | compile (opt-in) | Quarkus CDI wiring for MongoDB stores. Delegates to persistence-mongodb-core. |
+| `persistence-spring-mongodb/` | `casehub-work-persistence-spring-mongodb` | compile (opt-in) | Spring Boot auto-configuration for MongoDB stores. Delegates to persistence-mongodb-core. |
 | `persistence-memory/` | `casehub-work-persistence-memory` | test | In-memory stores for `@QuarkusTest` isolation. ConcurrentHashMap-backed, thread-safe, zero-datasource. |
 | `progress-memory/` | `casehub-work-progress-memory` | test | In-memory stores for progress model testing (`InMemoryProgressInstanceStore`, `InMemoryProgressEventStore`). |
 | `postgres-broadcaster/` | — | compile (opt-in) | Distributed SSE for WorkItem lifecycle events via PostgreSQL LISTEN/NOTIFY. |
@@ -348,6 +350,32 @@ All properties prefixed with `casehub.work`:
 | `sla.default-claim-hours` | `casehub.work` | 4 |
 | `snapshot-interval` | `casehub.work.queues` | PT1H |
 | `trend-retention` | `casehub.work.queues` | PT168H |
+
+## Spring Boot — MongoDB Persistence
+
+Add the MongoDB persistence module for Spring Boot deployments:
+
+```xml
+<dependency>
+  <groupId>io.casehub</groupId>
+  <artifactId>casehub-work-persistence-spring-mongodb</artifactId>
+</dependency>
+```
+
+Configure the MongoDB connection:
+
+```yaml
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/casehub-work
+      database: casehub-work
+```
+
+The auto-configuration produces all 16 work store beans backed by MongoDB.
+Each bean uses `@ConditionalOnMissingBean` — provide your own `@Bean` to
+override any individual store. Indexes are created at startup via
+`CommandLineRunner`.
 
 ## Boundary Rules
 
