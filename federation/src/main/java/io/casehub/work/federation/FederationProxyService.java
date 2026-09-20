@@ -109,4 +109,6 @@ public class FederationProxyService implements WorkItemOperations {
     @Override public List<WorkItem> findChildrenByParentId(UUID parentId) { return delegate.findChildrenByParentId(parentId); }
     @Override public Optional<WorkItem> findByCallerRef(String callerRef) { return delegate.findByCallerRef(callerRef); }
     @Override public Optional<WorkItem> findActiveByCallerRef(String callerRef) { return delegate.findActiveByCallerRef(callerRef); }
+    @Override public WorkItem compensate(UUID originalId, WorkItemCreateRequest request, String triggeredBy, String reason) { return delegate.compensate(originalId, request, triggeredBy, reason); }
+    @Override public WorkItem markCompensated(UUID originalId) { return delegate.markCompensated(originalId); }
 }

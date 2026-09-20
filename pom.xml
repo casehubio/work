@@ -37,9 +37,9 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <!-- module>queues-postgres-broadcaster</module --><!-- depends on queues -->
     <module>rest</module>
     <module>graphql</module>
-    <!-- module>engine-adapter</module --><!-- compilation broken: InboundWorkItemRequest/InboundWorkItemScheduler not in published engine-common SNAPSHOT -->
+    <!-- engine-adapter removed — moved to engine repo (454bee26) -->
     <module>qhorus</module>
-    <!-- module>federation</module --><!-- depends on engine-adapter -->
+    <module>federation</module>
     <module>client</module>
     <module>progress-api</module>
     <module>progress-core</module>
@@ -48,7 +48,7 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <module>progress-deployment</module>
     <module>progress-memory</module>
     <module>annotations</module>
-    <!-- module>work-spring</module --><!-- depends on excluded modules -->
+    <module>work-spring</module>
 
     <!-- module>integration-tests</module --><!-- integration test failures from platform update — tracked by #403 -->
     <module>integration-tests-memory</module>
