@@ -27,7 +27,7 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <!-- module>queues-examples</module --><!-- depends on queues -->
     <!-- module>queues-dashboard</module --><!-- depends on queues -->
     <!-- module>examples</module --><!-- Quarkus build fails on CI (ledger dep + platform mock) — tracked by #403 -->
-    <module>flow-examples</module>
+    <!-- module>flow-examples</module --><!-- Quarkus build fails on CI — tracked by #403 -->
     <module>persistence-mongodb</module>
     <module>persistence-memory</module>
     <module>issue-tracker</module>
