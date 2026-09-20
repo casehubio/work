@@ -48,7 +48,7 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <module>progress-deployment</module>
     <module>progress-memory</module>
     <module>annotations</module>
-    <module>work-spring</module>
+    <!-- module>work-spring</module --><!-- casehub-platform-spring-generator not published to GitHub Packages -->
 
     <!-- module>integration-tests</module --><!-- integration test failures from platform update — tracked by #403 -->
     <!-- module>integration-tests-memory</module --><!-- Quarkus build fails — tracked by #403 -->
