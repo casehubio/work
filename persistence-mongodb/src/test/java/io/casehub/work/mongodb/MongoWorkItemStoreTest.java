@@ -1,6 +1,9 @@
 package io.casehub.work.mongodb;
 
+import static com.mongodb.client.model.Filters.eq;
+import com.mongodb.client.MongoDatabase;
 import io.casehub.work.api.DeclineTarget;
+import io.casehub.work.mongodb.core.doc.MongoWorkItemDocument;
 import io.casehub.work.api.LabelPersistence;
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemLabel;
@@ -32,10 +35,13 @@ class MongoWorkItemStoreTest {
     @Inject
     MutableCurrentPrincipal principal;
 
+    @Inject
+    MongoDatabase database;
+
     @BeforeEach
     void clearAll() {
         principal.reset();
-        MongoWorkItemDocument.deleteAll();
+        database.getCollection("work_items").drop();
     }
 
     // ── Put / Get ─────────────────────────────────────────────────────────────
@@ -101,7 +107,7 @@ class MongoWorkItemStoreTest {
         final WorkItem loaded = store.get(wi.id()).orElseThrow();
         assertThat(loaded.status()).isEqualTo(WorkItemStatus.ASSIGNED);
         assertThat(loaded.assigneeId()).isEqualTo("bob");
-        assertThat(MongoWorkItemDocument.count()).isEqualTo(1);
+        assertThat(database.getCollection("work_items").countDocuments()).isEqualTo(1);
     }
 
     // ── ScanAll ───────────────────────────────────────────────────────────────
@@ -541,23 +547,23 @@ class MongoWorkItemStoreTest {
         WorkItem wi = pending("alice", "Version insert test");
         wi = store.put(wi);
 
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(0L);
+        assertThat(database.getCollection("work_items", MongoWorkItemDocument.class).find(eq("_id", wi.id().toString())).first().version).isEqualTo(0L);
 
         store.get(wi.id()).orElseThrow();
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(0L);
+        assertThat(database.getCollection("work_items", MongoWorkItemDocument.class).find(eq("_id", wi.id().toString())).first().version).isEqualTo(0L);
     }
 
     @Test
     void put_incrementsVersion_onUpdate() {
         WorkItem wi = store.put(pending("alice", "Version update test"));
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(0L);
+        assertThat(database.getCollection("work_items", MongoWorkItemDocument.class).find(eq("_id", wi.id().toString())).first().version).isEqualTo(0L);
 
         wi = wi.toBuilder().status(WorkItemStatus.ASSIGNED).assigneeId("bob").build();
         wi = store.put(wi);
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(1L);
+        assertThat(database.getCollection("work_items", MongoWorkItemDocument.class).find(eq("_id", wi.id().toString())).first().version).isEqualTo(1L);
 
         store.get(wi.id()).orElseThrow();
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(1L);
+        assertThat(database.getCollection("work_items", MongoWorkItemDocument.class).find(eq("_id", wi.id().toString())).first().version).isEqualTo(1L);
         assertThat(store.get(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
@@ -569,12 +575,12 @@ class MongoWorkItemStoreTest {
         final WorkItem reader1 = store.get(wi.id()).orElseThrow();
         final WorkItem reader2 = store.get(wi.id()).orElseThrow();
 
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(0L);
+        assertThat(database.getCollection("work_items", MongoWorkItemDocument.class).find(eq("_id", wi.id().toString())).first().version).isEqualTo(0L);
 
         // Reader 1 updates successfully
         WorkItem updated1 = reader1.toBuilder().status(WorkItemStatus.ASSIGNED).assigneeId("bob").build();
         updated1 = store.put(updated1);
-        assertThat(MongoWorkItemDocument.<MongoWorkItemDocument>findById(wi.id().toString()).version).isEqualTo(1L);
+        assertThat(database.getCollection("work_items", MongoWorkItemDocument.class).find(eq("_id", wi.id().toString())).first().version).isEqualTo(1L);
 
         // Reader 2 attempts to update with stale version — should fail
         final WorkItem stale2 = reader2.toBuilder().status(WorkItemStatus.ASSIGNED).assigneeId("carol").build();

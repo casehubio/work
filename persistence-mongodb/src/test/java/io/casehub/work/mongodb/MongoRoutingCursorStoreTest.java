@@ -8,6 +8,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.mongodb.client.MongoDatabase;
 import io.quarkus.test.junit.QuarkusTest;
 
 import io.casehub.work.core.strategy.RoutingCursorStore;
@@ -27,6 +28,9 @@ class MongoRoutingCursorStoreTest {
     @Inject
     MutableCurrentPrincipal principal;
 
+    @Inject
+    MongoDatabase database;
+
     @BeforeEach
     void setUp() {
         principal.reset();
@@ -34,7 +38,7 @@ class MongoRoutingCursorStoreTest {
 
     @AfterEach
     void cleanup() {
-        MongoRoutingCursorDocument.deleteAll();
+        database.getCollection("routing_cursors").drop();
     }
 
     @Test

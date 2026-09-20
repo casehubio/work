@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.mongodb.client.MongoDatabase;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.WorkItemTemplateStore;
@@ -25,10 +26,13 @@ class MongoWorkItemTemplateStoreTest {
     @Inject
     MutableCurrentPrincipal principal;
 
+    @Inject
+    MongoDatabase database;
+
     @BeforeEach
     void clearAll() {
         principal.reset();
-        MongoWorkItemTemplateDocument.deleteAll();
+        database.getCollection("work_item_templates").drop();
     }
 
     // ── Put ───────────────────────────────────────────────────────────────────

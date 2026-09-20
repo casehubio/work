@@ -10,6 +10,8 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.mongodb.client.MongoDatabase;
+import io.casehub.work.mongodb.core.doc.MongoRoutingCursorDocument;
 import io.casehub.work.runtime.repository.CrossTenantRoutingCursorStore;
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -20,12 +22,15 @@ class MongoCrossTenantRoutingCursorStoreTest {
     MutableCurrentPrincipal principal;
 
     @Inject
+    MongoDatabase database;
+
+    @Inject
     CrossTenantRoutingCursorStore store;
 
     @BeforeEach
     void setUp() {
         principal.reset();
-        MongoRoutingCursorDocument.deleteAll();
+        database.getCollection("routing_cursors").drop();
     }
 
     @Test
@@ -41,7 +46,7 @@ class MongoCrossTenantRoutingCursorStoreTest {
         long deleted = store.cleanupStale(cutoff);
 
         assertThat(deleted).isEqualTo(2);
-        assertThat(MongoRoutingCursorDocument.count()).isEqualTo(1);
+        assertThat(database.getCollection("routing_cursors").countDocuments()).isEqualTo(1);
     }
 
     @Test
@@ -53,7 +58,7 @@ class MongoCrossTenantRoutingCursorStoreTest {
         long deleted = store.cleanupStale(cutoff);
 
         assertThat(deleted).isEqualTo(0);
-        assertThat(MongoRoutingCursorDocument.count()).isEqualTo(1);
+        assertThat(database.getCollection("routing_cursors").countDocuments()).isEqualTo(1);
     }
 
     @Test
@@ -69,6 +74,7 @@ class MongoCrossTenantRoutingCursorStoreTest {
         doc.id = id;
         doc.lastIndex = lastIndex;
         doc.lastAccessed = lastAccessed;
-        doc.persist();
+        database.getCollection("routing_cursors", MongoRoutingCursorDocument.class)
+                .insertOne(doc);
     }
 }

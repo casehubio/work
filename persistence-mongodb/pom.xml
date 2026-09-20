@@ -18,7 +18,13 @@ selects it automatically. Translates WorkItemQuery to MongoDB Document filters.<
 
   <dependencies>
 
-    <!-- Core extension -->
+    <!-- Core POJOs -->
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-work-persistence-mongodb-core</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-work</artifactId>
@@ -31,10 +37,10 @@ selects it automatically. Translates WorkItemQuery to MongoDB Document filters.<
       <version>${project.version}</version>
     </dependency>
 
-    <!-- MongoDB with Panache -->
+    <!-- MongoDB client (no Panache) -->
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-mongodb-panache</artifactId>
+      <artifactId>quarkus-mongodb-client</artifactId>
     </dependency>
 
     <!-- CDI -->

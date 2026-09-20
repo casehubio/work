@@ -7,7 +7,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
+import com.mongodb.client.MongoDatabase;
 import io.casehub.work.api.WorkItem;
+import io.casehub.work.mongodb.core.doc.MongoWorkItemDocument;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +27,9 @@ class MongoCrossTenantWorkItemStoreTest {
     MutableCurrentPrincipal principal;
 
     @Inject
+    MongoDatabase database;
+
+    @Inject
     CrossTenantWorkItemStore unqualifiedStore;
 
     @Inject
@@ -34,7 +39,7 @@ class MongoCrossTenantWorkItemStoreTest {
     @BeforeEach
     void setUp() {
         principal.reset();
-        MongoWorkItemDocument.deleteAll();
+        database.getCollection("work_items").drop();
     }
 
     @Test
@@ -114,6 +119,7 @@ class MongoCrossTenantWorkItemStoreTest {
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now())
                 .build();
-        MongoWorkItemDocument.from(wi).persist();
+        database.getCollection("work_items", MongoWorkItemDocument.class)
+                .insertOne(MongoWorkItemDocument.from(wi));
     }
 }

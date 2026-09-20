@@ -13,6 +13,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.mongodb.client.MongoDatabase;
 import io.casehub.work.runtime.model.WorkItemLink;
 import io.casehub.work.runtime.repository.WorkItemLinkStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -26,10 +27,13 @@ class MongoWorkItemLinkStoreTest {
     @Inject
     MutableCurrentPrincipal principal;
 
+    @Inject
+    MongoDatabase database;
+
     @BeforeEach
     void clearAll() {
         principal.reset();
-        MongoWorkItemLinkDocument.deleteAll();
+        database.getCollection("work_item_links").drop();
     }
 
     // ── Put ───────────────────────────────────────────────────────────────────

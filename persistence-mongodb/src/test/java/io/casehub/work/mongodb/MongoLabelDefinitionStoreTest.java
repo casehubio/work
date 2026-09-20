@@ -12,6 +12,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.mongodb.client.MongoDatabase;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelDefinition;
 import io.casehub.work.runtime.repository.LabelDefinitionStore;
@@ -26,10 +27,13 @@ class MongoLabelDefinitionStoreTest {
     @Inject
     MutableCurrentPrincipal principal;
 
+    @Inject
+    MongoDatabase database;
+
     @BeforeEach
     void clearAll() {
         principal.reset();
-        MongoLabelDefinitionDocument.deleteAll();
+        database.getCollection("label_definitions").drop();
     }
 
     // ── Put and Get ───────────────────────────────────────────────────────────

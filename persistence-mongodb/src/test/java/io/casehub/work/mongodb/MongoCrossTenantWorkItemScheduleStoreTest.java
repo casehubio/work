@@ -11,6 +11,8 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.mongodb.client.MongoDatabase;
+import io.casehub.work.mongodb.core.doc.MongoWorkItemScheduleDocument;
 import io.casehub.work.runtime.model.WorkItemSchedule;
 import io.casehub.work.runtime.repository.CrossTenantWorkItemScheduleStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -22,12 +24,15 @@ class MongoCrossTenantWorkItemScheduleStoreTest {
     MutableCurrentPrincipal principal;
 
     @Inject
+    MongoDatabase database;
+
+    @Inject
     CrossTenantWorkItemScheduleStore store;
 
     @BeforeEach
     void setUp() {
         principal.reset();
-        MongoWorkItemScheduleDocument.deleteAll();
+        database.getCollection("work_item_schedules").drop();
     }
 
     @Test
@@ -68,6 +73,7 @@ class MongoCrossTenantWorkItemScheduleStoreTest {
         doc.createdBy = "test";
         doc.createdAt = Instant.now();
         doc.version = 0L;
-        doc.persist();
+        database.getCollection("work_item_schedules", MongoWorkItemScheduleDocument.class)
+                .insertOne(doc);
     }
 }

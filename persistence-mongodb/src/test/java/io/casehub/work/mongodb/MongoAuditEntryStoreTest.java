@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.mongodb.client.MongoDatabase;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -21,9 +22,12 @@ class MongoAuditEntryStoreTest {
     @Inject
     AuditEntryStore store;
 
+    @Inject
+    MongoDatabase database;
+
     @BeforeEach
     void clearAll() {
-        MongoAuditEntryDocument.deleteAll();
+        database.getCollection("audit_entries").drop();
     }
 
     @Test

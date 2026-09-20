@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.mongodb.client.MongoDatabase;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelVocabulary;
 import io.casehub.work.runtime.repository.LabelVocabularyStore;
@@ -25,10 +26,13 @@ class MongoLabelVocabularyStoreTest {
     @Inject
     MutableCurrentPrincipal principal;
 
+    @Inject
+    MongoDatabase database;
+
     @BeforeEach
     void clearAll() {
         principal.reset();
-        MongoLabelVocabularyDocument.deleteAll();
+        database.getCollection("label_vocabularies").drop();
     }
 
     // ── Put and Get ───────────────────────────────────────────────────────────

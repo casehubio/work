@@ -13,6 +13,7 @@ import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.mongodb.client.MongoDatabase;
 import io.casehub.work.issuetracker.model.WorkItemIssueLink;
 import io.casehub.work.issuetracker.repository.IssueLinkStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -26,10 +27,13 @@ class MongoIssueLinkStoreTest {
     @Inject
     MutableCurrentPrincipal principal;
 
+    @Inject
+    MongoDatabase database;
+
     @BeforeEach
     void clearAll() {
         principal.reset();
-        MongoIssueLinkDocument.deleteAll();
+        database.getCollection("issue_links").drop();
     }
 
     // ── Save and FindById ──────────────────────────────────────────────────────

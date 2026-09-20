@@ -15,6 +15,7 @@ import jakarta.persistence.OptimisticLockException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.mongodb.client.MongoDatabase;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -28,6 +29,9 @@ class MongoWorkItemSpawnGroupStoreTest {
     @Inject
     MutableCurrentPrincipal principal;
 
+    @Inject
+    MongoDatabase database;
+
     private String tenantA;
     private String tenantB;
 
@@ -37,8 +41,7 @@ class MongoWorkItemSpawnGroupStoreTest {
         tenantA = "tenant-" + UUID.randomUUID();
         tenantB = "tenant-" + UUID.randomUUID();
 
-        // Clean up all spawn groups before each test
-        MongoWorkItemSpawnGroupDocument.deleteAll();
+        database.getCollection("work_item_spawn_groups").drop();
     }
 
     @Test

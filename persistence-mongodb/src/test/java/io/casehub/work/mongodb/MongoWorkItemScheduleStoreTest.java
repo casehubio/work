@@ -15,6 +15,7 @@ import jakarta.persistence.OptimisticLockException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.mongodb.client.MongoDatabase;
 import io.casehub.work.runtime.model.WorkItemSchedule;
 import io.casehub.work.runtime.repository.WorkItemScheduleStore;
 import io.quarkus.test.junit.QuarkusTest;
@@ -28,6 +29,9 @@ class MongoWorkItemScheduleStoreTest {
     @Inject
     MutableCurrentPrincipal principal;
 
+    @Inject
+    MongoDatabase database;
+
     private String tenantA;
     private String tenantB;
 
@@ -37,8 +41,7 @@ class MongoWorkItemScheduleStoreTest {
         tenantA = "tenant-" + UUID.randomUUID();
         tenantB = "tenant-" + UUID.randomUUID();
 
-        // Clean up all schedules before each test
-        MongoWorkItemScheduleDocument.deleteAll();
+        database.getCollection("work_item_schedules").drop();
     }
 
     @Test
