@@ -23,6 +23,8 @@ This is the SPI-visible subset of the runtime's WorkItemLifecycleEvent.
 
 ### `occurredAt` (`java.time.Instant`)
 
+### `originRef` (`java.lang.String`)
+
 ### `outcome` (`java.lang.String`)
 
 ### `status` (`io.casehub.work.api.WorkItemStatus`)
@@ -47,6 +49,8 @@ This is the SPI-visible subset of the runtime's WorkItemLifecycleEvent.
 
 ### `occurredAt` (`java.time.Instant`)
 
+### `originRef` (`java.lang.String`)
+
 ### `outcome` (`java.lang.String`)
 
 ### `status` (`io.casehub.work.api.WorkItemStatus`)
@@ -57,7 +61,7 @@ This is the SPI-visible subset of the runtime's WorkItemLifecycleEvent.
 
 ## Constructors
 
-### `public WorkItemStatusEvent(io.casehub.work.api.WorkEventType eventType, java.util.UUID workItemId, io.casehub.work.api.WorkItemStatus status, java.lang.String actor, java.lang.String detail, java.lang.String callerRef, java.lang.String assigneeId, java.lang.String candidateGroups, java.lang.String outcome, java.lang.String tenancyId, java.time.Instant occurredAt)`
+### `public WorkItemStatusEvent(io.casehub.work.api.WorkEventType eventType, java.util.UUID workItemId, io.casehub.work.api.WorkItemStatus status, java.lang.String actor, java.lang.String detail, java.lang.String callerRef, java.lang.String assigneeId, java.lang.String candidateGroups, java.lang.String outcome, java.lang.String tenancyId, java.time.Instant occurredAt, java.lang.String originRef)`
 
 #### Parameters
 
@@ -72,6 +76,7 @@ This is the SPI-visible subset of the runtime's WorkItemLifecycleEvent.
 - `outcome` (`java.lang.String`)
 - `tenancyId` (`java.lang.String`)
 - `occurredAt` (`java.time.Instant`)
+- `originRef` (`java.lang.String`)
 
 ## Methods
 
@@ -96,6 +101,8 @@ This is the SPI-visible subset of the runtime's WorkItemLifecycleEvent.
 ### `public final int hashCode()`
 
 ### `public java.time.Instant occurredAt()`
+
+### `public java.lang.String originRef()`
 
 ### `public java.lang.String outcome()`
 

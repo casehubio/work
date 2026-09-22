@@ -1,277 +1,207 @@
-# io.casehub.work.api.WorkItemCreateRequest.Builder
+# io.casehub.work.api.WorkItemQuery.Builder
 
 **Package:** `io.casehub.work.api`
 
 **Kind:** `class`
 
+Builder for `WorkItemQuery`.
+
 ## Fields
 
 ### `assigneeId` (`java.lang.String`)
 
-### `auditDetail` (`java.lang.String`)
+### `candidateGroups` (`java.util.List<java.lang.String>`)
 
-### `callerRef` (`java.lang.String`)
+### `candidateUserId` (`java.lang.String`)
 
-### `candidateGroups` (`java.lang.String`)
+### `claimDeadlineOrBefore` (`java.time.Instant`)
 
-### `candidateScores` (`java.lang.String`)
+### `expiresAtOrBefore` (`java.time.Instant`)
 
-### `candidateUsers` (`java.lang.String`)
+### `followUpBefore` (`java.time.Instant`)
 
-### `claimDeadline` (`java.time.Instant`)
+### `labelPattern` (`java.lang.String`)
 
-### `claimDeadlineBusinessHours` (`java.lang.Integer`)
-
-### `confidenceScore` (`java.lang.Double`)
-
-### `createdBy` (`java.lang.String`)
-
-### `description` (`java.lang.String`)
-
-### `excludedUsers` (`java.lang.String`)
-
-### `expiresAt` (`java.time.Instant`)
-
-### `expiresAtBusinessHours` (`java.lang.Integer`)
-
-### `followUpDate` (`java.time.Instant`)
-
-### `formKey` (`java.lang.String`)
-
-### `inputDataSchema` (`java.lang.String`)
-
-### `labels` (`java.util.List<io.casehub.work.api.WorkItemLabelRequest>`)
-
-### `outputDataSchema` (`java.lang.String`)
-
-### `payload` (`java.lang.String`)
-
-### `payloadTypeName` (`java.lang.String`)
-
-### `permittedOutcomes` (`java.util.List<io.casehub.work.api.Outcome>`)
+### `outcome` (`java.lang.String`)
 
 ### `priority` (`io.casehub.work.api.WorkItemPriority`)
 
-### `requiredCapabilities` (`java.lang.String`)
+### `status` (`io.casehub.work.api.WorkItemStatus`)
 
-### `resolutionTypeName` (`java.lang.String`)
-
-### `routingExperiences` (`java.lang.String`)
-
-### `scope` (`java.lang.String`)
-
-### `templateId` (`java.util.UUID`)
-
-### `templateVersion` (`java.lang.Long`)
+### `statusIn` (`java.util.List<io.casehub.work.api.WorkItemStatus>`)
 
 ### `tenancyId` (`java.lang.String`)
 
-### `title` (`java.lang.String`)
-
-### `types` (`java.util.List<java.lang.String>`)
+### `type` (`java.lang.String`)
 
 ## Constructors
 
-### `private Builder()`
-
-### `private Builder(io.casehub.work.api.WorkItemCreateRequest src)`
-
-#### Parameters
-
-- `src` (`io.casehub.work.api.WorkItemCreateRequest`)
+### `public Builder()`
 
 ## Methods
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder assigneeId(java.lang.String v)`
+### `public io.casehub.work.api.WorkItemQuery.Builder assigneeId(java.lang.String v)`
+
+Sets the assignee id constraint.
 
 #### Parameters
 
-- `v` (`java.lang.String`)
+- `v` (`java.lang.String`) — the assignee id; `null` means unconstrained
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder auditDetail(java.lang.String v)`
+#### Returns
 
-#### Parameters
+this builder
 
-- `v` (`java.lang.String`)
+### `public io.casehub.work.api.WorkItemQuery build()`
 
-### `public io.casehub.work.api.WorkItemCreateRequest build()`
+Builds the `WorkItemQuery`.
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder callerRef(java.lang.String v)`
+#### Returns
 
-#### Parameters
+a new immutable query instance
 
-- `v` (`java.lang.String`)
+### `public io.casehub.work.api.WorkItemQuery.Builder candidateGroups(java.util.List<java.lang.String> v)`
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder candidateGroups(java.lang.String v)`
-
-#### Parameters
-
-- `v` (`java.lang.String`)
-
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder candidateScores(java.lang.String v)`
+Sets the candidate groups constraint.
 
 #### Parameters
 
-- `v` (`java.lang.String`)
+- `v` (`java.util.List<java.lang.String>`) — the candidate groups; `null` means unconstrained
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder candidateUsers(java.lang.String v)`
+#### Returns
 
-#### Parameters
+this builder
 
-- `v` (`java.lang.String`)
+### `public io.casehub.work.api.WorkItemQuery.Builder candidateUserId(java.lang.String v)`
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder claimDeadline(java.time.Instant v)`
-
-#### Parameters
-
-- `v` (`java.time.Instant`)
-
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder claimDeadlineBusinessHours(java.lang.Integer v)`
+Sets the candidate user id constraint.
 
 #### Parameters
 
-- `v` (`java.lang.Integer`)
+- `v` (`java.lang.String`) — the candidate user id; `null` means unconstrained
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder confidenceScore(java.lang.Double v)`
+#### Returns
 
-#### Parameters
+this builder
 
-- `v` (`java.lang.Double`)
+### `public io.casehub.work.api.WorkItemQuery.Builder claimDeadlineOrBefore(java.time.Instant v)`
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder createdBy(java.lang.String v)`
-
-#### Parameters
-
-- `v` (`java.lang.String`)
-
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder description(java.lang.String v)`
+Sets the claim-deadline-or-before constraint.
 
 #### Parameters
 
-- `v` (`java.lang.String`)
+- `v` (`java.time.Instant`) — the instant; `null` means unconstrained
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder excludedUsers(java.lang.String v)`
+#### Returns
 
-#### Parameters
+this builder
 
-- `v` (`java.lang.String`)
+### `public io.casehub.work.api.WorkItemQuery.Builder expiresAtOrBefore(java.time.Instant v)`
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder expiresAt(java.time.Instant v)`
-
-#### Parameters
-
-- `v` (`java.time.Instant`)
-
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder expiresAtBusinessHours(java.lang.Integer v)`
+Sets the expires-at-or-before constraint.
 
 #### Parameters
 
-- `v` (`java.lang.Integer`)
+- `v` (`java.time.Instant`) — the instant; `null` means unconstrained
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder followUpDate(java.time.Instant v)`
+#### Returns
 
-#### Parameters
+this builder
 
-- `v` (`java.time.Instant`)
+### `public io.casehub.work.api.WorkItemQuery.Builder followUpBefore(java.time.Instant v)`
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder formKey(java.lang.String v)`
-
-#### Parameters
-
-- `v` (`java.lang.String`)
-
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder inputDataSchema(java.lang.String v)`
+Sets the follow-up-before constraint.
 
 #### Parameters
 
-- `v` (`java.lang.String`)
+- `v` (`java.time.Instant`) — the instant; `null` means unconstrained
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder labels(java.util.List<io.casehub.work.api.WorkItemLabelRequest> v)`
+#### Returns
 
-#### Parameters
+this builder
 
-- `v` (`java.util.List<io.casehub.work.api.WorkItemLabelRequest>`)
+### `public io.casehub.work.api.WorkItemQuery.Builder labelPattern(java.lang.String v)`
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder outputDataSchema(java.lang.String v)`
-
-#### Parameters
-
-- `v` (`java.lang.String`)
-
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder payload(java.lang.String v)`
+Sets the label pattern constraint.
 
 #### Parameters
 
-- `v` (`java.lang.String`)
+- `v` (`java.lang.String`) — the pattern; `null` means unconstrained
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder payloadTypeName(java.lang.String v)`
+#### Returns
 
-#### Parameters
+this builder
 
-- `v` (`java.lang.String`)
+### `public io.casehub.work.api.WorkItemQuery.Builder outcome(java.lang.String v)`
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder permittedOutcomes(java.util.List<io.casehub.work.api.Outcome> v)`
-
-#### Parameters
-
-- `v` (`java.util.List<io.casehub.work.api.Outcome>`)
-
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder priority(io.casehub.work.api.WorkItemPriority v)`
+Sets the exact outcome constraint.
 
 #### Parameters
 
-- `v` (`io.casehub.work.api.WorkItemPriority`)
+- `v` (`java.lang.String`) — the outcome string; `null` means unconstrained
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder requiredCapabilities(java.lang.String v)`
+#### Returns
 
-#### Parameters
+this builder
 
-- `v` (`java.lang.String`)
+### `public io.casehub.work.api.WorkItemQuery.Builder priority(io.casehub.work.api.WorkItemPriority v)`
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder resolutionTypeName(java.lang.String v)`
-
-#### Parameters
-
-- `v` (`java.lang.String`)
-
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder routingExperiences(java.lang.String v)`
+Sets the priority constraint.
 
 #### Parameters
 
-- `v` (`java.lang.String`)
+- `v` (`io.casehub.work.api.WorkItemPriority`) — the priority; `null` means unconstrained
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder scope(java.lang.String v)`
+#### Returns
 
-#### Parameters
+this builder
 
-- `v` (`java.lang.String`)
+### `public io.casehub.work.api.WorkItemQuery.Builder status(io.casehub.work.api.WorkItemStatus v)`
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder templateId(java.util.UUID v)`
-
-#### Parameters
-
-- `v` (`java.util.UUID`)
-
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder templateVersion(java.lang.Long v)`
+Sets the exact status constraint.
 
 #### Parameters
 
-- `v` (`java.lang.Long`)
+- `v` (`io.casehub.work.api.WorkItemStatus`) — the status; `null` means unconstrained
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder tenancyId(java.lang.String v)`
+#### Returns
 
-#### Parameters
+this builder
 
-- `v` (`java.lang.String`)
+### `public io.casehub.work.api.WorkItemQuery.Builder statusIn(java.util.List<io.casehub.work.api.WorkItemStatus> v)`
 
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder title(java.lang.String v)`
-
-#### Parameters
-
-- `v` (`java.lang.String`)
-
-### `public io.casehub.work.api.WorkItemCreateRequest.Builder types(java.util.List<java.lang.String> v)`
+Sets the status-in constraint.
 
 #### Parameters
 
-- `v` (`java.util.List<java.lang.String>`)
+- `v` (`java.util.List<io.casehub.work.api.WorkItemStatus>`) — the list of acceptable statuses; `null` means unconstrained
+
+#### Returns
+
+this builder
+
+### `public io.casehub.work.api.WorkItemQuery.Builder tenancyId(java.lang.String v)`
+
+Sets the tenant id constraint. When `null`, store implementations
+fall back to the current principal's tenant.
+
+#### Parameters
+
+- `v` (`java.lang.String`) — the tenancy id; `null` means use current principal
+
+#### Returns
+
+this builder
+
+### `public io.casehub.work.api.WorkItemQuery.Builder type(java.lang.String v)`
+
+Sets the type constraint. Matches WorkItems whose `types` set
+contains a type equal to or descended from this value.
+
+#### Parameters
+
+- `v` (`java.lang.String`) — the type path; `null` means unconstrained
+
+#### Returns
+
+this builder

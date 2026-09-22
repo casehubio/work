@@ -30,6 +30,14 @@ Optional detail appended to the CREATED audit entry. Used to record group expans
 
 ### `description` (`java.lang.String`)
 
+### `escalationDeadline` (`java.lang.String`)
+
+### `escalationGenerateSummary` (`java.lang.Boolean`)
+
+### `escalationOnClaimDeadline` (`java.lang.String`)
+
+### `escalationOnExpiry` (`java.lang.String`)
+
 ### `excludedUsers` (`java.lang.String`)
 
 ### `expiresAt` (`java.time.Instant`)
@@ -43,6 +51,10 @@ Optional detail appended to the CREATED audit entry. Used to record group expans
 ### `inputDataSchema` (`java.lang.String`)
 
 ### `labels` (`java.util.List<io.casehub.work.api.WorkItemLabelRequest>`)
+
+### `minimumScore` (`java.lang.Double`)
+
+### `originRef` (`java.lang.String`)
 
 ### `outputDataSchema` (`java.lang.String`)
 
@@ -59,6 +71,8 @@ Optional detail appended to the CREATED audit entry. Used to record group expans
 ### `resolutionTypeName` (`java.lang.String`)
 
 ### `routingExperiences` (`java.lang.String`)
+
+### `routingStrategy` (`java.lang.String`)
 
 ### `scope` (`java.lang.String`)
 

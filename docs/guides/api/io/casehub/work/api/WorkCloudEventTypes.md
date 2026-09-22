@@ -14,6 +14,8 @@
 
 ### `COMPLETED` (`java.lang.String`)
 
+### `CREATE` (`java.lang.String`)
+
 ### `CREATED` (`java.lang.String`)
 
 ### `DEADLINE_EXTENDED` (`java.lang.String`)
