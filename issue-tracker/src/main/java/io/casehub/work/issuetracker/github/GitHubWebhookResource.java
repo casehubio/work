@@ -20,6 +20,7 @@ import jakarta.ws.rs.core.Response;
 
 import org.jboss.logging.Logger;
 
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.casehub.work.issuetracker.webhook.WebhookEvent;
 import io.casehub.work.issuetracker.webhook.WebhookEventHandler;
 import io.casehub.work.runtime.service.TenantHolder;
@@ -39,6 +40,7 @@ import io.casehub.work.runtime.service.TenantHolder;
 @Path("/workitems/github-webhook/{tenancyId}")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@HandWrittenEndpoint("webhook receiver — HMAC signature verification requires raw request body access")
 public class GitHubWebhookResource {
 
     private static final Logger LOG = Logger.getLogger(GitHubWebhookResource.class);

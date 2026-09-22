@@ -16,6 +16,7 @@ import jakarta.ws.rs.core.Response;
 
 import org.jboss.logging.Logger;
 
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import io.casehub.work.issuetracker.webhook.WebhookEvent;
 import io.casehub.work.issuetracker.webhook.WebhookEventHandler;
 import io.casehub.work.runtime.service.TenantHolder;
@@ -38,6 +39,7 @@ import io.casehub.work.runtime.service.TenantHolder;
 @Path("/workitems/jira-webhook/{tenancyId}")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@HandWrittenEndpoint("webhook receiver — shared-secret verification requires raw request access")
 public class JiraWebhookResource {
 
     private static final Logger LOG = Logger.getLogger(JiraWebhookResource.class);
