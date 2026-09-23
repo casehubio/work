@@ -1,51 +1,32 @@
 package io.casehub.work.issuetracker.github;
 
+import io.casehub.platform.api.mcp.HeaderParam;
+import io.casehub.platform.api.mcp.McpDomain;
+import io.casehub.platform.api.mcp.PathParam;
+import io.casehub.platform.api.mcp.PlatformWebhook;
+import io.casehub.platform.api.mcp.RestPath;
+import io.casehub.work.issuetracker.webhook.WebhookEvent;
+import io.casehub.work.issuetracker.webhook.WebhookEventHandler;
+import io.casehub.work.runtime.service.TenantHolder;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.core.Response;
+import org.jboss.logging.Logger;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.Map;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
-
-import jakarta.inject.Inject;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.HeaderParam;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-
-import org.jboss.logging.Logger;
-
-import io.casehub.platform.api.mcp.HandWrittenEndpoint;
-import io.casehub.work.issuetracker.webhook.WebhookEvent;
-import io.casehub.work.issuetracker.webhook.WebhookEventHandler;
-import io.casehub.work.runtime.service.TenantHolder;
-
-/**
- * Receives inbound GitHub Issues webhook events.
- *
- * <p>Verifies the {@code X-Hub-Signature-256} HMAC before processing.
- * Returns 200 for all valid requests (including unhandled event types) to
- * prevent GitHub retry storms. Returns 401 on signature failure or missing secret config.
- *
- * <p>Configure in {@code application.properties}:
- * <pre>
- * casehub.work.issue-tracker.github.webhook-secret=your-secret
- * </pre>
- */
-@Path("/workitems/github-webhook/{tenancyId}")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
-@HandWrittenEndpoint("webhook receiver — HMAC signature verification requires raw request body access")
+@McpDomain(value = "work/webhooks", basePath = "/workitems")
+@ApplicationScoped
 public class GitHubWebhookResource {
 
-    private static final Logger LOG = Logger.getLogger(GitHubWebhookResource.class);
-    private static final String HMAC_SHA256 = "HmacSHA256";
-    private static final HexFormat HEX = HexFormat.of();
+    private static final Logger    LOG         = Logger.getLogger(GitHubWebhookResource.class);
+    private static final String    HMAC_SHA256 = "HmacSHA256";
+    private static final HexFormat HEX         = HexFormat.of();
 
     @Inject
     GitHubIssueTrackerConfig config;
@@ -58,23 +39,17 @@ public class GitHubWebhookResource {
     @Inject
     TenantHolder tenantHolder;
 
-    /**
-     * Receive a GitHub Issues webhook event.
-     *
-     * @param signature the {@code X-Hub-Signature-256} header value
-     * @param body the raw JSON payload
-     * @return 200 OK on success or unhandled event, 401 on signature failure
-     */
-    @POST
-    public Response receive(
-            @PathParam("tenancyId") final String tenancyId,
-            @HeaderParam("X-Hub-Signature-256") final String signature,
-            final String body) {
+    @PlatformWebhook("Receive GitHub Issues webhook event")
+    @RestPath("/github-webhook/{tenancyId}")
+    public Response receiveGitHub(
+            @PathParam String tenancyId,
+            @HeaderParam("X-Hub-Signature-256") String signature,
+            String body) {
 
         if (tenancyId == null || tenancyId.isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", "tenancyId path parameter is required"))
-                    .build();
+                           .entity(Map.of("error", "tenancyId path parameter is required"))
+                           .build();
         }
 
         final String secret = config.webhookSecret().filter(s -> !s.isBlank()).orElse(null);
@@ -103,12 +78,12 @@ public class GitHubWebhookResource {
     }
 
     private boolean verifySignature(final String secret, final String body, final String signature) {
-        if (signature == null || signature.isBlank()) return false;
+        if (signature == null || signature.isBlank()) {return false;}
         try {
             final Mac mac = Mac.getInstance(HMAC_SHA256);
             mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_SHA256));
             final String expected = "sha256=" +
-                    HEX.formatHex(mac.doFinal(body.getBytes(StandardCharsets.UTF_8)));
+                                    HEX.formatHex(mac.doFinal(body.getBytes(StandardCharsets.UTF_8)));
             return MessageDigest.isEqual(
                     expected.getBytes(StandardCharsets.UTF_8),
                     signature.getBytes(StandardCharsets.UTF_8));

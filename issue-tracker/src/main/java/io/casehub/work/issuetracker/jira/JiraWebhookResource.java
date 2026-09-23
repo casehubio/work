@@ -4,42 +4,21 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Map;
 
-import jakarta.inject.Inject;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-
-import org.jboss.logging.Logger;
-
-import io.casehub.platform.api.mcp.HandWrittenEndpoint;
+import io.casehub.platform.api.mcp.McpDomain;
+import io.casehub.platform.api.mcp.PathParam;
+import io.casehub.platform.api.mcp.PlatformWebhook;
+import io.casehub.platform.api.mcp.QueryParam;
+import io.casehub.platform.api.mcp.RestPath;
 import io.casehub.work.issuetracker.webhook.WebhookEvent;
 import io.casehub.work.issuetracker.webhook.WebhookEventHandler;
 import io.casehub.work.runtime.service.TenantHolder;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.core.Response;
+import org.jboss.logging.Logger;
 
-/**
- * Receives inbound Jira webhook events.
- *
- * <p>Jira Cloud does not sign payloads with HMAC. Verification uses a shared secret
- * passed as a query parameter. Configure your Jira webhook URL as:
- * {@code https://yourapp.example.com/workitems/jira-webhook?secret=your-secret}
- *
- * <p>Returns 200 for all valid requests (including unhandled events) to prevent
- * Jira retry storms. Returns 401 on secret mismatch or missing config.
- *
- * <p>Configure in {@code application.properties}:
- * <pre>
- * casehub.work.issue-tracker.jira.webhook-secret=your-secret
- * </pre>
- */
-@Path("/workitems/jira-webhook/{tenancyId}")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
-@HandWrittenEndpoint("webhook receiver — shared-secret verification requires raw request access")
+@McpDomain(value = "work/webhooks", basePath = "/workitems")
+@ApplicationScoped
 public class JiraWebhookResource {
 
     private static final Logger LOG = Logger.getLogger(JiraWebhookResource.class);
@@ -55,28 +34,22 @@ public class JiraWebhookResource {
     @Inject
     TenantHolder tenantHolder;
 
-    /**
-     * Receive a Jira webhook event.
-     *
-     * @param secret the {@code secret} query parameter for verification
-     * @param body the raw JSON payload
-     * @return 200 OK on success or unhandled event, 401 on secret mismatch
-     */
-    @POST
-    public Response receive(
-            @PathParam("tenancyId") final String tenancyId,
-            @QueryParam("secret") final String secret,
-            final String body) {
+    @PlatformWebhook("Receive Jira webhook event")
+    @RestPath("/jira-webhook/{tenancyId}")
+    public Response receiveJira(
+            @PathParam String tenancyId,
+            @QueryParam("secret") String secret,
+            String body) {
 
         if (tenancyId == null || tenancyId.isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", "tenancyId path parameter is required"))
-                    .build();
+                           .entity(Map.of("error", "tenancyId path parameter is required"))
+                           .build();
         }
 
         final String configuredSecret = config.webhookSecret()
-                .filter(s -> !s.isBlank())
-                .orElse(null);
+                                              .filter(s -> !s.isBlank())
+                                              .orElse(null);
         if (configuredSecret == null) {
             LOG.warn("Jira webhook received but casehub.work.issue-tracker.jira.webhook-secret is not configured — rejecting");
             return Response.status(Response.Status.UNAUTHORIZED).build();
@@ -102,7 +75,7 @@ public class JiraWebhookResource {
     }
 
     private boolean verifySecret(final String expected, final String provided) {
-        if (provided == null || provided.isBlank()) return false;
+        if (provided == null || provided.isBlank()) {return false;}
         return MessageDigest.isEqual(
                 expected.getBytes(StandardCharsets.UTF_8),
                 provided.getBytes(StandardCharsets.UTF_8));

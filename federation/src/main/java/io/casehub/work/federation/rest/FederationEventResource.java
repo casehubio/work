@@ -1,24 +1,24 @@
 package io.casehub.work.federation.rest;
 
+import io.casehub.platform.api.mcp.HeaderParam;
+import io.casehub.platform.api.mcp.McpDomain;
+import io.casehub.platform.api.mcp.PlatformWebhook;
+import io.casehub.platform.api.mcp.RestPath;
 import io.casehub.work.federation.FederationReceiver;
 import io.casehub.work.federation.subscription.FederationSubscriptionEntity;
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.HeaderParam;
-import io.casehub.platform.api.mcp.HandWrittenEndpoint;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 
-@Path("/federation/events")
-@HandWrittenEndpoint("Inbound CloudEvents webhook with HMAC verification — not a domain API")
+@McpDomain(value = "work/federation", basePath = "/federation")
+@ApplicationScoped
 public class FederationEventResource {
 
     @Inject
     FederationReceiver receiver;
 
-    @POST
-    @Consumes("application/cloudevents+json")
+    @PlatformWebhook(value = "Receive federation CloudEvents", consumes = "application/cloudevents+json")
+    @RestPath("/events")
     public Response receiveEvent(String cloudEventJson,
                                  @HeaderParam("X-Federation-Signature") String signature,
                                  @HeaderParam("X-Federation-Peer-Id") String peerId) {

@@ -115,7 +115,7 @@ trackers and best practices for using them together.</description>
             </path>
           </annotationProcessorPaths>
           <compilerArgs>
-            <arg>-AdomainFilter=work/issue-links</arg>
+            <arg>-AdomainFilter=work/issue-links,work/webhooks</arg>
             <arg>-AgenerateGraphQL=false</arg>
           </compilerArgs>
         </configuration>
