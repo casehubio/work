@@ -9,6 +9,7 @@ import io.casehub.platform.api.mcp.PathParam;
 import io.casehub.platform.api.mcp.PlatformMutation;
 import io.casehub.platform.api.mcp.PlatformQuery;
 import io.casehub.platform.api.mcp.PlatformStream;
+import io.casehub.platform.api.mcp.QueryParam;
 import io.casehub.platform.api.mcp.RestStatus;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemLifecycleEvent;
@@ -23,7 +24,7 @@ import io.smallrye.mutiny.Multi;
 
 import java.util.List;
 
-@McpDomain(value = "work/items", app = "work", summary = "Work item CRUD — create, query, clone, filter, assign")
+@McpDomain("work/items")
 public interface WorkItemApi {
 
     @PlatformQuery("List work items with optional filtering")
@@ -48,13 +49,13 @@ public interface WorkItemApi {
                        @ContextParam("tenancyId") String tenancyId);
 
     @PlatformQuery("Aggregated inbox summary counts")
-    WorkItemSummary inboxSummary(String assignee, List<String> candidateGroups,
+    WorkItemSummary inboxSummary(String assignee, @QueryParam("candidateGroups") List<String> candidateGroups,
                                  String candidateUser, WorkItemStatus status,
                                  WorkItemPriority priority, String type,
                                  @ContextParam("tenancyId") String tenancyId);
 
     @PlatformQuery("Inbox view with root items and post-filtering")
-    List<WorkItemRootView> inbox(String assignee, List<String> candidateGroups,
+    List<WorkItemRootView> inbox(String assignee, @QueryParam("candidateGroups") List<String> candidateGroups,
                                 String candidateUser, WorkItemStatus status,
                                 WorkItemPriority priority, String type,
                                 Boolean followUp, String outcome,

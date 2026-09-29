@@ -1,6 +1,12 @@
 package io.casehub.work.issuetracker.github;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.Map;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -12,28 +18,103 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-import io.casehub.work.issuetracker.github.core.GitHubWebhookCore;
-import io.casehub.work.issuetracker.github.core.WebhookOutcome;
+import org.jboss.logging.Logger;
 
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
+import io.casehub.work.issuetracker.webhook.WebhookEvent;
+import io.casehub.work.issuetracker.webhook.WebhookEventHandler;
+import io.casehub.work.runtime.service.TenantHolder;
+
+/**
+ * Receives inbound GitHub Issues webhook events.
+ *
+ * <p>Verifies the {@code X-Hub-Signature-256} HMAC before processing.
+ * Returns 200 for all valid requests (including unhandled event types) to
+ * prevent GitHub retry storms. Returns 401 on signature failure or missing secret config.
+ *
+ * <p>Configure in {@code application.properties}:
+ * <pre>
+ * casehub.work.issue-tracker.github.webhook-secret=your-secret
+ * </pre>
+ */
 @Path("/workitems/github-webhook/{tenancyId}")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@HandWrittenEndpoint("webhook receiver — HMAC signature verification requires raw request body access")
 public class GitHubWebhookResource {
 
-    @Inject
-    GitHubWebhookCore core;
+    private static final Logger LOG = Logger.getLogger(GitHubWebhookResource.class);
+    private static final String HMAC_SHA256 = "HmacSHA256";
+    private static final HexFormat HEX = HexFormat.of();
 
+    @Inject
+    GitHubIssueTrackerConfig config;
+
+    final GitHubWebhookParser parser = new GitHubWebhookParser();
+
+    @Inject
+    WebhookEventHandler handler;
+
+    @Inject
+    TenantHolder tenantHolder;
+
+    /**
+     * Receive a GitHub Issues webhook event.
+     *
+     * @param signature the {@code X-Hub-Signature-256} header value
+     * @param body the raw JSON payload
+     * @return 200 OK on success or unhandled event, 401 on signature failure
+     */
     @POST
     public Response receive(
             @PathParam("tenancyId") final String tenancyId,
             @HeaderParam("X-Hub-Signature-256") final String signature,
             final String body) {
-        WebhookOutcome outcome = core.receive(tenancyId, signature, body);
-        return switch (outcome) {
-            case OK -> Response.ok().build();
-            case BAD_REQUEST -> Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("error", "tenancyId path parameter is required")).build();
-            case UNAUTHORIZED -> Response.status(Response.Status.UNAUTHORIZED).build();
-        };
+
+        if (tenancyId == null || tenancyId.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", "tenancyId path parameter is required"))
+                    .build();
+        }
+
+        final String secret = config.webhookSecret().filter(s -> !s.isBlank()).orElse(null);
+        if (secret == null) {
+            LOG.warn("GitHub webhook received but casehub.work.issue-tracker.github.webhook-secret is not configured — rejecting");
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        if (!verifySignature(secret, body, signature)) {
+            LOG.warn("GitHub webhook HMAC verification failed — rejecting");
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+
+        tenantHolder.setTenancyId(tenancyId);
+
+        try {
+            final WebhookEvent event = parser.parse(Map.of(), body);
+            if (event != null) {
+                handler.handle(event);
+            }
+        } catch (final Exception e) {
+            LOG.warnf("GitHub webhook processing error (returning 200 to prevent retry): %s", e.getMessage());
+        }
+
+        return Response.ok().build();
+    }
+
+    private boolean verifySignature(final String secret, final String body, final String signature) {
+        if (signature == null || signature.isBlank()) return false;
+        try {
+            final Mac mac = Mac.getInstance(HMAC_SHA256);
+            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_SHA256));
+            final String expected = "sha256=" +
+                    HEX.formatHex(mac.doFinal(body.getBytes(StandardCharsets.UTF_8)));
+            return MessageDigest.isEqual(
+                    expected.getBytes(StandardCharsets.UTF_8),
+                    signature.getBytes(StandardCharsets.UTF_8));
+        } catch (final Exception e) {
+            LOG.warnf("HMAC computation failed: %s", e.getMessage());
+            return false;
+        }
     }
 }

@@ -14,6 +14,8 @@
 
 ### `id` (`java.util.UUID`)
 
+### `originRef` (`java.lang.String`)
+
 ### `outcome` (`java.lang.String`)
 
 ### `payload` (`java.lang.String`)
@@ -38,6 +40,8 @@
 
 ### `id` (`java.util.UUID`)
 
+### `originRef` (`java.lang.String`)
+
 ### `outcome` (`java.lang.String`)
 
 ### `payload` (`java.lang.String`)
@@ -54,7 +58,7 @@
 
 ## Constructors
 
-### `public WorkItemRef(java.util.UUID id, io.casehub.work.api.WorkItemStatus status, java.lang.String callerRef, java.lang.String assigneeId, java.lang.String resolution, java.lang.String candidateGroups, java.lang.String outcome, java.lang.String tenancyId, java.lang.String payload, java.lang.String payloadTypeName, java.lang.String resolutionTypeName)`
+### `public WorkItemRef(java.util.UUID id, io.casehub.work.api.WorkItemStatus status, java.lang.String callerRef, java.lang.String assigneeId, java.lang.String resolution, java.lang.String candidateGroups, java.lang.String outcome, java.lang.String tenancyId, java.lang.String payload, java.lang.String payloadTypeName, java.lang.String resolutionTypeName, java.lang.String originRef)`
 
 #### Parameters
 
@@ -69,6 +73,7 @@
 - `payload` (`java.lang.String`)
 - `payloadTypeName` (`java.lang.String`)
 - `resolutionTypeName` (`java.lang.String`)
+- `originRef` (`java.lang.String`)
 
 ## Methods
 
@@ -87,6 +92,8 @@
 ### `public final int hashCode()`
 
 ### `public java.util.UUID id()`
+
+### `public java.lang.String originRef()`
 
 ### `public java.lang.String outcome()`
 

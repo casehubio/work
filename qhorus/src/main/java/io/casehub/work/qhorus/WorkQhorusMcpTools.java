@@ -12,16 +12,13 @@ import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemRef;
 import io.casehub.work.api.spi.WorkItemCreator;
-import io.casehub.platform.api.mcp.McpDomain;
-import io.casehub.platform.api.mcp.PlatformMutation;
-import io.casehub.platform.api.mcp.PlatformQuery;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
 
 import java.util.UUID;
 
-@McpDomain(value = "work/human-tasks", app = "work", summary = "Human task orchestration — request work, check status, poll completion")
 @ApplicationScoped
 public class WorkQhorusMcpTools {
 
@@ -32,7 +29,7 @@ public class WorkQhorusMcpTools {
     @Inject WorkItemCreator workItemCreator;
     @Inject CurrentPrincipal currentPrincipal;
 
-    @PlatformMutation("Request human work by creating a WorkItem and posting a QUERY to a Qhorus channel")
+
     public HumanWorkResponse requestHumanWork(
             String channel, String title, String description,
             String candidateGroups, String priority, String payload,
@@ -72,7 +69,7 @@ public class WorkQhorusMcpTools {
         return new HumanWorkResponse(ref.id(), callerRef, correlationId, ref.status().name());
     }
 
-    @PlatformQuery("Check the current status of a previously requested human work item")
+
     public WorkStatusResponse checkWorkStatus(String callerRef) {
         return workItemCreator.findByCallerRef(callerRef)
                 .map(ref -> new WorkStatusResponse(ref.id(), ref.status().name(),
@@ -80,7 +77,7 @@ public class WorkQhorusMcpTools {
                 .orElse(new WorkStatusResponse(null, "NOT_FOUND", null, null, null, false));
     }
 
-    @PlatformQuery("Poll until a human work item reaches a terminal state or times out")
+
     public WorkStatusResponse waitForWork(String callerRef, int timeoutSeconds, int pollIntervalSeconds) {
         final int timeout = timeoutSeconds > 0 ? timeoutSeconds : 300;
         final int interval = pollIntervalSeconds > 0 ? pollIntervalSeconds : 5;

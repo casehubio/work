@@ -18,6 +18,8 @@
 
 ### `public abstract io.casehub.work.api.WorkEventType eventType()`
 
+### `public default java.util.UUID ledgerEntryId()`
+
 ### `public abstract java.time.Instant occurredAt()`
 
 ### `public default java.lang.String outcome()`

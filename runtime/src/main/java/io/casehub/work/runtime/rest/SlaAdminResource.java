@@ -1,20 +1,23 @@
 package io.casehub.work.runtime.rest;
 
-import io.casehub.work.runtime.rest.core.SlaAdminCore;
+import io.casehub.work.runtime.service.SlaDefaultsYamlLoader;
 import jakarta.inject.Inject;
+import io.casehub.platform.api.mcp.HandWrittenEndpoint;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
-import java.util.Map;
+import jakarta.ws.rs.core.Response;
 
 @Path("/workitems/admin/sla-config")
+@HandWrittenEndpoint("Admin infrastructure endpoint — not a domain API")
 public class SlaAdminResource {
 
     @Inject
-    SlaAdminCore core;
+    SlaDefaultsYamlLoader loader;
 
     @POST
     @Path("/reload")
-    public Map<String, Boolean> reload() {
-        return core.reload();
+    public Response reload() {
+        loader.reload();
+        return Response.ok("{\"reloaded\":true}").build();
     }
 }
