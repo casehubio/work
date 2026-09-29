@@ -22,7 +22,7 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <module>runtime</module>
     <module>deployment</module>
     <module>flow</module>
-    <module>ledger</module>
+    <!-- module>ledger</module --><!-- compilation broken: casehub-ledger SNAPSHOT with new package paths not yet published — tracked by #404 -->
     <!-- module>queues</module --><!-- compilation broken: references deleted WorkItemMapper/WorkItemResponse from #400 — tracked by #403 -->
     <!-- module>queues-examples</module --><!-- depends on queues -->
     <!-- module>queues-dashboard</module --><!-- depends on queues -->
