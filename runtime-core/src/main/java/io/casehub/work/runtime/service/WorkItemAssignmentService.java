@@ -44,6 +44,10 @@ public class WorkItemAssignmentService {
     private final WorkBroker workBroker = new WorkBroker();
     private final ExclusionPolicy exclusionPolicy;
 
+    protected WorkItemAssignmentService() {
+        this(null, null, null, null, null);
+    }
+
     public WorkItemAssignmentService(
             final StrategyResolver strategyResolver,
             final String routingStrategy,
