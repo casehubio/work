@@ -12,7 +12,7 @@ import io.casehub.platform.api.identity.TenancyConstants;
 /**
  * Test-only {@link CurrentPrincipal} with mutable state.
  *
- * <p>{@code @Alternative @Priority(100)} so it wins over
+ * <p>{@code @Alternative @Priority(200)} so it wins over
  * {@code MockCurrentPrincipal} ({@code @DefaultBean}) and
  * {@code TenantScopedPrincipal} (normal-priority) in test contexts.
  * Tests that exercise {@link io.casehub.work.runtime.service.TenantContextRunner}
@@ -23,7 +23,7 @@ import io.casehub.platform.api.identity.TenancyConstants;
  */
 @ApplicationScoped
 @Alternative
-@Priority(100)
+@Priority(200)
 public class MutableCurrentPrincipal implements CurrentPrincipal {
 
     private String actorId = "test-user";
