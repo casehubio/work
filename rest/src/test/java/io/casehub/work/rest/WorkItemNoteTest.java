@@ -155,7 +155,7 @@ class WorkItemNoteTest {
                 .body("{\"content\":\"irrelevant\"}")
                 .post("/api/work/notes/edit-note/" + itemId + "/" + java.util.UUID.randomUUID())
                 .then()
-                .statusCode(500);
+                .statusCode(400);
     }
 
     @Test

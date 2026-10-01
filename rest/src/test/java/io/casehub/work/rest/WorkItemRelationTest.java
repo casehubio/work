@@ -60,7 +60,7 @@ class WorkItemRelationTest {
         given().contentType(ContentType.JSON)
                 .body("{\"relationType\":\"PART_OF\"}")
                 .post("/api/work/relations/add-relation/" + id)
-                .then().statusCode(500);
+                .then().statusCode(400);
     }
 
     @Test
@@ -70,7 +70,7 @@ class WorkItemRelationTest {
         given().contentType(ContentType.JSON)
                 .body("{\"targetId\":\"" + other + "\"}")
                 .post("/api/work/relations/add-relation/" + id)
-                .then().statusCode(500);
+                .then().statusCode(400);
     }
 
     @Test
@@ -95,7 +95,7 @@ class WorkItemRelationTest {
                 .post("/api/work/relations/add-relation/" + child).then().statusCode(201);
 
         given().contentType(ContentType.JSON).body(body)
-                .post("/api/work/relations/add-relation/" + child).then().statusCode(500);
+                .post("/api/work/relations/add-relation/" + child).then().statusCode(400);
     }
 
     // ── GET /workitems/{id}/relations (outgoing) ──────────────────────────────
@@ -227,7 +227,7 @@ class WorkItemRelationTest {
         given().contentType(ContentType.JSON)
                 .body("{\"targetId\":\"" + a + "\",\"relationType\":\"PART_OF\"}")
                 .post("/api/work/relations/add-relation/" + b)
-                .then().statusCode(500);
+                .then().statusCode(400);
     }
 
     @Test
@@ -243,7 +243,7 @@ class WorkItemRelationTest {
         given().contentType(ContentType.JSON)
                 .body("{\"targetId\":\"" + a + "\",\"relationType\":\"PART_OF\"}")
                 .post("/api/work/relations/add-relation/" + c)
-                .then().statusCode(500);
+                .then().statusCode(400);
     }
 
     @Test
@@ -252,7 +252,7 @@ class WorkItemRelationTest {
         given().contentType(ContentType.JSON)
                 .body("{\"targetId\":\"" + id + "\",\"relationType\":\"PART_OF\"}")
                 .post("/api/work/relations/add-relation/" + id)
-                .then().statusCode(500);
+                .then().statusCode(400);
     }
 
     @Test
@@ -261,7 +261,7 @@ class WorkItemRelationTest {
         given().contentType(ContentType.JSON)
                 .body("{\"targetId\":\"" + a + "\",\"relationType\":\"RELATES_TO\"}")
                 .post("/api/work/relations/add-relation/" + a)
-                .then().statusCode(500);
+                .then().statusCode(400);
     }
 
     // ── E2E: tree navigation (happy path) ────────────────────────────────────

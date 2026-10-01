@@ -336,6 +336,6 @@ class LabelEndpointTest {
                 .queryParam("path", "nonexistent/label")
                 .post("/api/work/items/remove-label/" + id)
                 .then()
-                .statusCode(500);
+                .statusCode(400);
     }
 }

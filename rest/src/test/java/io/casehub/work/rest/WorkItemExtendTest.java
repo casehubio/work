@@ -59,7 +59,7 @@ class WorkItemExtendTest {
                 .body("{\"newExpiresAt\":\"" + pastExpiry + "\"}")
                 .post("/api/work/lifecycle/extend/" + id + "?actor=admin")
                 .then()
-                .statusCode(500);
+                .statusCode(400);
     }
 
     @Test
