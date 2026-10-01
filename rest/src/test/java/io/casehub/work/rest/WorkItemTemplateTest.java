@@ -405,7 +405,7 @@ class WorkItemTemplateTest {
                 .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
-        given().contentType("application/merge-patch+json")
+        given().contentType(ContentType.JSON)
                 .body("{\"typePaths\":\"[\\\"patched\\\"]\"}")
                 .post("/api/work/templates/update/" + id)
                 .then()

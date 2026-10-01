@@ -2,6 +2,7 @@ package io.casehub.work.rest;
 
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 

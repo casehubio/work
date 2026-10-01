@@ -10,6 +10,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.restassured.http.ContentType;
 
 /**
