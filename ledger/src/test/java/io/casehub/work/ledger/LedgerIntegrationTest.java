@@ -317,7 +317,7 @@ class LedgerIntegrationTest {
         assertThat(entries).hasSize(1);
         final UUID entryId = entries.get(0).id;
 
-        final LedgerAttestation attestation = new io.casehub.ledger.runtime.model.LedgerAttestation();
+        final LedgerAttestation attestation = new io.casehub.ledger.jpa.LedgerAttestation();
         attestation.ledgerEntryId = entryId;
         attestation.subjectId = item.id();
         attestation.attestorId = "alice";
@@ -344,7 +344,7 @@ class LedgerIntegrationTest {
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(item.id());
         final UUID entryId = entries.get(0).id;
 
-        final LedgerAttestation a1 = new io.casehub.ledger.runtime.model.LedgerAttestation();
+        final LedgerAttestation a1 = new io.casehub.ledger.jpa.LedgerAttestation();
         a1.ledgerEntryId = entryId;
         a1.subjectId = item.id();
         a1.attestorId = "alice";
@@ -353,7 +353,7 @@ class LedgerIntegrationTest {
         a1.confidence = 0.9;
         ledgerRepo.saveAttestation(a1, io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID);
 
-        final LedgerAttestation a2 = new io.casehub.ledger.runtime.model.LedgerAttestation();
+        final LedgerAttestation a2 = new io.casehub.ledger.jpa.LedgerAttestation();
         a2.ledgerEntryId = entryId;
         a2.subjectId = item.id();
         a2.attestorId = "audit-agent";

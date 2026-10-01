@@ -8,8 +8,8 @@ import io.casehub.platform.api.mcp.McpDomain;
 import io.casehub.platform.api.mcp.PathParam;
 import io.casehub.platform.api.mcp.PlatformQuery;
 import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.runtime.model.ActorTrustScore;
-import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
+import io.casehub.ledger.api.model.ActorTrustScoreBase;
+import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
 import io.casehub.work.ledger.api.dto.ActorTrustScoreResponse;
 
 @McpDomain("work/actor-trust")
@@ -30,7 +30,7 @@ public class WorkItemActorTrustApi {
                 .orElse(null);
     }
 
-    private ActorTrustScoreResponse toResponse(ActorTrustScore s) {
+    private ActorTrustScoreResponse toResponse(ActorTrustScoreBase s) {
         return new ActorTrustScoreResponse(s.actorId, s.actorType, s.trustScore,
                 s.decisionCount, s.overturnedCount, s.attestationPositive,
                 s.attestationNegative, s.lastComputedAt);

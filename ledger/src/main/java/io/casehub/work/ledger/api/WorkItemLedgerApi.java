@@ -15,7 +15,7 @@ import io.casehub.platform.api.mcp.PlatformQuery;
 import io.casehub.platform.api.mcp.RestStatus;
 import io.casehub.ledger.api.model.LedgerAttestation;
 import io.casehub.ledger.runtime.config.LedgerConfig;
-import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
+import io.casehub.ledger.jpa.JpaProvenanceSupplement;
 import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.ledger.api.dto.LedgerAttestationRequest;
 import io.casehub.work.ledger.api.dto.LedgerEntryResponse;
@@ -93,7 +93,7 @@ public class WorkItemLedgerApi {
             throw new IllegalArgumentException("Ledger entry not found for this WorkItem");
         }
 
-        final LedgerAttestation attestation = new io.casehub.ledger.runtime.model.LedgerAttestation();
+        final LedgerAttestation attestation = new io.casehub.ledger.jpa.LedgerAttestation();
         attestation.ledgerEntryId = entryId;
         attestation.subjectId = workItemId;
         attestation.attestorId = request.attestorId();

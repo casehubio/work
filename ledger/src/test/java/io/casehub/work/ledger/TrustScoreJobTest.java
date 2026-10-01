@@ -13,9 +13,9 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.runtime.model.ActorTrustScore;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
+import io.casehub.ledger.api.model.ActorTrustScoreBase;
+import io.casehub.ledger.jpa.LedgerAttestation;
+import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
 import io.casehub.ledger.runtime.service.TrustScoreJob;
 import io.casehub.work.ledger.model.WorkItemLedgerEntry;
 import io.casehub.work.ledger.repository.WorkItemLedgerEntryRepository;
@@ -70,7 +70,7 @@ class TrustScoreJobTest {
         final List<WorkItemLedgerEntry> entries = ledgerRepo.findByWorkItemId(workItemId);
         for (final WorkItemLedgerEntry entry : entries) {
             if (actor.equals(entry.actorId)) {
-                final LedgerAttestation attestation = new io.casehub.ledger.runtime.model.LedgerAttestation();
+                final LedgerAttestation attestation = new io.casehub.ledger.jpa.LedgerAttestation();
                 attestation.ledgerEntryId = entry.id;
                 attestation.subjectId = workItemId;
                 attestation.attestorId = "audit-agent";
@@ -88,7 +88,7 @@ class TrustScoreJobTest {
                 .filter(e -> actor.equals(e.actorId))
                 .reduce((first, second) -> second)
                 .ifPresent(entry -> {
-                    final LedgerAttestation attestation = new io.casehub.ledger.runtime.model.LedgerAttestation();
+                    final LedgerAttestation attestation = new io.casehub.ledger.jpa.LedgerAttestation();
                     attestation.ledgerEntryId = entry.id;
                     attestation.subjectId = workItemId;
                     attestation.attestorId = "audit-agent";
@@ -121,7 +121,7 @@ class TrustScoreJobTest {
 
         trustScoreJob.runComputation();
 
-        final Optional<ActorTrustScore> aliceScore = trustScoreRepository.findByActorId("alice");
+        final Optional<ActorTrustScoreBase> aliceScore = trustScoreRepository.findByActorId("alice");
         assertThat(aliceScore).isPresent();
         assertThat(aliceScore.get().trustScore).isGreaterThanOrEqualTo(0.0);
         assertThat(aliceScore.get().trustScore).isLessThanOrEqualTo(1.0);
@@ -137,7 +137,7 @@ class TrustScoreJobTest {
 
         trustScoreJob.runComputation();
 
-        final Optional<ActorTrustScore> aliceScore = trustScoreRepository.findByActorId("alice");
+        final Optional<ActorTrustScoreBase> aliceScore = trustScoreRepository.findByActorId("alice");
         assertThat(aliceScore).isPresent();
         assertThat(aliceScore.get().trustScore).isCloseTo(0.5, within(0.01));
     }
@@ -155,7 +155,7 @@ class TrustScoreJobTest {
 
         trustScoreJob.runComputation();
 
-        final Optional<ActorTrustScore> aliceScore = trustScoreRepository.findByActorId("alice");
+        final Optional<ActorTrustScoreBase> aliceScore = trustScoreRepository.findByActorId("alice");
         assertThat(aliceScore).isPresent();
         assertThat(aliceScore.get().trustScore).isLessThan(0.7);
     }
@@ -179,8 +179,8 @@ class TrustScoreJobTest {
 
         trustScoreJob.runComputation();
 
-        final Optional<ActorTrustScore> aliceScore = trustScoreRepository.findByActorId("alice");
-        final Optional<ActorTrustScore> bobScore = trustScoreRepository.findByActorId("bob");
+        final Optional<ActorTrustScoreBase> aliceScore = trustScoreRepository.findByActorId("alice");
+        final Optional<ActorTrustScoreBase> bobScore = trustScoreRepository.findByActorId("bob");
 
         assertThat(aliceScore).isPresent();
         assertThat(bobScore).isPresent();
@@ -200,7 +200,7 @@ class TrustScoreJobTest {
 
         trustScoreJob.runComputation();
 
-        final Optional<ActorTrustScore> firstRun = trustScoreRepository.findByActorId(actor);
+        final Optional<ActorTrustScoreBase> firstRun = trustScoreRepository.findByActorId(actor);
         assertThat(firstRun).isPresent();
         assertThat(firstRun.get().decisionCount).isGreaterThan(0);
         assertThat(firstRun.get().trustScore).isBetween(0.0, 1.0);
@@ -211,7 +211,7 @@ class TrustScoreJobTest {
         // Second run should succeed without errors and produce a valid score
         trustScoreJob.runComputation();
 
-        final Optional<ActorTrustScore> secondRun = trustScoreRepository.findByActorId(actor);
+        final Optional<ActorTrustScoreBase> secondRun = trustScoreRepository.findByActorId(actor);
         assertThat(secondRun).isPresent();
         assertThat(secondRun.get().trustScore).isBetween(0.0, 1.0);
     }
@@ -227,7 +227,7 @@ class TrustScoreJobTest {
 
         trustScoreJob.runComputation();
 
-        final Optional<ActorTrustScore> aliceScore = trustScoreRepository.findByActorId("alice");
+        final Optional<ActorTrustScoreBase> aliceScore = trustScoreRepository.findByActorId("alice");
         assertThat(aliceScore).isPresent();
         assertThat(aliceScore.get().attestationPositive).isGreaterThan(0);
     }
