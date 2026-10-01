@@ -39,12 +39,12 @@ class BusinessHoursIntegrationTest {
         final String id = given()
                 .contentType(ContentType.JSON)
                 .body(body)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         final String expiresAtStr = given()
-                .when().get("/workitems/" + id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .extract().path("expiresAt");
 
@@ -68,12 +68,12 @@ class BusinessHoursIntegrationTest {
         final String id = given()
                 .contentType(ContentType.JSON)
                 .body(body)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         final String claimDeadlineStr = given()
-                .when().get("/workitems/" + id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .extract().path("claimDeadline");
 
@@ -94,12 +94,12 @@ class BusinessHoursIntegrationTest {
         final String id = given()
                 .contentType(ContentType.JSON)
                 .body(body)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         final String expiresAtStr = given()
-                .when().get("/workitems/" + id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .extract().path("expiresAt");
 
@@ -121,7 +121,7 @@ class BusinessHoursIntegrationTest {
                         "types", List.of("bh-test"),
                         "createdBy", "test",
                         "defaultExpiryBusinessHours", 8))
-                .when().post("/workitem-templates")
+                .when().post("/api/work/templates/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
@@ -129,12 +129,12 @@ class BusinessHoursIntegrationTest {
         final String wiId = given()
                 .contentType(ContentType.JSON)
                 .body(Map.of("createdBy", "test"))
-                .when().post("/workitem-templates/" + tmplId + "/instantiate")
+                .when().post("/api/work/templates/instantiate/" + tmplId)
                 .then().statusCode(201)
                 .extract().path("id");
 
         final String expiresAtStr = given()
-                .when().get("/workitems/" + wiId)
+                .when().get("/api/work/items/get-by-id/" + wiId)
                 .then().statusCode(200)
                 .extract().path("expiresAt");
 
@@ -155,12 +155,12 @@ class BusinessHoursIntegrationTest {
                         "types", List.of("test"),
                         "createdBy", "test",
                         "expiresAtBusinessHours", 8))
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         final Instant bhExpiresAt = Instant.parse(given()
-                .when().get("/workitems/" + id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .extract().path("expiresAt").toString());
 

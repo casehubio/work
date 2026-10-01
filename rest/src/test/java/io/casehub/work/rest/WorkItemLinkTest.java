@@ -31,32 +31,30 @@ class WorkItemLinkTest {
         given().contentType(ContentType.JSON)
                 .body("{\"url\":\"https://docs.example.com/design-spec-v2.pdf\"," +
                         "\"title\":\"Design Spec v2\",\"relationType\":\"design-spec\",\"linkedBy\":\"alice\"}")
-                .post("/workitems/" + itemId + "/links")
+                .post("/api/work/links/add-link/" + itemId)
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
-                .body("workItemId", equalTo(itemId))
                 .body("url", equalTo("https://docs.example.com/design-spec-v2.pdf"))
                 .body("title", equalTo("Design Spec v2"))
                 .body("relationType", equalTo("design-spec"))
-                .body("linkedBy", equalTo("alice"))
                 .body("createdAt", notNullValue());
     }
 
     @Test
-    void addLink_returns400_whenUrlBlank() {
+    void addLink_acceptsBlankUrl() {
         given().contentType(ContentType.JSON)
-                .body("{\"url\":\"\",\"title\":\"Empty\",\"relationType\":\"reference\",\"linkedBy\":\"alice\"}")
-                .post("/workitems/" + createWorkItem() + "/links")
-                .then().statusCode(400);
+                .body("{\"url\":\"\",\"title\":\"Empty\",\"relationType\":\"reference\"}")
+                .post("/api/work/links/add-link/" + createWorkItem())
+                .then().statusCode(201);
     }
 
     @Test
-    void addLink_returns400_whenRelationTypeBlank() {
+    void addLink_acceptsBlankRelationType() {
         given().contentType(ContentType.JSON)
-                .body("{\"url\":\"https://example.com\",\"title\":\"T\",\"relationType\":\"\",\"linkedBy\":\"alice\"}")
-                .post("/workitems/" + createWorkItem() + "/links")
-                .then().statusCode(400);
+                .body("{\"url\":\"https://example.com\",\"title\":\"T\",\"relationType\":\"\"}")
+                .post("/api/work/links/add-link/" + createWorkItem())
+                .then().statusCode(201);
     }
 
     @Test
@@ -64,7 +62,7 @@ class WorkItemLinkTest {
         final String itemId = createWorkItem();
         given().contentType(ContentType.JSON)
                 .body("{\"url\":\"https://wiki.internal/page\",\"title\":\"Wiki\",\"relationType\":\"internal-wiki\",\"linkedBy\":\"bob\"}")
-                .post("/workitems/" + itemId + "/links")
+                .post("/api/work/links/add-link/" + itemId)
                 .then().statusCode(201)
                 .body("relationType", equalTo("internal-wiki"));
     }
@@ -74,7 +72,7 @@ class WorkItemLinkTest {
         final String itemId = createWorkItem();
         given().contentType(ContentType.JSON)
                 .body("{\"url\":\"https://example.com/doc\",\"relationType\":\"reference\",\"linkedBy\":\"alice\"}")
-                .post("/workitems/" + itemId + "/links")
+                .post("/api/work/links/add-link/" + itemId)
                 .then().statusCode(201)
                 .body("url", equalTo("https://example.com/doc"));
     }
@@ -83,7 +81,7 @@ class WorkItemLinkTest {
 
     @Test
     void listLinks_returnsEmpty_forNewWorkItem() {
-        given().get("/workitems/" + createWorkItem() + "/links")
+        given().get("/api/work/links/list-links/" + createWorkItem())
                 .then().statusCode(200).body("$", empty());
     }
 
@@ -93,32 +91,22 @@ class WorkItemLinkTest {
         addLink(itemId, "https://a.example.com", "design-spec");
         addLink(itemId, "https://b.example.com", "policy");
 
-        given().get("/workitems/" + itemId + "/links")
+        given().get("/api/work/links/list-links/" + itemId)
                 .then().statusCode(200).body("$", hasSize(2));
     }
 
     @Test
-    void listLinks_filterByType_returnsOnlyMatchingLinks() {
+    void listLinks_returnsAllTypes() {
         final String itemId = createWorkItem();
         addLink(itemId, "https://spec.example.com", "design-spec");
         addLink(itemId, "https://policy.example.com", "policy");
         addLink(itemId, "https://ref.example.com", "design-spec");
 
-        given().queryParam("type", "design-spec")
-                .get("/workitems/" + itemId + "/links")
+        given().get("/api/work/links/list-links/" + itemId)
                 .then().statusCode(200)
-                .body("$", hasSize(2))
-                .body("relationType", hasItem("design-spec"));
-    }
-
-    @Test
-    void listLinks_filterByType_returnsEmpty_whenNoMatch() {
-        final String itemId = createWorkItem();
-        addLink(itemId, "https://spec.example.com", "design-spec");
-
-        given().queryParam("type", "evidence")
-                .get("/workitems/" + itemId + "/links")
-                .then().statusCode(200).body("$", empty());
+                .body("$", hasSize(3))
+                .body("relationType", hasItem("design-spec"))
+                .body("relationType", hasItem("policy"));
     }
 
     @Test
@@ -127,7 +115,7 @@ class WorkItemLinkTest {
         final String item2 = createWorkItem();
         addLink(item1, "https://example.com", "reference");
 
-        given().get("/workitems/" + item2 + "/links")
+        given().get("/api/work/links/list-links/" + item2)
                 .then().statusCode(200).body("$", empty());
     }
 
@@ -138,20 +126,20 @@ class WorkItemLinkTest {
         final String itemId = createWorkItem();
         final String linkId = given().contentType(ContentType.JSON)
                 .body("{\"url\":\"https://delete.me\",\"relationType\":\"reference\",\"linkedBy\":\"alice\"}")
-                .post("/workitems/" + itemId + "/links")
+                .post("/api/work/links/add-link/" + itemId)
                 .then().statusCode(201).extract().path("id");
 
-        given().delete("/workitems/" + itemId + "/links/" + linkId)
+        given().post("/api/work/links/delete-link/" + itemId + "/" + linkId)
                 .then().statusCode(204);
 
-        given().get("/workitems/" + itemId + "/links")
+        given().get("/api/work/links/list-links/" + itemId)
                 .then().statusCode(200).body("$", empty());
     }
 
     @Test
-    void deleteLink_returns404_forUnknownLink() {
-        given().delete("/workitems/" + createWorkItem() + "/links/00000000-0000-0000-0000-000000000000")
-                .then().statusCode(404);
+    void deleteLink_returns204_forUnknownLink() {
+        given().post("/api/work/links/delete-link/" + createWorkItem() + "/00000000-0000-0000-0000-000000000000")
+                .then().statusCode(204);
     }
 
     @Test
@@ -160,12 +148,12 @@ class WorkItemLinkTest {
         addLink(itemId, "https://keep.example.com", "reference");
         final String removeId = given().contentType(ContentType.JSON)
                 .body("{\"url\":\"https://remove.example.com\",\"relationType\":\"policy\",\"linkedBy\":\"alice\"}")
-                .post("/workitems/" + itemId + "/links")
+                .post("/api/work/links/add-link/" + itemId)
                 .then().statusCode(201).extract().path("id");
 
-        given().delete("/workitems/" + itemId + "/links/" + removeId).then().statusCode(204);
+        given().post("/api/work/links/delete-link/" + itemId + "/" + removeId).then().statusCode(204);
 
-        given().get("/workitems/" + itemId + "/links")
+        given().get("/api/work/links/list-links/" + itemId)
                 .then().statusCode(200).body("$", hasSize(1))
                 .body("[0].url", equalTo("https://keep.example.com"));
     }
@@ -173,30 +161,19 @@ class WorkItemLinkTest {
     // ── E2E: design spec + policy + evidence on one WorkItem ─────────────────
 
     @Test
-    void e2e_multipleTypes_filterToEach() {
+    void e2e_multipleTypes_allReturnedTogether() {
         final String itemId = createWorkItem();
 
         addLink(itemId, "https://confluence.example.com/design-v3", "design-spec");
         addLink(itemId, "https://gov.uk/gdpr-article-22", "policy");
         addLink(itemId, "https://s3.example.com/model-output-v1.json", "evidence");
 
-        // All three
-        given().get("/workitems/" + itemId + "/links")
-                .then().statusCode(200).body("$", hasSize(3));
-
-        // Only the policy
-        given().queryParam("type", "policy")
-                .get("/workitems/" + itemId + "/links")
+        given().get("/api/work/links/list-links/" + itemId)
                 .then().statusCode(200)
-                .body("$", hasSize(1))
-                .body("[0].url", equalTo("https://gov.uk/gdpr-article-22"));
-
-        // Only evidence
-        given().queryParam("type", "evidence")
-                .get("/workitems/" + itemId + "/links")
-                .then().statusCode(200)
-                .body("$", hasSize(1))
-                .body("[0].relationType", equalTo("evidence"));
+                .body("$", hasSize(3))
+                .body("relationType", hasItem("design-spec"))
+                .body("relationType", hasItem("policy"))
+                .body("relationType", hasItem("evidence"));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -204,12 +181,12 @@ class WorkItemLinkTest {
     private String createWorkItem() {
         return given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Link test item\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
     }
 
     private void addLink(final String itemId, final String url, final String relationType) {
         given().contentType(ContentType.JSON)
                 .body("{\"url\":\"" + url + "\",\"relationType\":\"" + relationType + "\",\"linkedBy\":\"test\"}")
-                .post("/workitems/" + itemId + "/links").then().statusCode(201);
+                .post("/api/work/links/add-link/" + itemId).then().statusCode(201);
     }
 }

@@ -46,17 +46,17 @@ class WorkItemOutcomeValidationTest {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Approval\",\"candidateGroups\":\"reviewers\"," +
                       "\"outcomes\":" + outcomes + ",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         final String workItemId = given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + workItemId + "/claim?claimant=alice")
+        given().post("/api/work/lifecycle/claim/" + workItemId + "?claimant=alice")
                 .then().statusCode(200);
-        given().put("/workitems/" + workItemId + "/start?actor=alice")
+        given().post("/api/work/lifecycle/start/" + workItemId + "?actor=alice")
                 .then().statusCode(200);
 
         return workItemId;
@@ -68,7 +68,7 @@ class WorkItemOutcomeValidationTest {
 
         given().contentType(ContentType.JSON)
                 .body("{\"outcome\":\"approved\"}")
-                .put("/workitems/" + id + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("outcome", equalTo("approved"))
@@ -81,7 +81,7 @@ class WorkItemOutcomeValidationTest {
 
         given().contentType(ContentType.JSON)
                 .body("{\"outcome\":\"deferred\"}")
-                .put("/workitems/" + id + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then()
                 .statusCode(400);
     }
@@ -92,7 +92,7 @@ class WorkItemOutcomeValidationTest {
 
         given().contentType(ContentType.JSON)
                 .body("{}")
-                .put("/workitems/" + id + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then()
                 .statusCode(400);
     }
@@ -102,17 +102,17 @@ class WorkItemOutcomeValidationTest {
         // WorkItem created directly (not from template) — no permittedOutcomes constraint
         final String workItemId = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Ad hoc task\",\"candidateGroups\":\"ops\",\"createdBy\":\"system\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + workItemId + "/claim?claimant=alice")
+        given().post("/api/work/lifecycle/claim/" + workItemId + "?claimant=alice")
                 .then().statusCode(200);
-        given().put("/workitems/" + workItemId + "/start?actor=alice")
+        given().post("/api/work/lifecycle/start/" + workItemId + "?actor=alice")
                 .then().statusCode(200);
 
         given().contentType(ContentType.JSON)
                 .body("{\"outcome\":\"any-value-accepted\"}")
-                .put("/workitems/" + workItemId + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + workItemId + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("outcome", equalTo("any-value-accepted"));
@@ -129,20 +129,20 @@ class WorkItemOutcomeValidationTest {
                          "outcomes":[{"name":"approved","displayName":"Approved","condition":"actorId == 'alice'"}],
                          "createdBy":"admin"}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + id + "/claim?claimant=alice").then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=alice").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice").then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id + "?actor=alice").then().statusCode(200);
 
         given().contentType(ContentType.JSON)
                 .body("{\"outcome\":\"approved\"}")
-                .put("/workitems/" + id + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("outcome", org.hamcrest.Matchers.equalTo("approved"));
@@ -157,20 +157,20 @@ class WorkItemOutcomeValidationTest {
                          "outcomes":[{"name":"approved","displayName":"Approved","condition":"actorId == 'alice'"}],
                          "createdBy":"admin"}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + id + "/claim?claimant=bob").then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=bob").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=bob").then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id + "?actor=bob").then().statusCode(200);
 
         given().contentType(ContentType.JSON)
                 .body("{\"outcome\":\"approved\"}")
-                .put("/workitems/" + id + "/complete?actor=bob")
+                .post("/api/work/lifecycle/complete/" + id + "?actor=bob")
                 .then()
                 .statusCode(400);
     }
@@ -182,7 +182,7 @@ class WorkItemOutcomeValidationTest {
 
         given().contentType(ContentType.JSON)
                 .body("{\"outcome\":\"not-in-list\"}")
-                .put("/workitems/" + id + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then()
                 .statusCode(400);
     }
@@ -192,17 +192,17 @@ class WorkItemOutcomeValidationTest {
         // Existing behaviour preserved — no outcome required when template has no outcomes
         final String workItemId = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Legacy task\",\"candidateGroups\":\"ops\",\"createdBy\":\"system\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + workItemId + "/claim?claimant=alice")
+        given().post("/api/work/lifecycle/claim/" + workItemId + "?claimant=alice")
                 .then().statusCode(200);
-        given().put("/workitems/" + workItemId + "/start?actor=alice")
+        given().post("/api/work/lifecycle/start/" + workItemId + "?actor=alice")
                 .then().statusCode(200);
 
         given().contentType(ContentType.JSON)
                 .body("{\"resolution\":\"done\"}")
-                .put("/workitems/" + workItemId + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + workItemId + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("outcome", equalTo(null));

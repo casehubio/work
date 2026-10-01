@@ -31,7 +31,7 @@ class WorkItemExcludedUsersTest {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Approval\",\"candidateGroups\":\"reviewers\"," +
                       "\"excludedUsers\":\"alice,bob\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(201)
                 .body("excludedUsers", equalTo("alice,bob"));
@@ -42,12 +42,12 @@ class WorkItemExcludedUsersTest {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Exclusion Template\",\"candidateGroups\":\"reviewers\"," +
                       "\"excludedUsers\":\"alice\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("excludedUsers", equalTo("alice"));
@@ -57,12 +57,12 @@ class WorkItemExcludedUsersTest {
     void instantiateTemplate_withoutExcludedUsers_workItemExcludedUsersIsNull() {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"No Exclusion\",\"candidateGroups\":\"ops\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("excludedUsers", nullValue());
@@ -75,12 +75,12 @@ class WorkItemExcludedUsersTest {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Excl Override\",\"candidateGroups\":\"reviewers\"," +
                       "\"excludedUsers\":\"alice\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"assigneeId\":\"alice\",\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(400);
     }
@@ -90,12 +90,12 @@ class WorkItemExcludedUsersTest {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Excl Override OK\",\"candidateGroups\":\"reviewers\"," +
                       "\"excludedUsers\":\"alice\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"assigneeId\":\"bob\",\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201);
     }
@@ -105,14 +105,14 @@ class WorkItemExcludedUsersTest {
     @Test
     void claim_byExcludedUser_returns409() {
         final String id = workItemWithExcludedUser("alice");
-        given().put("/workitems/" + id + "/claim?claimant=alice")
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(409);
     }
 
     @Test
     void claim_byNonExcludedUser_returns200() {
         final String id = workItemWithExcludedUser("alice");
-        given().put("/workitems/" + id + "/claim?claimant=bob")
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=bob")
                 .then().statusCode(200);
     }
 
@@ -123,7 +123,7 @@ class WorkItemExcludedUsersTest {
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Conflict task\",\"candidateGroups\":\"ops\"," +
                       "\"assigneeId\":\"alice\",\"excludedUsers\":\"alice\",\"createdBy\":\"system\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then()
                 .statusCode(400);
     }
@@ -133,7 +133,7 @@ class WorkItemExcludedUsersTest {
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"OK task\",\"candidateGroups\":\"ops\"," +
                       "\"assigneeId\":\"bob\",\"excludedUsers\":\"alice\",\"createdBy\":\"system\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then()
                 .statusCode(201);
     }
@@ -143,10 +143,10 @@ class WorkItemExcludedUsersTest {
     @Test
     void delegate_toExcludedUser_returns400() {
         final String id = workItemWithExcludedUser("alice");
-        given().put("/workitems/" + id + "/claim?claimant=bob").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=bob").then().statusCode(200);
         given().contentType(ContentType.JSON)
                 .body("{\"to\":\"alice\"}")
-                .put("/workitems/" + id + "/delegate?actor=bob")
+                .post("/api/work/lifecycle/delegate/" + id + "?actor=bob")
                 .then()
                 .statusCode(400);
     }
@@ -154,10 +154,10 @@ class WorkItemExcludedUsersTest {
     @Test
     void delegate_toNonExcludedUser_returns200() {
         final String id = workItemWithExcludedUser("alice");
-        given().put("/workitems/" + id + "/claim?claimant=bob").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=bob").then().statusCode(200);
         given().contentType(ContentType.JSON)
                 .body("{\"to\":\"carol\"}")
-                .put("/workitems/" + id + "/delegate?actor=bob")
+                .post("/api/work/lifecycle/delegate/" + id + "?actor=bob")
                 .then()
                 .statusCode(200);
     }
@@ -168,9 +168,9 @@ class WorkItemExcludedUsersTest {
     void claim_noExclusion_whenExcludedUsersNull_returns200() {
         final String workItemId = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Open task\",\"candidateGroups\":\"ops\",\"createdBy\":\"system\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201).extract().path("id");
-        given().put("/workitems/" + workItemId + "/claim?claimant=alice")
+        given().post("/api/work/lifecycle/claim/" + workItemId + "?claimant=alice")
                 .then().statusCode(200);
     }
 
@@ -185,13 +185,13 @@ class WorkItemExcludedUsersTest {
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Conflict task\",\"candidateGroups\":\"ops\"," +
                       "\"assigneeId\":\"alice\",\"excludedUsers\":\"alice\",\"createdBy\":\"" + actor + "\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then()
                 .statusCode(400);
 
         given().queryParam("event", "CREATE_DENIED")
                 .queryParam("actorId", actor)
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries.size()", org.hamcrest.Matchers.greaterThan(0))
@@ -204,10 +204,10 @@ class WorkItemExcludedUsersTest {
     @Test
     void claim_byExcludedUser_createsClaimDeniedAuditEntry() {
         final String id = workItemWithExcludedUser("alice");
-        given().put("/workitems/" + id + "/claim?claimant=alice")
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(409);
 
-        given().get("/workitems/" + id)
+        given().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .body("auditTrail.find { it.event == 'CLAIM_DENIED' }.actor", equalTo("alice"))
                 .body("auditTrail.find { it.event == 'CLAIM_DENIED' }.detail", notNullValue());
@@ -217,10 +217,10 @@ class WorkItemExcludedUsersTest {
     void claim_byExcludedUser_auditEntryPersistsDespiteRejection() {
         // Verifies the blocked attempt audit entry is durably persisted and readable after a rejected claim.
         final String id = workItemWithExcludedUser("alice");
-        given().put("/workitems/" + id + "/claim?claimant=alice").then().statusCode(409);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice").then().statusCode(409);
 
         // WorkItem must still be PENDING (claim was rejected)
-        given().get("/workitems/" + id)
+        given().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .body("status", equalTo("PENDING"))
                 .body("auditTrail.collect { it.event }.flatten()", org.hamcrest.Matchers.hasItem("CLAIM_DENIED"));
@@ -229,14 +229,14 @@ class WorkItemExcludedUsersTest {
     @Test
     void delegate_toExcludedUser_createsDelegateDeniedAuditEntry() {
         final String id = workItemWithExcludedUser("alice");
-        given().put("/workitems/" + id + "/claim?claimant=bob").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=bob").then().statusCode(200);
 
         given().contentType(ContentType.JSON)
                 .body("{\"to\":\"alice\"}")
-                .put("/workitems/" + id + "/delegate?actor=bob")
+                .post("/api/work/lifecycle/delegate/" + id + "?actor=bob")
                 .then().statusCode(400);
 
-        given().get("/workitems/" + id)
+        given().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .body("auditTrail.find { it.event == 'DELEGATE_DENIED' }.actor", equalTo("bob"))
                 .body("auditTrail.find { it.event == 'DELEGATE_DENIED' }.detail", org.hamcrest.Matchers.containsString("alice"));
@@ -245,9 +245,9 @@ class WorkItemExcludedUsersTest {
     @Test
     void claim_byAllowedUser_doesNotCreateClaimDeniedEntry() {
         final String id = workItemWithExcludedUser("alice");
-        given().put("/workitems/" + id + "/claim?claimant=bob").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=bob").then().statusCode(200);
 
-        given().get("/workitems/" + id)
+        given().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .body("auditTrail.collect { it.event }.flatten()", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("CLAIM_DENIED")));
     }
@@ -258,7 +258,7 @@ class WorkItemExcludedUsersTest {
         return given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Exclusion test\",\"candidateGroups\":\"ops\"," +
                       "\"excludedUsers\":\"" + excludedUser + "\",\"createdBy\":\"system\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201).extract().path("id");
     }
 }

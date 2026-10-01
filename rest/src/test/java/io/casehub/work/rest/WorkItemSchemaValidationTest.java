@@ -39,7 +39,7 @@ class WorkItemSchemaValidationTest {
 
         given().contentType(ContentType.JSON)
                 .body("{\"resolution\":\"{\\\"decision\\\":\\\"approved\\\"}\",\"outcome\":null}")
-                .put("/workitems/" + id + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then()
                 .statusCode(200);
     }
@@ -50,7 +50,7 @@ class WorkItemSchemaValidationTest {
 
         given().contentType(ContentType.JSON)
                 .body("{\"resolution\":\"{\\\"wrong_field\\\":\\\"value\\\"}\"}")
-                .put("/workitems/" + id + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then()
                 .statusCode(400)
                 .body("error", containsString("outputDataSchema"));
@@ -62,7 +62,7 @@ class WorkItemSchemaValidationTest {
 
         given().contentType(ContentType.JSON)
                 .body("{}")
-                .put("/workitems/" + id + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then()
                 .statusCode(200);
     }
@@ -73,7 +73,7 @@ class WorkItemSchemaValidationTest {
 
         given().contentType(ContentType.JSON)
                 .body("{\"resolution\":\"{\\\"anything\\\":true}\"}")
-                .put("/workitems/" + id + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then()
                 .statusCode(200);
     }
@@ -87,12 +87,12 @@ class WorkItemSchemaValidationTest {
                       "\"inputDataSchema\":" + INPUT_SCHEMA + "," +
                       "\"defaultPayload\":\"{\\\"requestor\\\":\\\"eng-team\\\"}\"," +
                       "\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201);
     }
@@ -104,12 +104,12 @@ class WorkItemSchemaValidationTest {
                       "\"inputDataSchema\":" + INPUT_SCHEMA + "," +
                       "\"defaultPayload\":\"{\\\"wrong_field\\\":\\\"value\\\"}\"," +
                       "\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(400);
     }
@@ -119,12 +119,12 @@ class WorkItemSchemaValidationTest {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Null Payload Template\",\"candidateGroups\":\"ops\"," +
                       "\"inputDataSchema\":" + INPUT_SCHEMA + ",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201);
     }
@@ -133,7 +133,7 @@ class WorkItemSchemaValidationTest {
     void directCreate_noTemplate_noSchemaValidation() {
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Ad hoc\",\"candidateGroups\":\"ops\",\"createdBy\":\"system\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then()
                 .statusCode(201);
     }
@@ -147,16 +147,16 @@ class WorkItemSchemaValidationTest {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Completion Schema\",\"candidateGroups\":\"reviewers\"" +
                       schemaJson + ",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + id + "/claim?claimant=alice").then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=alice").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice").then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id + "?actor=alice").then().statusCode(200);
         return id;
     }
 }

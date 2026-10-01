@@ -32,7 +32,7 @@ class SpawnE2ETest {
 
         final Response spawnResp = given()
                 .contentType(ContentType.JSON).body(spawnBody)
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(201)
                 .extract().response();
 
@@ -50,18 +50,18 @@ class SpawnE2ETest {
         spawnedChildren.forEach(child -> {
             final String childId = (String) child.get("workItemId");
             final String storedRef = given()
-                    .when().get("/workitems/" + childId)
+                    .when().get("/api/work/items/get-by-id/" + childId)
                     .then().statusCode(200).extract().path("callerRef");
             assertThat(storedRef).isEqualTo((String) child.get("callerRef"));
         });
 
         // PART_OF links exist
-        assertThat(given().when().get("/workitems/" + parentId + "/children")
+        assertThat(given().when().get("/api/work/relations/children/" + parentId)
                 .then().statusCode(200).extract().jsonPath().getList("$")).hasSize(3);
 
         // Parent has SPAWNED in audit trail (embedded in GET /workitems/{id} response)
         final List<Map<String, Object>> auditTrail = given()
-                .when().get("/workitems/" + parentId)
+                .when().get("/api/work/items/get-by-id/" + parentId)
                 .then().statusCode(200).extract().jsonPath().getList("auditTrail");
         assertThat(auditTrail.stream().map(a -> (String) a.get("event")).toList()).contains("SPAWNED");
     }
@@ -75,7 +75,7 @@ class SpawnE2ETest {
                 .contentType(ContentType.JSON)
                 .body(Map.of("idempotencyKey", "nest-1-" + UUID.randomUUID(),
                         "children", List.of(Map.of("templateId", tmpl))))
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(201).extract().response();
 
         final String childId = firstSpawn.jsonPath().getString("children[0].workItemId");
@@ -85,29 +85,29 @@ class SpawnE2ETest {
                 .contentType(ContentType.JSON)
                 .body(Map.of("idempotencyKey", "nest-2-" + UUID.randomUUID(),
                         "children", List.of(Map.of("templateId", tmpl))))
-                .when().post("/workitems/" + childId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + childId)
                 .then().statusCode(201);
 
         // Parent sees only direct child
-        assertThat(given().when().get("/workitems/" + parentId + "/children")
+        assertThat(given().when().get("/api/work/relations/children/" + parentId)
                 .then().statusCode(200).extract().jsonPath().getList("$")).hasSize(1);
 
         // Child sees only grandchild
-        assertThat(given().when().get("/workitems/" + childId + "/children")
+        assertThat(given().when().get("/api/work/relations/children/" + childId)
                 .then().statusCode(200).extract().jsonPath().getList("$")).hasSize(1);
     }
 
     private String createTemplate(final String name) {
         return given().contentType(ContentType.JSON)
                 .body(Map.of("name", name, "typePaths", "[\"" + name + "\"]", "createdBy", "test"))
-                .when().post("/workitem-templates")
+                .when().post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
     }
 
     private String createWorkItem(final String category) {
         return given().contentType(ContentType.JSON)
                 .body(Map.of("title", "parent-" + category, "types", List.of(category), "createdBy", "test"))
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201).extract().path("id");
     }
 }

@@ -43,7 +43,7 @@ class WorkItemTemplatePatchTest {
                          "allowSameAssignee":true,
                          "createdBy":"admin"}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
     }
 
@@ -55,7 +55,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"typePaths\":\"[\\\"compliance\\\"]\"}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("typePaths", equalTo("[\"compliance\"]"))
@@ -69,7 +69,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"description\":\"Updated description\"}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("description", equalTo("Updated description"));
@@ -81,7 +81,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"description\":null}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("description", nullValue());
@@ -93,7 +93,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("name", equalTo("Template Alpha"))
@@ -117,7 +117,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"defaultExpiryHours\":72}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("defaultExpiryHours", equalTo(72));
@@ -129,7 +129,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"defaultClaimHours\":null}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("defaultClaimHours", nullValue());
@@ -143,7 +143,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"allowSameAssignee\":false}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("allowSameAssignee", equalTo(false));
@@ -155,7 +155,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"allowSameAssignee\":null}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("allowSameAssignee", nullValue());
@@ -169,7 +169,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"name\":null}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(400);
     }
@@ -179,12 +179,12 @@ class WorkItemTemplatePatchTest {
         createTemplate(); // "Template Alpha"
         final String id2 = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Template Beta\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(MERGE_PATCH)
                 .body("{\"name\":\"Template Alpha\"}")
-                .patch("/workitem-templates/" + id2)
+                .post("/api/work/templates/update/" + id2)
                 .then()
                 .statusCode(409);
     }
@@ -195,7 +195,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"name\":\"Template Alpha\"}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("name", equalTo("Template Alpha"));
@@ -209,7 +209,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"priority\":\"URGENT\"}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("priority", equalTo("URGENT"));
@@ -221,7 +221,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"priority\":\"NOT_A_PRIORITY\"}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(400);
     }
@@ -232,7 +232,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"priority\":null}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("priority", nullValue());
@@ -251,7 +251,7 @@ class WorkItemTemplatePatchTest {
                           {"name":"rejected","displayName":"Rejected","condition":"reason != null"}
                         ]}
                         """)
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("outcomes", hasSize(2))
@@ -268,13 +268,13 @@ class WorkItemTemplatePatchTest {
                         {"name":"Template With Outcomes","createdBy":"admin",
                          "outcomes":[{"name":"approved","displayName":"Approved","condition":null}]}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         // Then clear via PATCH
         given().contentType(MERGE_PATCH)
                 .body("{\"outcomes\":null}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("outcomes", nullValue());
@@ -288,7 +288,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"inputDataSchema\":{\"type\":\"object\",\"required\":[\"name\"]}}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("inputDataSchema", notNullValue());
@@ -300,7 +300,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"inputDataSchema\":null}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("inputDataSchema", nullValue());
@@ -312,7 +312,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"inputDataSchema\":[\"not\",\"an\",\"object\"]}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(400);
     }
@@ -323,7 +323,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"outputDataSchema\":\"just a string\"}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(400);
     }
@@ -336,7 +336,7 @@ class WorkItemTemplatePatchTest {
 
         given().contentType(MERGE_PATCH)
                 .body("{\"createdBy\":\"hacker\",\"description\":\"changed\"}")
-                .patch("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("createdBy", equalTo("admin"))       // unchanged

@@ -20,7 +20,7 @@ class DynamicFilterRegistryTest {
                       "conditionLanguage":"jexl","conditionExpression":"category == 'loan'",
                       "triggerEvents":"ADD",
                       "actions":[{"type":"Add","label":"loan/intake"}]}""")
-               .post("/label-rules")
+               .post("/api/work/label-rules/create")
                .then().statusCode(201)
                .body("id", notNullValue())
                .body("name", equalTo("test/dynamic-crud"))
@@ -33,9 +33,9 @@ class DynamicFilterRegistryTest {
         given().contentType(ContentType.JSON)
                .body("{\"name\":\"" + name + "\",\"conditionLanguage\":\"jexl\"," +
                      "\"conditionExpression\":\"true\",\"actions\":[]}")
-               .post("/label-rules").then().statusCode(201);
+               .post("/api/work/label-rules/create").then().statusCode(201);
 
-        given().get("/label-rules")
+        given().get("/api/work/label-rules/list")
                .then().statusCode(200)
                .body("name", hasItem(name));
     }
@@ -45,9 +45,9 @@ class DynamicFilterRegistryTest {
         final String id = given().contentType(ContentType.JSON)
                                  .body("{\"name\":\"delete-test-" + System.nanoTime() + "\",\"conditionLanguage\":\"jexl\"," +
                                        "\"conditionExpression\":\"true\",\"actions\":[]}")
-                                 .post("/label-rules").then().statusCode(201).extract().path("id");
+                                 .post("/api/work/label-rules/create").then().statusCode(201).extract().path("id");
 
-        given().delete("/label-rules/" + id).then().statusCode(204);
+        given().post("/api/work/label-rules/delete/" + id).then().statusCode(204);
     }
 
     @Test
@@ -60,7 +60,7 @@ class DynamicFilterRegistryTest {
     void createRule_returns400_whenNameMissing() {
         given().contentType(ContentType.JSON)
                .body("{\"conditionLanguage\":\"jexl\",\"conditionExpression\":\"true\",\"actions\":[]}")
-               .post("/label-rules")
+               .post("/api/work/label-rules/create")
                .then().statusCode(400);
     }
 
@@ -68,7 +68,7 @@ class DynamicFilterRegistryTest {
     void createRule_returns400_whenConditionMissing() {
         given().contentType(ContentType.JSON)
                .body("{\"name\":\"bad-rule\",\"conditionLanguage\":\"jexl\",\"actions\":[]}")
-               .post("/label-rules")
+               .post("/api/work/label-rules/create")
                .then().statusCode(400);
     }
 
@@ -76,7 +76,7 @@ class DynamicFilterRegistryTest {
     void createRule_returns400_whenLanguageMissing() {
         given().contentType(ContentType.JSON)
                .body("{\"name\":\"bad-rule\",\"conditionExpression\":\"true\",\"actions\":[]}")
-               .post("/label-rules")
+               .post("/api/work/label-rules/create")
                .then().statusCode(400);
     }
 }

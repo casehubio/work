@@ -31,7 +31,7 @@ class WorkItemSpawnResourceTest {
         final Response response = given()
                 .contentType(ContentType.JSON)
                 .body(spawnBody)
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(201)
                 .extract().response();
 
@@ -42,14 +42,14 @@ class WorkItemSpawnResourceTest {
         assertThat(children.get(1).get("callerRef")).isEqualTo("case:l1/pi:f2");
 
         final List<Map<String, Object>> childList = given()
-                .when().get("/workitems/" + parentId + "/children")
+                .when().get("/api/work/relations/children/" + parentId)
                 .then().statusCode(200)
                 .extract().jsonPath().getList("$");
         assertThat(childList).hasSize(2);
 
         final String child1Id = (String) children.get(0).get("workItemId");
         final String fetchedRef = given()
-                .when().get("/workitems/" + child1Id)
+                .when().get("/api/work/items/get-by-id/" + child1Id)
                 .then().statusCode(200)
                 .extract().path("callerRef");
         assertThat(fetchedRef).isEqualTo("case:l1/pi:c1");
@@ -72,7 +72,7 @@ class WorkItemSpawnResourceTest {
         given()
                 .contentType(ContentType.JSON)
                 .body(Map.of("idempotencyKey", "key-1", "children", List.of()))
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(400);
     }
 
@@ -83,7 +83,7 @@ class WorkItemSpawnResourceTest {
                 .contentType(ContentType.JSON)
                 .body(Map.of("children", List.of(
                         Map.of("templateId", UUID.randomUUID().toString()))))
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(400);
     }
 
@@ -95,7 +95,7 @@ class WorkItemSpawnResourceTest {
                 .body(Map.of(
                         "idempotencyKey", "key-" + UUID.randomUUID(),
                         "children", List.of(Map.of("templateId", UUID.randomUUID().toString()))))
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(422);
     }
 
@@ -109,11 +109,11 @@ class WorkItemSpawnResourceTest {
                 .contentType(ContentType.JSON)
                 .body(Map.of("idempotencyKey", key,
                         "children", List.of(Map.of("templateId", tmplId))))
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(201);
 
         final List<Map<String, Object>> groups = given()
-                .when().get("/workitems/" + parentId + "/spawn-groups")
+                .when().get("/api/work/spawn/list-spawn-groups/" + parentId)
                 .then().statusCode(200)
                 .extract().jsonPath().getList("$");
 
@@ -130,12 +130,12 @@ class WorkItemSpawnResourceTest {
                 .contentType(ContentType.JSON)
                 .body(Map.of("idempotencyKey", "get-test-" + UUID.randomUUID(),
                         "children", List.of(Map.of("templateId", tmplId, "callerRef", "ref-1"))))
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(201)
                 .extract().path("groupId");
 
         final io.restassured.response.Response groupResp = given()
-                .when().get("/spawn-groups/" + groupId)
+                .when().get("/api/work/spawn-groups/get-group/" + groupId)
                 .then().statusCode(200)
                 .extract().response();
 
@@ -148,14 +148,14 @@ class WorkItemSpawnResourceTest {
     private String createTemplate(final String name) {
         return given().contentType(ContentType.JSON)
                 .body(Map.of("name", name, "typePaths", name, "createdBy", "test"))
-                .when().post("/workitem-templates")
+                .when().post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
     }
 
     private String createWorkItem(final String category) {
         return given().contentType(ContentType.JSON)
                 .body(Map.of("title", "parent-" + category, "types", List.of(category), "createdBy", "test"))
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201).extract().path("id");
     }
 }

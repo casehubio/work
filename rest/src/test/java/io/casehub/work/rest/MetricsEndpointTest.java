@@ -44,7 +44,7 @@ class MetricsEndpointTest {
         // Trigger a lifecycle event so the counter exists
         given().contentType(io.restassured.http.ContentType.JSON)
                 .body("{\"title\":\"Metrics test\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201);
+                .post("/api/work/items/create").then().statusCode(201);
 
         given().get("/q/metrics")
                 .then().statusCode(200)

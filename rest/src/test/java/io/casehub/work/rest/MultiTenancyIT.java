@@ -76,7 +76,7 @@ class MultiTenancyIT {
 
         // List as tenant A → contains A, not B
         principal.setTenancyId(TENANT_A);
-        final List<String> idsA = given().get("/workitems")
+        final List<String> idsA = given().get("/api/work/items/list-all")
                 .then().statusCode(200)
                 .extract().jsonPath().getList("id");
         assertThat(idsA).contains(idA);
@@ -84,7 +84,7 @@ class MultiTenancyIT {
 
         // List as tenant B → contains B, not A
         principal.setTenancyId(TENANT_B);
-        final List<String> idsB = given().get("/workitems")
+        final List<String> idsB = given().get("/api/work/items/list-all")
                 .then().statusCode(200)
                 .extract().jsonPath().getList("id");
         assertThat(idsB).contains(idB);
@@ -114,14 +114,14 @@ class MultiTenancyIT {
 
         // Verify audit trail exists as tenant A
         given().queryParam("actorId", actor)
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then().statusCode(200)
                 .body("entries.size()", greaterThanOrEqualTo(1));
 
         // Switch to tenant B → audit query returns empty
         principal.setTenancyId(TENANT_B);
         given().queryParam("actorId", actor)
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then().statusCode(200)
                 .body("entries", empty())
                 .body("total", equalTo(0));
@@ -157,7 +157,7 @@ class MultiTenancyIT {
         principal.setTenancyId(TENANT_A);
         final String templateIdA = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"" + templateName + "\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201)
                 .body("name", equalTo(templateName))
                 .extract().path("id");
@@ -166,7 +166,7 @@ class MultiTenancyIT {
         principal.setTenancyId(TENANT_B);
         final String templateIdB = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"" + templateName + "\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201)
                 .body("name", equalTo(templateName))
                 .extract().path("id");
@@ -176,7 +176,7 @@ class MultiTenancyIT {
 
         // List as tenant A → sees only tenant A's template
         principal.setTenancyId(TENANT_A);
-        final List<String> namesA = given().get("/workitem-templates")
+        final List<String> namesA = given().get("/api/work/templates/list-all")
                 .then().statusCode(200)
                 .extract().jsonPath().getList("id");
         assertThat(namesA).contains(templateIdA);
@@ -184,7 +184,7 @@ class MultiTenancyIT {
 
         // List as tenant B → sees only tenant B's template
         principal.setTenancyId(TENANT_B);
-        final List<String> namesB = given().get("/workitem-templates")
+        final List<String> namesB = given().get("/api/work/templates/list-all")
                 .then().statusCode(200)
                 .extract().jsonPath().getList("id");
         assertThat(namesB).contains(templateIdB);
@@ -196,7 +196,7 @@ class MultiTenancyIT {
         principal.setTenancyId(TENANT_A);
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"mt-cross-check-" + System.nanoTime() + "\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
@@ -317,7 +317,7 @@ class MultiTenancyIT {
         principal.setTenancyId(TENANT_A);
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"mt-delete-guard-" + System.nanoTime() + "\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
@@ -343,7 +343,7 @@ class MultiTenancyIT {
                           "createdBy": "mt-system"
                         }
                         """.formatted(title))
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201)
                 .body("id", notNullValue())
                 .extract().path("id");

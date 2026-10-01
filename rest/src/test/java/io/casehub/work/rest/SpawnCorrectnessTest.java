@@ -25,14 +25,14 @@ class SpawnCorrectnessTest {
                 .contentType(ContentType.JSON)
                 .body(Map.of("idempotencyKey", "dir-" + UUID.randomUUID(),
                         "children", List.of(Map.of("templateId", tmplId))))
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(201).extract().response();
 
         final String childId = spawnResp.jsonPath().getString("children[0].workItemId");
 
         // Child has outgoing PART_OF relation pointing to parent
         final List<Map<String, Object>> outgoing = given()
-                .when().get("/workitems/" + childId + "/relations")
+                .when().get("/api/work/relations/list-outgoing/" + childId)
                 .then().statusCode(200).extract().jsonPath().getList("$");
 
         assertThat(outgoing).anySatisfy(rel -> {
@@ -50,14 +50,14 @@ class SpawnCorrectnessTest {
                 .contentType(ContentType.JSON)
                 .body(Map.of("idempotencyKey", "null-ref-" + UUID.randomUUID(),
                         "children", List.of(Map.of("templateId", tmplId))))
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(201).extract().response();
 
         final String childId = spawnResp.jsonPath().getString("children[0].workItemId");
 
         // callerRef not provided — stored as null (not empty string)
         final Object storedRef = given()
-                .when().get("/workitems/" + childId)
+                .when().get("/api/work/items/get-by-id/" + childId)
                 .then().statusCode(200).extract().path("callerRef");
         assertThat(storedRef).isNull();
     }
@@ -73,14 +73,14 @@ class SpawnCorrectnessTest {
                         "children", List.of(Map.of(
                                 "templateId", tmplId,
                                 "overrides", Map.of("candidateGroups", "fraud-team")))))
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(201).extract().response();
 
         final String childId = spawnResp.jsonPath().getString("children[0].workItemId");
 
         // Overridden candidateGroups on child
         final String candidateGroups = given()
-                .when().get("/workitems/" + childId)
+                .when().get("/api/work/items/get-by-id/" + childId)
                 .then().statusCode(200).extract().path("candidateGroups");
         assertThat(candidateGroups).isEqualTo("fraud-team");
     }
@@ -94,7 +94,7 @@ class SpawnCorrectnessTest {
                 .contentType(ContentType.JSON)
                 .body(Map.of("idempotencyKey", "cycle-" + UUID.randomUUID(),
                         "children", List.of(Map.of("templateId", tmplId))))
-                .when().post("/workitems/" + parentId + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(201).extract().response();
 
         final String childId = spawnResp.jsonPath().getString("children[0].workItemId");
@@ -103,21 +103,21 @@ class SpawnCorrectnessTest {
         given()
                 .contentType(ContentType.JSON)
                 .body(Map.of("targetId", childId, "relationType", "PART_OF", "createdBy", "test"))
-                .when().post("/workitems/" + parentId + "/relations")
+                .when().post("/api/work/relations/add-relation/" + parentId)
                 .then().statusCode(400);
     }
 
     private String createTemplate(final String name) {
         return given().contentType(ContentType.JSON)
                 .body(Map.of("name", name, "typePaths", "[\"" + name + "\"]", "createdBy", "test"))
-                .when().post("/workitem-templates")
+                .when().post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
     }
 
     private String createWorkItem(final String category) {
         return given().contentType(ContentType.JSON)
                 .body(Map.of("title", "p-" + category, "types", List.of(category), "createdBy", "test"))
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201).extract().path("id");
     }
 }

@@ -11,7 +11,7 @@ class PermanentFilterRegistryTest {
 
     @Test
     void listRules_includesPermanentWithSource() {
-        given().get("/label-rules")
+        given().get("/api/work/label-rules/list")
                .then().statusCode(200)
                .body("findAll { it.source == 'permanent' }.name", hasItem("test/apply-label"));
     }

@@ -22,7 +22,7 @@ class WorkItemBulkTest {
         final List<String> ids = createItems(3);
         given().contentType(ContentType.JSON)
                 .body(bulkBody("claim", ids, "alice", null))
-                .post("/workitems/bulk")
+                .post("/api/work/bulk/bulk")
                 .then().statusCode(200)
                 .body("$", hasSize(3))
                 .body("[0].status", equalTo("ok"))
@@ -30,7 +30,7 @@ class WorkItemBulkTest {
                 .body("[2].status", equalTo("ok"));
 
         // Verify actually claimed
-        ids.forEach(id -> given().get("/workitems/" + id).then().body("status", equalTo("ASSIGNED")));
+        ids.forEach(id -> given().get("/api/work/items/get-by-id/" + id).then().body("status", equalTo("ASSIGNED")));
     }
 
     @Test
@@ -41,7 +41,7 @@ class WorkItemBulkTest {
 
         given().contentType(ContentType.JSON)
                 .body(bulkBody("claim", ids, "alice", null))
-                .post("/workitems/bulk")
+                .post("/api/work/bulk/bulk")
                 .then().statusCode(200)
                 .body("$", hasSize(2))
                 .body("[0].status", equalTo("error")) // already claimed
@@ -55,12 +55,12 @@ class WorkItemBulkTest {
         final List<String> ids = createItems(2);
         given().contentType(ContentType.JSON)
                 .body(bulkBody("cancel", ids, "admin", "batch cancel"))
-                .post("/workitems/bulk")
+                .post("/api/work/bulk/bulk")
                 .then().statusCode(200)
                 .body("[0].status", equalTo("ok"))
                 .body("[1].status", equalTo("ok"));
 
-        ids.forEach(id -> given().get("/workitems/" + id).then().body("status", equalTo("CANCELLED")));
+        ids.forEach(id -> given().get("/api/work/items/get-by-id/" + id).then().body("status", equalTo("CANCELLED")));
     }
 
     // ── Validation ────────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ class WorkItemBulkTest {
     void bulk_returns400_forUnknownOperation() {
         given().contentType(ContentType.JSON)
                 .body(bulkBody("invalidOp", createItems(1), "alice", null))
-                .post("/workitems/bulk")
+                .post("/api/work/bulk/bulk")
                 .then().statusCode(400);
     }
 
@@ -77,7 +77,7 @@ class WorkItemBulkTest {
     void bulk_returns400_whenIdsEmpty() {
         given().contentType(ContentType.JSON)
                 .body("{\"operation\":\"claim\",\"workItemIds\":[],\"actorId\":\"alice\"}")
-                .post("/workitems/bulk")
+                .post("/api/work/bulk/bulk")
                 .then().statusCode(400);
     }
 
@@ -88,7 +88,7 @@ class WorkItemBulkTest {
                 .toList();
         given().contentType(ContentType.JSON)
                 .body(bulkBody("claim", tooMany, "alice", null))
-                .post("/workitems/bulk")
+                .post("/api/work/bulk/bulk")
                 .then().statusCode(400);
     }
 
@@ -99,7 +99,7 @@ class WorkItemBulkTest {
         final List<String> ids = createItems(1);
         given().contentType(ContentType.JSON)
                 .body(bulkBody("claim", ids, "alice", null))
-                .post("/workitems/bulk")
+                .post("/api/work/bulk/bulk")
                 .then().statusCode(200)
                 .body("[0].id", equalTo(ids.get(0)))
                 .body("[0].status", equalTo("ok"));
@@ -110,7 +110,7 @@ class WorkItemBulkTest {
         final List<String> ids = List.of("00000000-0000-0000-0000-000000000000");
         given().contentType(ContentType.JSON)
                 .body(bulkBody("claim", ids, "alice", null))
-                .post("/workitems/bulk")
+                .post("/api/work/bulk/bulk")
                 .then().statusCode(200)
                 .body("[0].status", equalTo("error"))
                 .body("[0].error", org.hamcrest.Matchers.notNullValue());
@@ -121,7 +121,7 @@ class WorkItemBulkTest {
     private List<String> createItems(final int count) {
         return IntStream.range(0, count).mapToObj(i -> (String) given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Bulk item " + i + "\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id")).toList();
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id")).toList();
     }
 
     private String bulkBody(final String op, final List<String> ids,
