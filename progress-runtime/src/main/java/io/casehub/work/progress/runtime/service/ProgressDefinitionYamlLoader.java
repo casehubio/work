@@ -3,7 +3,7 @@ package io.casehub.work.progress.runtime.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.casehub.yaml.jackson.YamlMappers;
 import io.casehub.work.progress.ProgressDefinition;
 import io.casehub.work.progress.ProgressDefinitionRegistry;
 import io.casehub.work.progress.StepDefinition;
@@ -33,7 +33,7 @@ public class ProgressDefinitionYamlLoader {
 
     private static final Logger LOG = Logger.getLogger(ProgressDefinitionYamlLoader.class);
     static final String RESOURCE_PATH = "META-INF/work-progress-definitions.yaml";
-    private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
+    private static final ObjectMapper YAML_MAPPER = YamlMappers.create();
     private static final VariableResolver RESOLVER = new VariableResolver(
             Map.of("env", VariableSource.env(), "sys", VariableSource.systemProperty()),
             Set.of());

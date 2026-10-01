@@ -2,7 +2,7 @@ package io.casehub.work.runtime.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.casehub.yaml.jackson.YamlMappers;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.quarkus.runtime.Startup;
@@ -25,7 +25,7 @@ public class SlaDefaultsYamlLoader {
 
     private static final Logger LOG = Logger.getLogger(SlaDefaultsYamlLoader.class);
     static final String RESOURCE_PATH = "META-INF/work-sla-defaults.yaml";
-    private static final ObjectMapper YAML_MAPPER = new ObjectMapper(new YAMLFactory());
+    private static final ObjectMapper YAML_MAPPER = YamlMappers.create();
 
     @Inject
     WorkItemsConfig config;

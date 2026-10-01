@@ -2,7 +2,7 @@ package io.casehub.work.runtime.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.casehub.yaml.jackson.YamlMappers;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemTemplate;
@@ -33,7 +33,7 @@ public class WorkItemTemplateYamlLoader {
 
     private static final Logger           LOG           = Logger.getLogger(WorkItemTemplateYamlLoader.class);
     private static final String           RESOURCE_PATH = "META-INF/work-templates.yaml";
-    private static final ObjectMapper     YAML_MAPPER   = new ObjectMapper(new YAMLFactory());
+    private static final ObjectMapper     YAML_MAPPER   = YamlMappers.create();
     public static final  VariableResolver RESOLVER      = new VariableResolver(
             Map.of("env", VariableSource.env(), "sys", VariableSource.systemProperty()),
             Set.of());
