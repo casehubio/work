@@ -71,7 +71,7 @@ class MultiInstanceCreateTest {
         });
 
         // Spawn group created with policy
-        WorkItemSpawnGroup group = em.createQuery("FROM WorkItemSpawnGroup WHERE workItemId = ?1 AND requiredCount IS NOT NULL", WorkItemSpawnGroup.class).setParameter(1, parent.id()).getResultStream().findFirst().orElse(null);
+        WorkItemSpawnGroup group = em.createQuery("FROM WorkItemSpawnGroup WHERE parentId = ?1 AND requiredCount IS NOT NULL", WorkItemSpawnGroup.class).setParameter(1, parent.id()).getResultStream().findFirst().orElse(null);
         assertThat(group).isNotNull();
         assertThat(group.instanceCount).isEqualTo(3);
         assertThat(group.requiredCount).isEqualTo(2);

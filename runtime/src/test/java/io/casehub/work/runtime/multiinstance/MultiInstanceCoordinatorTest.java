@@ -185,7 +185,7 @@ class MultiInstanceCoordinatorTest {
         }
 
         Awaitility.await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-            WorkItemSpawnGroup group = inTx(() -> em.createQuery("FROM WorkItemSpawnGroup WHERE workItemId = ?1 AND requiredCount IS NOT NULL", WorkItemSpawnGroup.class).setParameter(1, parentId).getResultStream().findFirst().orElse(null));
+            WorkItemSpawnGroup group = inTx(() -> em.createQuery("FROM WorkItemSpawnGroup WHERE parentId = ?1 AND requiredCount IS NOT NULL", WorkItemSpawnGroup.class).setParameter(1, parentId).getResultStream().findFirst().orElse(null));
             assertThat(group.policyTriggered).isTrue();
         });
 
