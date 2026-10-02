@@ -16,6 +16,8 @@
 
 ### `occurredAt` (`java.time.Instant`)
 
+### `workItemId` (`java.util.UUID`)
+
 ## Record Components
 
 ### `actor` (`java.lang.String`)
@@ -28,13 +30,16 @@
 
 ### `occurredAt` (`java.time.Instant`)
 
+### `workItemId` (`java.util.UUID`)
+
 ## Constructors
 
-### `public AuditEntryView(java.util.UUID id, java.lang.String event, java.lang.String actor, java.lang.String detail, java.time.Instant occurredAt)`
+### `public AuditEntryView(java.util.UUID id, java.util.UUID workItemId, java.lang.String event, java.lang.String actor, java.lang.String detail, java.time.Instant occurredAt)`
 
 #### Parameters
 
 - `id` (`java.util.UUID`)
+- `workItemId` (`java.util.UUID`)
 - `event` (`java.lang.String`)
 - `actor` (`java.lang.String`)
 - `detail` (`java.lang.String`)
@@ -61,3 +66,5 @@
 ### `public java.time.Instant occurredAt()`
 
 ### `public final java.lang.String toString()`
+
+### `public java.util.UUID workItemId()`

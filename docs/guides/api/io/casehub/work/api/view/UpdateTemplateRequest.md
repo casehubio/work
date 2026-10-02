@@ -30,7 +30,7 @@
 
 ### `excludedUsers` (`java.lang.String`)
 
-### `inputDataSchema` (`java.lang.String`)
+### `inputDataSchema` (`JsonNode`)
 
 ### `instanceCount` (`java.lang.Integer`)
 
@@ -42,7 +42,7 @@
 
 ### `outcomes` (`java.util.List<io.casehub.work.api.Outcome>`)
 
-### `outputDataSchema` (`java.lang.String`)
+### `outputDataSchema` (`JsonNode`)
 
 ### `parentRole` (`java.lang.String`)
 
@@ -82,7 +82,7 @@
 
 ### `excludedUsers` (`java.lang.String`)
 
-### `inputDataSchema` (`java.lang.String`)
+### `inputDataSchema` (`JsonNode`)
 
 ### `instanceCount` (`java.lang.Integer`)
 
@@ -94,7 +94,7 @@
 
 ### `outcomes` (`java.util.List<io.casehub.work.api.Outcome>`)
 
-### `outputDataSchema` (`java.lang.String`)
+### `outputDataSchema` (`JsonNode`)
 
 ### `parentRole` (`java.lang.String`)
 
@@ -110,7 +110,7 @@
 
 ## Constructors
 
-### `public UpdateTemplateRequest(java.lang.String name, java.lang.String description, java.lang.String typePaths, java.lang.String priority, java.lang.String candidateGroups, java.lang.String candidateUsers, java.lang.String requiredCapabilities, java.lang.Integer defaultExpiryHours, java.lang.Integer defaultClaimHours, java.lang.Integer defaultExpiryBusinessHours, java.lang.Integer defaultClaimBusinessHours, java.lang.String defaultPayload, java.lang.String labelPaths, java.lang.Integer instanceCount, java.lang.Integer requiredCount, java.lang.String parentRole, java.lang.String assignmentStrategy, java.lang.String onThresholdReached, java.lang.Boolean allowSameAssignee, java.util.List<io.casehub.work.api.Outcome> outcomes, java.lang.String inputDataSchema, java.lang.String outputDataSchema, java.lang.String excludedUsers, java.lang.String excludedGroups, java.lang.String scope)`
+### `public UpdateTemplateRequest(java.lang.String name, java.lang.String description, java.lang.String typePaths, java.lang.String priority, java.lang.String candidateGroups, java.lang.String candidateUsers, java.lang.String requiredCapabilities, java.lang.Integer defaultExpiryHours, java.lang.Integer defaultClaimHours, java.lang.Integer defaultExpiryBusinessHours, java.lang.Integer defaultClaimBusinessHours, java.lang.String defaultPayload, java.lang.String labelPaths, java.lang.Integer instanceCount, java.lang.Integer requiredCount, java.lang.String parentRole, java.lang.String assignmentStrategy, java.lang.String onThresholdReached, java.lang.Boolean allowSameAssignee, java.util.List<io.casehub.work.api.Outcome> outcomes, JsonNode inputDataSchema, JsonNode outputDataSchema, java.lang.String excludedUsers, java.lang.String excludedGroups, java.lang.String scope)`
 
 #### Parameters
 
@@ -134,8 +134,8 @@
 - `onThresholdReached` (`java.lang.String`)
 - `allowSameAssignee` (`java.lang.Boolean`)
 - `outcomes` (`java.util.List<io.casehub.work.api.Outcome>`)
-- `inputDataSchema` (`java.lang.String`)
-- `outputDataSchema` (`java.lang.String`)
+- `inputDataSchema` (`JsonNode`)
+- `outputDataSchema` (`JsonNode`)
 - `excludedUsers` (`java.lang.String`)
 - `excludedGroups` (`java.lang.String`)
 - `scope` (`java.lang.String`)
@@ -174,7 +174,7 @@
 
 ### `public final int hashCode()`
 
-### `public java.lang.String inputDataSchema()`
+### `public JsonNode inputDataSchema()`
 
 ### `public java.lang.Integer instanceCount()`
 
@@ -186,7 +186,7 @@
 
 ### `public java.util.List<io.casehub.work.api.Outcome> outcomes()`
 
-### `public java.lang.String outputDataSchema()`
+### `public JsonNode outputDataSchema()`
 
 ### `public java.lang.String parentRole()`
 
