@@ -38,7 +38,7 @@ class AuditResourceTest {
                 .body("entries", notNullValue())
                 .body("page", equalTo(0))
                 .body("size", notNullValue())
-                .body("total", notNullValue());
+                .body("totalCount", notNullValue());
     }
 
     @Test
@@ -52,7 +52,7 @@ class AuditResourceTest {
                 .then()
                 .statusCode(200)
                 .body("entries", not(empty()))
-                .body("total", greaterThanOrEqualTo(1));
+                .body("totalCount", greaterThanOrEqualTo(1));
     }
 
     @Test
@@ -93,7 +93,7 @@ class AuditResourceTest {
                 .then()
                 .statusCode(200)
                 .body("entries", empty())
-                .body("total", equalTo(0));
+                .body("totalCount", equalTo(0));
     }
 
     @Test
@@ -110,7 +110,7 @@ class AuditResourceTest {
                 .body("entries.event", hasItem("CREATED"))
                 .body("entries.event", hasItem("ASSIGNED"))
                 .body("entries.event", hasItem("COMPLETED"))
-                .body("total", greaterThanOrEqualTo(3));
+                .body("totalCount", greaterThanOrEqualTo(3));
     }
 
     // ── Filter by event type ──────────────────────────────────────────────────
@@ -187,7 +187,7 @@ class AuditResourceTest {
                 .then()
                 .statusCode(200)
                 .body("entries", not(empty()))
-                .body("total", greaterThanOrEqualTo(1));
+                .body("totalCount", greaterThanOrEqualTo(1));
     }
 
     // ── filter by type ────────────────────────────────────────────────────
@@ -223,7 +223,7 @@ class AuditResourceTest {
 
     @Test
     void pagination_customPageAndSize_areReflectedInResponse() {
-        given().queryParam("page", "1").queryParam("size", "5")
+        given().queryParam("pageIndex", "1").queryParam("pageSize", "5")
                 .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
@@ -233,7 +233,7 @@ class AuditResourceTest {
 
     @Test
     void pagination_sizeCappedAt100() {
-        given().queryParam("size", "999")
+        given().queryParam("pageSize", "999")
                 .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
@@ -249,13 +249,13 @@ class AuditResourceTest {
 
         // page=0 size=1: entries has 1, but total reflects all
         final int total = given().queryParam("actorId", actor)
-                .queryParam("page", "0").queryParam("size", "1")
+                .queryParam("pageIndex", "0").queryParam("pageSize", "1")
                 .get("/api/work/audit/query")
                 .then().statusCode(200)
-                .extract().path("total");
+                .extract().path("totalCount");
 
         final int entriesSize = given().queryParam("actorId", actor)
-                .queryParam("page", "0").queryParam("size", "1")
+                .queryParam("pageIndex", "0").queryParam("pageSize", "1")
                 .get("/api/work/audit/query")
                 .then().statusCode(200)
                 .extract().path("entries.size()");
@@ -313,7 +313,7 @@ class AuditResourceTest {
                 .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
-                .body("total", equalTo(2))
+                .body("totalCount", equalTo(2))
                 .body("entries.workItemId", hasItem(id1))
                 .body("entries.workItemId", hasItem(id2))
                 .body("entries.workItemId", not(hasItem(id3)));
