@@ -22,7 +22,8 @@ public class JpaQueueSnapshotStore extends TenantAwareStore implements QueueSnap
             if (snapshot.tenancyId == null) {
                 snapshot.tenancyId = currentPrincipal.tenancyId();
             }
-            snapshot.persistAndFlush();
+            em.persist(snapshot);
+            em.flush();
             return snapshot;
         });
     }
@@ -31,10 +32,9 @@ public class JpaQueueSnapshotStore extends TenantAwareStore implements QueueSnap
     public List<QueueSnapshot> findByQueueAndPeriod(
             final UUID queueViewId, final Instant from, final Instant to) {
         return withTenantQuery(() ->
-                QueueSnapshot.<QueueSnapshot>find(
-                        "tenancyId = ?1 AND queueViewId = ?2 AND snapshotAt >= ?3 AND snapshotAt <= ?4 ORDER BY snapshotAt ASC",
-                        currentPrincipal.tenancyId(), queueViewId, from, to)
-                        .list());
+                em.createQuery("FROM QueueSnapshot WHERE tenancyId = ?1 AND queueViewId = ?2 AND snapshotAt >= ?3 AND snapshotAt <= ?4 ORDER BY snapshotAt ASC", QueueSnapshot.class)
+                        .setParameter(1, currentPrincipal.tenancyId()).setParameter(2, queueViewId).setParameter(3, from).setParameter(4, to)
+                        .getResultList());
     }
 
     @Override
@@ -42,7 +42,6 @@ public class JpaQueueSnapshotStore extends TenantAwareStore implements QueueSnap
     public Map<UUID, Instant> findLatestSnapshotTimes(final Collection<UUID> queueViewIds) {
         if (queueViewIds.isEmpty()) return Map.of();
         return withTenantQuery(() -> {
-            final var em = QueueSnapshot.getEntityManager();
             final List<Object[]> rows = em.createQuery(
                             "SELECT qs.queueViewId, MAX(qs.snapshotAt) FROM QueueSnapshot qs " +
                                     "WHERE qs.tenancyId = :tenancyId AND qs.queueViewId IN :ids GROUP BY qs.queueViewId")
@@ -60,8 +59,9 @@ public class JpaQueueSnapshotStore extends TenantAwareStore implements QueueSnap
     @Override
     public void deleteOlderThan(final Instant cutoff) {
         withTenantQuery(() -> {
-            QueueSnapshot.delete("tenancyId = ?1 AND snapshotAt < ?2",
-                    currentPrincipal.tenancyId(), cutoff);
+            em.createQuery("DELETE FROM QueueSnapshot WHERE tenancyId = ?1 AND snapshotAt < ?2")
+                    .setParameter(1, currentPrincipal.tenancyId()).setParameter(2, cutoff)
+                    .executeUpdate();
             return null;
         });
     }

@@ -60,7 +60,7 @@ class WorkItemCapabilityIT {
                 {"title":"Review contract","requiredCapabilities":"legal-review","createdBy":"test"}
                 """)
         .when()
-            .post("/workitems")
+            .post("/api/work/items/create")
         .then()
             .statusCode(201);
     }
@@ -73,7 +73,7 @@ class WorkItemCapabilityIT {
                 {"title":"Review contract","requiredCapabilities":"legal_review","createdBy":"test"}
                 """)
         .when()
-            .post("/workitems")
+            .post("/api/work/items/create")
         .then()
             .statusCode(400)
             .body("error", equalTo("MALFORMED_CAPABILITY"))
@@ -88,7 +88,7 @@ class WorkItemCapabilityIT {
                 {"title":"Sign document","requiredCapabilities":"audit-sign","createdBy":"test"}
                 """)
         .when()
-            .post("/workitems")
+            .post("/api/work/items/create")
         .then()
             .statusCode(400)
             .body("error", equalTo("UNKNOWN_CAPABILITY"))
@@ -103,7 +103,7 @@ class WorkItemCapabilityIT {
                 {"title":"Multi","requiredCapabilities":"audit-sign,risk-assess","createdBy":"test"}
                 """)
         .when()
-            .post("/workitems")
+            .post("/api/work/items/create")
         .then()
             .statusCode(400)
             .body("error", equalTo("UNKNOWN_CAPABILITY"))
@@ -118,7 +118,7 @@ class WorkItemCapabilityIT {
                 {"title":"Open task","createdBy":"test"}
                 """)
         .when()
-            .post("/workitems")
+            .post("/api/work/items/create")
         .then()
             .statusCode(201);
     }

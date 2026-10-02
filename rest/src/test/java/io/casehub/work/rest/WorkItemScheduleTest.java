@@ -8,6 +8,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -27,10 +28,13 @@ class WorkItemScheduleTest {
     @Inject
     WorkItemScheduleService scheduleService;
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        WorkItemTemplate.deleteAll(); // cascades to work_item_schedule via ON DELETE CASCADE
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     // ── POST /workitem-schedules ──────────────────────────────────────────────
@@ -42,7 +46,7 @@ class WorkItemScheduleTest {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Daily compliance check\",\"templateId\":\"" + templateId
                         + "\",\"cronExpression\":\"0 0 9 * * ?\",\"createdBy\":\"admin\"}")
-                .post("/workitem-schedules")
+                .post("/api/work/schedules/create")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -59,7 +63,7 @@ class WorkItemScheduleTest {
         given().contentType(ContentType.JSON)
                 .body("{\"templateId\":\"" + createTemplate()
                         + "\",\"cronExpression\":\"0 0 9 * * ?\",\"createdBy\":\"admin\"}")
-                .post("/workitem-schedules")
+                .post("/api/work/schedules/create")
                 .then().statusCode(400);
     }
 
@@ -68,7 +72,7 @@ class WorkItemScheduleTest {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Bad cron\",\"templateId\":\"" + createTemplate()
                         + "\",\"cronExpression\":\"not-valid-cron\",\"createdBy\":\"admin\"}")
-                .post("/workitem-schedules")
+                .post("/api/work/schedules/create")
                 .then().statusCode(400)
                 .body("error", org.hamcrest.Matchers.containsString("cron"));
     }
@@ -81,9 +85,9 @@ class WorkItemScheduleTest {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"List test schedule\",\"templateId\":\"" + templateId
                         + "\",\"cronExpression\":\"0 0 8 * * ?\",\"createdBy\":\"admin\"}")
-                .post("/workitem-schedules").then().statusCode(201);
+                .post("/api/work/schedules/create").then().statusCode(201);
 
-        given().get("/workitem-schedules")
+        given().get("/api/work/schedules/list")
                 .then().statusCode(200)
                 .body("name", hasItem("List test schedule"));
     }
@@ -93,7 +97,7 @@ class WorkItemScheduleTest {
     @Test
     void getSchedule_returnsById() {
         final String id = createSchedule("Get test schedule");
-        given().get("/workitem-schedules/" + id)
+        given().get("/api/work/schedules/get/" + id)
                 .then().statusCode(200)
                 .body("id", equalTo(id))
                 .body("name", equalTo("Get test schedule"));
@@ -112,7 +116,7 @@ class WorkItemScheduleTest {
         final String id = createSchedule("Toggle test");
         given().contentType(ContentType.JSON)
                 .body("{\"active\":false}")
-                .put("/workitem-schedules/" + id + "/active")
+                .post("/api/work/schedules/set-active/" + id + "")
                 .then().statusCode(200)
                 .body("active", equalTo(false));
     }
@@ -121,10 +125,10 @@ class WorkItemScheduleTest {
     void setActive_true_reEnablesSchedule_andRecomputesNextFireAt() {
         final String id = createSchedule("Re-enable test");
         given().contentType(ContentType.JSON).body("{\"active\":false}")
-                .put("/workitem-schedules/" + id + "/active").then().statusCode(200);
+                .post("/api/work/schedules/set-active/" + id + "").then().statusCode(200);
 
         given().contentType(ContentType.JSON).body("{\"active\":true}")
-                .put("/workitem-schedules/" + id + "/active")
+                .post("/api/work/schedules/set-active/" + id + "")
                 .then().statusCode(200)
                 .body("active", equalTo(true))
                 .body("nextFireAt", notNullValue());
@@ -135,8 +139,8 @@ class WorkItemScheduleTest {
     @Test
     void deleteSchedule_returns204_andScheduleIsGone() {
         final String id = createSchedule("To delete");
-        given().delete("/workitem-schedules/" + id).then().statusCode(204);
-        given().get("/workitem-schedules/" + id).then().statusCode(404);
+        given().post("/api/work/schedules/delete/" + id).then().statusCode(204);
+        given().get("/api/work/schedules/get/" + id).then().statusCode(404);
     }
 
     @Test
@@ -153,7 +157,7 @@ class WorkItemScheduleTest {
         final String scheduleId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Due schedule\",\"templateId\":\"" + templateId
                         + "\",\"cronExpression\":\"* * * * * ?\",\"createdBy\":\"admin\"}")
-                .post("/workitem-schedules").then().statusCode(201).extract().path("id");
+                .post("/api/work/schedules/create").then().statusCode(201).extract().path("id");
 
         // Force nextFireAt to be in the past so the schedule is immediately due
         scheduleService.forceDue(java.util.UUID.fromString(scheduleId));
@@ -165,9 +169,9 @@ class WorkItemScheduleTest {
 
         // Verify a WorkItem was created with the template's category
         given().queryParam("type", "schedule-test-cat")
-                .get("/workitems")
+                .get("/api/work/items/list-all")
                 .then().statusCode(200)
-                .body("$", org.hamcrest.Matchers.hasSize(greaterThanOrEqualTo(1)));
+                .body("items", org.hamcrest.Matchers.hasSize(greaterThanOrEqualTo(1)));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -175,13 +179,13 @@ class WorkItemScheduleTest {
     private String createTemplate() {
         return given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Schedule template\",\"typePaths\":\"schedule-test-cat\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates").then().statusCode(201).extract().path("id");
+                .post("/api/work/templates/create").then().statusCode(201).extract().path("id");
     }
 
     private String createSchedule(final String name) {
         return given().contentType(ContentType.JSON)
                 .body("{\"name\":\"" + name + "\",\"templateId\":\"" + createTemplate()
                         + "\",\"cronExpression\":\"0 0 9 * * ?\",\"createdBy\":\"admin\"}")
-                .post("/workitem-schedules").then().statusCode(201).extract().path("id");
+                .post("/api/work/schedules/create").then().statusCode(201).extract().path("id");
     }
 }

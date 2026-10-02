@@ -5,9 +5,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
-import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.WorkItemLink;
 import io.casehub.work.runtime.repository.WorkItemLinkStore;
 
@@ -28,7 +25,8 @@ public class JpaWorkItemLinkStore extends TenantAwareStore implements WorkItemLi
             if (link.tenancyId == null) {
                 link.tenancyId = currentPrincipal.tenancyId();
             }
-            link.persistAndFlush();
+            em.persist(link);
+            em.flush();
             return link;
         });
     }
@@ -36,30 +34,32 @@ public class JpaWorkItemLinkStore extends TenantAwareStore implements WorkItemLi
     @Override
     public Optional<WorkItemLink> get(final UUID id) {
         return withTenantQuery(() ->
-                WorkItemLink.find("id = ?1 AND tenancyId = ?2", id, currentPrincipal.tenancyId())
-                        .firstResultOptional());
+                em.createQuery("FROM WorkItemLink WHERE id = ?1 AND tenancyId = ?2", WorkItemLink.class)
+                        .setParameter(1, id).setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     public List<WorkItemLink> findByWorkItemId(final UUID workItemId) {
         return withTenantQuery(() ->
-                WorkItemLink.list("workItemId = ?1 AND tenancyId = ?2 ORDER BY createdAt ASC",
-                        workItemId, currentPrincipal.tenancyId()));
+                em.createQuery("FROM WorkItemLink WHERE workItemId = ?1 AND tenancyId = ?2 ORDER BY createdAt ASC", WorkItemLink.class)
+                        .setParameter(1, workItemId).setParameter(2, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override
     public List<WorkItemLink> findByWorkItemIdAndType(final UUID workItemId, final String type) {
         return withTenantQuery(() ->
-                WorkItemLink.list(
-                        "workItemId = ?1 AND relationType = ?2 AND tenancyId = ?3 ORDER BY createdAt ASC",
-                        workItemId, type, currentPrincipal.tenancyId()));
+                em.createQuery("FROM WorkItemLink WHERE workItemId = ?1 AND relationType = ?2 AND tenancyId = ?3 ORDER BY createdAt ASC", WorkItemLink.class)
+                        .setParameter(1, workItemId).setParameter(2, type).setParameter(3, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override
     public boolean delete(final UUID id) {
         return withTenantQuery(() -> {
-            final long deleted = WorkItemLink.delete("id = ?1 AND tenancyId = ?2",
-                    id, currentPrincipal.tenancyId());
+            final int deleted = em.createQuery("DELETE FROM WorkItemLink WHERE id = ?1 AND tenancyId = ?2")
+                    .setParameter(1, id).setParameter(2, currentPrincipal.tenancyId()).executeUpdate();
             return deleted > 0;
         });
     }

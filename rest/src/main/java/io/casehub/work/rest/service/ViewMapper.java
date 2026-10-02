@@ -45,7 +45,7 @@ public final class ViewMapper {
 
     static WorkItemWithAuditView toWithAuditView(WorkItem wi, List<AuditEntry> trail) {
         List<AuditEntryView> auditViews = trail.stream()
-                .map(e -> new AuditEntryView(e.id, e.event, e.actor, e.detail, e.occurredAt))
+                .map(e -> new AuditEntryView(e.id, e.workItemId, e.event, e.actor, e.detail, e.occurredAt))
                 .toList();
         return new WorkItemWithAuditView(
                 wi.id(), wi.title(), wi.description(),

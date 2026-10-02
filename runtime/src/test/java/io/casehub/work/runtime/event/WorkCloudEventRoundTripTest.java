@@ -13,6 +13,7 @@ import io.cloudevents.core.builder.CloudEventBuilder;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,7 @@ class WorkCloudEventRoundTripTest {
     @Inject WorkItemService workItemService;
     @Inject WorkItemStore workItemStore;
     @Inject Event<CloudEvent> cloudEventBus;
+    @Inject EntityManager em;
 
     private UUID templateId;
 
@@ -48,8 +50,8 @@ class WorkCloudEventRoundTripTest {
     @Transactional
     void setUp() {
         cloudEventCapture.clear();
-        WorkItemTemplate.deleteAll();
-        workItemStore.scanAll().forEach(wi -> WorkItemEntity.deleteById(wi.id()));
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemEntity").executeUpdate();
 
         final WorkItemTemplate template = new WorkItemTemplate();
         template.id                 = UUID.randomUUID();

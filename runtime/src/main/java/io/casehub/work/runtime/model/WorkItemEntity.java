@@ -2,7 +2,7 @@ package io.casehub.work.runtime.model;
 
 import io.casehub.work.api.CompensationStatus;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -38,7 +38,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "work_item")
-public class WorkItemEntity extends PanacheEntityBase {
+public class WorkItemEntity {
 
     /** Primary key — UUID assigned on first persist. */
     @Id

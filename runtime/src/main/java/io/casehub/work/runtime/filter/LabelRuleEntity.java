@@ -24,11 +24,11 @@ import io.casehub.platform.api.label.LabelAction;
 import io.casehub.platform.api.label.LabelRule;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.PathAttributeConverter;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
 
 @Entity
 @Table(name = "label_rule")
-public class LabelRuleEntity extends PanacheEntityBase {
+public class LabelRuleEntity {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 

@@ -3,6 +3,8 @@ package io.casehub.work.rest.service;
 import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -39,6 +41,7 @@ public class DefaultWorkItemTemplateApi implements WorkItemTemplateApi {
         if (request.createdBy() == null || request.createdBy().isBlank()) {
             throw new IllegalArgumentException("createdBy is required");
         }
+        validateSchemaFields(request.inputDataSchema(), request.outputDataSchema());
         if (templateService.findByName(request.name()).isPresent()) {
             throw new IllegalStateException("template with name '" + request.name() + "' already exists");
         }
@@ -81,6 +84,7 @@ public class DefaultWorkItemTemplateApi implements WorkItemTemplateApi {
             return null;
         }
 
+        validateSchemaFields(request.inputDataSchema(), request.outputDataSchema());
         if (!request.name().equals(t.name)) {
             if (templateService.findByName(request.name()).isPresent()) {
                 throw new IllegalStateException("template with name '" + request.name() + "' already exists");
@@ -131,8 +135,8 @@ public class DefaultWorkItemTemplateApi implements WorkItemTemplateApi {
         t.onThresholdReached = r.onThresholdReached();
         t.allowSameAssignee = r.allowSameAssignee();
         t.outcomes = WorkItemTemplateService.encodeOutcomes(r.outcomes());
-        t.inputDataSchema = r.inputDataSchema();
-        t.outputDataSchema = r.outputDataSchema();
+        t.inputDataSchema = r.inputDataSchema() != null ? r.inputDataSchema().toString() : null;
+        t.outputDataSchema = r.outputDataSchema() != null ? r.outputDataSchema().toString() : null;
         t.excludedUsers = r.excludedUsers();
         t.excludedGroups = r.excludedGroups();
         t.scope = r.scope();
@@ -160,8 +164,8 @@ public class DefaultWorkItemTemplateApi implements WorkItemTemplateApi {
         t.onThresholdReached = r.onThresholdReached();
         t.allowSameAssignee = r.allowSameAssignee();
         t.outcomes = WorkItemTemplateService.encodeOutcomes(r.outcomes());
-        t.inputDataSchema = r.inputDataSchema();
-        t.outputDataSchema = r.outputDataSchema();
+        t.inputDataSchema = r.inputDataSchema() != null ? r.inputDataSchema().toString() : null;
+        t.outputDataSchema = r.outputDataSchema() != null ? r.outputDataSchema().toString() : null;
         t.excludedUsers = r.excludedUsers();
         t.excludedGroups = r.excludedGroups();
         t.scope = r.scope();
@@ -181,5 +185,14 @@ public class DefaultWorkItemTemplateApi implements WorkItemTemplateApi {
                 t.inputDataSchema, t.outputDataSchema,
                 t.excludedUsers, t.excludedGroups, t.scope,
                 t.createdBy, t.createdAt);
+    }
+
+    private static void validateSchemaFields(JsonNode inputDataSchema, JsonNode outputDataSchema) {
+        if (inputDataSchema != null && !inputDataSchema.isObject()) {
+            throw new IllegalArgumentException("inputDataSchema must be a JSON object, not a " + inputDataSchema.getNodeType().name().toLowerCase());
+        }
+        if (outputDataSchema != null && !outputDataSchema.isObject()) {
+            throw new IllegalArgumentException("outputDataSchema must be a JSON object, not a " + outputDataSchema.getNodeType().name().toLowerCase());
+        }
     }
 }

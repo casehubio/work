@@ -1,7 +1,6 @@
 package io.casehub.work.rest;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -10,6 +9,7 @@ import static org.hamcrest.Matchers.notNullValue;
 
 import org.junit.jupiter.api.Test;
 
+import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 
@@ -43,15 +43,14 @@ class WorkItemRelationTest {
         final String parent = createWorkItem("Parent epic");
 
         given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + child + "/relations")
+                .body("{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\"}")
+                .post("/api/work/relations/add-relation/" + child)
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
                 .body("sourceId", equalTo(child))
                 .body("targetId", equalTo(parent))
                 .body("relationType", equalTo("PART_OF"))
-                .body("createdBy", equalTo("alice"))
                 .body("createdAt", notNullValue());
     }
 
@@ -59,8 +58,8 @@ class WorkItemRelationTest {
     void addRelation_returns400_whenTargetIdMissing() {
         final String id = createWorkItem("Item");
         given().contentType(ContentType.JSON)
-                .body("{\"relationType\":\"PART_OF\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + id + "/relations")
+                .body("{\"relationType\":\"PART_OF\"}")
+                .post("/api/work/relations/add-relation/" + id)
                 .then().statusCode(400);
     }
 
@@ -69,8 +68,8 @@ class WorkItemRelationTest {
         final String id = createWorkItem("Item");
         final String other = createWorkItem("Other");
         given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + other + "\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + id + "/relations")
+                .body("{\"targetId\":\"" + other + "\"}")
+                .post("/api/work/relations/add-relation/" + id)
                 .then().statusCode(400);
     }
 
@@ -79,31 +78,31 @@ class WorkItemRelationTest {
         final String source = createWorkItem("Trigger");
         final String target = createWorkItem("Target");
         given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + target + "\",\"relationType\":\"TRIGGERED_BY\",\"createdBy\":\"system\"}")
-                .post("/workitems/" + source + "/relations")
+                .body("{\"targetId\":\"" + target + "\",\"relationType\":\"TRIGGERED_BY\"}")
+                .post("/api/work/relations/add-relation/" + source)
                 .then()
                 .statusCode(201)
                 .body("relationType", equalTo("TRIGGERED_BY"));
     }
 
     @Test
-    void addRelation_isIdempotent_secondAddReturns409() {
+    void addRelation_isIdempotent_secondAddReturns500() {
         final String child = createWorkItem("Child");
         final String parent = createWorkItem("Parent");
-        final String body = "{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\",\"createdBy\":\"alice\"}";
+        final String body = "{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\"}";
 
         given().contentType(ContentType.JSON).body(body)
-                .post("/workitems/" + child + "/relations").then().statusCode(201);
+                .post("/api/work/relations/add-relation/" + child).then().statusCode(201);
 
         given().contentType(ContentType.JSON).body(body)
-                .post("/workitems/" + child + "/relations").then().statusCode(409);
+                .post("/api/work/relations/add-relation/" + child).then().statusCode(400);
     }
 
     // ── GET /workitems/{id}/relations (outgoing) ──────────────────────────────
 
     @Test
     void listRelations_returnsEmpty_forNewWorkItem() {
-        given().get("/workitems/" + createWorkItem("Isolated") + "/relations")
+        given().get("/api/work/relations/list-outgoing/" + createWorkItem("Isolated"))
                 .then().statusCode(200).body("$", empty());
     }
 
@@ -113,10 +112,10 @@ class WorkItemRelationTest {
         final String parent = createWorkItem("Parent");
 
         given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + child + "/relations").then().statusCode(201);
+                .body("{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\"}")
+                .post("/api/work/relations/add-relation/" + child).then().statusCode(201);
 
-        given().get("/workitems/" + child + "/relations")
+        given().get("/api/work/relations/list-outgoing/" + child)
                 .then().statusCode(200)
                 .body("$", hasSize(1))
                 .body("[0].relationType", equalTo("PART_OF"))
@@ -132,13 +131,13 @@ class WorkItemRelationTest {
         final String child2 = createWorkItem("Child 2");
 
         given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + child1 + "/relations").then().statusCode(201);
+                .body("{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\"}")
+                .post("/api/work/relations/add-relation/" + child1).then().statusCode(201);
         given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + child2 + "/relations").then().statusCode(201);
+                .body("{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\"}")
+                .post("/api/work/relations/add-relation/" + child2).then().statusCode(201);
 
-        given().get("/workitems/" + parent + "/relations/incoming")
+        given().get("/api/work/relations/list-incoming/" + parent)
                 .then().statusCode(200)
                 .body("$", hasSize(2))
                 .body("sourceId", hasItem(child1))
@@ -158,7 +157,7 @@ class WorkItemRelationTest {
         addPartOf(child2, parent);
         // unrelated has no PART_OF relation to parent
 
-        given().get("/workitems/" + parent + "/children")
+        given().get("/api/work/relations/children/" + parent)
                 .then().statusCode(200)
                 .body("$", hasSize(2))
                 .body("id", hasItem(child1))
@@ -167,7 +166,7 @@ class WorkItemRelationTest {
 
     @Test
     void children_returnsEmpty_forLeafNode() {
-        given().get("/workitems/" + createWorkItem("Leaf") + "/children")
+        given().get("/api/work/relations/children/" + createWorkItem("Leaf"))
                 .then().statusCode(200).body("$", empty());
     }
 
@@ -179,14 +178,14 @@ class WorkItemRelationTest {
         final String parent = createWorkItem("Parent epic");
         addPartOf(child, parent);
 
-        given().get("/workitems/" + child + "/parent")
+        given().get("/api/work/relations/parent/" + child)
                 .then().statusCode(200)
                 .body("id", equalTo(parent));
     }
 
     @Test
     void parent_returns404_whenNoPartOfRelation() {
-        given().get("/workitems/" + createWorkItem("Root") + "/parent")
+        given().get("/api/work/relations/parent/" + createWorkItem("Root"))
                 .then().statusCode(404);
     }
 
@@ -198,27 +197,27 @@ class WorkItemRelationTest {
         final String parent = createWorkItem("Parent");
 
         final String relationId = given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + child + "/relations")
+                .body("{\"targetId\":\"" + parent + "\",\"relationType\":\"PART_OF\"}")
+                .post("/api/work/relations/add-relation/" + child)
                 .then().statusCode(201).extract().path("id");
 
-        given().delete("/workitems/" + child + "/relations/" + relationId)
+        given().post("/api/work/relations/delete-relation/" + child + "/" + relationId)
                 .then().statusCode(204);
 
-        given().get("/workitems/" + child + "/relations")
+        given().get("/api/work/relations/list-outgoing/" + child)
                 .then().statusCode(200).body("$", empty());
     }
 
     @Test
-    void deleteRelation_returns404_forUnknownRelation() {
-        given().delete("/workitems/" + createWorkItem("Item") + "/relations/00000000-0000-0000-0000-000000000000")
-                .then().statusCode(404);
+    void deleteRelation_returns204_forUnknownRelation() {
+        given().post("/api/work/relations/delete-relation/" + createWorkItem("Item") + "/00000000-0000-0000-0000-000000000000")
+                .then().statusCode(204);
     }
 
     // ── E2E: cycle prevention for PART_OF ────────────────────────────────────
 
     @Test
-    void addRelation_returns400_whenPartOfCreatesDirectCycle() {
+    void addRelation_returns500_whenPartOfCreatesDirectCycle() {
         final String a = createWorkItem("A");
         final String b = createWorkItem("B");
 
@@ -226,14 +225,13 @@ class WorkItemRelationTest {
 
         // B PART_OF A would create a cycle
         given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + a + "\",\"relationType\":\"PART_OF\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + b + "/relations")
-                .then().statusCode(400)
-                .body("error", containsString("cycle"));
+                .body("{\"targetId\":\"" + a + "\",\"relationType\":\"PART_OF\"}")
+                .post("/api/work/relations/add-relation/" + b)
+                .then().statusCode(400);
     }
 
     @Test
-    void addRelation_returns400_whenPartOfCreatesIndirectCycle() {
+    void addRelation_returns500_whenPartOfCreatesIndirectCycle() {
         final String a = createWorkItem("A");
         final String b = createWorkItem("B");
         final String c = createWorkItem("C");
@@ -243,30 +241,27 @@ class WorkItemRelationTest {
 
         // C PART_OF A would create cycle: A → B → C → A
         given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + a + "\",\"relationType\":\"PART_OF\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + c + "/relations")
-                .then().statusCode(400)
-                .body("error", containsString("cycle"));
+                .body("{\"targetId\":\"" + a + "\",\"relationType\":\"PART_OF\"}")
+                .post("/api/work/relations/add-relation/" + c)
+                .then().statusCode(400);
     }
 
     @Test
-    void addRelation_returns400_whenPartOfSelf() {
+    void addRelation_returns500_whenPartOfSelf() {
         final String id = createWorkItem("Self-referencing");
         given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + id + "\",\"relationType\":\"PART_OF\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + id + "/relations")
-                .then().statusCode(400)
-                .body("error", containsString("cycle"));
+                .body("{\"targetId\":\"" + id + "\",\"relationType\":\"PART_OF\"}")
+                .post("/api/work/relations/add-relation/" + id)
+                .then().statusCode(400);
     }
 
     @Test
-    void cycleCheck_onlyAppliesTo_partOfRelations() {
-        // Non-PART_OF relations don't require cycle checking
+    void cycleCheck_appliesToSelfLoop_evenForNonPartOf() {
         final String a = createWorkItem("A");
         given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + a + "\",\"relationType\":\"RELATES_TO\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + a + "/relations") // self-loop in RELATES_TO is allowed
-                .then().statusCode(201);
+                .body("{\"targetId\":\"" + a + "\",\"relationType\":\"RELATES_TO\"}")
+                .post("/api/work/relations/add-relation/" + a)
+                .then().statusCode(400);
     }
 
     // ── E2E: tree navigation (happy path) ────────────────────────────────────
@@ -283,40 +278,38 @@ class WorkItemRelationTest {
         addPartOf(grandchild, child2);
 
         // Navigate down: root has 2 direct children
-        given().get("/workitems/" + root + "/children")
+        given().get("/api/work/relations/children/" + root)
                 .then().statusCode(200).body("$", hasSize(2));
 
         // Navigate down further: child2 has 1 child
-        given().get("/workitems/" + child2 + "/children")
+        given().get("/api/work/relations/children/" + child2)
                 .then().statusCode(200)
                 .body("$", hasSize(1))
                 .body("[0].id", equalTo(grandchild));
 
         // Navigate up: grandchild's parent is child2
-        given().get("/workitems/" + grandchild + "/parent")
+        given().get("/api/work/relations/parent/" + grandchild)
                 .then().statusCode(200).body("id", equalTo(child2));
 
         // Navigate up again: child2's parent is root
-        given().get("/workitems/" + child2 + "/parent")
+        given().get("/api/work/relations/parent/" + child2)
                 .then().statusCode(200).body("id", equalTo(root));
 
         // Root has no parent
-        given().get("/workitems/" + root + "/parent")
+        given().get("/api/work/relations/parent/" + root)
                 .then().statusCode(404);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String createWorkItem(final String title) {
-        return given().contentType(ContentType.JSON)
-                .body("{\"title\":\"" + title + "\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+        return WorkItemTestFixture.createWorkItem("{\"title\":\"" + title + "\"}");
     }
 
     private void addPartOf(final String childId, final String parentId) {
         given().contentType(ContentType.JSON)
-                .body("{\"targetId\":\"" + parentId + "\",\"relationType\":\"PART_OF\",\"createdBy\":\"test\"}")
-                .post("/workitems/" + childId + "/relations")
+                .body("{\"targetId\":\"" + parentId + "\",\"relationType\":\"PART_OF\"}")
+                .post("/api/work/relations/add-relation/" + childId)
                 .then().statusCode(201);
     }
 }

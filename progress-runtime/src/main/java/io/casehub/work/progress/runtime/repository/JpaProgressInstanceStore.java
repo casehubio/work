@@ -19,14 +19,15 @@ public class JpaProgressInstanceStore extends TenantAwareStore implements Progre
             ProgressInstanceEntity existing = em.find(ProgressInstanceEntity.class, instance.id());
             if (existing != null) {
                 ProgressInstanceMapper.updateEntity(existing, instance);
-                existing.persistAndFlush();
+                em.flush();
                 return ProgressInstanceMapper.toDomain(existing);
             }
             ProgressInstanceEntity entity = ProgressInstanceMapper.toEntity(instance);
             if (entity.tenancyId == null) {
                 entity.tenancyId = currentPrincipal.tenancyId();
             }
-            entity.persistAndFlush();
+            em.persist(entity);
+            em.flush();
             return ProgressInstanceMapper.toDomain(entity);
         });
     }
@@ -42,10 +43,10 @@ public class JpaProgressInstanceStore extends TenantAwareStore implements Progre
     @Override
     public List<ProgressInstance> findByScopeTypeAndScopeId(String scopeType, String scopeId) {
         return withTenantQuery(() ->
-                ProgressInstanceEntity.<ProgressInstanceEntity>find(
-                                "scopeType = ?1 AND scopeId = ?2 ORDER BY createdAt DESC",
-                                scopeType, scopeId)
-                        .list()
+                em.createQuery("FROM ProgressInstanceEntity WHERE scopeType = ?1 AND scopeId = ?2 ORDER BY createdAt DESC", ProgressInstanceEntity.class)
+                        .setParameter(1, scopeType)
+                        .setParameter(2, scopeId)
+                        .getResultList()
                         .stream()
                         .map(ProgressInstanceMapper::toDomain)
                         .toList());
@@ -54,9 +55,9 @@ public class JpaProgressInstanceStore extends TenantAwareStore implements Progre
     @Override
     public List<ProgressInstance> findByParentProgressId(UUID parentProgressId) {
         return withTenantQuery(() ->
-                ProgressInstanceEntity.<ProgressInstanceEntity>find(
-                                "parentProgressId = ?1", parentProgressId)
-                        .list()
+                em.createQuery("FROM ProgressInstanceEntity WHERE parentProgressId = ?1", ProgressInstanceEntity.class)
+                        .setParameter(1, parentProgressId)
+                        .getResultList()
                         .stream()
                         .map(ProgressInstanceMapper::toDomain)
                         .toList());

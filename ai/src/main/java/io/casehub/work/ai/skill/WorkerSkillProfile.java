@@ -9,7 +9,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
  * Stores a free-text skill narrative for a worker.
@@ -20,7 +19,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity
 @Table(name = "worker_skill_profile")
-public class WorkerSkillProfile extends PanacheEntityBase {
+public class WorkerSkillProfile {
 
     @Id
     @Column(name = "worker_id", nullable = false)

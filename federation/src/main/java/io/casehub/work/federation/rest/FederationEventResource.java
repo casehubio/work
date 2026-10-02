@@ -3,6 +3,7 @@ package io.casehub.work.federation.rest;
 import io.casehub.work.federation.FederationReceiver;
 import io.casehub.work.federation.subscription.FederationSubscriptionEntity;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.HeaderParam;
 import io.casehub.platform.api.mcp.HandWrittenEndpoint;
@@ -13,6 +14,9 @@ import jakarta.ws.rs.core.Response;
 @Path("/federation/events")
 @HandWrittenEndpoint("Inbound CloudEvents webhook with HMAC verification — not a domain API")
 public class FederationEventResource {
+
+    @Inject
+    EntityManager em;
 
     @Inject
     FederationReceiver receiver;
@@ -31,9 +35,8 @@ public class FederationEventResource {
                            .entity("Missing X-Federation-Signature header").build();
         }
 
-        var subscriptions = FederationSubscriptionEntity.<FederationSubscriptionEntity>find(
-                "peerId = ?1 and status = ?2",
-                peerId, FederationSubscriptionEntity.SubscriptionStatus.ACTIVE).list();
+        var subscriptions = em.createQuery("FROM FederationSubscriptionEntity WHERE peerId = ?1 AND status = ?2", FederationSubscriptionEntity.class)
+                .setParameter(1, peerId).setParameter(2, FederationSubscriptionEntity.SubscriptionStatus.ACTIVE).getResultList();
 
         if (subscriptions.isEmpty()) {
             return Response.status(Response.Status.FORBIDDEN)

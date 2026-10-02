@@ -30,10 +30,10 @@ class WorkerSelectionStrategyIT {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Route Me\",\"createdBy\":\"system\"," +
                         "\"candidateUsers\":\"" + alice + "," + bob + "\"}")
-                .post("/workitems").then().statusCode(201)
+                .post("/api/work/items/create").then().statusCode(201)
                 .extract().path("id");
 
-        given().get("/workitems/" + id).then().statusCode(200)
+        given().get("/api/work/items/get-by-id/" + id).then().statusCode(200)
                 .body("assigneeId", equalTo(bob))
                 .body("status", equalTo("ASSIGNED"));
     }
@@ -42,10 +42,10 @@ class WorkerSelectionStrategyIT {
     void leastLoaded_noPreAssignment_whenNoCandidates() {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"No Candidates\",\"createdBy\":\"system\"}")
-                .post("/workitems").then().statusCode(201)
+                .post("/api/work/items/create").then().statusCode(201)
                 .extract().path("id");
 
-        given().get("/workitems/" + id).then().statusCode(200)
+        given().get("/api/work/items/get-by-id/" + id).then().statusCode(200)
                 .body("assigneeId", nullValue())
                 .body("status", equalTo("PENDING"));
     }
@@ -56,10 +56,10 @@ class WorkerSelectionStrategyIT {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Solo\",\"createdBy\":\"system\"," +
                         "\"candidateUsers\":\"" + actor + "\"}")
-                .post("/workitems").then().statusCode(201)
+                .post("/api/work/items/create").then().statusCode(201)
                 .extract().path("id");
 
-        given().get("/workitems/" + id).then().statusCode(200)
+        given().get("/api/work/items/get-by-id/" + id).then().statusCode(200)
                 .body("assigneeId", equalTo(actor))
                 .body("status", equalTo("ASSIGNED"));
     }
@@ -70,16 +70,16 @@ class WorkerSelectionStrategyIT {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Pre-Assigned\",\"createdBy\":\"system\"," +
                         "\"candidateUsers\":\"" + actor + "\"}")
-                .post("/workitems").then().statusCode(201)
+                .post("/api/work/items/create").then().statusCode(201)
                 .extract().path("id");
 
         // Should be ASSIGNED without any PUT /claim call
-        given().get("/workitems/" + id).then().statusCode(200)
+        given().get("/api/work/items/get-by-id/" + id).then().statusCode(200)
                 .body("status", equalTo("ASSIGNED"))
                 .body("assigneeId", equalTo(actor));
 
         // Can start immediately
-        given().put("/workitems/" + id + "/start?actor=" + actor)
+        given().post("/api/work/lifecycle/start/" + id + "?actor=" + actor)
                 .then().statusCode(200)
                 .body("status", equalTo("IN_PROGRESS"));
     }
@@ -91,10 +91,10 @@ class WorkerSelectionStrategyIT {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Group Only\",\"createdBy\":\"system\"," +
                         "\"candidateGroups\":\"some-group\"}")
-                .post("/workitems").then().statusCode(201)
+                .post("/api/work/items/create").then().statusCode(201)
                 .extract().path("id");
 
-        given().get("/workitems/" + id).then().statusCode(200)
+        given().get("/api/work/items/get-by-id/" + id).then().statusCode(200)
                 .body("status", equalTo("PENDING"))
                 .body("assigneeId", nullValue());
     }
@@ -108,10 +108,10 @@ class WorkerSelectionStrategyIT {
                 .body("{\"title\":\"Cap Required\",\"createdBy\":\"system\"," +
                         "\"candidateUsers\":\"" + actor + "\"," +
                         "\"requiredCapabilities\":\"exotic-skill\"}")
-                .post("/workitems").then().statusCode(201)
+                .post("/api/work/items/create").then().statusCode(201)
                 .extract().path("id");
 
-        given().get("/workitems/" + id).then().statusCode(200)
+        given().get("/api/work/items/get-by-id/" + id).then().statusCode(200)
                 .body("status", equalTo("PENDING"))
                 .body("assigneeId", nullValue());
     }
@@ -127,7 +127,7 @@ class WorkerSelectionStrategyIT {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Release Me\",\"createdBy\":\"system\"," +
                         "\"candidateUsers\":\"" + alice + "," + bob + "\"}")
-                .post("/workitems").then().statusCode(201)
+                .post("/api/work/items/create").then().statusCode(201)
                 .extract().path("id");
 
         // Whoever was assigned, give bob 3 extra active items
@@ -136,7 +136,7 @@ class WorkerSelectionStrategyIT {
         createAndStartWorkItem(bob);
 
         // Release → strategy re-fires → alice should win (fewer active)
-        given().put("/workitems/" + id + "/release?actor=" + alice).then().statusCode(200)
+        given().post("/api/work/lifecycle/release/" + id + "?actor=" + alice).then().statusCode(200)
                 .body("assigneeId", equalTo(alice))
                 .body("status", equalTo("ASSIGNED"));
     }
@@ -152,13 +152,13 @@ class WorkerSelectionStrategyIT {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Delegate Me\",\"createdBy\":\"system\"," +
                         "\"candidateUsers\":\"" + alice + "," + bob + "," + carol + "\"}")
-                .post("/workitems").then().statusCode(201)
+                .post("/api/work/items/create").then().statusCode(201)
                 .extract().path("id");
 
         // Start it (required to delegate)
-        final String assignee = given().get("/workitems/" + id).then().statusCode(200)
+        final String assignee = given().get("/api/work/items/get-by-id/" + id).then().statusCode(200)
                 .extract().path("assigneeId");
-        given().put("/workitems/" + id + "/start?actor=" + assignee).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id + "?actor=" + assignee).then().statusCode(200);
 
         // Give bob 3 active items, carol 0
         createAndStartWorkItem(bob);
@@ -168,7 +168,7 @@ class WorkerSelectionStrategyIT {
         // Delegate → strategy re-fires → carol should win (0 active)
         given().contentType(ContentType.JSON)
                 .body("{\"to\":\"" + carol + "\"}")
-                .put("/workitems/" + id + "/delegate?actor=" + assignee)
+                .post("/api/work/lifecycle/delegate/" + id + "?actor=" + assignee)
                 .then().statusCode(200)
                 .body("assigneeId", equalTo(carol));
     }
@@ -188,19 +188,19 @@ class WorkerSelectionStrategyIT {
                 .body("{\"title\":\"E2E Work\",\"createdBy\":\"agent:ai\"," +
                         "\"candidateUsers\":\"" + alice + "," + bob + "\"," +
                         "\"confidenceScore\":0.9}")
-                .post("/workitems").then().statusCode(201)
+                .post("/api/work/items/create").then().statusCode(201)
                 .body("assigneeId", equalTo(bob))
                 .body("status", equalTo("ASSIGNED"))
                 .body("confidenceScore", equalTo(0.9f))
                 .extract().path("id");
 
         // Bob starts immediately (no claim step)
-        given().put("/workitems/" + id + "/start?actor=" + bob)
+        given().post("/api/work/lifecycle/start/" + id + "?actor=" + bob)
                 .then().statusCode(200).body("status", equalTo("IN_PROGRESS"));
 
         // Bob completes
         given().contentType(ContentType.JSON).body("{\"resolution\":null}")
-                .put("/workitems/" + id + "/complete?actor=" + bob)
+                .post("/api/work/lifecycle/complete/" + id + "?actor=" + bob)
                 .then().statusCode(200)
                 .body("status", equalTo("COMPLETED"))
                 .body("assigneeId", equalTo(bob));
@@ -217,10 +217,10 @@ class WorkerSelectionStrategyIT {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Active\",\"createdBy\":\"system\"," +
                         "\"candidateUsers\":\"" + actor + "\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
         // Pre-assigned to actor by least-loaded (only candidate) → ASSIGNED
         // Start to put in IN_PROGRESS (counted as active)
-        given().put("/workitems/" + id + "/start?actor=" + actor).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id + "?actor=" + actor).then().statusCode(200);
     }
 }

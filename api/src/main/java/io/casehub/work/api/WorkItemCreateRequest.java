@@ -5,7 +5,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 
+@JsonDeserialize(builder = WorkItemCreateRequest.Builder.class)
 public final class WorkItemCreateRequest {
 
     public final String title;
@@ -175,6 +178,7 @@ public final class WorkItemCreateRequest {
                 + "', candidateGroups='" + candidateGroups + "'}";
     }
 
+    @JsonPOJOBuilder(withPrefix = "")
     public static final class Builder {
 
         private String title;

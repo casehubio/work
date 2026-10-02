@@ -8,15 +8,20 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
 class WorkerSkillProfileResourceTest {
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void cleanup() {
-        WorkerSkillProfile.deleteAll();
+        em.createQuery("DELETE FROM WorkerSkillProfile").executeUpdate();
     }
 
     @Test

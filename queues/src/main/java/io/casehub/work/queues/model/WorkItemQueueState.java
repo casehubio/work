@@ -7,14 +7,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-import io.casehub.platform.api.identity.CurrentPrincipal;
-import io.quarkus.arc.Arc;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /** Soft-assignment state for a WorkItem within the queue subsystem. */
 @Entity
 @Table(name = "work_item_queue_state")
-public class WorkItemQueueState extends PanacheEntityBase {
+public class WorkItemQueueState {
 
     /** Primary key — matches the WorkItem UUID; no auto-generation. */
     @Id
@@ -30,21 +27,4 @@ public class WorkItemQueueState extends PanacheEntityBase {
      */
     public boolean relinquishable = false;
 
-    /**
-     * Return the existing {@link WorkItemQueueState} for the given work item, or create and
-     * persist a new one with defaults if none exists.
-     *
-     * @param workItemId the UUID of the WorkItem whose queue state is needed
-     * @return the existing or newly created state record
-     */
-    public static WorkItemQueueState findOrCreate(final UUID workItemId) {
-        return WorkItemQueueState.<WorkItemQueueState> findByIdOptional(workItemId)
-                .orElseGet(() -> {
-                    final var s = new WorkItemQueueState();
-                    s.workItemId = workItemId;
-                    s.tenancyId = Arc.container().instance(CurrentPrincipal.class).get().tenancyId();
-                    s.persist();
-                    return s;
-                });
-    }
 }

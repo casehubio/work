@@ -21,7 +21,7 @@ class WorkItemCloneTest {
 
         final String cloneId = given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"alice\"}")
-                .post("/workitems/" + sourceId + "/clone")
+                .post("/api/work/items/clone/" + sourceId)
                 .then().statusCode(201)
                 .body("id", notNullValue())
                 .body("status", equalTo("PENDING"))
@@ -35,9 +35,8 @@ class WorkItemCloneTest {
     void clone_copiesOperationalFields() {
         final String sourceId = createFull();
 
-        given().contentType(ContentType.JSON)
-                .body("{\"createdBy\":\"alice\"}")
-                .post("/workitems/" + sourceId + "/clone")
+        given().queryParam("createdBy", "alice")
+                .post("/api/work/items/clone/" + sourceId)
                 .then().statusCode(201)
                 .body("title", containsString("Full item"))
                 .body("types[0]", equalTo("test-category"))
@@ -51,9 +50,8 @@ class WorkItemCloneTest {
     void clone_defaultTitle_appendsCopySuffix() {
         final String sourceId = createFull();
 
-        given().contentType(ContentType.JSON)
-                .body("{\"createdBy\":\"alice\"}")
-                .post("/workitems/" + sourceId + "/clone")
+        given().queryParam("createdBy", "alice")
+                .post("/api/work/items/clone/" + sourceId)
                 .then().statusCode(201)
                 .body("title", containsString("(copy)"));
     }
@@ -62,9 +60,9 @@ class WorkItemCloneTest {
     void clone_withTitleOverride_usesProvidedTitle() {
         final String sourceId = createFull();
 
-        given().contentType(ContentType.JSON)
-                .body("{\"title\":\"Custom clone title\",\"createdBy\":\"alice\"}")
-                .post("/workitems/" + sourceId + "/clone")
+        given().queryParam("title", "Custom clone title")
+                .queryParam("createdBy", "alice")
+                .post("/api/work/items/clone/" + sourceId)
                 .then().statusCode(201)
                 .body("title", equalTo("Custom clone title"));
     }
@@ -73,11 +71,10 @@ class WorkItemCloneTest {
     void clone_doesNotCopyAssignee_orOwner() {
         final String sourceId = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Assigned item\",\"createdBy\":\"sys\",\"assigneeId\":\"bob\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
-        given().contentType(ContentType.JSON)
-                .body("{\"createdBy\":\"alice\"}")
-                .post("/workitems/" + sourceId + "/clone")
+        given().queryParam("createdBy", "alice")
+                .post("/api/work/items/clone/" + sourceId)
                 .then().statusCode(201)
                 .body("assigneeId", nullValue())
                 .body("owner", nullValue());
@@ -87,16 +84,15 @@ class WorkItemCloneTest {
     void clone_doesNotCopyResolution_orDelegationChain() {
         // Complete the source through claim → start → complete lifecycle
         final String sourceId = createFull();
-        given().queryParam("claimant", "bob").put("/workitems/" + sourceId + "/claim").then().statusCode(200);
-        given().queryParam("actor", "bob").put("/workitems/" + sourceId + "/start").then().statusCode(200);
+        given().queryParam("claimant", "bob").post("/api/work/lifecycle/claim/" + sourceId + "").then().statusCode(200);
+        given().queryParam("actor", "bob").post("/api/work/lifecycle/start/" + sourceId + "").then().statusCode(200);
         given().contentType(ContentType.JSON)
                 .body("{\"resolution\":\"{}\"}")
                 .queryParam("actor", "bob")
-                .put("/workitems/" + sourceId + "/complete").then().statusCode(200);
+                .post("/api/work/lifecycle/complete/" + sourceId + "").then().statusCode(200);
 
-        given().contentType(ContentType.JSON)
-                .body("{\"createdBy\":\"alice\"}")
-                .post("/workitems/" + sourceId + "/clone")
+        given().queryParam("createdBy", "alice")
+                .post("/api/work/items/clone/" + sourceId)
                 .then().statusCode(201)
                 .body("status", equalTo("PENDING"))
                 .body("resolution", nullValue())
@@ -111,11 +107,10 @@ class WorkItemCloneTest {
                         {"title":"Labelled","createdBy":"sys",
                          "labels":[{"path":"legal/review","persistence":"MANUAL","appliedBy":"alice"}]}
                         """)
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
-        given().contentType(ContentType.JSON)
-                .body("{\"createdBy\":\"alice\"}")
-                .post("/workitems/" + sourceId + "/clone")
+        given().queryParam("createdBy", "alice")
+                .post("/api/work/items/clone/" + sourceId)
                 .then().statusCode(201)
                 .body("labels.path", hasItem("legal/review"))
                 .body("labels.findAll{it.persistence=='MANUAL'}.size()", equalTo(1));
@@ -123,9 +118,8 @@ class WorkItemCloneTest {
 
     @Test
     void clone_returns404_forUnknownSource() {
-        given().contentType(ContentType.JSON)
-                .body("{\"createdBy\":\"alice\"}")
-                .post("/workitems/00000000-0000-0000-0000-000000000000/clone")
+        given().queryParam("createdBy", "alice")
+                .post("/api/work/items/clone/00000000-0000-0000-0000-000000000000")
                 .then().statusCode(404);
     }
 
@@ -138,6 +132,6 @@ class WorkItemCloneTest {
                          "candidateGroups":"team-a","createdBy":"sys",
                          "payload":"{\\"key\\":\\"value\\"}"}
                         """)
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
     }
 }

@@ -11,11 +11,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 
 /**
- * REST integration tests for delegation lifecycle endpoints:
- * {@code PUT /workitems/{id}/accept-delegation} and
- * {@code PUT /workitems/{id}/decline-delegation}.
- *
- * <p>Also covers the {@code GET /workitems/{id}} path through {@link WorkItemService#findById}.
+ * REST integration tests for delegation lifecycle endpoints.
  */
 @QuarkusTest
 @TestTransaction
@@ -27,12 +23,12 @@ class WorkItemDelegationTest {
                 .body("""
                         {"title":"Delegation test","priority":"MEDIUM","createdBy":"system"}
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         given().contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=" + claimant)
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=" + claimant)
                 .then().statusCode(200);
 
         return id;
@@ -42,7 +38,7 @@ class WorkItemDelegationTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"to\":\"" + to + "\"}")
-                .when().put("/workitems/" + id + "/delegate?actor=" + actor)
+                .when().post("/api/work/lifecycle/delegate/" + id + "?actor=" + actor)
                 .then().statusCode(200);
     }
 
@@ -51,7 +47,7 @@ class WorkItemDelegationTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"to\":\"" + to + "\",\"declineTarget\":\"" + declineTarget + "\"}")
-                .when().put("/workitems/" + id + "/delegate?actor=" + actor)
+                .when().post("/api/work/lifecycle/delegate/" + id + "?actor=" + actor)
                 .then().statusCode(200);
     }
 
@@ -64,7 +60,7 @@ class WorkItemDelegationTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"to\":\"bob\"}")
-                .when().put("/workitems/" + id + "/delegate?actor=alice")
+                .when().post("/api/work/lifecycle/delegate/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("DELEGATED"))
@@ -78,7 +74,7 @@ class WorkItemDelegationTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"to\":\"bob\",\"declineTarget\":\"DELEGATOR\"}")
-                .when().put("/workitems/" + id + "/delegate?actor=alice")
+                .when().post("/api/work/lifecycle/delegate/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("delegationDeclineTarget", equalTo("DELEGATOR"));
@@ -92,7 +88,7 @@ class WorkItemDelegationTest {
         delegate(id, "alice", "bob");
 
         given()
-                .when().get("/workitems/" + id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("DELEGATED"));
@@ -106,7 +102,7 @@ class WorkItemDelegationTest {
         delegate(id, "alice", "bob");
 
         given()
-                .when().put("/workitems/" + id + "/accept-delegation?claimant=bob")
+                .when().post("/api/work/lifecycle/accept-delegation/" + id + "?claimant=bob")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("ASSIGNED"))
@@ -119,7 +115,7 @@ class WorkItemDelegationTest {
         delegateWithTarget(id, "alice", "bob", "DELEGATOR");
 
         given()
-                .when().put("/workitems/" + id + "/accept-delegation?claimant=bob")
+                .when().post("/api/work/lifecycle/accept-delegation/" + id + "?claimant=bob")
                 .then()
                 .statusCode(200)
                 .body("delegationDeclineTarget", nullValue());
@@ -131,7 +127,7 @@ class WorkItemDelegationTest {
         delegate(id, "alice", "bob");
 
         given()
-                .when().put("/workitems/" + id + "/accept-delegation?claimant=charlie")
+                .when().post("/api/work/lifecycle/accept-delegation/" + id + "?claimant=charlie")
                 .then().statusCode(409);
     }
 
@@ -141,7 +137,7 @@ class WorkItemDelegationTest {
 
         // Item is ASSIGNED, not DELEGATED
         given()
-                .when().put("/workitems/" + id + "/accept-delegation?claimant=alice")
+                .when().post("/api/work/lifecycle/accept-delegation/" + id + "?claimant=alice")
                 .then().statusCode(409);
     }
 
@@ -153,7 +149,7 @@ class WorkItemDelegationTest {
         delegateWithTarget(id, "alice", "bob", "POOL");
 
         given()
-                .when().put("/workitems/" + id + "/decline-delegation?actor=bob")
+                .when().post("/api/work/lifecycle/decline-delegation/" + id + "?actor=bob")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("PENDING"))
@@ -168,7 +164,7 @@ class WorkItemDelegationTest {
         delegateWithTarget(id, "alice", "bob", "DELEGATOR");
 
         given()
-                .when().put("/workitems/" + id + "/decline-delegation?actor=bob")
+                .when().post("/api/work/lifecycle/decline-delegation/" + id + "?actor=bob")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("ASSIGNED"))
@@ -183,7 +179,7 @@ class WorkItemDelegationTest {
         delegate(id, "alice", "bob");
 
         given()
-                .when().put("/workitems/" + id + "/decline-delegation?actor=charlie")
+                .when().post("/api/work/lifecycle/decline-delegation/" + id + "?actor=charlie")
                 .then().statusCode(409);
     }
 
@@ -192,7 +188,7 @@ class WorkItemDelegationTest {
         final String id = createAndClaimItem("alice");
 
         given()
-                .when().put("/workitems/" + id + "/decline-delegation?actor=alice")
+                .when().post("/api/work/lifecycle/decline-delegation/" + id + "?actor=alice")
                 .then().statusCode(409);
     }
 }

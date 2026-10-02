@@ -11,6 +11,7 @@ import io.casehub.work.core.strategy.RoutingCursorStore;
 import io.casehub.work.runtime.model.RoutingCursor;
 import io.casehub.work.runtime.model.RoutingCursorId;
 import io.casehub.work.runtime.test.MutableCurrentPrincipal;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -33,6 +34,9 @@ class JpaRoutingCursorStoreTenancyTest {
 
     @Inject
     MutableCurrentPrincipal principal;
+
+    @Inject
+    EntityManager em;
 
     @BeforeEach
     void resetPrincipal() {
@@ -72,8 +76,8 @@ class JpaRoutingCursorStoreTenancyTest {
         RoutingCursorId idA = new RoutingCursorId(poolHash, TENANT_A);
         RoutingCursorId idB = new RoutingCursorId(poolHash, TENANT_B);
 
-        RoutingCursor cursorA = RoutingCursor.findById(idA);
-        RoutingCursor cursorB = RoutingCursor.findById(idB);
+        RoutingCursor cursorA = em.find(RoutingCursor.class, idA);
+        RoutingCursor cursorB = em.find(RoutingCursor.class, idB);
 
         assertThat(cursorA).isNotNull();
         assertThat(cursorB).isNotNull();
@@ -111,7 +115,7 @@ class JpaRoutingCursorStoreTenancyTest {
         store.acquireNext(poolHash, poolSize);
 
         RoutingCursorId id = new RoutingCursorId(poolHash, TENANT_A);
-        RoutingCursor cursor = RoutingCursor.findById(id);
+        RoutingCursor cursor = em.find(RoutingCursor.class, id);
 
         assertThat(cursor).isNotNull();
         assertThat(cursor.tenancyId).isEqualTo(TENANT_A);

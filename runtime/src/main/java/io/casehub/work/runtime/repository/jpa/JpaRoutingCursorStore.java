@@ -62,12 +62,12 @@ public class JpaRoutingCursorStore extends TenantAwareStore implements RoutingCu
             final String tenancyId = currentPrincipal.tenancyId();
             final RoutingCursorId id = new RoutingCursorId(poolHash, tenancyId);
 
-            RoutingCursor cursor = RoutingCursor.findById(id);
+            RoutingCursor cursor = em.find(RoutingCursor.class, id);
             if (cursor == null) {
                 cursor = new RoutingCursor(poolHash);
                 cursor.tenancyId = tenancyId;
-                cursor.persist();
-                RoutingCursor.flush();
+                em.persist(cursor);
+                em.flush();
             }
             final int next = (cursor.lastIndex + 1) % poolSize;
             cursor.lastIndex = next;

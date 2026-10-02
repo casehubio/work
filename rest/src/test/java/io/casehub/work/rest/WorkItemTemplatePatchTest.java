@@ -11,6 +11,9 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
@@ -24,12 +27,15 @@ class WorkItemTemplatePatchTest {
 
     private static final String MERGE_PATCH = "application/merge-patch+json";
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearAll() {
-        AuditEntry.deleteAll();
-        WorkItemEntity.deleteAll();
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM AuditEntry").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemEntity").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     private String createTemplate() {
@@ -43,7 +49,7 @@ class WorkItemTemplatePatchTest {
                          "allowSameAssignee":true,
                          "createdBy":"admin"}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
     }
 
@@ -179,7 +185,7 @@ class WorkItemTemplatePatchTest {
         createTemplate(); // "Template Alpha"
         final String id2 = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Template Beta\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(MERGE_PATCH)
@@ -268,7 +274,7 @@ class WorkItemTemplatePatchTest {
                         {"name":"Template With Outcomes","createdBy":"admin",
                          "outcomes":[{"name":"approved","displayName":"Approved","condition":null}]}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         // Then clear via PATCH

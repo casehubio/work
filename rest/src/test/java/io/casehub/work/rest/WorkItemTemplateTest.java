@@ -11,6 +11,9 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
@@ -36,10 +39,13 @@ import io.restassured.http.ContentType;
 @QuarkusTest
 class WorkItemTemplateTest {
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     // ── POST /workitem-templates ──────────────────────────────────────────────
@@ -52,7 +58,7 @@ class WorkItemTemplateTest {
                          "candidateGroups":"loan-officers","defaultExpiryHours":48,
                          "createdBy":"admin"}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -68,7 +74,7 @@ class WorkItemTemplateTest {
     void createTemplate_returns400_whenNameMissing() {
         given().contentType(ContentType.JSON)
                 .body("{\"typePaths\":\"[\\\"finance\\\"]\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(400);
     }
@@ -76,15 +82,15 @@ class WorkItemTemplateTest {
     @Test
     void createTemplate_returns409_whenNameAlreadyExists() {
         final String body = "{\"name\":\"Duplicate Name\",\"createdBy\":\"admin\"}";
-        given().contentType(ContentType.JSON).body(body).post("/workitem-templates").then().statusCode(201);
-        given().contentType(ContentType.JSON).body(body).post("/workitem-templates").then().statusCode(409);
+        given().contentType(ContentType.JSON).body(body).post("/api/work/templates/create").then().statusCode(201);
+        given().contentType(ContentType.JSON).body(body).post("/api/work/templates/create").then().statusCode(409);
     }
 
     @Test
     void createTemplate_returns400_whenCreatedByMissing() {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Test\",\"typePaths\":\"[\\\"ops\\\"]\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(400);
     }
@@ -93,7 +99,7 @@ class WorkItemTemplateTest {
     void createTemplate_withMinimalFields_succeeds() {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Minimal Template\",\"createdBy\":\"alice\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(201)
                 .body("typePaths", nullValue())
@@ -107,10 +113,10 @@ class WorkItemTemplateTest {
     void listTemplates_includesCreatedTemplate() {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Security Triage Template\",\"typePaths\":\"[\\\"security\\\"]\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201);
 
-        given().get("/workitem-templates")
+        given().get("/api/work/templates/list-all")
                 .then()
                 .statusCode(200)
                 .body("name", hasItem("Security Triage Template"));
@@ -122,11 +128,11 @@ class WorkItemTemplateTest {
     void getTemplate_returnsById() {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Compliance Review\",\"typePaths\":\"[\\\"legal\\\"]\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
-        given().get("/workitem-templates/" + id)
+        given().get("/api/work/templates/get-by-id/" + id)
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(id))
@@ -136,7 +142,7 @@ class WorkItemTemplateTest {
 
     @Test
     void getTemplate_returns404_forUnknownId() {
-        given().get("/workitem-templates/00000000-0000-0000-0000-000000000000")
+        given().get("/api/work/templates/get-by-id/00000000-0000-0000-0000-000000000000")
                 .then()
                 .statusCode(404);
     }
@@ -147,18 +153,18 @@ class WorkItemTemplateTest {
     void deleteTemplate_returns204_andTemplateIsGone() {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"To Delete\",\"createdBy\":\"alice\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
-        given().delete("/workitem-templates/" + id).then().statusCode(204);
-        given().get("/workitem-templates/" + id).then().statusCode(404);
+        given().post("/api/work/templates/delete/" + id).then().statusCode(204);
+        given().get("/api/work/templates/get-by-id/" + id).then().statusCode(404);
     }
 
     @Test
     void deleteTemplate_returns404_forUnknownId() {
-        given().delete("/workitem-templates/00000000-0000-0000-0000-000000000000")
-                .then().statusCode(404);
+        given().post("/api/work/templates/delete/00000000-0000-0000-0000-000000000000")
+                .then().statusCode(400);
     }
 
     // ── Happy path: instantiate template ─────────────────────────────────────
@@ -172,13 +178,13 @@ class WorkItemTemplateTest {
                          "defaultPayload":"{\\\"type\\\":\\\"nda\\\"}",
                          "createdBy":"admin"}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -193,13 +199,13 @@ class WorkItemTemplateTest {
     void instantiate_titleDefaultsToTemplateName() {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Standard Security Review\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"agent-1\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("title", equalTo("Standard Security Review"));
@@ -211,13 +217,13 @@ class WorkItemTemplateTest {
     void instantiate_withTitleOverride_usesProvidedTitle() {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Finance Review\",\"typePaths\":\"[\\\"finance\\\"]\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Q4 budget reallocation — £50k\",\"createdBy\":\"finance-bot\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("title", equalTo("Q4 budget reallocation — £50k"))
@@ -228,13 +234,13 @@ class WorkItemTemplateTest {
     void instantiate_withAssigneeOverride_assignsDirectly() {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Direct Assignment\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"assigneeId\":\"alice\",\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("assigneeId", equalTo("alice"));
@@ -257,13 +263,13 @@ class WorkItemTemplateTest {
                          "labelPaths":"[\\"intake/triage\\",\\"priority/high\\"]",
                          "createdBy":"admin"}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("labels.path", hasItem("intake/triage"))
@@ -277,12 +283,12 @@ class WorkItemTemplateTest {
     void updateTemplate_returns200_withUpdatedFields() {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Original\",\"typePaths\":\"[\\\"legal\\\"]\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Updated\",\"typePaths\":\"[\\\"finance\\\"]\",\"candidateGroups\":\"ops\"}")
-                .put("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("name", equalTo("Updated"))
@@ -295,12 +301,12 @@ class WorkItemTemplateTest {
     void updateTemplate_clearsFieldsWhenNull() {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"WithDesc\",\"description\":\"old desc\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"WithDesc\"}")
-                .put("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("description", nullValue());
@@ -310,7 +316,7 @@ class WorkItemTemplateTest {
     void updateTemplate_returns404_whenNotFound() {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Whatever\"}")
-                .put("/workitem-templates/00000000-0000-0000-0000-000000000000")
+                .post("/api/work/templates/update/00000000-0000-0000-0000-000000000000")
                 .then()
                 .statusCode(404);
     }
@@ -319,12 +325,12 @@ class WorkItemTemplateTest {
     void updateTemplate_returns400_whenNameBlank() {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"ToUpdate\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"\"}")
-                .put("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(400);
     }
@@ -333,17 +339,17 @@ class WorkItemTemplateTest {
     void updateTemplate_returns409_whenNameConflictsWithOtherTemplate() {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"AlreadyExists\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201);
 
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"ToRename\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"AlreadyExists\"}")
-                .put("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(409);
     }
@@ -352,12 +358,12 @@ class WorkItemTemplateTest {
     void updateTemplate_allowsSameNameOnSameTemplate() {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"SameName\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"SameName\",\"typePaths\":\"[\\\"finance\\\"]\"}")
-                .put("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("name", equalTo("SameName"))
@@ -370,7 +376,7 @@ class WorkItemTemplateTest {
     void createTemplate_startsAtVersion1() {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Versioned\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(201)
                 .body("version", equalTo(1));
@@ -380,19 +386,19 @@ class WorkItemTemplateTest {
     void updateTemplate_incrementsVersion() {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Bump\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Bump\",\"typePaths\":\"[\\\"updated\\\"]\"}")
-                .put("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("version", equalTo(2));
 
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Bump\",\"typePaths\":\"[\\\"updated-again\\\"]\"}")
-                .put("/workitem-templates/" + id)
+                .post("/api/work/templates/update/" + id)
                 .then()
                 .statusCode(200)
                 .body("version", equalTo(3));
@@ -402,7 +408,7 @@ class WorkItemTemplateTest {
     void patchTemplate_incrementsVersion() {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"PatchBump\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType("application/merge-patch+json")
@@ -417,19 +423,19 @@ class WorkItemTemplateTest {
     void instantiate_setsTemplateVersionOnWorkItem() {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"InstVer\",\"typePaths\":\"[\\\"ops\\\"]\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         // Update to version 2
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"InstVer\",\"typePaths\":\"[\\\"ops-v2\\\"]\"}")
-                .put("/workitem-templates/" + templateId)
+                .post("/api/work/templates/update/" + templateId)
                 .then().statusCode(200);
 
         // Instantiate — should record version 2
         given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"alice\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("templateVersion", equalTo(2));

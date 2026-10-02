@@ -6,9 +6,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 
-import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.WorkItemSchedule;
 import io.casehub.work.runtime.repository.WorkItemScheduleStore;
 
@@ -29,7 +27,8 @@ public class JpaWorkItemScheduleStore extends TenantAwareStore implements WorkIt
             if (schedule.tenancyId == null) {
                 schedule.tenancyId = currentPrincipal.tenancyId();
             }
-            schedule.persistAndFlush();
+            em.persist(schedule);
+            em.flush();
             return schedule;
         });
     }
@@ -37,22 +36,27 @@ public class JpaWorkItemScheduleStore extends TenantAwareStore implements WorkIt
     @Override
     public Optional<WorkItemSchedule> get(final UUID id) {
         return withTenantQuery(() ->
-                WorkItemSchedule.find("id = ?1 AND tenancyId = ?2", id, currentPrincipal.tenancyId())
-                        .firstResultOptional());
+                em.createQuery("FROM WorkItemSchedule WHERE id = ?1 AND tenancyId = ?2", WorkItemSchedule.class)
+                        .setParameter(1, id)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     public List<WorkItemSchedule> scanAll() {
         return withTenantQuery(() ->
-                WorkItemSchedule.find("tenancyId = ?1 ORDER BY name ASC", currentPrincipal.tenancyId())
-                        .list());
+                em.createQuery("FROM WorkItemSchedule WHERE tenancyId = ?1 ORDER BY name ASC", WorkItemSchedule.class)
+                        .setParameter(1, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override
     public boolean delete(final UUID id) {
         return withTenantQuery(() -> {
-            final long deleted = WorkItemSchedule.delete("id = ?1 AND tenancyId = ?2",
-                    id, currentPrincipal.tenancyId());
+            final int deleted = em.createQuery("DELETE FROM WorkItemSchedule WHERE id = ?1 AND tenancyId = ?2")
+                    .setParameter(1, id)
+                    .setParameter(2, currentPrincipal.tenancyId())
+                    .executeUpdate();
             return deleted > 0;
         });
     }
@@ -60,8 +64,11 @@ public class JpaWorkItemScheduleStore extends TenantAwareStore implements WorkIt
     @Override
     public List<WorkItemSchedule> findDue(final Instant now) {
         return withTenantQuery(() ->
-                WorkItemSchedule.list(
-                        "active = true AND nextFireAt IS NOT NULL AND nextFireAt <= ?1 AND tenancyId = ?2 ORDER BY nextFireAt ASC",
-                        now, currentPrincipal.tenancyId()));
+                em.createQuery(
+                        "FROM WorkItemSchedule WHERE active = true AND nextFireAt IS NOT NULL AND nextFireAt <= ?1 AND tenancyId = ?2 ORDER BY nextFireAt ASC",
+                        WorkItemSchedule.class)
+                        .setParameter(1, now)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 }

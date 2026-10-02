@@ -1,7 +1,7 @@
 package io.casehub.work.ai.escalation;
 
 import java.time.Instant;
-import java.util.List;
+
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -10,7 +10,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
  * LLM-generated summary of a WorkItem's history at the moment it escalates.
@@ -22,7 +21,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity
 @Table(name = "escalation_summary")
-public class EscalationSummary extends PanacheEntityBase {
+public class EscalationSummary {
 
     @Id
     @Column(nullable = false)
@@ -55,8 +54,4 @@ public class EscalationSummary extends PanacheEntityBase {
         }
     }
 
-    /** Return all summaries for a WorkItem, most recent first. */
-    public static List<EscalationSummary> findByWorkItemId(final UUID workItemId) {
-        return list("workItemId = ?1 ORDER BY generatedAt DESC", workItemId);
-    }
 }

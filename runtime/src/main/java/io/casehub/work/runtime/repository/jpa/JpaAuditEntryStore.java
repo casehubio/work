@@ -28,15 +28,17 @@ public class JpaAuditEntryStore extends TenantAwareStore implements AuditEntrySt
             if (entry.tenancyId == null) {
                 entry.tenancyId = currentPrincipal.tenancyId();
             }
-            entry.persist();
+            em.persist(entry);
         });
     }
 
     @Override
     public List<AuditEntry> findByWorkItemId(final UUID workItemId) {
         return withTenantQuery(() ->
-                AuditEntry.list("workItemId = ?1 AND tenancyId = ?2 ORDER BY occurredAt ASC",
-                        workItemId, currentPrincipal.tenancyId()));
+                em.createQuery("FROM AuditEntry WHERE workItemId = ?1 AND tenancyId = ?2 ORDER BY occurredAt ASC", AuditEntry.class)
+                        .setParameter(1, workItemId)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override

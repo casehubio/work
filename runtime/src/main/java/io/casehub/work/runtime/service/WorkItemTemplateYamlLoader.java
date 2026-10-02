@@ -11,6 +11,8 @@ import io.casehub.yaml.core.resolver.VariableSource;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.jboss.logging.Logger;
 
@@ -25,6 +27,9 @@ import java.util.Set;
 
 @ApplicationScoped
 public class WorkItemTemplateYamlLoader {
+
+    @Inject
+    EntityManager em;
 
     private static final Logger           LOG           = Logger.getLogger(WorkItemTemplateYamlLoader.class);
     private static final String           RESOURCE_PATH = "META-INF/work-templates.yaml";
@@ -112,16 +117,17 @@ public class WorkItemTemplateYamlLoader {
     }
 
     private void upsertByName(WorkItemTemplate template, String sourceUrl) {
-        Optional<WorkItemTemplate> existing = WorkItemTemplate
-                                                      .find("name = ?1 AND tenancyId = ?2", template.name, template.tenancyId)
-                                                      .firstResultOptional();
+        Optional<WorkItemTemplate> existing = em.createQuery("FROM WorkItemTemplate WHERE name = ?1 AND tenancyId = ?2", WorkItemTemplate.class)
+                .setParameter(1, template.name).setParameter(2, template.tenancyId)
+                .getResultStream().findFirst();
         if (existing.isPresent()) {
             LOG.warnf("WorkItemTemplate '%s' already exists (id=%s) — overwriting from %s",
                       template.name, existing.get().id, sourceUrl);
             template.id      = existing.get().id;
             template.version = existing.get().version;
         }
-        template.persistAndFlush();
+        em.merge(template);
+        em.flush();
         LOG.infof("Loaded WorkItemTemplate '%s' (id=%s)", template.name, template.id);
     }
 

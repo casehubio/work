@@ -24,9 +24,8 @@ public class JpaCrossTenantWorkItemStore extends TenantAwareStore implements Cro
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public List<WorkItem> findActiveWithDeadlines() {
         return withCrossTenantQuery(() ->
-                                            WorkItemEntity.<WorkItemEntity>find(
-                                                                  "status NOT IN (?1) AND (expiresAt IS NOT NULL OR claimDeadline IS NOT NULL)",
-                                                                  WorkItemStatus.TERMINAL_STATUSES)
-                                                          .list().stream().map(WorkItemEntityMapper::toDomain).toList());
+                em.createQuery("FROM WorkItemEntity WHERE status NOT IN (?1) AND (expiresAt IS NOT NULL OR claimDeadline IS NOT NULL)", WorkItemEntity.class)
+                        .setParameter(1, WorkItemStatus.TERMINAL_STATUSES)
+                        .getResultList().stream().map(WorkItemEntityMapper::toDomain).toList());
     }
 }

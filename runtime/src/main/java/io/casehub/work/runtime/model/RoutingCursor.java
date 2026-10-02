@@ -9,7 +9,7 @@ import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
 
 /**
  * Persistent cursor tracking the last-assigned index for a round-robin candidate pool.
@@ -23,7 +23,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity
 @Table(name = "routing_cursor")
 @IdClass(RoutingCursorId.class)
-public class RoutingCursor extends PanacheEntityBase {
+public class RoutingCursor {
 
     @Id
     @Column(name = "pool_hash", length = 64, nullable = false, updatable = false)

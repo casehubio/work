@@ -20,33 +20,34 @@ public class JpaProgressEventStore extends TenantAwareStore implements ProgressE
     public void append(ProgressUpdatedEvent event) {
         withTenantRun(() -> {
             ProgressEventEntity entity = toEntity(event);
-            entity.persistAndFlush();
+            em.persist(entity);
+            em.flush();
         });
     }
 
     @Override
     public Optional<ProgressUpdatedEvent> findById(UUID eventId) {
         return withTenantQuery(() ->
-                                       ProgressEventEntity.<ProgressEventEntity>findByIdOptional(eventId)
-                                                          .map(this::toDomain));
+                                       Optional.ofNullable(em.find(ProgressEventEntity.class, eventId))
+                        .map(this::toDomain));
     }
 
     @Override
     public Optional<ProgressUpdatedEvent> findLastEventAtOrBefore(UUID progressId, Instant cutoff) {
-        return ProgressEventEntity.<ProgressEventEntity>find(
-                                          "progressId = ?1 AND occurredAt <= ?2 ORDER BY occurredAt DESC, id DESC",
-                                          progressId, cutoff)
-                                  .firstResultOptional()
-                                  .map(this::toDomain);
+        return em.createQuery("FROM ProgressEventEntity WHERE progressId = ?1 AND occurredAt <= ?2 ORDER BY occurredAt DESC, id DESC", ProgressEventEntity.class)
+                .setParameter(1, progressId)
+                .setParameter(2, cutoff)
+                .getResultStream().findFirst()
+                .map(this::toDomain);
     }
 
 
     @Override
     public List<ProgressUpdatedEvent> findByProgressId(UUID progressId) {
         return withTenantQuery(() ->
-                ProgressEventEntity.<ProgressEventEntity>find(
-                                "progressId = ?1 ORDER BY occurredAt ASC", progressId)
-                        .list()
+                em.createQuery("FROM ProgressEventEntity WHERE progressId = ?1 ORDER BY occurredAt ASC", ProgressEventEntity.class)
+                        .setParameter(1, progressId)
+                        .getResultList()
                         .stream()
                         .map(this::toDomain)
                         .toList());
@@ -55,10 +56,10 @@ public class JpaProgressEventStore extends TenantAwareStore implements ProgressE
     @Override
     public List<ProgressUpdatedEvent> findByProgressIdSince(UUID progressId, Instant since) {
         return withTenantQuery(() ->
-                ProgressEventEntity.<ProgressEventEntity>find(
-                                "progressId = ?1 AND occurredAt > ?2 ORDER BY occurredAt ASC",
-                                progressId, since)
-                        .list()
+                em.createQuery("FROM ProgressEventEntity WHERE progressId = ?1 AND occurredAt > ?2 ORDER BY occurredAt ASC", ProgressEventEntity.class)
+                        .setParameter(1, progressId)
+                        .setParameter(2, since)
+                        .getResultList()
                         .stream()
                         .map(this::toDomain)
                         .toList());
@@ -67,10 +68,10 @@ public class JpaProgressEventStore extends TenantAwareStore implements ProgressE
     @Override
     public List<ProgressUpdatedEvent> findByRootProgressIdSince(UUID rootProgressId, Instant since) {
         return withTenantQuery(() ->
-                ProgressEventEntity.<ProgressEventEntity>find(
-                                "rootProgressId = ?1 AND occurredAt > ?2 ORDER BY occurredAt ASC",
-                                rootProgressId, since)
-                        .list()
+                em.createQuery("FROM ProgressEventEntity WHERE rootProgressId = ?1 AND occurredAt > ?2 ORDER BY occurredAt ASC", ProgressEventEntity.class)
+                        .setParameter(1, rootProgressId)
+                        .setParameter(2, since)
+                        .getResultList()
                         .stream()
                         .map(this::toDomain)
                         .toList());

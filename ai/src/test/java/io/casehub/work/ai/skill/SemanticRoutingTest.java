@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.spi.WorkItemStore;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -37,10 +38,13 @@ class SemanticRoutingTest {
     @Inject
     WorkItemStore workItemStore;
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void cleanup() {
-        WorkerSkillProfile.deleteAll();
+        em.createQuery("DELETE FROM WorkerSkillProfile").executeUpdate();
     }
 
     @Test

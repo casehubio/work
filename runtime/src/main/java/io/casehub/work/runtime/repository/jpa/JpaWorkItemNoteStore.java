@@ -5,9 +5,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
-import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.WorkItemNote;
 import io.casehub.work.runtime.repository.WorkItemNoteStore;
 
@@ -27,7 +24,8 @@ public class JpaWorkItemNoteStore extends TenantAwareStore implements WorkItemNo
             if (note.tenancyId == null) {
                 note.tenancyId = currentPrincipal.tenancyId();
             }
-            note.persistAndFlush();
+            em.persist(note);
+            em.flush();
             return note;
         });
     }
@@ -35,15 +33,17 @@ public class JpaWorkItemNoteStore extends TenantAwareStore implements WorkItemNo
     @Override
     public Optional<WorkItemNote> findById(final UUID noteId) {
         return withTenantQuery(() ->
-                WorkItemNote.find("id = ?1 AND tenancyId = ?2", noteId, currentPrincipal.tenancyId())
-                        .firstResultOptional());
+                em.createQuery("FROM WorkItemNote WHERE id = ?1 AND tenancyId = ?2", WorkItemNote.class)
+                        .setParameter(1, noteId).setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     public List<WorkItemNote> findByWorkItemId(final UUID workItemId) {
         return withTenantQuery(() ->
-                WorkItemNote.list("workItemId = ?1 AND tenancyId = ?2 ORDER BY createdAt ASC",
-                        workItemId, currentPrincipal.tenancyId()));
+                em.createQuery("FROM WorkItemNote WHERE workItemId = ?1 AND tenancyId = ?2 ORDER BY createdAt ASC", WorkItemNote.class)
+                        .setParameter(1, workItemId).setParameter(2, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override
@@ -52,7 +52,8 @@ public class JpaWorkItemNoteStore extends TenantAwareStore implements WorkItemNo
             if (note.tenancyId == null) {
                 note.tenancyId = currentPrincipal.tenancyId();
             }
-            note.persistAndFlush();
+            em.merge(note);
+            em.flush();
             return note;
         });
     }
@@ -60,8 +61,8 @@ public class JpaWorkItemNoteStore extends TenantAwareStore implements WorkItemNo
     @Override
     public boolean delete(final UUID noteId) {
         return withTenantQuery(() -> {
-            // Tenant-scoped delete — only delete if it belongs to current tenant
-            long deleted = WorkItemNote.delete("id = ?1 AND tenancyId = ?2", noteId, currentPrincipal.tenancyId());
+            int deleted = em.createQuery("DELETE FROM WorkItemNote WHERE id = ?1 AND tenancyId = ?2")
+                    .setParameter(1, noteId).setParameter(2, currentPrincipal.tenancyId()).executeUpdate();
             return deleted > 0;
         });
     }

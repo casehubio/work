@@ -12,6 +12,7 @@ import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.restassured.http.ContentType;
 
 /**
@@ -51,13 +52,13 @@ class WorkItemOptimisticLockTest {
 
     @Test
     void workItem_response_includesVersionField() {
-        given().get("/workitems/" + createWorkItem())
+        given().get("/api/work/items/get-by-id/" + createWorkItem())
                 .then().statusCode(200).body("version", notNullValue());
     }
 
     @Test
     void workItem_freshCreate_hasVersionZero() {
-        final int version = given().get("/workitems/" + createWorkItem())
+        final int version = given().get("/api/work/items/get-by-id/" + createWorkItem())
                 .then().statusCode(200).extract().path("version");
         assertThat(version).isEqualTo(0);
     }
@@ -65,7 +66,7 @@ class WorkItemOptimisticLockTest {
     @Test
     void workItem_afterClaim_versionIncremented() {
         final String itemId = createWorkItem();
-        given().queryParam("claimant", "alice").put("/workitems/" + itemId + "/claim").then().statusCode(200);
+        given().queryParam("claimant", "alice").post("/api/work/lifecycle/claim/" + itemId).then().statusCode(200);
         assertThat(version(itemId)).isGreaterThan(0);
     }
 
@@ -74,7 +75,7 @@ class WorkItemOptimisticLockTest {
     @Test
     void claim_happyPath_returns200() {
         given().queryParam("claimant", "alice")
-                .put("/workitems/" + createWorkItem() + "/claim")
+                .post("/api/work/lifecycle/claim/" + createWorkItem())
                 .then().statusCode(200);
     }
 
@@ -82,9 +83,9 @@ class WorkItemOptimisticLockTest {
     void versionMonotonicallyIncreases_acrossMultipleOperations() {
         final String id = createWorkItem();
         final int v0 = version(id);
-        given().queryParam("claimant", "alice").put("/workitems/" + id + "/claim").then().statusCode(200);
+        given().queryParam("claimant", "alice").post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
         final int v1 = version(id);
-        given().queryParam("actor", "alice").put("/workitems/" + id + "/start").then().statusCode(200);
+        given().queryParam("actor", "alice").post("/api/work/lifecycle/start/" + id).then().statusCode(200);
         final int v2 = version(id);
         assertThat(v1).isGreaterThan(v0);
         assertThat(v2).isGreaterThan(v1);
@@ -95,10 +96,10 @@ class WorkItemOptimisticLockTest {
     private String createWorkItem() {
         return given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Lock test\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
     }
 
     private int version(final String itemId) {
-        return given().get("/workitems/" + itemId).then().statusCode(200).extract().path("version");
+        return given().get("/api/work/items/get-by-id/" + itemId).then().statusCode(200).extract().path("version");
     }
 }

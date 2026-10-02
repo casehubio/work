@@ -37,7 +37,7 @@ public class DefaultWorkItemAuditApi implements WorkItemAuditApi {
 
         return new AuditQueryResult(
                 entries.stream()
-                        .map(e -> new AuditEntryView(e.id, e.event, e.actor, e.detail, e.occurredAt))
+                        .map(e -> new AuditEntryView(e.id, e.workItemId, e.event, e.actor, e.detail, e.occurredAt))
                         .toList(),
                 q.page(), q.size(), total);
     }

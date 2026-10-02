@@ -6,6 +6,8 @@ import java.util.UUID;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import jakarta.persistence.EntityManager;
+
 import io.casehub.work.api.spi.WorkItemFederationApi;
 import io.casehub.work.api.view.FederationSubscriptionRequest;
 import io.casehub.work.api.view.FederationSubscriptionResult;
@@ -15,6 +17,9 @@ import io.casehub.work.federation.subscription.SubscriptionFilter;
 
 @ApplicationScoped
 public class DefaultWorkItemFederationApi implements WorkItemFederationApi {
+
+    @Inject
+    EntityManager em;
 
     @Inject
     FederationSubscriptionService subscriptionService;
@@ -37,7 +42,7 @@ public class DefaultWorkItemFederationApi implements WorkItemFederationApi {
 
     @Override
     public void deregister(UUID subscriptionId, String tenancyId) {
-        FederationSubscriptionEntity sub = FederationSubscriptionEntity.findById(subscriptionId);
+        FederationSubscriptionEntity sub = em.find(FederationSubscriptionEntity.class, subscriptionId);
         if (sub == null) {
             throw new IllegalArgumentException("Subscription not found: " + subscriptionId);
         }
@@ -46,7 +51,7 @@ public class DefaultWorkItemFederationApi implements WorkItemFederationApi {
 
     @Override
     public FederationSubscriptionResult reactivate(UUID subscriptionId, String tenancyId) {
-        FederationSubscriptionEntity sub = FederationSubscriptionEntity.findById(subscriptionId);
+        FederationSubscriptionEntity sub = em.find(FederationSubscriptionEntity.class, subscriptionId);
         if (sub == null) {
             return null;
         }

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.casehub.work.api.WorkItem;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 import java.time.Instant;
@@ -13,6 +14,9 @@ import java.util.UUID;
 
 @ApplicationScoped
 public class FederationSubscriptionService {
+
+    @Inject
+    EntityManager em;
 
     @Inject
     ObjectMapper objectMapper;
@@ -34,14 +38,15 @@ public class FederationSubscriptionService {
         entity.status = FederationSubscriptionEntity.SubscriptionStatus.ACTIVE;
         entity.consecutiveFailures = 0;
         entity.createdAt = Instant.now();
-        entity.persistAndFlush();
+        em.persist(entity);
+        em.flush();
         return entity;
     }
 
     public List<FederationSubscriptionEntity> findActiveSubscriptions(String tenancyId) {
-        return FederationSubscriptionEntity.find("tenancyId = ?1 and status = ?2",
-                        tenancyId, FederationSubscriptionEntity.SubscriptionStatus.ACTIVE)
-                .list();
+        return em.createQuery("FROM FederationSubscriptionEntity WHERE tenancyId = ?1 AND status = ?2", FederationSubscriptionEntity.class)
+                .setParameter(1, tenancyId).setParameter(2, FederationSubscriptionEntity.SubscriptionStatus.ACTIVE)
+                .getResultList();
     }
 
     public List<FederationSubscriptionEntity> matchSubscriptions(WorkItem workItem) {
@@ -59,30 +64,32 @@ public class FederationSubscriptionService {
         var tracking = new FederationTrackingEntity();
         tracking.subscriptionId = subscriptionId;
         tracking.workItemId = workItemId;
-        tracking.persistAndFlush();
+        em.persist(tracking);
+        em.flush();
     }
 
     public List<FederationSubscriptionEntity> findLockedSubscriptions(UUID workItemId) {
-        List<FederationTrackingEntity> trackings = FederationTrackingEntity.find(
-                "workItemId = ?1", workItemId).list();
+        List<FederationTrackingEntity> trackings = em.createQuery("FROM FederationTrackingEntity WHERE workItemId = ?1", FederationTrackingEntity.class)
+                .setParameter(1, workItemId).getResultList();
         List<UUID> subscriptionIds = trackings.stream()
                 .map(t -> t.subscriptionId).toList();
         if (subscriptionIds.isEmpty()) {
             return List.of();
         }
-        return FederationSubscriptionEntity.find("id in ?1 and status = ?2",
-                        subscriptionIds, FederationSubscriptionEntity.SubscriptionStatus.ACTIVE)
-                .list();
+        return em.createQuery("FROM FederationSubscriptionEntity WHERE id IN ?1 AND status = ?2", FederationSubscriptionEntity.class)
+                .setParameter(1, subscriptionIds).setParameter(2, FederationSubscriptionEntity.SubscriptionStatus.ACTIVE)
+                .getResultList();
     }
 
     @Transactional
     public void removeTracking(UUID workItemId) {
-        FederationTrackingEntity.delete("workItemId = ?1", workItemId);
+        em.createQuery("DELETE FROM FederationTrackingEntity WHERE workItemId = ?1")
+                .setParameter(1, workItemId).executeUpdate();
     }
 
     @Transactional
     public void recordSuccess(UUID subscriptionId) {
-        FederationSubscriptionEntity sub = FederationSubscriptionEntity.findById(subscriptionId);
+        FederationSubscriptionEntity sub = em.find(FederationSubscriptionEntity.class, subscriptionId);
         if (sub != null) {
             sub.consecutiveFailures = 0;
         }
@@ -90,7 +97,7 @@ public class FederationSubscriptionService {
 
     @Transactional
     public void recordFailure(UUID subscriptionId) {
-        FederationSubscriptionEntity sub = FederationSubscriptionEntity.findById(subscriptionId);
+        FederationSubscriptionEntity sub = em.find(FederationSubscriptionEntity.class, subscriptionId);
         if (sub != null) {
             sub.consecutiveFailures++;
             sub.lastFailureAt = Instant.now();

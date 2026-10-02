@@ -5,10 +5,13 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,10 +22,13 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 class WorkItemTemplateSchemaTest {
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     private static final String OUTPUT_SCHEMA =
@@ -38,7 +44,7 @@ class WorkItemTemplateSchemaTest {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Loan Approval\",\"category\":\"finance\"," +
                       "\"outputDataSchema\":" + OUTPUT_SCHEMA + ",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(201)
                 .body("outputDataSchema", notNullValue())
@@ -51,7 +57,7 @@ class WorkItemTemplateSchemaTest {
                 .body("{\"name\":\"Review Task\",\"candidateGroups\":\"reviewers\"," +
                       "\"inputDataSchema\":" + INPUT_SCHEMA + "," +
                       "\"outputDataSchema\":" + OUTPUT_SCHEMA + ",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(201)
                 .body("inputDataSchema", notNullValue())
@@ -63,12 +69,12 @@ class WorkItemTemplateSchemaTest {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Schema Template\",\"candidateGroups\":\"reviewers\"," +
                       "\"outputDataSchema\":" + OUTPUT_SCHEMA + ",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("outputDataSchema", notNullValue())
@@ -84,7 +90,7 @@ class WorkItemTemplateSchemaTest {
                 .body("{\"name\":\"Bad Input Schema\",\"category\":\"test\"," +
                       "\"inputDataSchema\":\"" + INPUT_SCHEMA.replace("\"", "\\\"") + "\"," +
                       "\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(400);
     }
@@ -95,7 +101,7 @@ class WorkItemTemplateSchemaTest {
                 .body("{\"name\":\"Bad Output Schema\",\"category\":\"test\"," +
                       "\"outputDataSchema\":\"" + OUTPUT_SCHEMA.replace("\"", "\\\"") + "\"," +
                       "\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(400);
     }
@@ -104,12 +110,12 @@ class WorkItemTemplateSchemaTest {
     void instantiateTemplate_withoutSchemas_workItemSchemasAreNull() {
         final String templateId = given().contentType(ContentType.JSON)
                 .body("{\"name\":\"No Schema\",\"candidateGroups\":\"ops\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("{\"createdBy\":\"system\"}")
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("outputDataSchema", nullValue())

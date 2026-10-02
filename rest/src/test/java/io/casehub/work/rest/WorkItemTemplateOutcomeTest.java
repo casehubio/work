@@ -7,12 +7,15 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItemEntity;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,12 +26,15 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 class WorkItemTemplateOutcomeTest {
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        AuditEntry.deleteAll();
-        WorkItemEntity.deleteAll();
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM AuditEntry").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemEntity").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     @Test
@@ -43,7 +49,7 @@ class WorkItemTemplateOutcomeTest {
                          ],
                          "createdBy":"admin"}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(201)
                 .body("outcomes", hasSize(3))
@@ -59,7 +65,7 @@ class WorkItemTemplateOutcomeTest {
                 .body("""
                         {"name":"Free-form Task","typePaths":"[\\"general\\\"]","createdBy":"admin"}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue());
@@ -78,7 +84,7 @@ class WorkItemTemplateOutcomeTest {
                          ],
                          "createdBy":"admin"}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(201)
                 .extract().path("id");
@@ -88,7 +94,7 @@ class WorkItemTemplateOutcomeTest {
                 .body("""
                         {"createdBy":"system"}
                         """)
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("templateId", equalTo(templateId))
@@ -104,7 +110,7 @@ class WorkItemTemplateOutcomeTest {
                 .body("""
                         {"name":"Simple Task","typePaths":"[\\"ops\\\"]","createdBy":"admin"}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then()
                 .statusCode(201)
                 .extract().path("id");
@@ -113,7 +119,7 @@ class WorkItemTemplateOutcomeTest {
                 .body("""
                         {"createdBy":"system"}
                         """)
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then()
                 .statusCode(201)
                 .body("templateId", equalTo(templateId))
@@ -134,23 +140,23 @@ class WorkItemTemplateOutcomeTest {
                            {"name":"rejected-conflict","displayName":"Conflict of Interest"}
                          ]}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         final String id = given().contentType(ContentType.JSON)
                 .body("""
                         {"createdBy":"system"}
                         """)
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + id + "/claim?claimant=alice").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice").then().statusCode(200);
 
         given().contentType(ContentType.JSON)
                 .body("""
                         {"reason":"conflict of interest","outcome":"rejected-conflict"}
                         """)
-                .put("/workitems/" + id + "/reject?actor=alice")
+                .post("/api/work/lifecycle/reject/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("outcome", equalTo("rejected-conflict"))
@@ -166,23 +172,23 @@ class WorkItemTemplateOutcomeTest {
                            {"name":"approved","displayName":"Approved"}
                          ]}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         final String id = given().contentType(ContentType.JSON)
                 .body("""
                         {"createdBy":"system"}
                         """)
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + id + "/claim?claimant=alice").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice").then().statusCode(200);
 
         given().contentType(ContentType.JSON)
                 .body("""
                         {"reason":"no good","outcome":"not-a-real-outcome"}
                         """)
-                .put("/workitems/" + id + "/reject?actor=alice")
+                .post("/api/work/lifecycle/reject/" + id + "?actor=alice")
                 .then()
                 .statusCode(400)
                 .body("error", containsString("not-a-real-outcome"));
@@ -194,16 +200,16 @@ class WorkItemTemplateOutcomeTest {
                 .body("""
                         {"title":"No outcome constraint","createdBy":"system"}
                         """)
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + id + "/claim?claimant=bob").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=bob").then().statusCode(200);
 
         given().contentType(ContentType.JSON)
                 .body("""
                         {"reason":"not suitable","outcome":"any-value"}
                         """)
-                .put("/workitems/" + id + "/reject?actor=bob")
+                .post("/api/work/lifecycle/reject/" + id + "?actor=bob")
                 .then()
                 .statusCode(200)
                 .body("outcome", equalTo("any-value"))
@@ -217,24 +223,24 @@ class WorkItemTemplateOutcomeTest {
                         {"name":"Reject Null Outcome Template","createdBy":"admin",
                          "outcomes":[{"name":"approved","displayName":"Approved"}]}
                         """)
-                .post("/workitem-templates")
+                .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
         final String id = given().contentType(ContentType.JSON)
                 .body("""
                         {"createdBy":"system"}
                         """)
-                .post("/workitem-templates/" + templateId + "/instantiate")
+                .post("/api/work/templates/instantiate/" + templateId)
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + id + "/claim?claimant=alice").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice").then().statusCode(200);
 
         // Reject with no outcome — should fail since template declares permitted outcomes
         given().contentType(ContentType.JSON)
                 .body("""
                         {"reason":"not good"}
                         """)
-                .put("/workitems/" + id + "/reject?actor=alice")
+                .post("/api/work/lifecycle/reject/" + id + "?actor=alice")
                 .then()
                 .statusCode(400)
                 .body("error", containsString("outcome is required"));

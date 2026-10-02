@@ -12,8 +12,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Table;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-
 /**
  * A predefined blueprint for creating {@link WorkItemEntity} instances.
  *
@@ -47,7 +45,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity
 @Table(name = "work_item_template",
        uniqueConstraints = @UniqueConstraint(name = "uq_work_item_template_name_tenant", columnNames = {"name", "tenancy_id"}))
-public class WorkItemTemplate extends PanacheEntityBase {
+public class WorkItemTemplate {
 
     /** Primary key — UUID assigned on first persist. */
     @Id

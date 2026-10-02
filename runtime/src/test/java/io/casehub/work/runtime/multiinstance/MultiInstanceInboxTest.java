@@ -20,6 +20,7 @@ import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -31,6 +32,9 @@ class MultiInstanceInboxTest {
     @Inject
     WorkItemStore store;
 
+    @Inject
+    EntityManager em;
+
     @Test
     @Transactional
     void standaloneWorkItemAppearsAsRootWithChildCountZero() {
@@ -41,7 +45,7 @@ class MultiInstanceInboxTest {
         item.title = "Standalone";
         item.createdBy = "test";
         item.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        item.persist();
+        em.persist(item);
 
         List<WorkItemRootView> roots = store.scanRoots("alice-inbox-test", null, List.of());
         assertThat(roots).anyMatch(r -> r.workItem().id().equals(item.id)
@@ -60,7 +64,7 @@ class MultiInstanceInboxTest {
         t.instanceCount = 3;
         t.requiredCount = 2;
         t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        t.persist();
+        em.persist(t);
 
         final var request = WorkItemCreateRequest.builder()
                 .templateId(t.id)
@@ -88,7 +92,7 @@ class MultiInstanceInboxTest {
         t.requiredCount = 1;
         t.parentRole = "COORDINATOR";
         t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        t.persist();
+        em.persist(t);
 
         final var request = WorkItemCreateRequest.builder()
                 .templateId(t.id)
@@ -113,7 +117,7 @@ class MultiInstanceInboxTest {
         t.instanceCount = 2;
         t.requiredCount = 1;
         t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        t.persist();
+        em.persist(t);
 
         final var request = WorkItemCreateRequest.builder()
                 .templateId(t.id)

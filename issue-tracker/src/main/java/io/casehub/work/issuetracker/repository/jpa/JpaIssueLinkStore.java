@@ -12,7 +12,7 @@ import io.casehub.work.issuetracker.repository.IssueLinkStore;
 import io.casehub.work.runtime.repository.jpa.TenantAwareStore;
 
 /**
- * Default JPA/Panache implementation of {@link IssueLinkStore}.
+ * Default JPA implementation of {@link IssueLinkStore}.
  *
  * <p>Every query is scoped to the current tenant via {@link CurrentPrincipal#tenancyId()}.
  * The {@link #save} method stamps {@code tenancyId} from the principal on insert when
@@ -25,9 +25,9 @@ public class JpaIssueLinkStore extends TenantAwareStore implements IssueLinkStor
     @Override
     public Optional<WorkItemIssueLink> findById(final UUID id) {
         return withTenantQuery(() ->
-            WorkItemIssueLink.find("id = ?1 AND tenancyId = ?2",
-                    id, currentPrincipal.tenancyId())
-                    .firstResultOptional()
+            em.createQuery("FROM WorkItemIssueLink WHERE id = ?1 AND tenancyId = ?2", WorkItemIssueLink.class)
+                    .setParameter(1, id).setParameter(2, currentPrincipal.tenancyId())
+                    .getResultStream().findFirst()
         );
     }
 
@@ -35,9 +35,9 @@ public class JpaIssueLinkStore extends TenantAwareStore implements IssueLinkStor
     @Override
     public List<WorkItemIssueLink> findByWorkItemId(final UUID workItemId) {
         return withTenantQuery(() ->
-            WorkItemIssueLink.list(
-                    "workItemId = ?1 AND tenancyId = ?2 ORDER BY linkedAt ASC",
-                    workItemId, currentPrincipal.tenancyId())
+            em.createQuery("FROM WorkItemIssueLink WHERE workItemId = ?1 AND tenancyId = ?2 ORDER BY linkedAt ASC", WorkItemIssueLink.class)
+                    .setParameter(1, workItemId).setParameter(2, currentPrincipal.tenancyId())
+                    .getResultList()
         );
     }
 
@@ -46,10 +46,9 @@ public class JpaIssueLinkStore extends TenantAwareStore implements IssueLinkStor
     public Optional<WorkItemIssueLink> findByRef(
             final UUID workItemId, final String trackerType, final String externalRef) {
         return withTenantQuery(() ->
-            WorkItemIssueLink.find(
-                    "workItemId = ?1 AND trackerType = ?2 AND externalRef = ?3 AND tenancyId = ?4",
-                    workItemId, trackerType, externalRef, currentPrincipal.tenancyId())
-                    .firstResultOptional()
+            em.createQuery("FROM WorkItemIssueLink WHERE workItemId = ?1 AND trackerType = ?2 AND externalRef = ?3 AND tenancyId = ?4", WorkItemIssueLink.class)
+                    .setParameter(1, workItemId).setParameter(2, trackerType).setParameter(3, externalRef).setParameter(4, currentPrincipal.tenancyId())
+                    .getResultStream().findFirst()
         );
     }
 
@@ -57,9 +56,9 @@ public class JpaIssueLinkStore extends TenantAwareStore implements IssueLinkStor
     @Override
     public List<WorkItemIssueLink> findByTrackerRef(final String trackerType, final String externalRef) {
         return withTenantQuery(() ->
-            WorkItemIssueLink.list(
-                    "trackerType = ?1 AND externalRef = ?2 AND tenancyId = ?3",
-                    trackerType, externalRef, currentPrincipal.tenancyId())
+            em.createQuery("FROM WorkItemIssueLink WHERE trackerType = ?1 AND externalRef = ?2 AND tenancyId = ?3", WorkItemIssueLink.class)
+                    .setParameter(1, trackerType).setParameter(2, externalRef).setParameter(3, currentPrincipal.tenancyId())
+                    .getResultList()
         );
     }
 
@@ -67,7 +66,7 @@ public class JpaIssueLinkStore extends TenantAwareStore implements IssueLinkStor
      * {@inheritDoc}
      *
      * <p>Stamps {@code tenancyId} from the current principal when the entity does not
-     * already carry one. Calls {@link WorkItemIssueLink#persistAndFlush()} to ensure
+     * already carry one. Calls {@code em.persist()} and {@code em.flush()} to ensure
      * the entity is written immediately.
      */
     @Override
@@ -76,7 +75,8 @@ public class JpaIssueLinkStore extends TenantAwareStore implements IssueLinkStor
             if (link.tenancyId == null) {
                 link.tenancyId = currentPrincipal.tenancyId();
             }
-            link.persistAndFlush();
+            em.persist(link);
+            em.flush();
             return link;
         });
     }
@@ -84,6 +84,6 @@ public class JpaIssueLinkStore extends TenantAwareStore implements IssueLinkStor
     /** {@inheritDoc} */
     @Override
     public void delete(final WorkItemIssueLink link) {
-        withTenantRun(() -> link.delete());
+        withTenantRun(() -> em.remove(em.contains(link) ? link : em.merge(link)));
     }
 }

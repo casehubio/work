@@ -9,6 +9,7 @@ import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,13 +24,16 @@ class WorkItemTemplateInstantiateTest {
     @Inject
     WorkItemTemplateService templateService;
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void cleanup() {
-        AuditEntry.deleteAll();
-        WorkItemSpawnGroup.deleteAll();
-        WorkItemEntity.deleteAll();
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM AuditEntry").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemSpawnGroup").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemEntity").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     @Test
@@ -84,7 +88,7 @@ class WorkItemTemplateInstantiateTest {
         t.createdBy = "admin";
         t.instanceCount = instanceCount;
         t.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
-        t.persist();
+        em.persist(t);
         return t;
     }
 }

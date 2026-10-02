@@ -142,7 +142,8 @@ class ViewRecordTest {
     void auditEntryViewFields() {
         UUID id = UUID.randomUUID();
         Instant now = Instant.now();
-        var entry = new AuditEntryView(id, "CLAIMED", "actor1", "detail", now);
+        UUID workItemId = UUID.randomUUID();
+        var entry = new AuditEntryView(id, workItemId, "CLAIMED", "actor1", "detail", now);
         assertEquals("CLAIMED", entry.event());
         assertEquals("actor1", entry.actor());
     }

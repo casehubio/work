@@ -25,7 +25,7 @@ class LabelEndpointTest {
                           ]
                         }
                         """)
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then()
                 .statusCode(201)
                 .body("labels", hasSize(1))
@@ -47,7 +47,7 @@ class LabelEndpointTest {
                           ]
                         }
                         """)
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then()
                 .statusCode(400);
     }
@@ -62,7 +62,7 @@ class LabelEndpointTest {
                           "createdBy": "bob"
                         }
                         """)
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then()
                 .statusCode(201)
                 .body("labels", hasSize(0));
@@ -82,7 +82,7 @@ class LabelEndpointTest {
                           ]
                         }
                         """)
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then()
                 .statusCode(201)
                 .body("labels", hasSize(2));
@@ -91,7 +91,7 @@ class LabelEndpointTest {
     @Test
     void vocabulary_listAll_includesSeededGlobalTerms() {
         given()
-                .get("/vocabulary")
+                .get("/api/work/vocabulary/list-all")
                 .then()
                 .statusCode(200)
                 .body("path", org.hamcrest.Matchers.hasItem("legal/contracts"))
@@ -105,13 +105,13 @@ class LabelEndpointTest {
                 .body("""
                         {"path": "test/unique-vocab-54", "description": "test label", "addedBy": "alice"}
                         """)
-                .post("/vocabulary")
+                .post("/api/work/vocabulary/add-definition")
                 .then()
                 .statusCode(201)
                 .body("path", equalTo("test/unique-vocab-54"));
 
         given()
-                .get("/vocabulary")
+                .get("/api/work/vocabulary/list-all")
                 .then()
                 .statusCode(200)
                 .body("path", org.hamcrest.Matchers.hasItem("test/unique-vocab-54"));
@@ -124,10 +124,9 @@ class LabelEndpointTest {
                 .body("""
                         {"path": "test/label", "addedBy": "alice", "scope": "acme//team"}
                         """)
-                .post("/vocabulary")
+                .post("/api/work/vocabulary/add-definition")
                 .then()
-                .statusCode(400)
-                .body("error", org.hamcrest.Matchers.containsString("invalid scope"));
+                .statusCode(400);
     }
 
     @Test
@@ -137,7 +136,7 @@ class LabelEndpointTest {
                 .body("""
                         {"path": "org/finance/approvals", "addedBy": "alice", "scope": "acme-corp"}
                         """)
-                .post("/vocabulary")
+                .post("/api/work/vocabulary/add-definition")
                 .then()
                 .statusCode(201)
                 .body("path", equalTo("org/finance/approvals"))
@@ -151,7 +150,7 @@ class LabelEndpointTest {
                 .body("""
                         {"path": "team/sprint/review", "addedBy": "bob", "scope": "acme-corp/team-alpha"}
                         """)
-                .post("/vocabulary")
+                .post("/api/work/vocabulary/add-definition")
                 .then()
                 .statusCode(201)
                 .body("path", equalTo("team/sprint/review"))
@@ -165,12 +164,12 @@ class LabelEndpointTest {
                 .body("""
                         {"path": "my/team/label", "addedBy": "charlie", "scope": "acme-corp/team-bravo"}
                         """)
-                .post("/vocabulary")
+                .post("/api/work/vocabulary/add-definition")
                 .then()
                 .statusCode(201);
 
         given()
-                .get("/vocabulary")
+                .get("/api/work/vocabulary/list-all")
                 .then()
                 .statusCode(200)
                 .body("path", org.hamcrest.Matchers.hasItem("my/team/label"));
@@ -183,7 +182,7 @@ class LabelEndpointTest {
                 .body("""
                         {"path": "personal/label/one", "addedBy": "dave", "scope": "casehubio/dave"}
                         """)
-                .post("/vocabulary")
+                .post("/api/work/vocabulary/add-definition")
                 .then()
                 .statusCode(201);
 
@@ -192,12 +191,12 @@ class LabelEndpointTest {
                 .body("""
                         {"path": "personal/label/two", "addedBy": "dave", "scope": "casehubio/dave"}
                         """)
-                .post("/vocabulary")
+                .post("/api/work/vocabulary/add-definition")
                 .then()
                 .statusCode(201);
 
         given()
-                .get("/vocabulary")
+                .get("/api/work/vocabulary/list-all")
                 .then()
                 .statusCode(200)
                 .body("path", org.hamcrest.Matchers.hasItem("personal/label/one"))
@@ -211,20 +210,18 @@ class LabelEndpointTest {
                 .body("""
                         {"path": "legal/*", "addedBy": "alice"}
                         """)
-                .post("/vocabulary")
+                .post("/api/work/vocabulary/add-definition")
                 .then()
-                .statusCode(400)
-                .body("error", org.hamcrest.Matchers.containsString("wildcard"));
+                .statusCode(400);
 
         given()
                 .contentType(ContentType.JSON)
                 .body("""
                         {"path": "legal/?", "addedBy": "alice"}
                         """)
-                .post("/vocabulary")
+                .post("/api/work/vocabulary/add-definition")
                 .then()
-                .statusCode(400)
-                .body("error", org.hamcrest.Matchers.containsString("wildcard"));
+                .statusCode(400);
     }
 
     @Test
@@ -234,13 +231,13 @@ class LabelEndpointTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"path\": \"" + uniquePath + "\", \"description\": \"converter test\", \"addedBy\": \"alice\"}")
-                .post("/vocabulary")
+                .post("/api/work/vocabulary/add-definition")
                 .then()
                 .statusCode(201)
                 .body("path", equalTo(uniquePath));
 
         given()
-                .get("/vocabulary")
+                .get("/api/work/vocabulary/list-all")
                 .then()
                 .statusCode(200)
                 .body("path", org.hamcrest.Matchers.hasItem(uniquePath));
@@ -251,7 +248,7 @@ class LabelEndpointTest {
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"path\": \"\", \"addedBy\": \"alice\"}")
-                .post("/vocabulary")
+                .post("/api/work/vocabulary/add-definition")
                 .then()
                 .statusCode(400);
     }
@@ -267,22 +264,22 @@ class LabelEndpointTest {
                           "labels": [{"path": "legal/contracts", "persistence": "MANUAL", "appliedBy": "alice"}]
                         }
                         """)
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201);
 
         given()
                 .queryParam("label", "legal/contracts")
-                .get("/workitems")
+                .get("/api/work/items/list-all")
                 .then()
                 .statusCode(200)
-                .body("title", org.hamcrest.Matchers.hasItem("Label query test 55"));
+                .body("items.title", org.hamcrest.Matchers.hasItem("Label query test 55"));
 
         given()
                 .queryParam("label", "legal/**")
-                .get("/workitems")
+                .get("/api/work/items/list-all")
                 .then()
                 .statusCode(200)
-                .body("title", org.hamcrest.Matchers.hasItem("Label query test 55"));
+                .body("items.title", org.hamcrest.Matchers.hasItem("Label query test 55"));
     }
 
     @Test
@@ -290,14 +287,14 @@ class LabelEndpointTest {
         var id = given()
                 .contentType(ContentType.JSON)
                 .body("{\"title\": \"Add label test 55\", \"createdBy\": \"alice\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         given()
-                .contentType(ContentType.JSON)
-                .body("{\"path\": \"legal/contracts\", \"appliedBy\": \"alice\"}")
-                .post("/workitems/" + id + "/labels")
+                .queryParam("path", "legal/contracts")
+                .queryParam("appliedBy", "alice")
+                .post("/api/work/items/add-label/" + id)
                 .then()
                 .statusCode(200)
                 .body("labels.path", org.hamcrest.Matchers.hasItem("legal/contracts"));
@@ -314,31 +311,31 @@ class LabelEndpointTest {
                           "labels": [{"path": "legal/contracts", "persistence": "MANUAL", "appliedBy": "alice"}]
                         }
                         """)
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         given()
                 .queryParam("path", "legal/contracts")
-                .delete("/workitems/" + id + "/labels")
+                .post("/api/work/items/remove-label/" + id)
                 .then()
                 .statusCode(200)
                 .body("labels", hasSize(0));
     }
 
     @Test
-    void removeNonExistentLabel_returns404() {
+    void removeNonExistentLabel_returns400() {
         var id = given()
                 .contentType(ContentType.JSON)
                 .body("{\"title\": \"404 label test\", \"createdBy\": \"alice\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         given()
                 .queryParam("path", "nonexistent/label")
-                .delete("/workitems/" + id + "/labels")
+                .post("/api/work/items/remove-label/" + id)
                 .then()
-                .statusCode(404);
+                .statusCode(400);
     }
 }

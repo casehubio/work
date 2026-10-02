@@ -19,6 +19,7 @@ import io.casehub.work.api.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -27,10 +28,13 @@ class MultiInstanceCreateTest {
     @Inject
     WorkItemTemplateService templateService;
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     @Test
@@ -44,7 +48,7 @@ class MultiInstanceCreateTest {
         template.instanceCount = 3;
         template.requiredCount = 2;
         template.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        template.persist();
+        em.persist(template);
 
         final var request = WorkItemCreateRequest.builder()
                 .templateId(template.id)
@@ -56,20 +60,18 @@ class MultiInstanceCreateTest {
         assertThat(parent.id()).isNotNull();
 
         // Three children should exist
-        List<WorkItemEntity> children = WorkItemEntity.list("parentId", parent.id());
+        List<WorkItemEntity> children = em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parent.id()).getResultList();
         assertThat(children).hasSize(3);
 
         // All children have PART_OF relation to parent
         children.forEach(child -> {
             assertThat(child.parentId).isEqualTo(parent.id());
-            long relations = WorkItemRelation.count(
-                    "sourceId = ?1 AND targetId = ?2 AND relationType = ?3",
-                    child.id, parent.id(), WorkItemRelationType.PART_OF);
+            long relations = em.createQuery("SELECT COUNT(r) FROM WorkItemRelation r WHERE r.sourceId = ?1 AND r.targetId = ?2 AND r.relationType = ?3", Long.class).setParameter(1, child.id).setParameter(2, parent.id()).setParameter(3, WorkItemRelationType.PART_OF).getSingleResult();
             assertThat(relations).isEqualTo(1);
         });
 
         // Spawn group created with policy
-        WorkItemSpawnGroup group = WorkItemSpawnGroup.findMultiInstanceByParentId(parent.id());
+        WorkItemSpawnGroup group = em.createQuery("FROM WorkItemSpawnGroup WHERE parentId = ?1 AND requiredCount IS NOT NULL", WorkItemSpawnGroup.class).setParameter(1, parent.id()).getResultStream().findFirst().orElse(null);
         assertThat(group).isNotNull();
         assertThat(group.instanceCount).isEqualTo(3);
         assertThat(group.requiredCount).isEqualTo(2);
@@ -84,7 +86,7 @@ class MultiInstanceCreateTest {
         template.name = "Simple Task";
         template.createdBy = "test";
         template.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        template.persist();
+        em.persist(template);
 
         final var request = WorkItemCreateRequest.builder()
                 .templateId(template.id)
@@ -93,6 +95,6 @@ class MultiInstanceCreateTest {
         WorkItem item = templateService.createFromTemplate(request);
 
         assertThat(item.parentId()).isNull();
-        assertThat(WorkItemEntity.count("parentId", item.id())).isZero();
+        assertThat(em.createQuery("SELECT COUNT(e) FROM WorkItemEntity e WHERE e.parentId = ?1", Long.class).setParameter(1, item.id()).getSingleResult()).isZero();
     }
 }

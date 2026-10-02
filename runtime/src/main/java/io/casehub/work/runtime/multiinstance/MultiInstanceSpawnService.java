@@ -16,6 +16,7 @@ import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 import java.util.ArrayList;
@@ -42,6 +43,9 @@ public class MultiInstanceSpawnService {
     @Inject
     io.casehub.work.api.spi.WorkItemStore workItemStore;
 
+    @Inject
+    EntityManager em;
+
 
     @Transactional
     public io.casehub.work.api.WorkItem createGroup(final WorkItemCreateRequest mergedRequest,
@@ -58,7 +62,7 @@ public class MultiInstanceSpawnService {
         group.parentRole         = template.parentRole != null ? template.parentRole : ParentRole.COORDINATOR.name();
         group.groupStatus        = GroupStatus.IN_PROGRESS;
         group.tenancyId          = parent.tenancyId();
-        group.persist();
+        em.persist(group);
 
         final List<io.casehub.work.api.WorkItem> children = new ArrayList<>();
         for (int i = 0; i < template.instanceCount; i++) {
@@ -75,7 +79,7 @@ public class MultiInstanceSpawnService {
             rel.relationType = WorkItemRelationType.PART_OF;
             rel.createdBy    = "system:multi-instance:" + group.id;
             rel.tenancyId    = parent.tenancyId();
-            rel.persist();
+            em.persist(rel);
 
             children.add(child);
         }
@@ -121,7 +125,7 @@ public class MultiInstanceSpawnService {
         group.parentRole         = config.effectiveParentRole().name();
         group.groupStatus        = GroupStatus.IN_PROGRESS;
         group.tenancyId          = parent.tenancyId();
-        group.persist();
+        em.persist(group);
 
         final List<io.casehub.work.api.WorkItem> children = new ArrayList<>();
         for (int i = 0; i < config.instanceCount(); i++) {
@@ -141,7 +145,7 @@ public class MultiInstanceSpawnService {
             rel.relationType = WorkItemRelationType.PART_OF;
             rel.createdBy    = "system:multi-instance:" + group.id;
             rel.tenancyId    = parent.tenancyId();
-            rel.persist();
+            em.persist(rel);
 
             children.add(child);
         }

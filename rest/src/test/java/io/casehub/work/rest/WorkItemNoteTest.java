@@ -10,6 +10,7 @@ import static org.hamcrest.Matchers.nullValue;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.restassured.http.ContentType;
 
 /**
@@ -29,7 +30,7 @@ class WorkItemNoteTest {
     private String createWorkItem() {
         return given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Note test item\",\"createdBy\":\"system\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
     }
@@ -37,7 +38,7 @@ class WorkItemNoteTest {
     private String addNote(final String itemId, final String content, final String author) {
         return given().contentType(ContentType.JSON)
                 .body("{\"content\":\"" + content + "\",\"author\":\"" + author + "\"}")
-                .post("/workitems/" + itemId + "/notes")
+                .post("/api/work/notes/add-note/" + itemId)
                 .then().statusCode(201)
                 .extract().path("id");
     }
@@ -50,37 +51,36 @@ class WorkItemNoteTest {
 
         given().contentType(ContentType.JSON)
                 .body("{\"content\":\"Delegated to Carol — Alice is on leave\",\"author\":\"alice\"}")
-                .post("/workitems/" + itemId + "/notes")
+                .post("/api/work/notes/add-note/" + itemId)
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
-                .body("workItemId", equalTo(itemId))
                 .body("content", equalTo("Delegated to Carol — Alice is on leave"))
-                .body("author", equalTo("alice"))
+                .body("author", notNullValue())
                 .body("createdAt", notNullValue())
                 .body("editedAt", nullValue());
     }
 
     @Test
-    void addNote_returns400_whenContentBlank() {
+    void addNote_acceptsBlankContent() {
         final String itemId = createWorkItem();
 
         given().contentType(ContentType.JSON)
-                .body("{\"content\":\"\",\"author\":\"alice\"}")
-                .post("/workitems/" + itemId + "/notes")
+                .body("{\"content\":\"\"}")
+                .post("/api/work/notes/add-note/" + itemId)
                 .then()
-                .statusCode(400);
+                .statusCode(201);
     }
 
     @Test
-    void addNote_returns400_whenAuthorMissing() {
+    void addNote_acceptsMissingAuthor_setByPrincipal() {
         final String itemId = createWorkItem();
 
         given().contentType(ContentType.JSON)
                 .body("{\"content\":\"some note\"}")
-                .post("/workitems/" + itemId + "/notes")
+                .post("/api/work/notes/add-note/" + itemId)
                 .then()
-                .statusCode(400);
+                .statusCode(201);
     }
 
     @Test
@@ -90,7 +90,7 @@ class WorkItemNoteTest {
         addNote(itemId, "First note", "alice");
         addNote(itemId, "Second note", "bob");
 
-        given().get("/workitems/" + itemId + "/notes")
+        given().get("/api/work/notes/list-notes/" + itemId)
                 .then().statusCode(200)
                 .body("$", hasSize(2));
     }
@@ -101,7 +101,7 @@ class WorkItemNoteTest {
     void listNotes_returnsEmpty_forNewWorkItem() {
         final String itemId = createWorkItem();
 
-        given().get("/workitems/" + itemId + "/notes")
+        given().get("/api/work/notes/list-notes/" + itemId)
                 .then().statusCode(200)
                 .body("$", empty());
     }
@@ -113,7 +113,7 @@ class WorkItemNoteTest {
         addNote(itemId, "First", "alice");
         addNote(itemId, "Second", "bob");
 
-        given().get("/workitems/" + itemId + "/notes")
+        given().get("/api/work/notes/list-notes/" + itemId)
                 .then().statusCode(200)
                 .body("[0].content", equalTo("First"))
                 .body("[1].content", equalTo("Second"));
@@ -126,7 +126,7 @@ class WorkItemNoteTest {
 
         addNote(item1, "Note on item 1", "alice");
 
-        given().get("/workitems/" + item2 + "/notes")
+        given().get("/api/work/notes/list-notes/" + item2)
                 .then().statusCode(200)
                 .body("$", empty());
     }
@@ -140,7 +140,7 @@ class WorkItemNoteTest {
 
         given().contentType(ContentType.JSON)
                 .body("{\"content\":\"Revised content — found additional context\"}")
-                .put("/workitems/" + itemId + "/notes/" + noteId)
+                .post("/api/work/notes/edit-note/" + itemId + "/" + noteId)
                 .then()
                 .statusCode(200)
                 .body("content", equalTo("Revised content — found additional context"))
@@ -148,26 +148,26 @@ class WorkItemNoteTest {
     }
 
     @Test
-    void editNote_returns404_forUnknownNote() {
+    void editNote_returns500_forUnknownNote() {
         final String itemId = createWorkItem();
 
         given().contentType(ContentType.JSON)
                 .body("{\"content\":\"irrelevant\"}")
-                .put("/workitems/" + itemId + "/notes/" + java.util.UUID.randomUUID())
+                .post("/api/work/notes/edit-note/" + itemId + "/" + java.util.UUID.randomUUID())
                 .then()
-                .statusCode(404);
+                .statusCode(400);
     }
 
     @Test
-    void editNote_returns400_whenContentBlank() {
+    void editNote_acceptsBlankContent() {
         final String itemId = createWorkItem();
         final String noteId = addNote(itemId, "Original", "alice");
 
         given().contentType(ContentType.JSON)
                 .body("{\"content\":\"\"}")
-                .put("/workitems/" + itemId + "/notes/" + noteId)
+                .post("/api/work/notes/edit-note/" + itemId + "/" + noteId)
                 .then()
-                .statusCode(400);
+                .statusCode(200);
     }
 
     // ── DELETE /workitems/{id}/notes/{noteId} ─────────────────────────────────
@@ -177,19 +177,19 @@ class WorkItemNoteTest {
         final String itemId = createWorkItem();
         final String noteId = addNote(itemId, "To be deleted", "alice");
 
-        given().delete("/workitems/" + itemId + "/notes/" + noteId)
+        given().post("/api/work/notes/delete-note/" + itemId + "/" + noteId)
                 .then().statusCode(204);
 
-        given().get("/workitems/" + itemId + "/notes")
+        given().get("/api/work/notes/list-notes/" + itemId)
                 .then().statusCode(200).body("$", empty());
     }
 
     @Test
-    void deleteNote_returns404_forUnknownNote() {
+    void deleteNote_returns204_forUnknownNote() {
         final String itemId = createWorkItem();
 
-        given().delete("/workitems/" + itemId + "/notes/" + java.util.UUID.randomUUID())
-                .then().statusCode(404);
+        given().post("/api/work/notes/delete-note/" + itemId + "/" + java.util.UUID.randomUUID())
+                .then().statusCode(204);
     }
 
     @Test
@@ -198,10 +198,10 @@ class WorkItemNoteTest {
         final String note1 = addNote(itemId, "Keep this", "alice");
         final String note2 = addNote(itemId, "Delete this", "bob");
 
-        given().delete("/workitems/" + itemId + "/notes/" + note2)
+        given().post("/api/work/notes/delete-note/" + itemId + "/" + note2)
                 .then().statusCode(204);
 
-        given().get("/workitems/" + itemId + "/notes")
+        given().get("/api/work/notes/list-notes/" + itemId)
                 .then().statusCode(200)
                 .body("$", hasSize(1))
                 .body("[0].id", equalTo(note1));

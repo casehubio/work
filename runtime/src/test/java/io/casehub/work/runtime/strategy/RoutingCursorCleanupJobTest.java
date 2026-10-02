@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.runtime.model.RoutingCursor;
 import io.casehub.work.runtime.model.RoutingCursorId;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -30,6 +31,9 @@ class RoutingCursorCleanupJobTest {
     @Inject
     RoutingCursorCleanupJob cleanupJob;
 
+    @Inject
+    EntityManager em;
+
     @Test
     void cleanup_deletesRowsOlderThanCutoff() {
         final String staleHash = "stale-" + UUID.randomUUID();
@@ -37,12 +41,12 @@ class RoutingCursorCleanupJobTest {
             final RoutingCursor stale = new RoutingCursor(staleHash);
             stale.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
             stale.lastAccessed = Instant.now().minus(35, ChronoUnit.DAYS);
-            stale.persist();
+            em.persist(stale);
         });
 
         cleanupJob.cleanup();
 
-        final RoutingCursor result = inTx(() -> RoutingCursor.findById(
+        final RoutingCursor result = inTx(() -> em.find(RoutingCursor.class,
                 new RoutingCursorId(staleHash, TenancyConstants.DEFAULT_TENANT_ID)));
         assertThat(result).isNull();
     }
@@ -54,12 +58,12 @@ class RoutingCursorCleanupJobTest {
             final RoutingCursor fresh = new RoutingCursor(freshHash);
             fresh.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
             fresh.lastAccessed = Instant.now().minus(1, ChronoUnit.DAYS);
-            fresh.persist();
+            em.persist(fresh);
         });
 
         cleanupJob.cleanup();
 
-        final RoutingCursor result = inTx(() -> RoutingCursor.findById(
+        final RoutingCursor result = inTx(() -> em.find(RoutingCursor.class,
                 new RoutingCursorId(freshHash, TenancyConstants.DEFAULT_TENANT_ID)));
         assertThat(result).isNotNull();
     }

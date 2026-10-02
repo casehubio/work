@@ -12,6 +12,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.restassured.http.ContentType;
 
 /**
@@ -31,13 +32,13 @@ class AuditResourceTest {
 
     @Test
     void listAudit_returns200_withPaginatedEnvelope() {
-        given().get("/audit")
+        given().get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries", notNullValue())
                 .body("page", equalTo(0))
                 .body("size", notNullValue())
-                .body("total", notNullValue());
+                .body("totalCount", notNullValue());
     }
 
     @Test
@@ -47,11 +48,11 @@ class AuditResourceTest {
         claimAndStart(id, actor);
 
         given().queryParam("actorId", actor)
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries", not(empty()))
-                .body("total", greaterThanOrEqualTo(1));
+                .body("totalCount", greaterThanOrEqualTo(1));
     }
 
     @Test
@@ -60,7 +61,7 @@ class AuditResourceTest {
         createWorkItem("fields-cat", actor);
 
         given().queryParam("actorId", actor)
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries[0].id", notNullValue())
@@ -79,7 +80,7 @@ class AuditResourceTest {
         createWorkItem("cat-b", actorB);
 
         given().queryParam("actorId", actorA)
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries.actor", not(hasItem(actorB)));
@@ -88,11 +89,11 @@ class AuditResourceTest {
     @Test
     void filterByActorId_returnsEmpty_forUnknownActor() {
         given().queryParam("actorId", "nobody-" + System.nanoTime())
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries", empty())
-                .body("total", equalTo(0));
+                .body("totalCount", equalTo(0));
     }
 
     @Test
@@ -103,13 +104,13 @@ class AuditResourceTest {
         completeWorkItem(id, actor);
 
         given().queryParam("actorId", actor)
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries.event", hasItem("CREATED"))
                 .body("entries.event", hasItem("ASSIGNED"))
                 .body("entries.event", hasItem("COMPLETED"))
-                .body("total", greaterThanOrEqualTo(3));
+                .body("totalCount", greaterThanOrEqualTo(3));
     }
 
     // ── Filter by event type ──────────────────────────────────────────────────
@@ -123,7 +124,7 @@ class AuditResourceTest {
 
         given().queryParam("event", "COMPLETED")
                 .queryParam("actorId", actor)
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries.event", not(hasItem("CREATED")))
@@ -138,7 +139,7 @@ class AuditResourceTest {
 
         given().queryParam("event", "REJECTED")
                 .queryParam("actorId", actor)
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries", empty());
@@ -154,7 +155,7 @@ class AuditResourceTest {
         // from = far future: nothing should match
         given().queryParam("actorId", actor)
                 .queryParam("from", "2099-01-01T00:00:00Z")
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries", empty());
@@ -168,7 +169,7 @@ class AuditResourceTest {
         // to = far past: nothing should match
         given().queryParam("actorId", actor)
                 .queryParam("to", "2000-01-01T00:00:00Z")
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries", empty());
@@ -182,11 +183,11 @@ class AuditResourceTest {
         given().queryParam("actorId", actor)
                 .queryParam("from", "2020-01-01T00:00:00Z")
                 .queryParam("to", "2099-12-31T23:59:59Z")
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries", not(empty()))
-                .body("total", greaterThanOrEqualTo(1));
+                .body("totalCount", greaterThanOrEqualTo(1));
     }
 
     // ── filter by type ────────────────────────────────────────────────────
@@ -202,7 +203,7 @@ class AuditResourceTest {
 
         given().queryParam("actorId", actor)
                 .queryParam("type", cat)
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries.workItemId", hasItem(id1))
@@ -213,7 +214,7 @@ class AuditResourceTest {
 
     @Test
     void pagination_defaultPageIs0_defaultSizeIs20() {
-        given().get("/audit")
+        given().get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("page", equalTo(0))
@@ -222,8 +223,8 @@ class AuditResourceTest {
 
     @Test
     void pagination_customPageAndSize_areReflectedInResponse() {
-        given().queryParam("page", "1").queryParam("size", "5")
-                .get("/audit")
+        given().queryParam("pageIndex", "1").queryParam("pageSize", "5")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("page", equalTo(1))
@@ -232,8 +233,8 @@ class AuditResourceTest {
 
     @Test
     void pagination_sizeCappedAt100() {
-        given().queryParam("size", "999")
-                .get("/audit")
+        given().queryParam("pageSize", "999")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("size", equalTo(100));
@@ -248,14 +249,14 @@ class AuditResourceTest {
 
         // page=0 size=1: entries has 1, but total reflects all
         final int total = given().queryParam("actorId", actor)
-                .queryParam("page", "0").queryParam("size", "1")
-                .get("/audit")
+                .queryParam("pageIndex", "0").queryParam("pageSize", "1")
+                .get("/api/work/audit/query")
                 .then().statusCode(200)
-                .extract().path("total");
+                .extract().path("totalCount");
 
         final int entriesSize = given().queryParam("actorId", actor)
-                .queryParam("page", "0").queryParam("size", "1")
-                .get("/audit")
+                .queryParam("pageIndex", "0").queryParam("pageSize", "1")
+                .get("/api/work/audit/query")
                 .then().statusCode(200)
                 .extract().path("entries.size()");
 
@@ -277,7 +278,7 @@ class AuditResourceTest {
                 .queryParam("event", "COMPLETED")
                 .queryParam("from", "2020-01-01T00:00:00Z")
                 .queryParam("to", "2099-12-31T23:59:59Z")
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
                 .body("entries", not(empty()))
@@ -309,10 +310,10 @@ class AuditResourceTest {
         // Query: all COMPLETED events by Alice
         given().queryParam("actorId", alice)
                 .queryParam("event", "COMPLETED")
-                .get("/audit")
+                .get("/api/work/audit/query")
                 .then()
                 .statusCode(200)
-                .body("total", equalTo(2))
+                .body("totalCount", equalTo(2))
                 .body("entries.workItemId", hasItem(id1))
                 .body("entries.workItemId", hasItem(id2))
                 .body("entries.workItemId", not(hasItem(id3)));
@@ -324,19 +325,19 @@ class AuditResourceTest {
         return given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Audit Test\",\"types\":[\"" + type
                         + "\"],\"createdBy\":\"" + createdBy + "\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201).extract().path("id");
     }
 
     private void claimAndStart(final String id, final String actor) {
-        given().put("/workitems/" + id + "/claim?claimant=" + actor).then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=" + actor).then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=" + actor).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id + "?actor=" + actor).then().statusCode(200);
     }
 
     private void completeWorkItem(final String id, final String actor) {
         given().contentType(ContentType.JSON)
                 .body("{\"resolution\":null}")
-                .put("/workitems/" + id + "/complete?actor=" + actor)
+                .post("/api/work/lifecycle/complete/" + id + "?actor=" + actor)
                 .then().statusCode(200);
     }
 }

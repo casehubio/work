@@ -5,9 +5,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
-import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 
@@ -28,7 +25,8 @@ public class JpaWorkItemSpawnGroupStore extends TenantAwareStore implements Work
             if (group.tenancyId == null) {
                 group.tenancyId = currentPrincipal.tenancyId();
             }
-            group.persistAndFlush();
+            em.persist(group);
+            em.flush();
             return group;
         });
     }
@@ -36,51 +34,49 @@ public class JpaWorkItemSpawnGroupStore extends TenantAwareStore implements Work
     @Override
     public Optional<WorkItemSpawnGroup> get(final UUID id) {
         return withTenantQuery(() ->
-                WorkItemSpawnGroup.find("id = ?1 AND tenancyId = ?2", id, currentPrincipal.tenancyId())
-                        .firstResultOptional());
+                em.createQuery("FROM WorkItemSpawnGroup WHERE id = ?1 AND tenancyId = ?2", WorkItemSpawnGroup.class)
+                        .setParameter(1, id).setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     public List<WorkItemSpawnGroup> findByParentId(final UUID parentId) {
         return withTenantQuery(() ->
-                WorkItemSpawnGroup.list(
-                        "parentId = ?1 AND tenancyId = ?2 ORDER BY createdAt DESC",
-                        parentId, currentPrincipal.tenancyId()));
+                em.createQuery("FROM WorkItemSpawnGroup WHERE parentId = ?1 AND tenancyId = ?2 ORDER BY createdAt DESC", WorkItemSpawnGroup.class)
+                        .setParameter(1, parentId).setParameter(2, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override
     public Optional<WorkItemSpawnGroup> findByParentAndKey(final UUID parentId, final String groupKey) {
         return withTenantQuery(() ->
-                WorkItemSpawnGroup.find(
-                        "parentId = ?1 AND idempotencyKey = ?2 AND tenancyId = ?3",
-                        parentId, groupKey, currentPrincipal.tenancyId())
-                        .firstResultOptional());
+                em.createQuery("FROM WorkItemSpawnGroup WHERE parentId = ?1 AND idempotencyKey = ?2 AND tenancyId = ?3", WorkItemSpawnGroup.class)
+                        .setParameter(1, parentId).setParameter(2, groupKey).setParameter(3, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     public Optional<WorkItemSpawnGroup> findMultiInstanceByParentId(final UUID parentId) {
         return withTenantQuery(() ->
-                WorkItemSpawnGroup.find(
-                        "parentId = ?1 AND requiredCount IS NOT NULL AND tenancyId = ?2",
-                        parentId, currentPrincipal.tenancyId())
-                        .firstResultOptional());
+                em.createQuery("FROM WorkItemSpawnGroup WHERE parentId = ?1 AND requiredCount IS NOT NULL AND tenancyId = ?2", WorkItemSpawnGroup.class)
+                        .setParameter(1, parentId).setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     public Optional<WorkItemSpawnGroup> findMultiInstanceByParentIdForUpdate(final UUID parentId) {
         return withTenantQuery(() ->
-                WorkItemSpawnGroup.find(
-                        "parentId = ?1 AND requiredCount IS NOT NULL AND tenancyId = ?2",
-                        parentId, currentPrincipal.tenancyId())
-                        .withLock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-                        .firstResultOptional());
+                em.createQuery("FROM WorkItemSpawnGroup WHERE parentId = ?1 AND requiredCount IS NOT NULL AND tenancyId = ?2", WorkItemSpawnGroup.class)
+                        .setParameter(1, parentId).setParameter(2, currentPrincipal.tenancyId())
+                        .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+                        .getResultStream().findFirst());
     }
 
     @Override
     public boolean delete(final UUID id) {
         return withTenantQuery(() -> {
-            final long deleted = WorkItemSpawnGroup.delete("id = ?1 AND tenancyId = ?2",
-                    id, currentPrincipal.tenancyId());
+            final int deleted = em.createQuery("DELETE FROM WorkItemSpawnGroup WHERE id = ?1 AND tenancyId = ?2")
+                    .setParameter(1, id).setParameter(2, currentPrincipal.tenancyId()).executeUpdate();
             return deleted > 0;
         });
     }

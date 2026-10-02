@@ -1,7 +1,7 @@
 package io.casehub.work.issuetracker.model;
 
 import java.time.Instant;
-import java.util.List;
+
 import java.util.UUID;
 
 import io.casehub.work.runtime.model.WorkItemEntity;
@@ -12,7 +12,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
  * Persistent link between a {@link WorkItemEntity}
@@ -41,7 +40,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity
 @Table(name = "work_item_issue_link", uniqueConstraints = @UniqueConstraint(name = "uq_work_item_issue_link", columnNames = {
         "work_item_id", "tracker_type", "external_ref" }))
-public class WorkItemIssueLink extends PanacheEntityBase {
+public class WorkItemIssueLink {
 
     /** Surrogate primary key. */
     @Id
@@ -101,40 +100,4 @@ public class WorkItemIssueLink extends PanacheEntityBase {
         }
     }
 
-    /**
-     * Return all links for the given WorkItem, ordered by creation time ascending.
-     *
-     * @param workItemId the WorkItem UUID
-     * @return list of links; may be empty
-     */
-    public static List<WorkItemIssueLink> findByWorkItemId(final UUID workItemId) {
-        return list("workItemId = ?1 ORDER BY linkedAt ASC", workItemId);
-    }
-
-    /**
-     * Return all links for a given tracker type and external ref, across all WorkItems.
-     * Used by webhook handlers that receive the tracker ref but not the WorkItem ID.
-     *
-     * @param trackerType the tracker type string (e.g. {@code "github"})
-     * @param externalRef the tracker-specific reference (e.g. {@code "owner/repo#42"})
-     * @return list of links; may be empty if no WorkItem is linked to this ref
-     */
-    public static List<WorkItemIssueLink> findByTrackerRef(
-            final String trackerType, final String externalRef) {
-        return list("trackerType = ?1 AND externalRef = ?2", trackerType, externalRef);
-    }
-
-    /**
-     * Return a specific link by WorkItem and tracker reference.
-     *
-     * @param workItemId the WorkItem UUID
-     * @param trackerType the tracker type string
-     * @param externalRef the tracker-specific reference
-     * @return the link, or null if not found
-     */
-    public static WorkItemIssueLink findByRef(
-            final UUID workItemId, final String trackerType, final String externalRef) {
-        return find("workItemId = ?1 AND trackerType = ?2 AND externalRef = ?3",
-                workItemId, trackerType, externalRef).firstResult();
-    }
 }

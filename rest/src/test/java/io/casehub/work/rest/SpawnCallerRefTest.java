@@ -25,12 +25,12 @@ class SpawnCallerRefTest {
         final String id = given()
                 .contentType(ContentType.JSON)
                 .body(body)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         final String fetched = given()
-                .when().get("/workitems/" + id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .extract().path("callerRef");
 
@@ -47,12 +47,12 @@ class SpawnCallerRefTest {
         final String id = given()
                 .contentType(ContentType.JSON)
                 .body(body)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         final Object fetched = given()
-                .when().get("/workitems/" + id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .extract().path("callerRef");
 
@@ -71,12 +71,12 @@ class SpawnCallerRefTest {
         final String id = given()
                 .contentType(ContentType.JSON)
                 .body(body)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         final String fetched = given()
-                .when().get("/workitems/" + id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .extract().path("callerRef");
 

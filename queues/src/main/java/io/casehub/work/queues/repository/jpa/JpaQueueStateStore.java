@@ -11,7 +11,7 @@ import io.casehub.work.queues.repository.QueueStateStore;
 import io.casehub.work.runtime.repository.jpa.TenantAwareStore;
 
 /**
- * Default JPA/Panache implementation of {@link QueueStateStore}.
+ * Default JPA implementation of {@link QueueStateStore}.
  *
  * <p>Every query is scoped to the current tenant via {@link CurrentPrincipal#tenancyId()}.
  * The {@link #put} method stamps {@code tenancyId} from the principal on insert when
@@ -26,7 +26,8 @@ public class JpaQueueStateStore extends TenantAwareStore implements QueueStateSt
             if (state.tenancyId == null) {
                 state.tenancyId = currentPrincipal.tenancyId();
             }
-            state.persistAndFlush();
+            em.persist(state);
+            em.flush();
             return state;
         });
     }
@@ -34,9 +35,9 @@ public class JpaQueueStateStore extends TenantAwareStore implements QueueStateSt
     @Override
     public Optional<WorkItemQueueState> get(final UUID workItemId) {
         return withTenantQuery(() ->
-            WorkItemQueueState.find("workItemId = ?1 AND tenancyId = ?2",
-                    workItemId, currentPrincipal.tenancyId())
-                    .firstResultOptional()
+            em.createQuery("FROM WorkItemQueueState WHERE workItemId = ?1 AND tenancyId = ?2", WorkItemQueueState.class)
+                    .setParameter(1, workItemId).setParameter(2, currentPrincipal.tenancyId())
+                    .getResultStream().findFirst()
         );
     }
 
@@ -47,7 +48,8 @@ public class JpaQueueStateStore extends TenantAwareStore implements QueueStateSt
                 final WorkItemQueueState s = new WorkItemQueueState();
                 s.workItemId = workItemId;
                 s.tenancyId = currentPrincipal.tenancyId();
-                s.persistAndFlush();
+                em.persist(s);
+                em.flush();
                 return s;
             })
         );

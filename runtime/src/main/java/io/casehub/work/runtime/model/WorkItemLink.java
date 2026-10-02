@@ -1,7 +1,6 @@
 package io.casehub.work.runtime.model;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -9,8 +8,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
  * A structured reference from a {@link WorkItemEntity} to an external resource.
@@ -40,7 +37,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity
 @Table(name = "work_item_link")
-public class WorkItemLink extends PanacheEntityBase {
+public class WorkItemLink {
 
     @Id
     public UUID id;
@@ -87,15 +84,4 @@ public class WorkItemLink extends PanacheEntityBase {
             createdAt = Instant.now();
     }
 
-    /** All links for a WorkItem, ordered chronologically. */
-    public static List<WorkItemLink> findByWorkItemId(final UUID workItemId) {
-        return list("workItemId = ?1 ORDER BY createdAt ASC", workItemId);
-    }
-
-    /** Links for a WorkItem filtered to a specific relation type. */
-    public static List<WorkItemLink> findByWorkItemIdAndType(
-            final UUID workItemId, final String relationType) {
-        return list("workItemId = ?1 AND relationType = ?2 ORDER BY createdAt ASC",
-                workItemId, relationType);
-    }
 }

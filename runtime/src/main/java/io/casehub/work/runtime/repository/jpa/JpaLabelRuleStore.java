@@ -18,7 +18,8 @@ public class JpaLabelRuleStore extends TenantAwareStore implements LabelRuleStor
             if (rule.tenancyId == null) {
                 rule.tenancyId = currentPrincipal.tenancyId();
             }
-            rule.persistAndFlush();
+            em.persist(rule);
+            em.flush();
             return rule;
         });
     }
@@ -26,29 +27,35 @@ public class JpaLabelRuleStore extends TenantAwareStore implements LabelRuleStor
     @Override
     public Optional<LabelRuleEntity> get(final UUID id) {
         return withTenantQuery(() ->
-                LabelRuleEntity.find("id = ?1 AND tenancyId = ?2", id,
-                        currentPrincipal.tenancyId()).firstResultOptional());
+                em.createQuery("FROM LabelRuleEntity WHERE id = ?1 AND tenancyId = ?2", LabelRuleEntity.class)
+                        .setParameter(1, id)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     public List<LabelRuleEntity> findEnabled() {
         return withTenantQuery(() ->
-                LabelRuleEntity.list("enabled = true AND tenancyId = ?1 ORDER BY createdAt ASC",
-                        currentPrincipal.tenancyId()));
+                em.createQuery("FROM LabelRuleEntity WHERE enabled = true AND tenancyId = ?1 ORDER BY createdAt ASC", LabelRuleEntity.class)
+                        .setParameter(1, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override
     public List<LabelRuleEntity> scanAll() {
         return withTenantQuery(() ->
-                LabelRuleEntity.list("tenancyId = ?1 ORDER BY createdAt ASC",
-                        currentPrincipal.tenancyId()));
+                em.createQuery("FROM LabelRuleEntity WHERE tenancyId = ?1 ORDER BY createdAt ASC", LabelRuleEntity.class)
+                        .setParameter(1, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override
     public boolean delete(final UUID id) {
         return withTenantQuery(() -> {
-            long deleted = LabelRuleEntity.delete("id = ?1 AND tenancyId = ?2", id,
-                    currentPrincipal.tenancyId());
+            int deleted = em.createQuery("DELETE FROM LabelRuleEntity WHERE id = ?1 AND tenancyId = ?2")
+                    .setParameter(1, id)
+                    .setParameter(2, currentPrincipal.tenancyId())
+                    .executeUpdate();
             return deleted > 0;
         });
     }

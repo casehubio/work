@@ -18,7 +18,7 @@ class SummaryTest {
 
     @Test
     void summary_returns200_withExpectedShape() {
-        given().get("/workitems/inbox/summary")
+        given().get("/api/work/items/inbox-summary")
                 .then()
                 .statusCode(200)
                 .body("total", notNullValue())
@@ -32,9 +32,9 @@ class SummaryTest {
     void summary_countsCreatedWorkItem() {
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Summary test item\",\"createdBy\":\"test\",\"priority\":\"HIGH\"}")
-                .post("/workitems").then().statusCode(201);
+                .post("/api/work/items/create").then().statusCode(201);
 
-        given().get("/workitems/inbox/summary")
+        given().get("/api/work/items/inbox-summary")
                 .then()
                 .statusCode(200)
                 .body("total", greaterThanOrEqualTo(1))
@@ -48,11 +48,11 @@ class SummaryTest {
         final String unique = "summary-assignee-" + java.util.UUID.randomUUID();
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Assignee summary test\",\"createdBy\":\"test\",\"assigneeId\":\"" + unique + "\"}")
-                .post("/workitems").then().statusCode(201);
+                .post("/api/work/items/create").then().statusCode(201);
 
         // Filter to this specific assignee
         given().queryParam("assignee", unique)
-                .get("/workitems/inbox/summary")
+                .get("/api/work/items/inbox-summary")
                 .then()
                 .statusCode(200)
                 .body("total", equalTo(1))
@@ -64,10 +64,10 @@ class SummaryTest {
         final String cat = "summary-cat-" + java.util.UUID.randomUUID();
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Cat summary test\",\"createdBy\":\"test\",\"types\":[\"" + cat + "\"]}")
-                .post("/workitems").then().statusCode(201);
+                .post("/api/work/items/create").then().statusCode(201);
 
         given().queryParam("type", cat)
-                .get("/workitems/inbox/summary")
+                .get("/api/work/items/inbox-summary")
                 .then()
                 .statusCode(200)
                 .body("total", equalTo(1));

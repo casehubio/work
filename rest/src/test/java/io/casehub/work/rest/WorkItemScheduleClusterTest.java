@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.UUID;
 
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -44,10 +45,13 @@ class WorkItemScheduleClusterTest {
     @Inject
     WorkItemScheduleService scheduleService;
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        WorkItemTemplate.deleteAll(); // cascades to work_item_schedule via ON DELETE CASCADE
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     // ── Version field ─────────────────────────────────────────────────────────
@@ -88,8 +92,8 @@ class WorkItemScheduleClusterTest {
 
         // Total WorkItems for this template: exactly 1
         final int count = given().queryParam("type", "cluster-test-cat")
-                .get("/workitems").then().statusCode(200)
-                .extract().jsonPath().getList("$").size();
+                .get("/api/work/items/list-all").then().statusCode(200)
+                .extract().jsonPath().getList("items").size();
         assertThat(count).isGreaterThanOrEqualTo(1);
     }
 
@@ -113,7 +117,7 @@ class WorkItemScheduleClusterTest {
         final String name = "cluster-t-" + UUID.randomUUID().toString().substring(0, 8);
         return given().contentType(ContentType.JSON)
                 .body("{\"name\":\"" + name + "\",\"category\":\"cluster-test-cat\",\"createdBy\":\"admin\"}")
-                .post("/workitem-templates").then().statusCode(201).extract().path("id");
+                .post("/api/work/templates/create").then().statusCode(201).extract().path("id");
     }
 
     private String createSchedule(final String name) throws Exception {
@@ -124,6 +128,6 @@ class WorkItemScheduleClusterTest {
         return given().contentType(ContentType.JSON)
                 .body("{\"name\":\"" + name + "\",\"templateId\":\"" + templateId
                         + "\",\"cronExpression\":\"0 0 9 * * ?\",\"createdBy\":\"admin\"}")
-                .post("/workitem-schedules").then().statusCode(201).extract().path("id");
+                .post("/api/work/schedules/create").then().statusCode(201).extract().path("id");
     }
 }

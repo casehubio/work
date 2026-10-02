@@ -28,7 +28,7 @@ class InboxFilterTest {
     private void createItem(final String user, final String body) {
         given().contentType(ContentType.JSON)
                 .body(body)
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201);
     }
 
@@ -45,7 +45,7 @@ class InboxFilterTest {
 
         // inbox with no outcome filter returns both (and more from other tests, so just assert >= 2)
         given().queryParam("assignee", user)
-                .get("/workitems/inbox")
+                .get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(2));
@@ -53,7 +53,7 @@ class InboxFilterTest {
         // inbox with outcome=approved returns 0 (items are PENDING — no outcome set yet)
         given().queryParam("assignee", user)
                 .queryParam("outcome", "approved")
-                .get("/workitems/inbox")
+                .get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(0));
@@ -67,28 +67,28 @@ class InboxFilterTest {
                         {"title":"Outcome item","createdBy":"test",\
                         "candidateUsers":"%s","assigneeId":"%s"}
                         """.formatted(user, user))
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + workItemId + "/start?actor=" + user).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + workItemId + "?actor=" + user).then().statusCode(200);
         given().contentType(ContentType.JSON)
                 .body("{\"outcome\":\"approved\"}")
-                .put("/workitems/" + workItemId + "/complete?actor=" + user)
+                .post("/api/work/lifecycle/complete/" + workItemId + "?actor=" + user)
                 .then().statusCode(200);
 
         // completed item IS returned when filtering by its outcome
         given().queryParam("assignee", user)
                 .queryParam("outcome", "approved")
-                .get("/workitems/inbox")
+                .get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].item.outcome", equalTo("approved"));
+                .body("[0].workItem.outcome", equalTo("approved"));
 
         // completed item is NOT returned when filtering by a different outcome
         given().queryParam("assignee", user)
                 .queryParam("outcome", "rejected")
-                .get("/workitems/inbox")
+                .get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(0));
@@ -106,11 +106,11 @@ class InboxFilterTest {
 
         given().queryParam("candidateUser", user)
                 .queryParam("priority", "HIGH")
-                .get("/workitems/inbox")
+                .get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].item.priority", equalTo("HIGH"));
+                .body("[0].workItem.priority", equalTo("HIGH"));
     }
 
     @Test
@@ -125,11 +125,11 @@ class InboxFilterTest {
 
         given().queryParam("candidateUser", user)
                 .queryParam("type", "legal")
-                .get("/workitems/inbox")
+                .get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].item.types[0]", equalTo("legal"));
+                .body("[0].workItem.types[0]", equalTo("legal"));
     }
 
     @Test
@@ -143,7 +143,7 @@ class InboxFilterTest {
         // status=ASSIGNED matches (auto-assignment changed status from PENDING)
         given().queryParam("assignee", user)
                 .queryParam("status", "ASSIGNED")
-                .get("/workitems/inbox")
+                .get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1));
@@ -151,7 +151,7 @@ class InboxFilterTest {
         // status=IN_PROGRESS does not match
         given().queryParam("assignee", user)
                 .queryParam("status", "IN_PROGRESS")
-                .get("/workitems/inbox")
+                .get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(0));
@@ -170,18 +170,18 @@ class InboxFilterTest {
 
         given().queryParam("candidateUser", user)
                 .queryParam("followUp", "true")
-                .get("/workitems/inbox")
+                .get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].item.title", equalTo("With follow-up"));
+                .body("[0].workItem.title", equalTo("With follow-up"));
 
         given().queryParam("candidateUser", user)
                 .queryParam("followUp", "false")
-                .get("/workitems/inbox")
+                .get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].item.title", equalTo("Without follow-up"));
+                .body("[0].workItem.title", equalTo("Without follow-up"));
     }
 }

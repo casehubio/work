@@ -1,7 +1,6 @@
 package io.casehub.work.runtime.model;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -11,7 +10,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
 
 /**
  * A recurring WorkItem creation schedule, linking a {@link WorkItemTemplate}
@@ -42,7 +41,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity
 @Table(name = "work_item_schedule")
-public class WorkItemSchedule extends PanacheEntityBase {
+public class WorkItemSchedule {
 
     @Id
     public UUID id;
@@ -110,13 +109,4 @@ public class WorkItemSchedule extends PanacheEntityBase {
             createdAt = Instant.now();
     }
 
-    /** All active schedules whose nextFireAt is on or before {@code now}. */
-    public static List<WorkItemSchedule> findDue(final Instant now) {
-        return list("active = true AND nextFireAt IS NOT NULL AND nextFireAt <= ?1 ORDER BY nextFireAt ASC", now);
-    }
-
-    /** All schedules ordered by name. */
-    public static List<WorkItemSchedule> listAllByName() {
-        return list("ORDER BY name ASC");
-    }
 }

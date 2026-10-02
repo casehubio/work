@@ -2,6 +2,7 @@ package io.casehub.work.rest;
 
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 
@@ -36,7 +37,7 @@ class WorkItemSSETest {
 
     @Test
     void sseEndpoint_returns200_withSseContentType() throws Exception {
-        final HttpResponse<InputStream> response = connectSse("/workitems/events");
+        final HttpResponse<InputStream> response = connectSse("/api/work/items/stream-events");
         try (InputStream ignored = response.body()) {
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.headers().firstValue("content-type").orElse("")).contains("text/event-stream");
@@ -45,7 +46,7 @@ class WorkItemSSETest {
 
     @Test
     void sseEndpoint_withWorkItemIdFilter_isReachable() throws Exception {
-        final HttpResponse<InputStream> response = connectSse("/workitems/events?workItemId=" + UUID.randomUUID());
+        final HttpResponse<InputStream> response = connectSse("/api/work/items/stream-events?workItemId=" + UUID.randomUUID());
         try (InputStream ignored = response.body()) {
             assertThat(response.statusCode()).isEqualTo(200);
         }
@@ -53,7 +54,7 @@ class WorkItemSSETest {
 
     @Test
     void sseEndpoint_withTypeFilter_isReachable() throws Exception {
-        final HttpResponse<InputStream> response = connectSse("/workitems/events?type=created");
+        final HttpResponse<InputStream> response = connectSse("/api/work/items/stream-events?type=created");
         try (InputStream ignored = response.body()) {
             assertThat(response.statusCode()).isEqualTo(200);
         }
@@ -62,7 +63,7 @@ class WorkItemSSETest {
     @Test
     void perWorkItemEndpoint_returns200_withSseContentType() throws Exception {
         final String itemId = createWorkItem();
-        final HttpResponse<InputStream> response = connectSse("/workitems/" + itemId + "/events");
+        final HttpResponse<InputStream> response = connectSse("/api/work/items/stream-work-item-events/" + itemId);
         try (InputStream ignored = response.body()) {
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.headers().firstValue("content-type").orElse("")).contains("text/event-stream");
@@ -78,7 +79,7 @@ class WorkItemSSETest {
         final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/events?type=created", dataLines, latch, connected);
+                connectSseLinesAsync("api/work/items/stream-events?type=created", dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });
@@ -99,13 +100,13 @@ class WorkItemSSETest {
         final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/events?workItemId=" + targetId, dataLines, latch, connected);
+                connectSseLinesAsync("api/work/items/stream-events?workItemId=" + targetId, dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });
         assertThat(connected.await(5, TimeUnit.SECONDS)).as("SSE connection established").isTrue();
         createWorkItem(); // noise — should NOT appear
-        given().put("/workitems/" + targetId + "/claim?claimant=alice").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + targetId + "?claimant=alice").then().statusCode(200);
         assertThat(latch.await(10, TimeUnit.SECONDS)).as("Expected event for target within 4s").isTrue();
         assertThat(dataLines).isNotEmpty();
         assertThat(dataLines).allMatch(line -> line.contains(targetId));
@@ -122,12 +123,12 @@ class WorkItemSSETest {
         final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/" + itemId + "/events", dataLines, latch, connected);
+                connectSseLinesAsync("api/work/items/stream-work-item-events/" + itemId, dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });
         assertThat(connected.await(5, TimeUnit.SECONDS)).as("SSE connection established").isTrue();
-        given().put("/workitems/" + itemId + "/claim?claimant=bob").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + itemId + "?claimant=bob").then().statusCode(200);
         assertThat(latch.await(10, TimeUnit.SECONDS)).as("Expected event via per-WorkItem alias").isTrue();
         assertThat(dataLines.get(0)).contains(itemId);
         sseThread.interrupt();
@@ -143,13 +144,13 @@ class WorkItemSSETest {
         final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/events?type=assigned", dataLines, latch, connected);
+                connectSseLinesAsync("api/work/items/stream-events?type=assigned", dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });
         assertThat(connected.await(5, TimeUnit.SECONDS)).as("SSE connection established").isTrue();
         createWorkItem(); // fires CREATED — should not trigger latch (filter=assigned)
-        given().put("/workitems/" + itemId + "/claim?claimant=carol").then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + itemId + "?claimant=carol").then().statusCode(200);
         assertThat(latch.await(10, TimeUnit.SECONDS)).as("Expected ASSIGNED event").isTrue();
         assertThat(dataLines.get(0)).contains("assigned");
         sseThread.interrupt();
@@ -186,6 +187,6 @@ class WorkItemSSETest {
     private String createWorkItem() {
         return given().contentType(ContentType.JSON)
                 .body("{\"title\":\"SSE test item\",\"createdBy\":\"sse-test\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
     }
 }

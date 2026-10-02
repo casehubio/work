@@ -29,7 +29,7 @@ class OpenApiTest {
     void openApiSpec_containsInboxSummaryPath() {
         given().get("/q/openapi")
                 .then().statusCode(200)
-                .body(containsString("inbox/summary"));
+                .body(containsString("inbox-summary"));
     }
 
     @Test

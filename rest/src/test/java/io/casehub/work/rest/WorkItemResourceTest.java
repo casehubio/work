@@ -2,7 +2,6 @@ package io.casehub.work.rest;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -15,56 +14,21 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 
-/**
- * REST integration tests for {@link WorkItemResource}.
- *
- * <p>
- * {@code @TestTransaction} rolls back after each {@code @Test} method, ensuring
- * test isolation without requiring a full database reset.
- *
- * <p>
- * NOTE: This file is written in RED-phase TDD style. It will not compile until
- * {@code WorkItemResource} (and its response DTOs) are implemented.
- */
 @QuarkusTest
 @TestTransaction
 class WorkItemResourceTest {
 
     // -------------------------------------------------------------------------
-    // Helper
-    // -------------------------------------------------------------------------
-
-    /**
-     * POSTs a minimal WorkItem and returns its id string.
-     * Verifies 201 status as part of setup — a failure here is a fixture problem,
-     * not the test under examination.
-     */
-    private String createWorkItem() {
-        return given()
-                .contentType(ContentType.JSON)
-                .body("""
-                        {
-                            "title": "Test item",
-                            "description": "Do something",
-                            "priority": "MEDIUM",
-                            "createdBy": "system"
-                        }
-                        """)
-                .when().post("/workitems")
-                .then().statusCode(201)
-                .extract().path("id");
-    }
-
-    // -------------------------------------------------------------------------
-    // POST /workitems — create
+    // POST /api/work/items/create — create
     // -------------------------------------------------------------------------
 
     @Test
-    void create_returns201WithLocationHeader() {
+    void create_returns201WithId() {
         String id = given()
                 .contentType(ContentType.JSON)
                 .body("""
@@ -75,10 +39,9 @@ class WorkItemResourceTest {
                             "createdBy": "system"
                         }
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then()
                 .statusCode(201)
-                .header("Location", containsString("/workitems/"))
                 .extract().path("id");
 
         assertThat(id).isNotNull();
@@ -96,7 +59,7 @@ class WorkItemResourceTest {
                             "createdBy": "system"
                         }
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then()
                 .statusCode(201)
                 .body("id", notNullValue())
@@ -115,7 +78,7 @@ class WorkItemResourceTest {
                             "createdBy": "system"
                         }
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then()
                 .statusCode(201)
                 .extract().path("candidateGroups");
@@ -133,7 +96,7 @@ class WorkItemResourceTest {
                             "createdBy": "system"
                         }
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then()
                 .statusCode(201)
                 .body("expiresAt", notNullValue());
@@ -150,37 +113,37 @@ class WorkItemResourceTest {
                             "expiresAt": "2026-12-31T00:00:00Z"
                         }
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then()
                 .statusCode(201)
                 .body("expiresAt", equalTo("2026-12-31T00:00:00Z"));
     }
 
     // -------------------------------------------------------------------------
-    // GET /workitems — list all
+    // GET /api/work/items/list-all — list all
     // -------------------------------------------------------------------------
 
     @Test
-    void listAll_returnsArray() {
-        createWorkItem();
+    void listAll_returnsItems() {
+        WorkItemTestFixture.createWorkItem();
 
         given()
-                .when().get("/workitems")
+                .when().get("/api/work/items/list-all")
                 .then()
                 .statusCode(200)
-                .body("size()", greaterThanOrEqualTo(1));
+                .body("items.size()", greaterThanOrEqualTo(1));
     }
 
     // -------------------------------------------------------------------------
-    // GET /workitems/{id} — get with audit trail
+    // GET /api/work/items/get-by-id/{id} — get with audit trail
     // -------------------------------------------------------------------------
 
     @Test
     void getById_returnsWorkItemWithAuditTrail() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
-                .when().get("/workitems/" + id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(id))
@@ -192,21 +155,21 @@ class WorkItemResourceTest {
     @Test
     void getById_unknownId_returns404() {
         given()
-                .when().get("/workitems/00000000-0000-0000-0000-000000000000")
+                .when().get("/api/work/items/get-by-id/00000000-0000-0000-0000-000000000000")
                 .then()
                 .statusCode(404);
     }
 
     // -------------------------------------------------------------------------
-    // GET /workitems/inbox — inbox query
+    // GET /api/work/items/inbox — inbox query
     // -------------------------------------------------------------------------
 
     @Test
     void inbox_noParams_returnsItems() {
-        createWorkItem();
+        WorkItemTestFixture.createWorkItem();
 
         given()
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", notNullValue());
@@ -214,20 +177,20 @@ class WorkItemResourceTest {
 
     @Test
     void inbox_filterByAssignee_afterClaim() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
 
-        // Inbox returns WorkItemRootResponse — item id is nested under "item.id"
+        // Inbox returns WorkItemRootView — item id is nested under "workItem.id"
         List<String> ids = given()
                 .queryParam("assignee", "alice")
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
-                .extract().jsonPath().getList("item.id");
+                .extract().jsonPath().getList("workItem.id");
 
         assertThat(ids).contains(id);
     }
@@ -244,17 +207,17 @@ class WorkItemResourceTest {
                             "createdBy": "system"
                         }
                         """.formatted(uniqueGroup))
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
-        // Inbox returns WorkItemRootResponse — item id is nested under "item.id"
+        // Inbox returns WorkItemRootView — item id is nested under "workItem.id"
         List<String> ids = given()
-                .queryParam("candidateGroup", uniqueGroup)
-                .when().get("/workitems/inbox")
+                .queryParam("candidateGroups", uniqueGroup)
+                .when().get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
-                .extract().jsonPath().getList("item.id");
+                .extract().jsonPath().getList("workItem.id");
 
         assertThat(ids).contains(id);
     }
@@ -263,19 +226,19 @@ class WorkItemResourceTest {
     void inbox_filterByAssignee_pendingItemVisible() {
         // Inbox now requires identity context (assignee or candidateGroup) to return items.
         // Use assignee-based visibility: create item, claim it, then query by assignee.
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=bob-pending-test")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=bob-pending-test")
                 .then().statusCode(200);
 
         List<String> ids = given()
                 .queryParam("assignee", "bob-pending-test")
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
-                .extract().jsonPath().getList("item.id");
+                .extract().jsonPath().getList("workItem.id");
 
         assertThat(ids).contains(id);
     }
@@ -285,46 +248,46 @@ class WorkItemResourceTest {
         // After completing a WorkItem, it is no longer a root visible via scanRoots
         // because scanRoots returns ALL roots for the assignee regardless of status.
         // This test verifies the endpoint still returns 200 with a valid response shape.
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         // claim → start → complete
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice-complete-test")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice-complete-test")
                 .then().statusCode(200);
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/start?actor=alice-complete-test")
+                .when().post("/api/work/lifecycle/start/" + id + "?actor=alice-complete-test")
                 .then().statusCode(200);
         given()
                 .contentType(ContentType.JSON)
                 .body("""
                         { "resolution": "All done" }
                         """)
-                .when().put("/workitems/" + id + "/complete?actor=alice-complete-test")
+                .when().post("/api/work/lifecycle/complete/" + id + "?actor=alice-complete-test")
                 .then().statusCode(200);
 
         // Completed items are still returned (scanRoots does not filter by status);
         // the endpoint must return 200 with a valid list.
         given()
                 .queryParam("assignee", "alice-complete-test")
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then()
                 .statusCode(200)
                 .body("$", notNullValue());
     }
 
     // -------------------------------------------------------------------------
-    // PUT /{id}/claim
+    // POST /api/work/lifecycle/claim/{id}
     // -------------------------------------------------------------------------
 
     @Test
     void claim_returns200WithAssignedStatus() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("ASSIGNED"))
@@ -333,16 +296,16 @@ class WorkItemResourceTest {
 
     @Test
     void claim_alreadyAssigned_returns409() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=bob")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=bob")
                 .then().statusCode(409);
     }
 
@@ -350,26 +313,26 @@ class WorkItemResourceTest {
     void claim_unknownId_returns404() {
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/00000000-0000-0000-0000-000000000000/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/00000000-0000-0000-0000-000000000000?claimant=alice")
                 .then().statusCode(404);
     }
 
     // -------------------------------------------------------------------------
-    // PUT /{id}/start
+    // POST /api/work/lifecycle/start/{id}
     // -------------------------------------------------------------------------
 
     @Test
     void start_returns200WithInProgressStatus() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/start?actor=alice")
+                .when().post("/api/work/lifecycle/start/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("IN_PROGRESS"));
@@ -377,29 +340,29 @@ class WorkItemResourceTest {
 
     @Test
     void start_pendingItem_returns409() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/start?actor=alice")
+                .when().post("/api/work/lifecycle/start/" + id + "?actor=alice")
                 .then().statusCode(409);
     }
 
     // -------------------------------------------------------------------------
-    // PUT /{id}/complete
+    // POST /api/work/lifecycle/complete/{id}
     // -------------------------------------------------------------------------
 
     @Test
     void complete_returns200WithCompletedStatus() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/start?actor=alice")
+                .when().post("/api/work/lifecycle/start/" + id + "?actor=alice")
                 .then().statusCode(200);
 
         given()
@@ -407,7 +370,7 @@ class WorkItemResourceTest {
                 .body("""
                         { "resolution": "Fixed it" }
                         """)
-                .when().put("/workitems/" + id + "/complete?actor=alice")
+                .when().post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("COMPLETED"))
@@ -416,28 +379,28 @@ class WorkItemResourceTest {
 
     @Test
     void complete_pendingItem_returns409() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
                 .body("""
                         { "resolution": "Premature" }
                         """)
-                .when().put("/workitems/" + id + "/complete?actor=alice")
+                .when().post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then().statusCode(409);
     }
 
     // -------------------------------------------------------------------------
-    // PUT /{id}/reject
+    // POST /api/work/lifecycle/reject/{id}
     // -------------------------------------------------------------------------
 
     @Test
     void reject_returns200WithRejectedStatus() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
 
         given()
@@ -445,23 +408,23 @@ class WorkItemResourceTest {
                 .body("""
                         { "reason": "Not my responsibility" }
                         """)
-                .when().put("/workitems/" + id + "/reject?actor=alice")
+                .when().post("/api/work/lifecycle/reject/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("REJECTED"));
     }
 
     // -------------------------------------------------------------------------
-    // PUT /{id}/delegate
+    // POST /api/work/lifecycle/delegate/{id}
     // -------------------------------------------------------------------------
 
     @Test
     void delegate_returns200WithNewAssignee() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
 
         given()
@@ -469,7 +432,7 @@ class WorkItemResourceTest {
                 .body("""
                         { "to": "bob" }
                         """)
-                .when().put("/workitems/" + id + "/delegate?actor=alice")
+                .when().post("/api/work/lifecycle/delegate/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("assigneeId", equalTo("bob"))
@@ -477,21 +440,21 @@ class WorkItemResourceTest {
     }
 
     // -------------------------------------------------------------------------
-    // PUT /{id}/release
+    // POST /api/work/lifecycle/release/{id}
     // -------------------------------------------------------------------------
 
     @Test
     void release_returns200WithPendingAndNullAssignee() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/release?actor=alice")
+                .when().post("/api/work/lifecycle/release/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("PENDING"))
@@ -499,16 +462,16 @@ class WorkItemResourceTest {
     }
 
     // -------------------------------------------------------------------------
-    // PUT /{id}/suspend
+    // POST /api/work/lifecycle/suspend/{id}
     // -------------------------------------------------------------------------
 
     @Test
     void suspend_returns200WithSuspendedStatus() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
 
         given()
@@ -516,54 +479,54 @@ class WorkItemResourceTest {
                 .body("""
                         { "reason": "Waiting for external input" }
                         """)
-                .when().put("/workitems/" + id + "/suspend?actor=alice")
+                .when().post("/api/work/lifecycle/suspend/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("SUSPENDED"));
     }
 
     // -------------------------------------------------------------------------
-    // PUT /{id}/resume
+    // POST /api/work/lifecycle/resume/{id}
     // -------------------------------------------------------------------------
 
     @Test
     void resume_afterAssignedSuspend_returnsAssigned() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
         given()
                 .contentType(ContentType.JSON)
                 .body("""
                         { "reason": "Blocked" }
                         """)
-                .when().put("/workitems/" + id + "/suspend?actor=alice")
+                .when().post("/api/work/lifecycle/suspend/" + id + "?actor=alice")
                 .then().statusCode(200);
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/resume?actor=alice")
+                .when().post("/api/work/lifecycle/resume/" + id + "?actor=alice")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("ASSIGNED"));
     }
 
     // -------------------------------------------------------------------------
-    // PUT /{id}/cancel
+    // POST /api/work/lifecycle/cancel/{id}
     // -------------------------------------------------------------------------
 
     @Test
     void cancel_returns200WithCancelledStatus() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
                 .body("""
                         { "reason": "No longer needed" }
                         """)
-                .when().put("/workitems/" + id + "/cancel?actor=admin")
+                .when().post("/api/work/lifecycle/cancel/" + id + "?actor=admin")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("CANCELLED"));
@@ -571,11 +534,11 @@ class WorkItemResourceTest {
 
     @Test
     void cancel_fromAssigned_returns200() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
 
         given()
@@ -583,7 +546,7 @@ class WorkItemResourceTest {
                 .body("""
                         { "reason": "Revoked" }
                         """)
-                .when().put("/workitems/" + id + "/cancel?actor=admin")
+                .when().post("/api/work/lifecycle/cancel/" + id + "?actor=admin")
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("CANCELLED"));
@@ -595,26 +558,26 @@ class WorkItemResourceTest {
 
     @Test
     void auditTrail_growsWithEachOperation() {
-        String id = createWorkItem();
+        String id = WorkItemTestFixture.createWorkItem();
 
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/claim?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
         given()
                 .contentType(ContentType.JSON)
-                .when().put("/workitems/" + id + "/start?actor=alice")
+                .when().post("/api/work/lifecycle/start/" + id + "?actor=alice")
                 .then().statusCode(200);
         given()
                 .contentType(ContentType.JSON)
                 .body("""
                         { "resolution": "Done" }
                         """)
-                .when().put("/workitems/" + id + "/complete?actor=alice")
+                .when().post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then().statusCode(200);
 
         List<String> events = given()
-                .when().get("/workitems/" + id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then()
                 .statusCode(200)
                 .body("auditTrail", hasSize(4))
@@ -627,25 +590,21 @@ class WorkItemResourceTest {
     // Gap-filling: error response bodies, priority/type filtering
     // -------------------------------------------------------------------------
 
-    // Error response body format
     @Test
-    void getById_notFound_responseBodyHasErrorMessage() {
+    void getById_notFound_returns404() {
         given()
-                .when().get("/workitems/{id}", UUID.randomUUID())
-                .then().statusCode(404)
-                .body("error", notNullValue())
-                .body("error", containsString("not found"));
+                .when().get("/api/work/items/get-by-id/" + UUID.randomUUID())
+                .then().statusCode(404);
     }
 
     @Test
-    void claim_alreadyAssigned_responseBodyHasConflictMessage() {
-        String id = createWorkItem();
-        given().queryParam("claimant", "alice")
-                .when().put("/workitems/{id}/claim", id);
-        given().queryParam("claimant", "bob")
-                .when().put("/workitems/{id}/claim", id)
-                .then().statusCode(409)
-                .body("error", notNullValue());
+    void claim_alreadyAssigned_returns409_noBody() {
+        String id = WorkItemTestFixture.createWorkItem();
+        given()
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice");
+        given()
+                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=bob")
+                .then().statusCode(409);
     }
 
     // Priority and type filtering
@@ -656,20 +615,20 @@ class WorkItemResourceTest {
                 .body("""
                         {"title":"High","priority":"HIGH","createdBy":"system"}
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201);
         // Create LOW priority item
         String lowId = given().contentType(ContentType.JSON)
                 .body("""
                         {"title":"Low","priority":"LOW","createdBy":"system"}
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         List<String> ids = given()
                 .queryParam("priority", "HIGH")
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then().statusCode(200)
                 .extract().jsonPath().getList("id");
         assertThat(ids).doesNotContain(lowId);
@@ -681,19 +640,19 @@ class WorkItemResourceTest {
                 .body("""
                         {"title":"Finance task","types":["finance"],"priority":"MEDIUM","createdBy":"system"}
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201);
         String legalId = given().contentType(ContentType.JSON)
                 .body("""
                         {"title":"Legal task","types":["legal"],"priority":"MEDIUM","createdBy":"system"}
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
 
         List<String> ids = given()
                 .queryParam("type", "finance")
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then().statusCode(200)
                 .extract().jsonPath().getList("id");
         assertThat(ids).doesNotContain(legalId);
@@ -707,7 +666,7 @@ class WorkItemResourceTest {
         // Confirm the endpoint accepts the parameter without error.
         given()
                 .queryParam("followUp", "true")
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then().statusCode(200);
     }
 
@@ -719,7 +678,7 @@ class WorkItemResourceTest {
     void createWorkItem_withConfidenceScore_persistsAndReturnsIt() {
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"AI Task\",\"createdBy\":\"agent\",\"confidenceScore\":0.55}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201)
                 .body("confidenceScore", equalTo(0.55f));
     }
@@ -728,7 +687,7 @@ class WorkItemResourceTest {
     void createWorkItem_withoutConfidenceScore_returnsNullConfidenceScore() {
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Human Task\",\"createdBy\":\"human\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201)
                 .body("confidenceScore", nullValue());
     }
@@ -737,13 +696,13 @@ class WorkItemResourceTest {
     void createWorkItem_withHighConfidenceScore_returnsIt() {
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"High Confidence\",\"createdBy\":\"agent\",\"confidenceScore\":0.95}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201)
                 .body("confidenceScore", equalTo(0.95f));
     }
 
     // -------------------------------------------------------------------------
-    // GET /workitems?outcome= — outcome filter (Issue #178)
+    // GET /api/work/items/list-all?outcome= — outcome filter
     // -------------------------------------------------------------------------
 
     @Test
@@ -751,32 +710,32 @@ class WorkItemResourceTest {
         // Create a WorkItem and complete it with outcome "approved"
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Outcome Test\",\"createdBy\":\"system\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + id + "/claim?claimant=alice")
+        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
                 .then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=alice")
+        given().post("/api/work/lifecycle/start/" + id + "?actor=alice")
                 .then().statusCode(200);
         given().contentType(ContentType.JSON)
                 .body("{\"outcome\":\"approved\"}")
-                .put("/workitems/" + id + "/complete?actor=alice")
+                .post("/api/work/lifecycle/complete/" + id + "?actor=alice")
                 .then().statusCode(200);
 
         // Create a second item with no outcome (stays PENDING)
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"No Outcome\",\"createdBy\":\"system\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201);
 
         // Filter by outcome=approved — must include the completed one and exclude the pending one
         final List<String> returnedIds = given()
                 .queryParam("outcome", "approved")
-                .get("/workitems")
+                .get("/api/work/items/list-all")
                 .then()
                 .statusCode(200)
-                .body("every { it.outcome == 'approved' }", is(true))
-                .extract().jsonPath().getList("id");
+                .body("items.every { it.outcome == 'approved' }", is(true))
+                .extract().jsonPath().getList("items.id");
         assertThat(returnedIds).contains(id);
     }
 
@@ -784,14 +743,14 @@ class WorkItemResourceTest {
     void listAll_filterByOutcome_noMatch_returnsEmpty() {
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Pending Item\",\"createdBy\":\"system\"}")
-                .post("/workitems")
+                .post("/api/work/items/create")
                 .then().statusCode(201);
 
         given()
                 .queryParam("outcome", "nonexistent-outcome")
-                .get("/workitems")
+                .get("/api/work/items/list-all")
                 .then()
                 .statusCode(200)
-                .body("size()", equalTo(0));
+                .body("items.size()", equalTo(0));
     }
 }

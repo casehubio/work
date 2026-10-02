@@ -2,6 +2,8 @@ package io.casehub.work.api.view;
 
 import java.util.List;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import io.casehub.work.api.Outcome;
 
 public record UpdateTemplateRequest(
@@ -25,8 +27,8 @@ public record UpdateTemplateRequest(
         String onThresholdReached,
         Boolean allowSameAssignee,
         List<Outcome> outcomes,
-        String inputDataSchema,
-        String outputDataSchema,
+        JsonNode inputDataSchema,
+        JsonNode outputDataSchema,
         String excludedUsers,
         String excludedGroups,
         String scope) {

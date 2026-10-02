@@ -1,7 +1,6 @@
 package io.casehub.work.runtime.model;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 import io.casehub.work.api.WorkItemLifecycleEvent;
@@ -15,7 +14,6 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import io.casehub.work.api.GroupStatus;
 
 /**
@@ -53,7 +51,7 @@ import io.casehub.work.api.GroupStatus;
 @Table(name = "work_item_spawn_group", uniqueConstraints = {
         @UniqueConstraint(name = "uq_spawn_group_idempotency", columnNames = { "parent_id", "idempotency_key" })
 })
-public class WorkItemSpawnGroup extends PanacheEntityBase {
+public class WorkItemSpawnGroup {
 
     @Id
     public UUID id;
@@ -134,23 +132,4 @@ public class WorkItemSpawnGroup extends PanacheEntityBase {
         }
     }
 
-    /** Find an existing group by parent + idempotency key. */
-    public static WorkItemSpawnGroup findByParentAndKey(
-            final UUID parentId, final String idempotencyKey) {
-        return find("parentId = ?1 AND idempotencyKey = ?2", parentId, idempotencyKey)
-                .firstResult();
-    }
-
-    /** All groups spawned from a parent, newest first. */
-    public static List<WorkItemSpawnGroup> findByParentId(final UUID parentId) {
-        return list("parentId = ?1 ORDER BY createdAt DESC", parentId);
-    }
-
-    /**
-     * Find the multi-instance spawn group for a parent — the group where
-     * {@code requiredCount} is set. Returns null if no multi-instance group exists.
-     */
-    public static WorkItemSpawnGroup findMultiInstanceByParentId(final UUID parentId) {
-        return find("parentId = ?1 AND requiredCount IS NOT NULL", parentId).firstResult();
-    }
 }
