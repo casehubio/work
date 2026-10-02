@@ -55,7 +55,7 @@ class WorkItemRelationTest {
     }
 
     @Test
-    void addRelation_returns500_whenTargetIdMissing() {
+    void addRelation_returns400_whenTargetIdMissing() {
         final String id = createWorkItem("Item");
         given().contentType(ContentType.JSON)
                 .body("{\"relationType\":\"PART_OF\"}")
@@ -64,7 +64,7 @@ class WorkItemRelationTest {
     }
 
     @Test
-    void addRelation_returns500_whenRelationTypeMissing() {
+    void addRelation_returns400_whenRelationTypeMissing() {
         final String id = createWorkItem("Item");
         final String other = createWorkItem("Other");
         given().contentType(ContentType.JSON)

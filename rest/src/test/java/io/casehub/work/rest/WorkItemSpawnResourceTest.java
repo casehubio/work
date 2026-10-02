@@ -63,7 +63,7 @@ class WorkItemSpawnResourceTest {
                 .body(Map.of(
                         "idempotencyKey", "key-" + UUID.randomUUID(),
                         "children", List.of(Map.of("templateId", UUID.randomUUID().toString()))))
-                .when().post("/workitems/" + UUID.randomUUID() + "/spawn")
+                .when().post("/api/work/spawn/spawn/" + UUID.randomUUID())
                 .then().statusCode(404);
     }
 
@@ -89,7 +89,7 @@ class WorkItemSpawnResourceTest {
     }
 
     @Test
-    void spawn_returns422_whenTemplateNotFound() {
+    void spawn_returns400_whenTemplateNotFound() {
         final String parentId = createWorkItem("test");
         given()
                 .contentType(ContentType.JSON)
@@ -97,7 +97,7 @@ class WorkItemSpawnResourceTest {
                         "idempotencyKey", "key-" + UUID.randomUUID(),
                         "children", List.of(Map.of("templateId", UUID.randomUUID().toString()))))
                 .when().post("/api/work/spawn/spawn/" + parentId)
-                .then().statusCode(422);
+                .then().statusCode(400);
     }
 
     @Test

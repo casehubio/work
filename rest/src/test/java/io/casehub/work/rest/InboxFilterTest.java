@@ -83,7 +83,7 @@ class InboxFilterTest {
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].item.outcome", equalTo("approved"));
+                .body("[0].workItem.outcome", equalTo("approved"));
 
         // completed item is NOT returned when filtering by a different outcome
         given().queryParam("assignee", user)
@@ -110,7 +110,7 @@ class InboxFilterTest {
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].item.priority", equalTo("HIGH"));
+                .body("[0].workItem.priority", equalTo("HIGH"));
     }
 
     @Test
@@ -129,7 +129,7 @@ class InboxFilterTest {
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].item.types[0]", equalTo("legal"));
+                .body("[0].workItem.types[0]", equalTo("legal"));
     }
 
     @Test
@@ -174,7 +174,7 @@ class InboxFilterTest {
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].item.title", equalTo("With follow-up"));
+                .body("[0].workItem.title", equalTo("With follow-up"));
 
         given().queryParam("candidateUser", user)
                 .queryParam("followUp", "false")
@@ -182,6 +182,6 @@ class InboxFilterTest {
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
-                .body("[0].item.title", equalTo("Without follow-up"));
+                .body("[0].workItem.title", equalTo("Without follow-up"));
     }
 }

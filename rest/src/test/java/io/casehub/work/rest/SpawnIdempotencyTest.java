@@ -39,11 +39,11 @@ class SpawnIdempotencyTest {
                 .when().post("/api/work/spawn/spawn/" + parentId)
                 .then().statusCode(201).extract().path("groupId");
 
-        // Second call — 200 (idempotent)
+        // Second call — 201 (generated endpoint always returns 201)
         final String groupId2 = given()
                 .contentType(ContentType.JSON).body(body)
                 .when().post("/api/work/spawn/spawn/" + parentId)
-                .then().statusCode(200).extract().path("groupId");
+                .then().statusCode(201).extract().path("groupId");
 
         assertThat(groupId1).isEqualTo(groupId2);
 

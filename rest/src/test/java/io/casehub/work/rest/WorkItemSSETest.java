@@ -46,7 +46,7 @@ class WorkItemSSETest {
 
     @Test
     void sseEndpoint_withWorkItemIdFilter_isReachable() throws Exception {
-        final HttpResponse<InputStream> response = connectSse("/workitems/events?workItemId=" + UUID.randomUUID());
+        final HttpResponse<InputStream> response = connectSse("/api/work/items/stream-events?workItemId=" + UUID.randomUUID());
         try (InputStream ignored = response.body()) {
             assertThat(response.statusCode()).isEqualTo(200);
         }
@@ -54,7 +54,7 @@ class WorkItemSSETest {
 
     @Test
     void sseEndpoint_withTypeFilter_isReachable() throws Exception {
-        final HttpResponse<InputStream> response = connectSse("/workitems/events?type=created");
+        final HttpResponse<InputStream> response = connectSse("/api/work/items/stream-events?type=created");
         try (InputStream ignored = response.body()) {
             assertThat(response.statusCode()).isEqualTo(200);
         }
@@ -79,7 +79,7 @@ class WorkItemSSETest {
         final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/events?type=created", dataLines, latch, connected);
+                connectSseLinesAsync("api/work/items/stream-events?type=created", dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });
@@ -100,7 +100,7 @@ class WorkItemSSETest {
         final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/events?workItemId=" + targetId, dataLines, latch, connected);
+                connectSseLinesAsync("api/work/items/stream-events?workItemId=" + targetId, dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });
@@ -123,7 +123,7 @@ class WorkItemSSETest {
         final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/" + itemId + "/events", dataLines, latch, connected);
+                connectSseLinesAsync("api/work/items/stream-work-item-events/" + itemId, dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });
@@ -144,7 +144,7 @@ class WorkItemSSETest {
         final CountDownLatch connected = new CountDownLatch(1);
         final Thread sseThread = Thread.ofVirtual().start(() -> {
             try {
-                connectSseLinesAsync("workitems/events?type=assigned", dataLines, latch, connected);
+                connectSseLinesAsync("api/work/items/stream-events?type=assigned", dataLines, latch, connected);
             } catch (Exception ignored) {
             }
         });

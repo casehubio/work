@@ -167,7 +167,7 @@ class WorkItemScheduleTest {
         given().queryParam("type", "schedule-test-cat")
                 .get("/api/work/items/list-all")
                 .then().statusCode(200)
-                .body("$", org.hamcrest.Matchers.hasSize(greaterThanOrEqualTo(1)));
+                .body("items", org.hamcrest.Matchers.hasSize(greaterThanOrEqualTo(1)));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

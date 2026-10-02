@@ -89,7 +89,7 @@ class WorkItemScheduleClusterTest {
         // Total WorkItems for this template: exactly 1
         final int count = given().queryParam("type", "cluster-test-cat")
                 .get("/api/work/items/list-all").then().statusCode(200)
-                .extract().jsonPath().getList("$").size();
+                .extract().jsonPath().getList("items").size();
         assertThat(count).isGreaterThanOrEqualTo(1);
     }
 

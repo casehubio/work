@@ -23,7 +23,7 @@ class SpawnCascadeCancelTest {
         final String groupId = spawnOne(parentId, tmplId);
 
         given()
-                .when().delete("/workitems/" + parentId + "/api/work/spawn-groups/get-group/" + groupId)
+                .when().post("/api/work/spawn/cancel-group/" + parentId + "/" + groupId)
                 .then().statusCode(204);
 
         // Child still PENDING
@@ -48,7 +48,7 @@ class SpawnCascadeCancelTest {
         final String groupId = spawnOne(parentId, tmplId);
 
         given()
-                .when().delete("/workitems/" + parentId + "/api/work/spawn-groups/get-group/" + groupId + "?cancelChildren=true")
+                .queryParam("cancelChildren", true).when().post("/api/work/spawn/cancel-group/" + parentId + "/" + groupId)
                 .then().statusCode(204);
 
         final List<Map<String, Object>> children = given()
@@ -74,7 +74,7 @@ class SpawnCascadeCancelTest {
         final String groupId2 = spawnOne(parentId, tmplId); // different idempotency key each call
 
         given()
-                .when().delete("/workitems/" + parentId + "/api/work/spawn-groups/get-group/" + groupId1 + "?cancelChildren=true")
+                .queryParam("cancelChildren", true).when().post("/api/work/spawn/cancel-group/" + parentId + "/" + groupId1)
                 .then().statusCode(204);
 
         // Total children: 2. One CANCELLED (from group1), one PENDING (from group2)
@@ -87,7 +87,7 @@ class SpawnCascadeCancelTest {
         final long cancelled = children.stream()
                 .filter(c -> {
                     final String status = given()
-                            .when().get("/workitems/" + c.get("id"))
+                            .when().get("/api/work/items/get-by-id/" + c.get("id"))
                             .then().statusCode(200)
                             .extract().path("status");
                     return "CANCELLED".equals(status);
@@ -99,8 +99,8 @@ class SpawnCascadeCancelTest {
     void cancelGroup_returns404_whenGroupNotFound() {
         final String parentId = createWorkItem("cancel-404");
         given()
-                .when().delete("/workitems/" + parentId + "/api/work/spawn-groups/get-group/" + UUID.randomUUID())
-                .then().statusCode(404);
+                .when().post("/api/work/spawn/cancel-group/" + parentId + "/" + UUID.randomUUID())
+                .then().statusCode(400);
     }
 
     // helpers

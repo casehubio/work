@@ -40,6 +40,13 @@ public class DefaultWorkItemRelationApi implements WorkItemRelationApi {
         UUID targetId = body.targetId();
         String relationType = body.relationType();
 
+        if (targetId == null) {
+            throw new IllegalArgumentException("targetId is required");
+        }
+        if (relationType == null || relationType.isBlank()) {
+            throw new IllegalArgumentException("relationType is required");
+        }
+
         if (workItemId.equals(targetId)) {
             throw new IllegalArgumentException("Cannot create self-referencing relation");
         }

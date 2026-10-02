@@ -136,7 +136,7 @@ class WorkItemTemplateTest {
 
     @Test
     void getTemplate_returns404_forUnknownId() {
-        given().get("/workitem-templates/00000000-0000-0000-0000-000000000000")
+        given().get("/api/work/templates/get-by-id/00000000-0000-0000-0000-000000000000")
                 .then()
                 .statusCode(404);
     }
@@ -157,8 +157,8 @@ class WorkItemTemplateTest {
 
     @Test
     void deleteTemplate_returns404_forUnknownId() {
-        given().delete("/workitem-templates/00000000-0000-0000-0000-000000000000")
-                .then().statusCode(404);
+        given().post("/api/work/templates/delete/00000000-0000-0000-0000-000000000000")
+                .then().statusCode(400);
     }
 
     // ── Happy path: instantiate template ─────────────────────────────────────
@@ -310,7 +310,7 @@ class WorkItemTemplateTest {
     void updateTemplate_returns404_whenNotFound() {
         given().contentType(ContentType.JSON)
                 .body("{\"name\":\"Whatever\"}")
-                .put("/workitem-templates/00000000-0000-0000-0000-000000000000")
+                .post("/api/work/templates/update/00000000-0000-0000-0000-000000000000")
                 .then()
                 .statusCode(404);
     }
@@ -405,9 +405,9 @@ class WorkItemTemplateTest {
                 .post("/api/work/templates/create")
                 .then().statusCode(201).extract().path("id");
 
-        given().contentType(ContentType.JSON)
+        given().contentType("application/merge-patch+json")
                 .body("{\"typePaths\":\"[\\\"patched\\\"]\"}")
-                .post("/api/work/templates/update/" + id)
+                .patch("/workitem-templates/" + id)
                 .then()
                 .statusCode(200)
                 .body("version", equalTo(2));

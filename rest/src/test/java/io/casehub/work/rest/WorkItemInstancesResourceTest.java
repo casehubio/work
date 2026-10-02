@@ -47,7 +47,7 @@ class WorkItemInstancesResourceTest {
         });
 
         given()
-                .when().get("/workitems/" + parentId + "/instances")
+                .when().get("/api/work/instances/get-instances/" + parentId)
                 .then()
                 .statusCode(200)
                 .body("parentId", equalTo(parentId))
@@ -61,7 +61,7 @@ class WorkItemInstancesResourceTest {
     @Test
     void getInstancesReturns404ForNonExistentParent() {
         given()
-                .when().get("/workitems/" + UUID.randomUUID() + "/instances")
+                .when().get("/api/work/instances/get-instances/" + UUID.randomUUID())
                 .then()
                 .statusCode(404);
     }
@@ -81,7 +81,7 @@ class WorkItemInstancesResourceTest {
         });
 
         given()
-                .when().get("/workitems/" + itemId + "/instances")
+                .when().get("/api/work/instances/get-instances/" + itemId)
                 .then()
                 .statusCode(404);
     }

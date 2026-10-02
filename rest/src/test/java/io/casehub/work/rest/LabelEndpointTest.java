@@ -324,7 +324,7 @@ class LabelEndpointTest {
     }
 
     @Test
-    void removeNonExistentLabel_returns500() {
+    void removeNonExistentLabel_returns400() {
         var id = given()
                 .contentType(ContentType.JSON)
                 .body("{\"title\": \"404 label test\", \"createdBy\": \"alice\"}")

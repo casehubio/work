@@ -37,7 +37,7 @@ class WorkItemBulkTest {
     void bulkClaim_partialSuccess_continuesOnFailure() {
         final List<String> ids = createItems(2);
         // Pre-claim the first one so it's no longer PENDING
-        given().queryParam("claimant", "bob").put("/workitems/" + ids.get(0) + "/claim").then().statusCode(200);
+        given().queryParam("claimant", "bob").post("/api/work/lifecycle/claim/" + ids.get(0)).then().statusCode(200);
 
         given().contentType(ContentType.JSON)
                 .body(bulkBody("claim", ids, "alice", null))
