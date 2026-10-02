@@ -9,7 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
 
 /**
  * Immutable audit log entry recording a lifecycle event on a {@link WorkItemEntity}.
@@ -21,7 +21,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity
 @Table(name = "audit_entry")
-public class AuditEntry extends PanacheEntityBase {
+public class AuditEntry {
 
     /** Primary key — UUID assigned on first persist. */
     @Id

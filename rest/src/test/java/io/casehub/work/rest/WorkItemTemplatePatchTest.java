@@ -11,6 +11,9 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
@@ -24,12 +27,15 @@ class WorkItemTemplatePatchTest {
 
     private static final String MERGE_PATCH = "application/merge-patch+json";
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearAll() {
-        AuditEntry.deleteAll();
-        WorkItemEntity.deleteAll();
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM AuditEntry").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemEntity").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     private String createTemplate() {

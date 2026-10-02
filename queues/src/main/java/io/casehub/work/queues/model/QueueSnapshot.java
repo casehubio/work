@@ -9,11 +9,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 @Entity
 @Table(name = "queue_snapshot")
-public class QueueSnapshot extends PanacheEntityBase {
+public class QueueSnapshot {
 
     @Id
     public UUID id;

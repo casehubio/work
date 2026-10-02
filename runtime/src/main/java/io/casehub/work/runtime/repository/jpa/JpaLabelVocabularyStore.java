@@ -5,12 +5,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import jakarta.persistence.PersistenceException;
 import jakarta.transaction.Transactional;
 import jakarta.transaction.Transactional.TxType;
 
-import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelVocabulary;
 import io.casehub.work.runtime.repository.LabelVocabularyStore;
@@ -32,7 +30,8 @@ public class JpaLabelVocabularyStore extends TenantAwareStore implements LabelVo
             if (vocabulary.tenancyId == null) {
                 vocabulary.tenancyId = currentPrincipal.tenancyId();
             }
-            vocabulary.persistAndFlush();
+            em.persist(vocabulary);
+            em.flush();
             return vocabulary;
         });
     }
@@ -40,21 +39,27 @@ public class JpaLabelVocabularyStore extends TenantAwareStore implements LabelVo
     @Override
     public Optional<LabelVocabulary> get(final UUID id) {
         return withTenantQuery(() ->
-                LabelVocabulary.find("id = ?1 AND tenancyId = ?2", id, currentPrincipal.tenancyId())
-                        .firstResultOptional());
+                em.createQuery("FROM LabelVocabulary WHERE id = ?1 AND tenancyId = ?2", LabelVocabulary.class)
+                        .setParameter(1, id)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     public List<LabelVocabulary> scanAll() {
         return withTenantQuery(() ->
-                LabelVocabulary.find("tenancyId = ?1", currentPrincipal.tenancyId())
-                        .list());
+                em.createQuery("FROM LabelVocabulary WHERE tenancyId = ?1", LabelVocabulary.class)
+                        .setParameter(1, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override
     public boolean delete(final UUID id) {
         return withTenantQuery(() -> {
-            final long deleted = LabelVocabulary.delete("id = ?1 AND tenancyId = ?2", id, currentPrincipal.tenancyId());
+            final int deleted = em.createQuery("DELETE FROM LabelVocabulary WHERE id = ?1 AND tenancyId = ?2")
+                    .setParameter(1, id)
+                    .setParameter(2, currentPrincipal.tenancyId())
+                    .executeUpdate();
             return deleted > 0;
         });
     }
@@ -62,17 +67,21 @@ public class JpaLabelVocabularyStore extends TenantAwareStore implements LabelVo
     @Override
     public Optional<LabelVocabulary> findByScope(final Path scope) {
         return withTenantQuery(() ->
-                LabelVocabulary.find("scope = ?1 AND tenancyId = ?2", scope, currentPrincipal.tenancyId())
-                        .firstResultOptional());
+                em.createQuery("FROM LabelVocabulary WHERE scope = ?1 AND tenancyId = ?2", LabelVocabulary.class)
+                        .setParameter(1, scope)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     @Transactional(TxType.REQUIRES_NEW)
     public LabelVocabulary findOrCreate(final Path scope, final String name) {
         return withTenantQuery(() -> {
-            final Optional<LabelVocabulary> existing = LabelVocabulary
-                    .find("scope = ?1 AND tenancyId = ?2", scope, currentPrincipal.tenancyId())
-                    .<LabelVocabulary>firstResultOptional();
+            final Optional<LabelVocabulary> existing = em.createQuery(
+                            "FROM LabelVocabulary WHERE scope = ?1 AND tenancyId = ?2", LabelVocabulary.class)
+                    .setParameter(1, scope)
+                    .setParameter(2, currentPrincipal.tenancyId())
+                    .getResultStream().findFirst();
             if (existing.isPresent()) {
                 return existing.get();
             }
@@ -81,13 +90,15 @@ public class JpaLabelVocabularyStore extends TenantAwareStore implements LabelVo
             vocab.name = name;
             vocab.tenancyId = currentPrincipal.tenancyId();
             try {
-                vocab.persistAndFlush();
+                em.persist(vocab);
+                em.flush();
                 return vocab;
             } catch (PersistenceException e) {
-                LabelVocabulary.getEntityManager().clear();
-                return LabelVocabulary
-                        .find("scope = ?1 AND tenancyId = ?2", scope, currentPrincipal.tenancyId())
-                        .<LabelVocabulary>firstResultOptional()
+                em.clear();
+                return em.createQuery("FROM LabelVocabulary WHERE scope = ?1 AND tenancyId = ?2", LabelVocabulary.class)
+                        .setParameter(1, scope)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst()
                         .orElseThrow(() -> new IllegalStateException(
                                 "Concurrent vocabulary creation failed", e));
             }

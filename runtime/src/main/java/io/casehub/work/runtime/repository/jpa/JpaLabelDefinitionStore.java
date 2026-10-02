@@ -5,9 +5,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 
-import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelDefinition;
 import io.casehub.work.runtime.repository.LabelDefinitionStore;
@@ -29,7 +27,8 @@ public class JpaLabelDefinitionStore extends TenantAwareStore implements LabelDe
             if (definition.tenancyId == null) {
                 definition.tenancyId = currentPrincipal.tenancyId();
             }
-            definition.persistAndFlush();
+            em.persist(definition);
+            em.flush();
             return definition;
         });
     }
@@ -37,28 +36,37 @@ public class JpaLabelDefinitionStore extends TenantAwareStore implements LabelDe
     @Override
     public Optional<LabelDefinition> get(final UUID id) {
         return withTenantQuery(() ->
-                LabelDefinition.find("id = ?1 AND tenancyId = ?2", id, currentPrincipal.tenancyId())
-                        .firstResultOptional());
+                em.createQuery("FROM LabelDefinition WHERE id = ?1 AND tenancyId = ?2", LabelDefinition.class)
+                        .setParameter(1, id)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     public List<LabelDefinition> findByVocabularyId(final UUID vocabularyId) {
         return withTenantQuery(() ->
-                LabelDefinition.find("vocabularyId = ?1 AND tenancyId = ?2", vocabularyId, currentPrincipal.tenancyId())
-                        .list());
+                em.createQuery("FROM LabelDefinition WHERE vocabularyId = ?1 AND tenancyId = ?2", LabelDefinition.class)
+                        .setParameter(1, vocabularyId)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override
     public List<LabelDefinition> findByPath(final Path path) {
         return withTenantQuery(() ->
-                LabelDefinition.find("path = ?1 AND tenancyId = ?2", path, currentPrincipal.tenancyId())
-                        .list());
+                em.createQuery("FROM LabelDefinition WHERE path = ?1 AND tenancyId = ?2", LabelDefinition.class)
+                        .setParameter(1, path)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override
     public boolean delete(final UUID id) {
         return withTenantQuery(() -> {
-            final long deleted = LabelDefinition.delete("id = ?1 AND tenancyId = ?2", id, currentPrincipal.tenancyId());
+            final int deleted = em.createQuery("DELETE FROM LabelDefinition WHERE id = ?1 AND tenancyId = ?2")
+                    .setParameter(1, id)
+                    .setParameter(2, currentPrincipal.tenancyId())
+                    .executeUpdate();
             return deleted > 0;
         });
     }

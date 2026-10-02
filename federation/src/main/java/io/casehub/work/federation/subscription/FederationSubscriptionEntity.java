@@ -1,6 +1,6 @@
 package io.casehub.work.federation.subscription;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "federation_subscription")
-public class FederationSubscriptionEntity extends PanacheEntityBase {
+public class FederationSubscriptionEntity {
 
     @Id
     public UUID id;

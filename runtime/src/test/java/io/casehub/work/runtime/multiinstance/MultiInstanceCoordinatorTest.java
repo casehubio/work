@@ -22,6 +22,7 @@ import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -36,10 +37,13 @@ class MultiInstanceCoordinatorTest {
     @Inject
     MultiInstanceSpawnService spawnService;
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     private UUID createGroupAndGetParentId(int instanceCount, int requiredCount) {
@@ -51,7 +55,7 @@ class MultiInstanceCoordinatorTest {
             t.instanceCount = instanceCount;
             t.requiredCount = requiredCount;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            t.persist();
+            em.persist(t);
             final var request = WorkItemCreateRequest.builder()
                     .templateId(t.id)
                     .createdBy("test")
@@ -63,7 +67,7 @@ class MultiInstanceCoordinatorTest {
     @Test
     void parentCompletesWhenMChildrenComplete() {
         UUID parentId = createGroupAndGetParentId(3, 2);
-        List<UUID> childIds = inTx(() -> WorkItemEntity.<WorkItemEntity> list("parentId", parentId).stream().map(w -> w.id).toList());
+        List<UUID> childIds = inTx(() -> em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parentId).getResultList().stream().map(w -> w.id).toList());
 
         inTx(() -> workItemService.claim(childIds.get(0), "alice"));
         inTx(() -> workItemService.start(childIds.get(0), "alice"));
@@ -74,7 +78,7 @@ class MultiInstanceCoordinatorTest {
         inTx(() -> workItemService.complete(childIds.get(1), "bob", "approved", null));
 
         Awaitility.await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-            WorkItemEntity parent = inTx(() -> WorkItemEntity.findById(parentId));
+            WorkItemEntity parent = inTx(() -> em.find(WorkItemEntity.class, parentId));
             assertThat(parent.status).isEqualTo(WorkItemStatus.COMPLETED);
         });
     }
@@ -82,7 +86,7 @@ class MultiInstanceCoordinatorTest {
     @Test
     void parentRejectedWhenGroupCannotReachM() {
         UUID parentId = createGroupAndGetParentId(3, 2);
-        List<UUID> childIds = inTx(() -> WorkItemEntity.<WorkItemEntity> list("parentId", parentId).stream().map(w -> w.id).toList());
+        List<UUID> childIds = inTx(() -> em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parentId).getResultList().stream().map(w -> w.id).toList());
 
         // 2 rejections — remaining(1) < needed(2), group fails
         inTx(() -> workItemService.claim(childIds.get(0), "alice"));
@@ -94,7 +98,7 @@ class MultiInstanceCoordinatorTest {
         inTx(() -> workItemService.reject(childIds.get(1), "bob", "denied", null));
 
         Awaitility.await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-            WorkItemEntity parent = inTx(() -> WorkItemEntity.findById(parentId));
+            WorkItemEntity parent = inTx(() -> em.find(WorkItemEntity.class, parentId));
             assertThat(parent.status).isEqualTo(WorkItemStatus.REJECTED);
         });
     }
@@ -110,13 +114,13 @@ class MultiInstanceCoordinatorTest {
             t.requiredCount = 2;
             t.onThresholdReached = "CANCEL";
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            t.persist();
+            em.persist(t);
             final var request = WorkItemCreateRequest.builder()
                     .templateId(t.id).createdBy("test").build();
             return templateService.createFromTemplate(request).id();
         });
 
-        List<UUID> childIds = inTx(() -> WorkItemEntity.<WorkItemEntity> list("parentId", parentId).stream().map(w -> w.id).toList());
+        List<UUID> childIds = inTx(() -> em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parentId).getResultList().stream().map(w -> w.id).toList());
 
         inTx(() -> workItemService.claim(childIds.get(0), "alice"));
         inTx(() -> workItemService.start(childIds.get(0), "alice"));
@@ -127,8 +131,7 @@ class MultiInstanceCoordinatorTest {
         inTx(() -> workItemService.complete(childIds.get(1), "bob", "approved", null));
 
         Awaitility.await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-            long cancelled = inTx(() -> WorkItemEntity.count(
-                    "parentId = ?1 AND status = ?2", parentId, WorkItemStatus.CANCELLED));
+            long cancelled = inTx(() -> em.createQuery("SELECT COUNT(e) FROM WorkItemEntity e WHERE e.parentId = ?1 AND e.status = ?2", Long.class).setParameter(1, parentId).setParameter(2, WorkItemStatus.CANCELLED).getSingleResult());
             assertThat(cancelled).isEqualTo(3);
         });
     }
@@ -144,13 +147,13 @@ class MultiInstanceCoordinatorTest {
             t.requiredCount = 2;
             t.onThresholdReached = "KEEP";
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            t.persist();
+            em.persist(t);
             final var request = WorkItemCreateRequest.builder()
                     .templateId(t.id).createdBy("test").build();
             return templateService.createFromTemplate(request).id();
         });
 
-        List<UUID> childIds = inTx(() -> WorkItemEntity.<WorkItemEntity> list("parentId", parentId).stream().map(w -> w.id).toList());
+        List<UUID> childIds = inTx(() -> em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parentId).getResultList().stream().map(w -> w.id).toList());
 
         inTx(() -> workItemService.claim(childIds.get(0), "alice"));
         inTx(() -> workItemService.start(childIds.get(0), "alice"));
@@ -161,18 +164,18 @@ class MultiInstanceCoordinatorTest {
         inTx(() -> workItemService.complete(childIds.get(1), "bob", "approved", null));
 
         Awaitility.await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-            WorkItemEntity parent = inTx(() -> WorkItemEntity.findById(parentId));
+            WorkItemEntity parent = inTx(() -> em.find(WorkItemEntity.class, parentId));
             assertThat(parent.status).isEqualTo(WorkItemStatus.COMPLETED);
         });
 
-        WorkItemEntity third = inTx(() -> WorkItemEntity.findById(childIds.get(2)));
+        WorkItemEntity third = inTx(() -> em.find(WorkItemEntity.class, childIds.get(2)));
         assertThat(third.status).isEqualTo(WorkItemStatus.PENDING);
     }
 
     @Test
     void policyTriggeredIsIdempotent() {
         UUID parentId = createGroupAndGetParentId(3, 2);
-        List<UUID> childIds = inTx(() -> WorkItemEntity.<WorkItemEntity> list("parentId", parentId).stream().map(w -> w.id).toList());
+        List<UUID> childIds = inTx(() -> em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parentId).getResultList().stream().map(w -> w.id).toList());
 
         // Complete all 3 (exceeds M=2) — parent should complete exactly once
         for (UUID childId : childIds) {
@@ -182,11 +185,11 @@ class MultiInstanceCoordinatorTest {
         }
 
         Awaitility.await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
-            WorkItemSpawnGroup group = inTx(() -> WorkItemSpawnGroup.findMultiInstanceByParentId(parentId));
+            WorkItemSpawnGroup group = inTx(() -> em.createQuery("FROM WorkItemSpawnGroup WHERE workItemId = ?1 AND requiredCount IS NOT NULL", WorkItemSpawnGroup.class).setParameter(1, parentId).getResultStream().findFirst().orElse(null));
             assertThat(group.policyTriggered).isTrue();
         });
 
-        WorkItemEntity parent = inTx(() -> WorkItemEntity.findById(parentId));
+        WorkItemEntity parent = inTx(() -> em.find(WorkItemEntity.class, parentId));
         assertThat(parent.status).isEqualTo(WorkItemStatus.COMPLETED);
     }
 
@@ -202,18 +205,18 @@ class MultiInstanceCoordinatorTest {
             t.instanceCount = 3;
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            t.persist();
+            em.persist(t);
             final WorkItemCreateRequest req = WorkItemCreateRequest.builder()
                     .title(t.name).createdBy("test").callerRef(callerRef)
                     .candidateGroups(t.candidateGroups).templateId(t.id).build();
             return spawnService.createGroup(req, t, null).id();
         });
 
-        final WorkItemEntity parent = inTx(() -> WorkItemEntity.findById(parentId));
+        final WorkItemEntity parent = inTx(() -> em.find(WorkItemEntity.class, parentId));
         assertThat(parent.callerRef).isEqualTo(callerRef);
 
         final List<WorkItemEntity> children = inTx(() ->
-            WorkItemEntity.<WorkItemEntity>list("parentId", parentId));
+            em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parentId).getResultList());
         assertThat(children).hasSize(3);
         assertThat(children).allSatisfy(child ->
             assertThat(child.callerRef).isNull());

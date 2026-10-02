@@ -11,6 +11,9 @@ import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
@@ -36,10 +39,13 @@ import io.restassured.http.ContentType;
 @QuarkusTest
 class WorkItemTemplateTest {
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     // ── POST /workitem-templates ──────────────────────────────────────────────

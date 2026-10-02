@@ -16,7 +16,7 @@ import io.casehub.work.runtime.repository.WorkItemSpawnGroupStore;
 import io.casehub.work.runtime.service.SummaryQueryBuilder;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -44,9 +44,6 @@ import java.util.UUID;
 public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore {
 
     @Inject
-    EntityManager em;
-
-    @Inject
     WorkItemSpawnGroupStore spawnGroupStore;
 
     @Override
@@ -67,7 +64,8 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
             if (entity.tenancyId == null) {
                 entity.tenancyId = currentPrincipal.tenancyId();
             }
-            entity.persistAndFlush();
+            em.persist(entity);
+            em.flush();
             return WorkItemEntityMapper.toDomain(entity);
         });
     }
@@ -75,36 +73,43 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
     @Override
     public Optional<WorkItem> get(final UUID id) {
         return withTenantQuery(() ->
-                                       WorkItemEntity.<WorkItemEntity>find("id = ?1 AND tenancyId = ?2", id, currentPrincipal.tenancyId())
-                                                     .firstResultOptional()
-                                                     .map(WorkItemEntityMapper::toDomain));
+                em.createQuery("FROM WorkItemEntity WHERE id = ?1 AND tenancyId = ?2", WorkItemEntity.class)
+                        .setParameter(1, id)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst()
+                        .map(WorkItemEntityMapper::toDomain));
     }
 
     @Override
     public Optional<WorkItem> findByCallerRef(final String callerRef) {
         return withTenantQuery(() ->
-                                       WorkItemEntity.<WorkItemEntity>find("callerRef = ?1 AND tenancyId = ?2 ORDER BY createdAt DESC",
-                                                                           callerRef, currentPrincipal.tenancyId())
-                                                     .firstResultOptional()
-                                                     .map(WorkItemEntityMapper::toDomain));
+                em.createQuery("FROM WorkItemEntity WHERE callerRef = ?1 AND tenancyId = ?2 ORDER BY createdAt DESC", WorkItemEntity.class)
+                        .setParameter(1, callerRef)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst()
+                        .map(WorkItemEntityMapper::toDomain));
     }
 
     @Override
     public Optional<WorkItem> findActiveByCallerRef(final String callerRef) {
         return withTenantQuery(() ->
-                                       WorkItemEntity.<WorkItemEntity>find("callerRef = ?1 AND status NOT IN (?2) AND tenancyId = ?3 ORDER BY createdAt DESC",
-                                                                           callerRef, WorkItemStatus.TERMINAL_STATUSES, currentPrincipal.tenancyId())
-                                                     .firstResultOptional()
-                                                     .map(WorkItemEntityMapper::toDomain));
+                em.createQuery("FROM WorkItemEntity WHERE callerRef = ?1 AND status NOT IN (?2) AND tenancyId = ?3 ORDER BY createdAt DESC", WorkItemEntity.class)
+                        .setParameter(1, callerRef)
+                        .setParameter(2, WorkItemStatus.TERMINAL_STATUSES)
+                        .setParameter(3, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst()
+                        .map(WorkItemEntityMapper::toDomain));
     }
 
     @Override
     public Optional<WorkItem> findByOrigin(String originServiceId, UUID originWorkItemId) {
         return withTenantQuery(() ->
-                                       WorkItemEntity.<WorkItemEntity>find("originServiceId = ?1 AND originWorkItemId = ?2 AND tenancyId = ?3",
-                                                                           originServiceId, originWorkItemId, currentPrincipal.tenancyId())
-                                                     .firstResultOptional()
-                                                     .map(WorkItemEntityMapper::toDomain));
+                em.createQuery("FROM WorkItemEntity WHERE originServiceId = ?1 AND originWorkItemId = ?2 AND tenancyId = ?3", WorkItemEntity.class)
+                        .setParameter(1, originServiceId)
+                        .setParameter(2, originWorkItemId)
+                        .setParameter(3, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst()
+                        .map(WorkItemEntityMapper::toDomain));
     }
 
 
@@ -188,7 +193,9 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                 entities = scanByLabelPattern(query.labelPattern());
             } else {
                 final JpqlAndParams jp = buildScanJpql(query);
-                entities = WorkItemEntity.find(jp.jpql(), jp.params()).list();
+                final TypedQuery<WorkItemEntity> q = em.createQuery("FROM WorkItemEntity WHERE " + jp.jpql(), WorkItemEntity.class);
+                jp.params().forEach(q::setParameter);
+                entities = q.getResultList();
             }
             return entities.stream().map(WorkItemEntityMapper::toDomain).toList();
         });
@@ -207,14 +214,14 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
 
     @Override
     public long countByParentAndAssignee(final UUID parentId, final String assigneeId, final UUID excludeId) {
-        return withTenantQuery(() -> {
-            // Only count non-terminal instances — terminal children no longer block new claims
-            return WorkItemEntity.count(
-                    "parentId = ?1 AND assigneeId = ?2 AND id != ?3 AND status NOT IN (?4) AND tenancyId = ?5",
-                    parentId, assigneeId, excludeId,
-                    WorkItemStatus.TERMINAL_STATUSES,
-                    currentPrincipal.tenancyId());
-        });
+        return withTenantQuery(() ->
+                em.createQuery("SELECT COUNT(e) FROM WorkItemEntity e WHERE e.parentId = ?1 AND e.assigneeId = ?2 AND e.id != ?3 AND e.status NOT IN (?4) AND e.tenancyId = ?5", Long.class)
+                        .setParameter(1, parentId)
+                        .setParameter(2, assigneeId)
+                        .setParameter(3, excludeId)
+                        .setParameter(4, WorkItemStatus.TERMINAL_STATUSES)
+                        .setParameter(5, currentPrincipal.tenancyId())
+                        .getSingleResult());
     }
 
     @Override
@@ -256,8 +263,9 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
         }
         pred.append(" AND (").append(visibilityPred).append(")");
 
-            // Find directly visible items
-            final List<WorkItemEntity> directlyVisible = WorkItemEntity.find(pred.toString(), params).list();
+            final TypedQuery<WorkItemEntity> visQ = em.createQuery("FROM WorkItemEntity WHERE " + pred, WorkItemEntity.class);
+            params.forEach(visQ::setParameter);
+            final List<WorkItemEntity> directlyVisible = visQ.getResultList();
 
             // Collect roots (items with parentId IS NULL) including ancestors of visible children
             final LinkedHashSet<UUID>                 rootIds   = new LinkedHashSet<>();
@@ -269,9 +277,10 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                     rootIds.add(item.id);
                     rootItems.put(item.id, item);
                 } else {
-                    // Tenant-scoped parent lookup (replaces static WorkItem.findById)
-                    final WorkItemEntity parent = WorkItemEntity.<WorkItemEntity> find(
-                            "id = ?1 AND tenancyId = ?2", item.parentId, tenancyId).firstResult();
+                    final WorkItemEntity parent = em.createQuery("FROM WorkItemEntity WHERE id = ?1 AND tenancyId = ?2", WorkItemEntity.class)
+                            .setParameter(1, item.parentId)
+                            .setParameter(2, tenancyId)
+                            .getResultStream().findFirst().orElse(null);
                     if (parent != null && parent.parentId == null) {
                         rootIds.add(parent.id);
                         rootItems.put(parent.id, parent);
@@ -282,7 +291,8 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
             return rootIds.stream().map(id -> {
                 final WorkItemEntity     root       = rootItems.get(id);
                 final WorkItemSpawnGroup group      = spawnGroupStore.findMultiInstanceByParentId(id).orElse(null);
-                final int                childCount = (int) WorkItemEntity.count("parentId = ?1 AND tenancyId = ?2", id, tenancyId);
+                final int                childCount = em.createQuery("SELECT COUNT(e) FROM WorkItemEntity e WHERE e.parentId = ?1 AND e.tenancyId = ?2", Long.class)
+                        .setParameter(1, id).setParameter(2, tenancyId).getSingleResult().intValue();
                 if (group != null) {
                     final GroupStatus status = group.groupStatus != null ? group.groupStatus : GroupStatus.IN_PROGRESS;
                     return new WorkItemRootView(WorkItemEntityMapper.toDomain(root), childCount, group.completedCount, group.requiredCount, status);
@@ -304,68 +314,62 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
         final String tenancyId = currentPrincipal.tenancyId();
         if (pattern.endsWith("/**")) {
             final String prefix = pattern.substring(0, pattern.length() - 3) + "/";
-            return WorkItemEntity.count(
-                    "SELECT COUNT(DISTINCT wi) FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path LIKE ?2",
-                    tenancyId, prefix + "%");
+            return em.createQuery("SELECT COUNT(DISTINCT wi) FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path LIKE ?2", Long.class)
+                    .setParameter(1, tenancyId).setParameter(2, prefix + "%").getSingleResult();
         }
         if (pattern.endsWith("/*")) {
             final String prefix = pattern.substring(0, pattern.length() - 2) + "/";
-            return WorkItemEntity.count(
-                    "SELECT COUNT(DISTINCT wi) FROM WorkItemEntity wi JOIN wi.labels l " +
-                            "WHERE wi.tenancyId = ?1 AND l.path LIKE ?2 AND l.path NOT LIKE ?3",
-                    tenancyId, prefix + "%", prefix + "%/%");
+            return em.createQuery("SELECT COUNT(DISTINCT wi) FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path LIKE ?2 AND l.path NOT LIKE ?3", Long.class)
+                    .setParameter(1, tenancyId).setParameter(2, prefix + "%").setParameter(3, prefix + "%/%").getSingleResult();
         }
-        return WorkItemEntity.count(
-                "SELECT COUNT(DISTINCT wi) FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path = ?2",
-                tenancyId, pattern);
+        return em.createQuery("SELECT COUNT(DISTINCT wi) FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path = ?2", Long.class)
+                .setParameter(1, tenancyId).setParameter(2, pattern).getSingleResult();
     }
 
     private List<WorkItemEntity> scanByLabelPattern(final String pattern) {
         final String tenancyId = currentPrincipal.tenancyId();
         if (pattern.endsWith("/**")) {
             final String prefix = pattern.substring(0, pattern.length() - 3) + "/";
-            return WorkItemEntity.<WorkItemEntity> find(
-                    "SELECT DISTINCT wi FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path LIKE ?2",
-                    tenancyId, prefix + "%").list();
+            return em.createQuery("SELECT DISTINCT wi FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path LIKE ?2", WorkItemEntity.class)
+                    .setParameter(1, tenancyId).setParameter(2, prefix + "%").getResultList();
         }
         if (pattern.endsWith("/*")) {
             final String prefix = pattern.substring(0, pattern.length() - 2) + "/";
-            return WorkItemEntity.<WorkItemEntity> find(
-                    "SELECT DISTINCT wi FROM WorkItemEntity wi JOIN wi.labels l " +
-                            "WHERE wi.tenancyId = ?1 AND l.path LIKE ?2 AND l.path NOT LIKE ?3",
-                    tenancyId, prefix + "%", prefix + "%/%").list();
+            return em.createQuery("SELECT DISTINCT wi FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path LIKE ?2 AND l.path NOT LIKE ?3", WorkItemEntity.class)
+                    .setParameter(1, tenancyId).setParameter(2, prefix + "%").setParameter(3, prefix + "%/%").getResultList();
         }
-        return WorkItemEntity.<WorkItemEntity> find(
-                "SELECT DISTINCT wi FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path = ?2",
-                tenancyId, pattern).list();
+        return em.createQuery("SELECT DISTINCT wi FROM WorkItemEntity wi JOIN wi.labels l WHERE wi.tenancyId = ?1 AND l.path = ?2", WorkItemEntity.class)
+                .setParameter(1, tenancyId).setParameter(2, pattern).getResultList();
     }
 
     @Override
     public List<WorkItem> findByParentIdExcludingStatuses(final UUID parentId,
                                                           final List<io.casehub.work.api.WorkItemStatus> excludeStatuses) {
         return withTenantQuery(() ->
-                                       WorkItemEntity.<WorkItemEntity>find(
-                                                             "parentId = ?1 AND tenancyId = ?2 AND status NOT IN (?3)",
-                                                             parentId, currentPrincipal.tenancyId(), excludeStatuses)
-                                                     .list().stream().map(WorkItemEntityMapper::toDomain).toList());
+                em.createQuery("FROM WorkItemEntity WHERE parentId = ?1 AND tenancyId = ?2 AND status NOT IN (?3)", WorkItemEntity.class)
+                        .setParameter(1, parentId)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .setParameter(3, excludeStatuses)
+                        .getResultList().stream().map(WorkItemEntityMapper::toDomain).toList());
     }
 
     @Override
     public List<WorkItem> findByParentIdWithStatuses(final UUID parentId,
                                                      final List<io.casehub.work.api.WorkItemStatus> statuses) {
         return withTenantQuery(() ->
-                                       WorkItemEntity.<WorkItemEntity>find(
-                                                             "parentId = ?1 AND tenancyId = ?2 AND status IN (?3)",
-                                                             parentId, currentPrincipal.tenancyId(), statuses)
-                                                     .list().stream().map(WorkItemEntityMapper::toDomain).toList());
+                em.createQuery("FROM WorkItemEntity WHERE parentId = ?1 AND tenancyId = ?2 AND status IN (?3)", WorkItemEntity.class)
+                        .setParameter(1, parentId)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .setParameter(3, statuses)
+                        .getResultList().stream().map(WorkItemEntityMapper::toDomain).toList());
     }
 
     @Override
     public List<WorkItem> findByParentId(final UUID parentId) {
         return withTenantQuery(() ->
-                                       WorkItemEntity.<WorkItemEntity>find(
-                                                             "parentId = ?1 AND tenancyId = ?2",
-                                                             parentId, currentPrincipal.tenancyId())
-                                                     .list().stream().map(WorkItemEntityMapper::toDomain).toList());
+                em.createQuery("FROM WorkItemEntity WHERE parentId = ?1 AND tenancyId = ?2", WorkItemEntity.class)
+                        .setParameter(1, parentId)
+                        .setParameter(2, currentPrincipal.tenancyId())
+                        .getResultList().stream().map(WorkItemEntityMapper::toDomain).toList());
     }
 }

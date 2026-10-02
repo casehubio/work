@@ -20,6 +20,7 @@ import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -51,6 +52,9 @@ class LedgerIntegrationTest {
 
     @Inject
     Event<WorkItemLifecycleEvent> lifecycleEvent;
+
+    @Inject
+    EntityManager em;
 
     // -------------------------------------------------------------------------
     // Fixture helper
@@ -491,7 +495,7 @@ class LedgerIntegrationTest {
         rel.relationType = WorkItemRelationType.PART_OF;
         rel.createdBy = "system:spawn";
         rel.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
-        rel.persist();
+        em.persist(rel);
 
         // Fire SPAWNED event on parent, as WorkItemSpawnService would
         lifecycleEvent.fire(WorkItemLifecycleEvent.of("SPAWNED", parent, "system:spawn",

@@ -21,6 +21,6 @@ public class JpaCrossTenantWorkItemScheduleStore extends TenantAwareStore implem
     @Override
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public List<WorkItemSchedule> findActive() {
-        return withCrossTenantQuery(() -> WorkItemSchedule.find("active = true").list());
+        return withCrossTenantQuery(() -> em.createQuery("FROM WorkItemSchedule WHERE active = true", WorkItemSchedule.class).getResultList());
     }
 }

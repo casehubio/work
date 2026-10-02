@@ -7,6 +7,7 @@ import io.casehub.work.client.WorkItemClient.ClientResponse;
 import io.casehub.work.federation.subscription.FederationSubscriptionEntity;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import org.jboss.logging.Logger;
@@ -17,6 +18,9 @@ import java.time.Duration;
 public class FederationProxy {
 
     private static final Logger LOG = Logger.getLogger(FederationProxy.class);
+
+    @Inject
+    EntityManager em;
 
     @Inject
     FederationConfig config;
@@ -77,10 +81,9 @@ public class FederationProxy {
     }
 
     private String resolveOwnerBaseUrl(WorkItem shadow) {
-        var subscriptions = FederationSubscriptionEntity.<FederationSubscriptionEntity>find(
-                                                                "tenancyId = ?1 and status = ?2",
-                                                                shadow.tenancyId(), FederationSubscriptionEntity.SubscriptionStatus.ACTIVE)
-                                                        .list();
+        var subscriptions = em.createQuery("FROM FederationSubscriptionEntity WHERE tenancyId = ?1 AND status = ?2", FederationSubscriptionEntity.class)
+                .setParameter(1, shadow.tenancyId()).setParameter(2, FederationSubscriptionEntity.SubscriptionStatus.ACTIVE)
+                .getResultList();
         return subscriptions.stream()
                             .filter(s -> s.peerId.equals(shadow.originServiceId()))
                             .map(s -> s.baseUrl)

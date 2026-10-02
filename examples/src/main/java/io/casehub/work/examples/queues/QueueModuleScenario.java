@@ -10,6 +10,7 @@ import io.casehub.work.api.WorkItemLabelRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.queues.model.WorkItemQueueState;
+import io.casehub.work.queues.repository.QueueStateStore;
 import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.api.WorkItem;
@@ -86,6 +87,9 @@ public class QueueModuleScenario {
 
     @Inject
     AuditEntryStore auditStore;
+
+    @Inject
+    QueueStateStore queueStateStore;
 
     @Inject
     Event<WorkItemLifecycleEvent> lifecycleEvent;
@@ -181,7 +185,7 @@ public class QueueModuleScenario {
         // Step 7: contract-specialist marks WorkItem A as relinquishable (handoff signal)
         final String description7 = "contract-specialist marks WorkItem A as relinquishable — needs senior review";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 7, total, description7);
-        final WorkItemQueueState state = WorkItemQueueState.findOrCreate(wiA.id());
+        final WorkItemQueueState state = queueStateStore.findOrCreate(wiA.id());
         state.relinquishable = true;
         steps.add(new StepLog(7, description7, wiA.id()));
 

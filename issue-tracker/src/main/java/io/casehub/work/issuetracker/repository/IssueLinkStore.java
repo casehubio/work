@@ -10,7 +10,7 @@ import io.casehub.work.issuetracker.model.WorkItemIssueLink;
  * Store SPI for {@link WorkItemIssueLink} persistence.
  *
  * <p>
- * Replaces direct Panache static calls with an injectable seam, enabling
+ * Replaces direct JPA static calls with an injectable seam, enabling
  * full unit testing without CDI or a database.
  *
  * <p>

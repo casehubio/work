@@ -2,7 +2,7 @@ package io.casehub.work.progress.runtime.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.casehub.work.progress.ProgressStatus;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -18,7 +18,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "progress_instance")
-public class ProgressInstanceEntity extends PanacheEntityBase {
+public class ProgressInstanceEntity {
 
     @Id
     public UUID id;

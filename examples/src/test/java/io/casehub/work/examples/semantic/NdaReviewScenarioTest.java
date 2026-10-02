@@ -12,6 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.ai.skill.WorkerSkillProfile;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
@@ -19,10 +21,13 @@ import io.restassured.response.Response;
 @QuarkusTest
 class NdaReviewScenarioTest {
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void cleanup() {
-        WorkerSkillProfile.deleteAll();
+        em.createQuery("DELETE FROM WorkerSkillProfile").executeUpdate();
     }
 
     @Test

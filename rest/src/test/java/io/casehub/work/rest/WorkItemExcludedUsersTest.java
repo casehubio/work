@@ -5,10 +5,13 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,10 +21,13 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 class WorkItemExcludedUsersTest {
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     // ── Template CRUD + snapshot ────────────────────────────────────────────

@@ -11,7 +11,7 @@ import io.casehub.work.ai.repository.EscalationSummaryStore;
 import io.casehub.work.runtime.repository.jpa.TenantAwareStore;
 
 /**
- * Default JPA/Panache implementation of {@link EscalationSummaryStore}.
+ * Default JPA implementation of {@link EscalationSummaryStore}.
  *
  * <p>Every query is scoped to the current tenant via {@link CurrentPrincipal#tenancyId()}.
  * The {@link #put} method stamps {@code tenancyId} from the principal on insert when
@@ -26,7 +26,8 @@ public class JpaEscalationSummaryStore extends TenantAwareStore implements Escal
             if (summary.tenancyId == null) {
                 summary.tenancyId = currentPrincipal.tenancyId();
             }
-            summary.persistAndFlush();
+            em.persist(summary);
+            em.flush();
             return summary;
         });
     }
@@ -34,9 +35,9 @@ public class JpaEscalationSummaryStore extends TenantAwareStore implements Escal
     @Override
     public List<EscalationSummary> findByWorkItemId(final UUID workItemId) {
         return withTenantQuery(() ->
-            EscalationSummary.list(
-                    "workItemId = ?1 AND tenancyId = ?2 ORDER BY generatedAt DESC",
-                    workItemId, currentPrincipal.tenancyId())
+            em.createQuery("FROM EscalationSummary WHERE workItemId = ?1 AND tenancyId = ?2 ORDER BY generatedAt DESC", EscalationSummary.class)
+                    .setParameter(1, workItemId).setParameter(2, currentPrincipal.tenancyId())
+                    .getResultList()
         );
     }
 }

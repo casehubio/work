@@ -12,7 +12,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 import io.casehub.platform.api.path.Path;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
 
 /**
  * A declared label path within a {@link LabelVocabulary}.
@@ -23,7 +23,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity
 @Table(name = "label_definition")
-public class LabelDefinition extends PanacheEntityBase {
+public class LabelDefinition {
 
     @Id
     public UUID id;

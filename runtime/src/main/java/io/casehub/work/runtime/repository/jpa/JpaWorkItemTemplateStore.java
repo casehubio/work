@@ -5,9 +5,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-
-import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.WorkItemTemplateStore;
 
@@ -28,7 +25,8 @@ public class JpaWorkItemTemplateStore extends TenantAwareStore implements WorkIt
             if (template.tenancyId == null) {
                 template.tenancyId = currentPrincipal.tenancyId();
             }
-            template.persistAndFlush();
+            em.persist(template);
+            em.flush();
             return template;
         });
     }
@@ -36,28 +34,32 @@ public class JpaWorkItemTemplateStore extends TenantAwareStore implements WorkIt
     @Override
     public Optional<WorkItemTemplate> get(final UUID id) {
         return withTenantQuery(() ->
-                WorkItemTemplate.find("id = ?1 AND tenancyId = ?2", id, currentPrincipal.tenancyId())
-                        .firstResultOptional());
+                em.createQuery("FROM WorkItemTemplate WHERE id = ?1 AND tenancyId = ?2", WorkItemTemplate.class)
+                        .setParameter(1, id).setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     public Optional<WorkItemTemplate> getByName(final String name) {
         return withTenantQuery(() ->
-                WorkItemTemplate.find("name = ?1 AND tenancyId = ?2", name, currentPrincipal.tenancyId())
-                        .firstResultOptional());
+                em.createQuery("FROM WorkItemTemplate WHERE name = ?1 AND tenancyId = ?2", WorkItemTemplate.class)
+                        .setParameter(1, name).setParameter(2, currentPrincipal.tenancyId())
+                        .getResultStream().findFirst());
     }
 
     @Override
     public List<WorkItemTemplate> scanAll() {
         return withTenantQuery(() ->
-                WorkItemTemplate.find("tenancyId = ?1 ORDER BY name ASC", currentPrincipal.tenancyId())
-                        .list());
+                em.createQuery("FROM WorkItemTemplate WHERE tenancyId = ?1 ORDER BY name ASC", WorkItemTemplate.class)
+                        .setParameter(1, currentPrincipal.tenancyId())
+                        .getResultList());
     }
 
     @Override
     public boolean delete(final UUID id) {
         return withTenantQuery(() -> {
-            final long deleted = WorkItemTemplate.delete("id = ?1 AND tenancyId = ?2", id, currentPrincipal.tenancyId());
+            final int deleted = em.createQuery("DELETE FROM WorkItemTemplate WHERE id = ?1 AND tenancyId = ?2")
+                    .setParameter(1, id).setParameter(2, currentPrincipal.tenancyId()).executeUpdate();
             return deleted > 0;
         });
     }

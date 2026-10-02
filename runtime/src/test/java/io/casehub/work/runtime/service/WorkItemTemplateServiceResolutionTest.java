@@ -12,6 +12,7 @@ import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.annotation.Priority;
+import jakarta.persistence.EntityManager;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
@@ -40,6 +41,9 @@ class WorkItemTemplateServiceResolutionTest {
     @Inject
     AuditEntryStore auditStore;
 
+    @Inject
+    EntityManager em;
+
     /**
      * Configurable @Alternative GroupMembershipProvider for tests.
      * Takes priority over NoOpGroupMembershipProvider @DefaultBean.
@@ -67,7 +71,7 @@ class WorkItemTemplateServiceResolutionTest {
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
         TestGroupMembershipProvider.reset();
     }
 
@@ -265,7 +269,7 @@ class WorkItemTemplateServiceResolutionTest {
         t.name = name;
         t.createdBy = "test";
         t.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
-        WorkItemTemplate.persist(t);
+        em.persist(t);
         return t;
     }
 
@@ -276,7 +280,7 @@ class WorkItemTemplateServiceResolutionTest {
         t.createdBy = "test";
         t.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
         customizer.accept(t);
-        WorkItemTemplate.persist(t);
+        em.persist(t);
         return t;
     }
 }

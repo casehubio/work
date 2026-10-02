@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.UUID;
 
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -44,10 +45,13 @@ class WorkItemScheduleClusterTest {
     @Inject
     WorkItemScheduleService scheduleService;
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        WorkItemTemplate.deleteAll(); // cascades to work_item_schedule via ON DELETE CASCADE
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     // ── Version field ─────────────────────────────────────────────────────────

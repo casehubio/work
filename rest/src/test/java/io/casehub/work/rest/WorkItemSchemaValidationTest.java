@@ -3,10 +3,13 @@ package io.casehub.work.rest;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +19,9 @@ import org.junit.jupiter.api.Test;
  */
 @QuarkusTest
 class WorkItemSchemaValidationTest {
+
+    @Inject
+    EntityManager em;
 
     private static final String OUTPUT_SCHEMA =
             "{\"type\":\"object\",\"required\":[\"decision\"]," +
@@ -28,7 +34,7 @@ class WorkItemSchemaValidationTest {
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     // ── outputDataSchema (resolution validation) ─────────────────────────────

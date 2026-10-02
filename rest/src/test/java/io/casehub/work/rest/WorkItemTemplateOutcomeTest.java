@@ -7,12 +7,15 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
+
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItemEntity;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
-import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,12 +26,15 @@ import org.junit.jupiter.api.Test;
 @QuarkusTest
 class WorkItemTemplateOutcomeTest {
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        AuditEntry.deleteAll();
-        WorkItemEntity.deleteAll();
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM AuditEntry").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemEntity").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     @Test

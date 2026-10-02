@@ -13,6 +13,7 @@ import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.core.strategy.RoutingCursorStore;
 import io.casehub.work.runtime.model.RoutingCursor;
 import io.casehub.work.runtime.model.RoutingCursorId;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
@@ -25,6 +26,9 @@ class RoutingCursorLastAccessedTest {
     @Inject
     RoutingCursorStore cursorStore;
 
+    @Inject
+    EntityManager em;
+
     @Test
     void acquireNext_stampsLastAccessed() {
         final String poolHash = "last-accessed-" + UUID.randomUUID();
@@ -32,7 +36,7 @@ class RoutingCursorLastAccessedTest {
 
         cursorStore.acquireNext(poolHash, 3);
 
-        final RoutingCursor cursor = RoutingCursor.findById(
+        final RoutingCursor cursor = em.find(RoutingCursor.class,
                 new RoutingCursorId(poolHash, TenancyConstants.DEFAULT_TENANT_ID));
         assertThat(cursor).isNotNull();
         assertThat(cursor.lastAccessed).isNotNull();

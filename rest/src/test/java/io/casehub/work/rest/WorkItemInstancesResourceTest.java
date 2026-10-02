@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,9 @@ class WorkItemInstancesResourceTest {
     @Inject
     WorkItemTemplateService templateService;
 
+    @Inject
+    EntityManager em;
+
     @Test
     void getInstancesReturnsChildrenWithGroupSummary() {
         // Data created in a committed transaction before the HTTP call
@@ -38,7 +42,7 @@ class WorkItemInstancesResourceTest {
             t.instanceCount = 3;
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            t.persist();
+            em.persist(t);
             final var request = WorkItemCreateRequest.builder()
                     .templateId(t.id)
                     .createdBy("test")
@@ -76,7 +80,7 @@ class WorkItemInstancesResourceTest {
             item.priority = WorkItemPriority.MEDIUM;
             item.createdBy = "test";
             item.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            item.persist();
+            em.persist(item);
             return item.id.toString();
         });
 

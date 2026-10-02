@@ -9,8 +9,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
-
 /**
  * An internal operational note attached to a {@link WorkItemEntity}.
  *
@@ -46,7 +44,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity
 @Table(name = "work_item_note")
-public class WorkItemNote extends PanacheEntityBase {
+public class WorkItemNote {
 
     /** Primary key — UUID assigned on first persist. */
     @Id

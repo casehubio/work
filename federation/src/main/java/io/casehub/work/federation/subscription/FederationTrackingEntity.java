@@ -1,6 +1,6 @@
 package io.casehub.work.federation.subscription;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -14,7 +14,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "federation_subscription_tracking")
 @IdClass(FederationTrackingEntity.TrackingId.class)
-public class FederationTrackingEntity extends PanacheEntityBase {
+public class FederationTrackingEntity {
 
     @Id
     @Column(name = "subscription_id")

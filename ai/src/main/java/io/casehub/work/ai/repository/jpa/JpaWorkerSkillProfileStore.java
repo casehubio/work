@@ -11,7 +11,7 @@ import io.casehub.work.ai.skill.WorkerSkillProfile;
 import io.casehub.work.runtime.repository.jpa.TenantAwareStore;
 
 /**
- * Default JPA/Panache implementation of {@link WorkerSkillProfileStore}.
+ * Default JPA implementation of {@link WorkerSkillProfileStore}.
  *
  * <p>Every query is scoped to the current tenant via {@link CurrentPrincipal#tenancyId()}.
  * The {@link #put} method stamps {@code tenancyId} from the principal on insert when
@@ -26,7 +26,8 @@ public class JpaWorkerSkillProfileStore extends TenantAwareStore implements Work
             if (profile.tenancyId == null) {
                 profile.tenancyId = currentPrincipal.tenancyId();
             }
-            profile.persistAndFlush();
+            em.persist(profile);
+            em.flush();
             return profile;
         });
     }
@@ -34,24 +35,26 @@ public class JpaWorkerSkillProfileStore extends TenantAwareStore implements Work
     @Override
     public Optional<WorkerSkillProfile> get(final String workerId) {
         return withTenantQuery(() ->
-            WorkerSkillProfile.find("workerId = ?1 AND tenancyId = ?2",
-                    workerId, currentPrincipal.tenancyId())
-                    .firstResultOptional()
+            em.createQuery("FROM WorkerSkillProfile WHERE workerId = ?1 AND tenancyId = ?2", WorkerSkillProfile.class)
+                    .setParameter(1, workerId).setParameter(2, currentPrincipal.tenancyId())
+                    .getResultStream().findFirst()
         );
     }
 
     @Override
     public List<WorkerSkillProfile> scanAll() {
         return withTenantQuery(() ->
-            WorkerSkillProfile.list("tenancyId", currentPrincipal.tenancyId())
+            em.createQuery("FROM WorkerSkillProfile WHERE tenancyId = ?1", WorkerSkillProfile.class)
+                    .setParameter(1, currentPrincipal.tenancyId()).getResultList()
         );
     }
 
     @Override
     public boolean delete(final String workerId) {
         return withTenantQuery(() -> {
-            final long deleted = WorkerSkillProfile.delete("workerId = ?1 AND tenancyId = ?2",
-                    workerId, currentPrincipal.tenancyId());
+            final long deleted = em.createQuery("DELETE FROM WorkerSkillProfile WHERE workerId = ?1 AND tenancyId = ?2")
+                    .setParameter(1, workerId).setParameter(2, currentPrincipal.tenancyId())
+                    .executeUpdate();
             return deleted > 0;
         });
     }

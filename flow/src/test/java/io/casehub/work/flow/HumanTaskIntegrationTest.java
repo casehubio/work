@@ -17,6 +17,7 @@ import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.service.WorkItemService;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.smallrye.mutiny.Uni;
@@ -36,6 +37,9 @@ class HumanTaskIntegrationTest {
 
     @Inject
     TestWorkItemsWorkflow testWorkflow;
+
+    @Inject
+    EntityManager em;
 
     @Test
     void requestApproval_createsWorkItemAndReturnsPendingUni() {
@@ -64,7 +68,7 @@ class HumanTaskIntegrationTest {
         Uni<String> result = bridge.requestApproval(
                 "Approve budget", null, "alice", WorkItemPriority.HIGH, null);
 
-        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        List<WorkItemEntity> all = em.createQuery("FROM WorkItemEntity", WorkItemEntity.class).getResultList();
         WorkItemEntity workItem = all.stream()
                                      .filter(wi -> "Approve budget".equals(wi.title))
                                      .findFirst()
@@ -84,7 +88,7 @@ class HumanTaskIntegrationTest {
         Uni<String> result = bridge.requestApproval(
                 "Budget rejection test", null, "carol", WorkItemPriority.LOW, null);
 
-        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        List<WorkItemEntity> all = em.createQuery("FROM WorkItemEntity", WorkItemEntity.class).getResultList();
         WorkItemEntity workItem = all.stream()
                                      .filter(wi -> "Budget rejection test".equals(wi.title))
                                      .findFirst()
@@ -103,7 +107,7 @@ class HumanTaskIntegrationTest {
         Uni<String> result = bridge.requestApproval(
                 "Cancel test", null, "dave", WorkItemPriority.MEDIUM, null);
 
-        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        List<WorkItemEntity> all = em.createQuery("FROM WorkItemEntity", WorkItemEntity.class).getResultList();
         WorkItemEntity workItem = all.stream()
                                      .filter(wi -> "Cancel test".equals(wi.title))
                                      .findFirst()
@@ -123,7 +127,7 @@ class HumanTaskIntegrationTest {
 
         assertThatThrownBy(() -> result.await().atMost(Duration.ofMillis(50)))
                 .isInstanceOf(Exception.class);
-        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        List<WorkItemEntity> all = em.createQuery("FROM WorkItemEntity", WorkItemEntity.class).getResultList();
         WorkItemEntity workItem = all.stream()
                                      .filter(wi -> "Team approval".equals(wi.title))
                                      .findFirst()
@@ -163,7 +167,7 @@ class HumanTaskIntegrationTest {
 
         assertThat(result).isNotNull();
 
-        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        List<WorkItemEntity> all = em.createQuery("FROM WorkItemEntity", WorkItemEntity.class).getResultList();
         WorkItemEntity wi = all.stream()
                                .filter(w -> "Uni test".equals(w.title))
                                .findFirst().orElseThrow();
@@ -181,7 +185,7 @@ class HumanTaskIntegrationTest {
         Uni<String> result = bridge.requestApproval(
                 "Uni reject test", null, "bob", WorkItemPriority.MEDIUM, null);
 
-        List<WorkItemEntity> all = WorkItemEntity.listAll();
+        List<WorkItemEntity> all = em.createQuery("FROM WorkItemEntity", WorkItemEntity.class).getResultList();
         WorkItemEntity wi = all.stream()
                                .filter(w -> "Uni reject test".equals(w.title))
                                .findFirst().orElseThrow();
@@ -207,7 +211,7 @@ class HumanTaskIntegrationTest {
 
     @Test
     void workItemsDslFlow_createsWorkItemAndSuspends() {
-        List<WorkItemEntity> before = WorkItemEntity.listAll();
+        List<WorkItemEntity> before = em.createQuery("FROM WorkItemEntity", WorkItemEntity.class).getResultList();
 
         // Start the workflow asynchronously — it suspends on the WorkItem creation
         testWorkflow.startInstance(Map.of("docTitle", "My Document"))
@@ -222,7 +226,7 @@ class HumanTaskIntegrationTest {
             Thread.currentThread().interrupt();
         }
 
-        List<WorkItemEntity> after = WorkItemEntity.listAll();
+        List<WorkItemEntity> after = em.createQuery("FROM WorkItemEntity", WorkItemEntity.class).getResultList();
 
         // A WorkItem should have been created by the workflow
         assertThat(after.size()).isGreaterThan(before.size());

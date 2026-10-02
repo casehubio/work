@@ -21,6 +21,6 @@ public class JpaCrossTenantRoutingCursorStore extends TenantAwareStore implement
     @Override
     @Transactional(Transactional.TxType.REQUIRES_NEW)
     public long cleanupStale(Instant cutoff) {
-        return withCrossTenantQuery(() -> RoutingCursor.delete("lastAccessed < ?1", cutoff));
+        return withCrossTenantQuery(() -> (long) em.createQuery("DELETE FROM RoutingCursor WHERE lastAccessed < ?1").setParameter(1, cutoff).executeUpdate());
     }
 }

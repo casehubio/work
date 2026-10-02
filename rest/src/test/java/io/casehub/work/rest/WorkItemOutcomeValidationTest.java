@@ -4,6 +4,8 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
 import io.casehub.work.runtime.model.WorkItemEntity;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,12 +26,15 @@ import io.restassured.http.ContentType;
 @QuarkusTest
 class WorkItemOutcomeValidationTest {
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
-        AuditEntry.deleteAll();
-        WorkItemEntity.deleteAll();
-        WorkItemTemplate.deleteAll();
+        em.createQuery("DELETE FROM AuditEntry").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemEntity").executeUpdate();
+        em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
     }
 
     /** Create a template with outcomes, instantiate, claim, start — returns the workItem id. */

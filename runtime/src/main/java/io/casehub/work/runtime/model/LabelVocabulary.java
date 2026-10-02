@@ -10,7 +10,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 import io.casehub.platform.api.path.Path;
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+
 
 /**
  * A named, scoped container of {@link LabelDefinition} entries.
@@ -23,7 +23,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
  */
 @Entity
 @Table(name = "label_vocabulary")
-public class LabelVocabulary extends PanacheEntityBase {
+public class LabelVocabulary {
 
     @Id
     public UUID id;

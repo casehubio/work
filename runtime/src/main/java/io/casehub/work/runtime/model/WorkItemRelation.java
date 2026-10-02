@@ -1,7 +1,6 @@
 package io.casehub.work.runtime.model;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 import io.casehub.work.api.WorkItemRelationType;
@@ -11,8 +10,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-
-import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 
 /**
  * A directed relation between two {@link WorkItemEntity} instances.
@@ -43,7 +40,7 @@ import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 @Entity
 @Table(name = "work_item_relation", uniqueConstraints = @UniqueConstraint(name = "uq_work_item_relation", columnNames = {
         "source_id", "target_id", "relation_type" }))
-public class WorkItemRelation extends PanacheEntityBase {
+public class WorkItemRelation {
 
     /** Surrogate primary key. */
     @Id
@@ -86,34 +83,4 @@ public class WorkItemRelation extends PanacheEntityBase {
         }
     }
 
-    /** All outgoing relations from a given WorkItem, ordered by creation time. */
-    public static List<WorkItemRelation> findBySourceId(final UUID sourceId) {
-        return list("sourceId = ?1 ORDER BY createdAt ASC", sourceId);
-    }
-
-    /** All incoming relations pointing to a given WorkItem, ordered by creation time. */
-    public static List<WorkItemRelation> findByTargetId(final UUID targetId) {
-        return list("targetId = ?1 ORDER BY createdAt ASC", targetId);
-    }
-
-    /** Outgoing relations of a specific type from a given WorkItem. */
-    public static List<WorkItemRelation> findBySourceAndType(
-            final UUID sourceId, final String relationType) {
-        return list("sourceId = ?1 AND relationType = ?2 ORDER BY createdAt ASC",
-                sourceId, relationType);
-    }
-
-    /** Incoming relations of a specific type pointing to a given WorkItem. */
-    public static List<WorkItemRelation> findByTargetAndType(
-            final UUID targetId, final String relationType) {
-        return list("targetId = ?1 AND relationType = ?2 ORDER BY createdAt ASC",
-                targetId, relationType);
-    }
-
-    /** Find an existing relation by all three keys — used for duplicate detection. */
-    public static WorkItemRelation findExisting(
-            final UUID sourceId, final UUID targetId, final String relationType) {
-        return find("sourceId = ?1 AND targetId = ?2 AND relationType = ?3",
-                sourceId, targetId, relationType).firstResult();
-    }
 }

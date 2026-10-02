@@ -25,6 +25,7 @@ import io.casehub.work.api.WorkItemGroupLifecycleEvent;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.service.WorkItemService;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -42,6 +43,9 @@ class WorkItemGroupLifecycleEventTest {
     @Inject
     io.casehub.work.runtime.repository.WorkItemSpawnGroupStore spawnGroupStore;
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     void clearCapture() {
         capture.clear();
@@ -57,7 +61,7 @@ class WorkItemGroupLifecycleEventTest {
             t.instanceCount = 3;
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            t.persist();
+            em.persist(t);
             final var request = WorkItemCreateRequest.builder()
                     .templateId(t.id)
                     .createdBy("test")
@@ -66,7 +70,7 @@ class WorkItemGroupLifecycleEventTest {
         });
 
         final List<UUID> children = inTx(() ->
-                WorkItemEntity.<WorkItemEntity>list("parentId", parentId).stream().map(w -> w.id).toList());
+                em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parentId).getResultList().stream().map(w -> w.id).toList());
 
         inTx(() -> workItemService.claim(children.get(0), "a"));
         inTx(() -> workItemService.start(children.get(0), "a"));
@@ -92,7 +96,7 @@ class WorkItemGroupLifecycleEventTest {
             t.instanceCount = 3;
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            t.persist();
+            em.persist(t);
             final var request = WorkItemCreateRequest.builder()
                     .templateId(t.id)
                     .createdBy("test")
@@ -101,7 +105,7 @@ class WorkItemGroupLifecycleEventTest {
         });
 
         final List<UUID> children = inTx(() ->
-                WorkItemEntity.<WorkItemEntity>list("parentId", parentId).stream().map(w -> w.id).toList());
+                em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parentId).getResultList().stream().map(w -> w.id).toList());
 
         // Complete only requiredCount (2) children — not all 3.
         // onThresholdReached is not set here so it defaults to KEEP (no side effects).
@@ -136,7 +140,7 @@ class WorkItemGroupLifecycleEventTest {
             t.instanceCount = 2;
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            t.persist();
+            em.persist(t);
             final var request = WorkItemCreateRequest.builder()
                     .templateId(t.id)
                     .createdBy("test")
@@ -146,7 +150,7 @@ class WorkItemGroupLifecycleEventTest {
         });
 
         final List<UUID> childIds = inTx(() ->
-            WorkItemEntity.<WorkItemEntity>list("parentId", parentId).stream()
+            em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parentId).getResultList().stream()
                           .map(w -> w.id).toList());
 
         inTx(() -> workItemService.claim(childIds.get(0), "alice"));
@@ -177,7 +181,7 @@ class WorkItemGroupLifecycleEventTest {
             t.instanceCount = 3;
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            t.persist();
+            em.persist(t);
             final var request = WorkItemCreateRequest.builder()
                     .templateId(t.id)
                     .createdBy("test")
@@ -200,7 +204,7 @@ class WorkItemGroupLifecycleEventTest {
             t.instanceCount = 3;
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            t.persist();
+            em.persist(t);
             final var request = WorkItemCreateRequest.builder()
                     .templateId(t.id)
                     .createdBy("test")
@@ -209,7 +213,7 @@ class WorkItemGroupLifecycleEventTest {
         });
 
         final List<UUID> children = inTx(() ->
-                WorkItemEntity.<WorkItemEntity>list("parentId", parentId).stream().map(w -> w.id).toList());
+                em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parentId).getResultList().stream().map(w -> w.id).toList());
 
         // Complete requiredCount (2) children to trigger threshold
         for (final UUID c : children.subList(0, 2)) {
@@ -242,7 +246,7 @@ class WorkItemGroupLifecycleEventTest {
             t.instanceCount = 3;
             t.requiredCount = 2;
             t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-            t.persist();
+            em.persist(t);
             final var request = WorkItemCreateRequest.builder()
                     .templateId(t.id)
                     .createdBy("test")
@@ -251,7 +255,7 @@ class WorkItemGroupLifecycleEventTest {
         });
 
         final List<UUID> children = inTx(() ->
-                WorkItemEntity.<WorkItemEntity>list("parentId", parentId).stream().map(w -> w.id).toList());
+                em.createQuery("FROM WorkItemEntity WHERE parentId = ?1", WorkItemEntity.class).setParameter(1, parentId).getResultList().stream().map(w -> w.id).toList());
 
         // Reject 2 of 3 children — threshold becomes unreachable (only 1 remains, need 2)
         for (final UUID c : children.subList(0, 2)) {

@@ -17,6 +17,7 @@ import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.service.ExpiryLifecycleService;
 import io.casehub.work.runtime.service.WorkItemService;
+import jakarta.persistence.EntityManager;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.response.Response;
 
@@ -36,10 +37,13 @@ class EscalationSummaryResourceTest {
     @Inject
     ExpiryLifecycleService expiryLifecycleService;
 
+    @Inject
+    EntityManager em;
+
     @BeforeEach
     @Transactional
     void cleanup() {
-        EscalationSummary.deleteAll();
+        em.createQuery("DELETE FROM EscalationSummary").executeUpdate();
     }
 
     @Test
