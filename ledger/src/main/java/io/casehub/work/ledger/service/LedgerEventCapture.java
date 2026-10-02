@@ -154,7 +154,11 @@ public class LedgerEventCapture {
         // PART_OF links (child → parent) are persisted before SPAWNED fires, so they
         // are visible here within the same transaction.
         if ("spawned".equals(eventSuffix(event.type()))) {
-            WorkItemRelation.findByTargetAndType(event.workItemId(), WorkItemRelationType.PART_OF)
+            em.createQuery("SELECT r FROM WorkItemRelation r WHERE r.targetId = :targetId AND r.relationType = :type",
+                            WorkItemRelation.class)
+                    .setParameter("targetId", event.workItemId())
+                    .setParameter("type", WorkItemRelationType.PART_OF)
+                    .getResultList()
                     .forEach(rel -> ledgerRepo.findEarliestByWorkItemId(rel.sourceId)
                             .ifPresent(childCreatedEntry -> {
                                 if ("WorkItemCreated".equals(childCreatedEntry.eventType)
