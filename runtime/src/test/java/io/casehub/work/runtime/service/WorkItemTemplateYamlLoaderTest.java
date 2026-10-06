@@ -1,15 +1,15 @@
 package io.casehub.work.runtime.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.casehub.yaml.core.resolver.UnresolvedVariableException;
+import io.casehub.yaml.jackson.YamlMappers;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WorkItemTemplateYamlLoaderTest {
 
@@ -56,7 +56,7 @@ class WorkItemTemplateYamlLoaderTest {
 
     @Test
     void parsesTestFixtureYaml() throws Exception {
-        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        ObjectMapper mapper = YamlMappers.create();
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("META-INF/work-templates.yaml")) {
             assertThat(is).isNotNull();
             JsonNode root = mapper.readTree(is);
