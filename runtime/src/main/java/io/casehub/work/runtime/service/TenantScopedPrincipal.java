@@ -2,11 +2,10 @@ package io.casehub.work.runtime.service;
 
 import java.util.Set;
 
-import jakarta.annotation.Priority;
 import jakarta.enterprise.context.RequestScoped;
-import jakarta.enterprise.inject.Alternative;
 import jakarta.inject.Inject;
 
+import io.quarkus.arc.DefaultBean;
 import io.quarkus.arc.Unremovable;
 
 import io.casehub.platform.api.identity.CurrentPrincipal;
@@ -14,9 +13,8 @@ import io.casehub.platform.api.identity.CurrentPrincipal;
 /**
  * Request-scoped {@link CurrentPrincipal} that delegates to {@link TenantHolder}.
  *
- * <p>{@code @Alternative @Priority(150)} beats the platform's
- * {@code MockCurrentPrincipal} ({@code @Priority(100)}) from
- * {@code DefaultBeans} but loses to test beans at higher priority.
+ * <p>{@code @DefaultBean} makes this a fallback — any application-provided
+ * {@link CurrentPrincipal} takes precedence automatically.
  *
  * <p>In REST request contexts where nobody touches {@link TenantHolder},
  * the defaults (actorId = "system", tenancyId = default UUID) match
@@ -24,8 +22,7 @@ import io.casehub.platform.api.identity.CurrentPrincipal;
  * contexts the holder is set to the target tenant before the work runs.
  */
 @RequestScoped
-@Alternative
-@Priority(150)
+@DefaultBean
 @Unremovable
 public class TenantScopedPrincipal implements CurrentPrincipal {
 
