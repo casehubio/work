@@ -37,7 +37,7 @@ public class JpaQueueStateStore extends TenantAwareStore implements QueueStateSt
         return withTenantQuery(() ->
             em.createQuery("FROM WorkItemQueueState WHERE workItemId = ?1 AND tenancyId = ?2", WorkItemQueueState.class)
                     .setParameter(1, workItemId).setParameter(2, currentPrincipal.tenancyId())
-                    .getResultStream().findFirst()
+                    .setMaxResults(1).getResultList().stream().findFirst()
         );
     }
 

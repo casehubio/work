@@ -39,7 +39,7 @@ public class JpaLabelDefinitionStore extends TenantAwareStore implements LabelDe
                 em.createQuery("FROM LabelDefinition WHERE id = ?1 AND tenancyId = ?2", LabelDefinition.class)
                         .setParameter(1, id)
                         .setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override

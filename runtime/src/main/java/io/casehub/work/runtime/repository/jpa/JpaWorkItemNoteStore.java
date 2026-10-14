@@ -35,7 +35,7 @@ public class JpaWorkItemNoteStore extends TenantAwareStore implements WorkItemNo
         return withTenantQuery(() ->
                 em.createQuery("FROM WorkItemNote WHERE id = ?1 AND tenancyId = ?2", WorkItemNote.class)
                         .setParameter(1, noteId).setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override

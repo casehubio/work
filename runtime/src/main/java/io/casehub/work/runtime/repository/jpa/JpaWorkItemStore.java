@@ -76,7 +76,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                 em.createQuery("FROM WorkItemEntity WHERE id = ?1 AND tenancyId = ?2", WorkItemEntity.class)
                         .setParameter(1, id)
                         .setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst()
+                        .setMaxResults(1).getResultList().stream().findFirst()
                         .map(WorkItemEntityMapper::toDomain));
     }
 
@@ -86,7 +86,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                 em.createQuery("FROM WorkItemEntity WHERE callerRef = ?1 AND tenancyId = ?2 ORDER BY createdAt DESC", WorkItemEntity.class)
                         .setParameter(1, callerRef)
                         .setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst()
+                        .setMaxResults(1).getResultList().stream().findFirst()
                         .map(WorkItemEntityMapper::toDomain));
     }
 
@@ -97,7 +97,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                         .setParameter(1, callerRef)
                         .setParameter(2, WorkItemStatus.TERMINAL_STATUSES)
                         .setParameter(3, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst()
+                        .setMaxResults(1).getResultList().stream().findFirst()
                         .map(WorkItemEntityMapper::toDomain));
     }
 
@@ -108,7 +108,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                         .setParameter(1, originServiceId)
                         .setParameter(2, originWorkItemId)
                         .setParameter(3, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst()
+                        .setMaxResults(1).getResultList().stream().findFirst()
                         .map(WorkItemEntityMapper::toDomain));
     }
 
@@ -280,7 +280,7 @@ public class JpaWorkItemStore extends TenantAwareStore implements WorkItemStore 
                     final WorkItemEntity parent = em.createQuery("FROM WorkItemEntity WHERE id = ?1 AND tenancyId = ?2", WorkItemEntity.class)
                             .setParameter(1, item.parentId)
                             .setParameter(2, tenancyId)
-                            .getResultStream().findFirst().orElse(null);
+                            .setMaxResults(1).getResultList().stream().findFirst().orElse(null);
                     if (parent != null && parent.parentId == null) {
                         rootIds.add(parent.id);
                         rootItems.put(parent.id, parent);

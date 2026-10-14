@@ -37,7 +37,7 @@ public class JpaProgressEventStore extends TenantAwareStore implements ProgressE
         return em.createQuery("FROM ProgressEventEntity WHERE progressId = ?1 AND occurredAt <= ?2 ORDER BY occurredAt DESC, id DESC", ProgressEventEntity.class)
                 .setParameter(1, progressId)
                 .setParameter(2, cutoff)
-                .getResultStream().findFirst()
+                .setMaxResults(1).getResultList().stream().findFirst()
                 .map(this::toDomain);
     }
 

@@ -36,7 +36,7 @@ public class JpaWorkItemSpawnGroupStore extends TenantAwareStore implements Work
         return withTenantQuery(() ->
                 em.createQuery("FROM WorkItemSpawnGroup WHERE id = ?1 AND tenancyId = ?2", WorkItemSpawnGroup.class)
                         .setParameter(1, id).setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override
@@ -52,7 +52,7 @@ public class JpaWorkItemSpawnGroupStore extends TenantAwareStore implements Work
         return withTenantQuery(() ->
                 em.createQuery("FROM WorkItemSpawnGroup WHERE parentId = ?1 AND idempotencyKey = ?2 AND tenancyId = ?3", WorkItemSpawnGroup.class)
                         .setParameter(1, parentId).setParameter(2, groupKey).setParameter(3, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override
@@ -60,7 +60,7 @@ public class JpaWorkItemSpawnGroupStore extends TenantAwareStore implements Work
         return withTenantQuery(() ->
                 em.createQuery("FROM WorkItemSpawnGroup WHERE parentId = ?1 AND requiredCount IS NOT NULL AND tenancyId = ?2", WorkItemSpawnGroup.class)
                         .setParameter(1, parentId).setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override
@@ -69,7 +69,7 @@ public class JpaWorkItemSpawnGroupStore extends TenantAwareStore implements Work
                 em.createQuery("FROM WorkItemSpawnGroup WHERE parentId = ?1 AND requiredCount IS NOT NULL AND tenancyId = ?2", WorkItemSpawnGroup.class)
                         .setParameter(1, parentId).setParameter(2, currentPrincipal.tenancyId())
                         .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override

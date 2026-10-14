@@ -39,7 +39,7 @@ public class JpaWorkItemScheduleStore extends TenantAwareStore implements WorkIt
                 em.createQuery("FROM WorkItemSchedule WHERE id = ?1 AND tenancyId = ?2", WorkItemSchedule.class)
                         .setParameter(1, id)
                         .setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override

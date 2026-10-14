@@ -36,7 +36,7 @@ public class JpaWorkItemTemplateStore extends TenantAwareStore implements WorkIt
         return withTenantQuery(() ->
                 em.createQuery("FROM WorkItemTemplate WHERE id = ?1 AND tenancyId = ?2", WorkItemTemplate.class)
                         .setParameter(1, id).setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override
@@ -44,7 +44,7 @@ public class JpaWorkItemTemplateStore extends TenantAwareStore implements WorkIt
         return withTenantQuery(() ->
                 em.createQuery("FROM WorkItemTemplate WHERE name = ?1 AND tenancyId = ?2", WorkItemTemplate.class)
                         .setParameter(1, name).setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override

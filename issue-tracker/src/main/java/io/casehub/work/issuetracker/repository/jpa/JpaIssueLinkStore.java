@@ -27,7 +27,7 @@ public class JpaIssueLinkStore extends TenantAwareStore implements IssueLinkStor
         return withTenantQuery(() ->
             em.createQuery("FROM WorkItemIssueLink WHERE id = ?1 AND tenancyId = ?2", WorkItemIssueLink.class)
                     .setParameter(1, id).setParameter(2, currentPrincipal.tenancyId())
-                    .getResultStream().findFirst()
+                    .setMaxResults(1).getResultList().stream().findFirst()
         );
     }
 
@@ -48,7 +48,7 @@ public class JpaIssueLinkStore extends TenantAwareStore implements IssueLinkStor
         return withTenantQuery(() ->
             em.createQuery("FROM WorkItemIssueLink WHERE workItemId = ?1 AND trackerType = ?2 AND externalRef = ?3 AND tenancyId = ?4", WorkItemIssueLink.class)
                     .setParameter(1, workItemId).setParameter(2, trackerType).setParameter(3, externalRef).setParameter(4, currentPrincipal.tenancyId())
-                    .getResultStream().findFirst()
+                    .setMaxResults(1).getResultList().stream().findFirst()
         );
     }
 

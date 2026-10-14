@@ -119,7 +119,7 @@ public class WorkItemTemplateYamlLoader {
     private void upsertByName(WorkItemTemplate template, String sourceUrl) {
         Optional<WorkItemTemplate> existing = em.createQuery("FROM WorkItemTemplate WHERE name = ?1 AND tenancyId = ?2", WorkItemTemplate.class)
                 .setParameter(1, template.name).setParameter(2, template.tenancyId)
-                .getResultStream().findFirst();
+                .setMaxResults(1).getResultList().stream().findFirst();
         if (existing.isPresent()) {
             LOG.warnf("WorkItemTemplate '%s' already exists (id=%s) — overwriting from %s",
                       template.name, existing.get().id, sourceUrl);

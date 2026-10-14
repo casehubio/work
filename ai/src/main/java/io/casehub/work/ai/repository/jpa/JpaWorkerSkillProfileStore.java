@@ -37,7 +37,7 @@ public class JpaWorkerSkillProfileStore extends TenantAwareStore implements Work
         return withTenantQuery(() ->
             em.createQuery("FROM WorkerSkillProfile WHERE workerId = ?1 AND tenancyId = ?2", WorkerSkillProfile.class)
                     .setParameter(1, workerId).setParameter(2, currentPrincipal.tenancyId())
-                    .getResultStream().findFirst()
+                    .setMaxResults(1).getResultList().stream().findFirst()
         );
     }
 

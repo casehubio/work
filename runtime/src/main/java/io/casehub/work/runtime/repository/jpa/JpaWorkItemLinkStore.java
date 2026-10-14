@@ -36,7 +36,7 @@ public class JpaWorkItemLinkStore extends TenantAwareStore implements WorkItemLi
         return withTenantQuery(() ->
                 em.createQuery("FROM WorkItemLink WHERE id = ?1 AND tenancyId = ?2", WorkItemLink.class)
                         .setParameter(1, id).setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override

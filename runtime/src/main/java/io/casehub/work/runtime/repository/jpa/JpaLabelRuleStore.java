@@ -30,7 +30,7 @@ public class JpaLabelRuleStore extends TenantAwareStore implements LabelRuleStor
                 em.createQuery("FROM LabelRuleEntity WHERE id = ?1 AND tenancyId = ?2", LabelRuleEntity.class)
                         .setParameter(1, id)
                         .setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override

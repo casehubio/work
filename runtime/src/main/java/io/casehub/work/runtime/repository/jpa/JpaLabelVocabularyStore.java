@@ -42,7 +42,7 @@ public class JpaLabelVocabularyStore extends TenantAwareStore implements LabelVo
                 em.createQuery("FROM LabelVocabulary WHERE id = ?1 AND tenancyId = ?2", LabelVocabulary.class)
                         .setParameter(1, id)
                         .setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override
@@ -70,7 +70,7 @@ public class JpaLabelVocabularyStore extends TenantAwareStore implements LabelVo
                 em.createQuery("FROM LabelVocabulary WHERE scope = ?1 AND tenancyId = ?2", LabelVocabulary.class)
                         .setParameter(1, scope)
                         .setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst());
+                        .setMaxResults(1).getResultList().stream().findFirst());
     }
 
     @Override
@@ -81,7 +81,7 @@ public class JpaLabelVocabularyStore extends TenantAwareStore implements LabelVo
                             "FROM LabelVocabulary WHERE scope = ?1 AND tenancyId = ?2", LabelVocabulary.class)
                     .setParameter(1, scope)
                     .setParameter(2, currentPrincipal.tenancyId())
-                    .getResultStream().findFirst();
+                    .setMaxResults(1).getResultList().stream().findFirst();
             if (existing.isPresent()) {
                 return existing.get();
             }
@@ -98,7 +98,7 @@ public class JpaLabelVocabularyStore extends TenantAwareStore implements LabelVo
                 return em.createQuery("FROM LabelVocabulary WHERE scope = ?1 AND tenancyId = ?2", LabelVocabulary.class)
                         .setParameter(1, scope)
                         .setParameter(2, currentPrincipal.tenancyId())
-                        .getResultStream().findFirst()
+                        .setMaxResults(1).getResultList().stream().findFirst()
                         .orElseThrow(() -> new IllegalStateException(
                                 "Concurrent vocabulary creation failed", e));
             }
