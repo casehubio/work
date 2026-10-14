@@ -14,7 +14,7 @@
   <name>CaseHub Work - Ledger</name>
 
   <properties>
-    <!-- Tests need casehub-ledger SNAPSHOT with @DefaultBean on its LedgerEntryRepository — skip until ledger publishes -->
+    <!-- casehub-ledger SPI implementations need @DefaultBean for consumer override — skip until ledger publishes -->
     <maven.test.skip>true</maven.test.skip>
   </properties>
   <description>Optional ledger module providing rich accountability: command/event separation,
