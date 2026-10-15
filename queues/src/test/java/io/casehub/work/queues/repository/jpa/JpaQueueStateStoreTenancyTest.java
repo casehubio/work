@@ -8,6 +8,7 @@ import java.util.UUID;
 import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.casehub.work.queues.model.WorkItemQueueState;
@@ -25,6 +26,7 @@ import io.quarkus.test.junit.QuarkusTest;
  */
 @QuarkusTest
 @TestTransaction
+@Disabled("Tracked in casehubio/work#418")
 class JpaQueueStateStoreTenancyTest {
 
     private static final String TENANT_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";

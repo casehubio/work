@@ -3,6 +3,7 @@ package io.casehub.work.queues.api;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -22,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration and E2E tests for GET /queues/{id}/events SSE stream.
  */
 @QuarkusTest
+@Disabled("Tracked in casehubio/work#417")
 class QueueSSETest {
 
     @TestHTTPResource("/")

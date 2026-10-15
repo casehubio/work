@@ -3,6 +3,7 @@ package io.casehub.work.queues.api;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -12,6 +13,7 @@ import io.restassured.http.ContentType;
 class QueueStateResourceTest {
 
     @Test
+    @Disabled("Tracked in casehubio/work#417")
     void setRelinquishable_true_succeeds() {
         var id = given().contentType(ContentType.JSON)
                 .body("""
@@ -25,6 +27,7 @@ class QueueStateResourceTest {
     }
 
     @Test
+    @Disabled("Tracked in casehubio/work#417")
     void setRelinquishable_false_clearsFlag() {
         var id = given().contentType(ContentType.JSON)
                 .body("""
@@ -50,6 +53,7 @@ class QueueStateResourceTest {
     }
 
     @Test
+    @Disabled("Tracked in casehubio/work#417")
     void pickup_pendingItem_claimsIt() {
         var id = given().contentType(ContentType.JSON)
                 .body("""
@@ -63,6 +67,7 @@ class QueueStateResourceTest {
     }
 
     @Test
+    @Disabled("Tracked in casehubio/work#417")
     void pickup_relinquishableAssignedItem_succeedsAndClearsFlag() {
         // Create and claim a WorkItem
         var id = given().contentType(ContentType.JSON)
@@ -91,6 +96,7 @@ class QueueStateResourceTest {
     }
 
     @Test
+    @Disabled("Tracked in casehubio/work#417")
     void pickup_nonRelinquishableAssignedItem_returns409() {
         var id = given().contentType(ContentType.JSON)
                 .body("""

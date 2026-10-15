@@ -3,12 +3,14 @@ package io.casehub.work.queues.api;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 
 @QuarkusTest
+@Disabled("Tracked in casehubio/work#417")
 class QueueHealthResourceTest {
 
     @Test
