@@ -7,7 +7,7 @@
   <parent>
     <groupId>io.casehub</groupId>
     <artifactId>casehub-work-parent</artifactId>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.3</version>
   </parent>
 
   <artifactId>casehub-work-issue-tracker</artifactId>
@@ -66,7 +66,7 @@ trackers and best practices for using them together.</description>
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform</artifactId>
-      <version>0.2-SNAPSHOT</version>
+      <version>0.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -106,7 +106,7 @@ trackers and best practices for using them together.</description>
             <path>
               <groupId>io.casehub</groupId>
               <artifactId>casehub-platform-graphql-generator</artifactId>
-              <version>0.2-SNAPSHOT</version>
+              <version>0.3</version>
             </path>
             <path>
               <groupId>io.casehub</groupId>

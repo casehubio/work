@@ -7,7 +7,7 @@
   <parent>
     <groupId>io.casehub</groupId>
     <artifactId>casehub-work-parent</artifactId>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.3</version>
   </parent>
 
   <artifactId>casehub-work-queues</artifactId>
@@ -76,7 +76,7 @@ FilterChain derivation graph, and QueueView named queries. The core extension is
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform</artifactId>
-      <version>0.2-SNAPSHOT</version>
+      <version>0.3</version>
       <scope>test</scope>
     </dependency>
     <!-- In-memory view backends for @QuarkusTest isolation -->
@@ -127,7 +127,7 @@ FilterChain derivation graph, and QueueView named queries. The core extension is
             <path>
               <groupId>io.casehub</groupId>
               <artifactId>casehub-platform-graphql-generator</artifactId>
-              <version>0.2-SNAPSHOT</version>
+              <version>0.3</version>
             </path>
             <path>
               <groupId>io.casehub</groupId>

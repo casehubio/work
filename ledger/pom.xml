@@ -7,7 +7,7 @@
   <parent>
     <groupId>io.casehub</groupId>
     <artifactId>casehub-work-parent</artifactId>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.3</version>
   </parent>
 
   <artifactId>casehub-work-ledger</artifactId>
@@ -35,7 +35,7 @@ extension is unchanged whether this module is present or not.</description>
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-ledger</artifactId>
-      <version>0.2-SNAPSHOT</version>
+      <version>0.3</version>
     </dependency>
 
     <!-- CDI, REST, ORM -->
@@ -104,7 +104,7 @@ extension is unchanged whether this module is present or not.</description>
             <path>
               <groupId>io.casehub</groupId>
               <artifactId>casehub-platform-graphql-generator</artifactId>
-              <version>0.2-SNAPSHOT</version>
+              <version>0.3</version>
             </path>
           </annotationProcessorPaths>
           <compilerArgs>
