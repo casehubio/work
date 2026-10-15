@@ -7,7 +7,7 @@
   <parent>
     <groupId>io.casehub</groupId>
     <artifactId>casehub-work-parent</artifactId>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.3</version>
   </parent>
 
   <artifactId>casehub-work</artifactId>
@@ -103,28 +103,28 @@
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-expression</artifactId>
-      <version>0.2-SNAPSHOT</version>
+      <version>0.3</version>
     </dependency>
     <!-- Platform YAML core — VariableResolver for ${env.*} / ${sys.*} interpolation -->
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-yaml-core</artifactId>
-      <version>0.2-SNAPSHOT</version>
+      <version>0.3</version>
     </dependency>
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-yaml-jackson</artifactId>
-      <version>0.2-SNAPSHOT</version>
+      <version>0.3</version>
     </dependency>
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-callback-api</artifactId>
-      <version>0.2-SNAPSHOT</version>
+      <version>0.3</version>
     </dependency>
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-callback</artifactId>
-      <version>0.2-SNAPSHOT</version>
+      <version>0.3</version>
     </dependency>
 
     <!-- Testing -->
@@ -132,7 +132,7 @@
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform</artifactId>
-      <version>0.2-SNAPSHOT</version>
+      <version>0.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>

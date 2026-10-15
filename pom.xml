@@ -6,7 +6,7 @@
 
   <groupId>io.casehub</groupId>
   <artifactId>casehub-work-parent</artifactId>
-  <version>0.2-SNAPSHOT</version>
+  <version>0.3</version>
   <packaging>pom</packaging>
 
   <name>CaseHub Work - Parent</name>
@@ -72,7 +72,7 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
     <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <surefire-plugin.version>3.2.5</surefire-plugin.version>
-    <version.io.casehub>0.2-SNAPSHOT</version.io.casehub>
+    <version.io.casehub>0.3</version.io.casehub>
     <spring-boot.version>4.1.0</spring-boot.version>
   </properties>
 
@@ -106,7 +106,7 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-parent</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>0.3</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -154,32 +154,32 @@ CaseHub platform module — human-scale WorkItem lifecycle management with optio
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-view</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>0.3</version>
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-view-jpa</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>0.3</version>
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-view-inmem</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>0.3</version>
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-callback-api</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>0.3</version>
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-callback</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>0.3</version>
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
         <artifactId>casehub-platform-yaml-core</artifactId>
-        <version>0.2-SNAPSHOT</version>
+        <version>0.3</version>
       </dependency>
       <dependency>
         <groupId>io.casehub</groupId>
