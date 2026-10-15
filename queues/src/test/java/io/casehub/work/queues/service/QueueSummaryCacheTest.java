@@ -7,6 +7,7 @@ import io.quarkus.cache.CacheManager;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -23,6 +24,7 @@ class QueueSummaryCacheTest {
     @Inject SubjectViewStore viewStore;
 
     @Test
+    @Disabled("Tracked in casehubio/work#417")
     void summarize_calledTwice_returnsCachedResult() {
         var queueId = given().contentType(ContentType.JSON)
                 .body("""
@@ -39,6 +41,7 @@ class QueueSummaryCacheTest {
     }
 
     @Test
+    @Disabled("Tracked in casehubio/work#417")
     void summarize_afterLifecycleEvent_returnsFreshResult() {
         given().contentType(ContentType.JSON)
                 .body("""

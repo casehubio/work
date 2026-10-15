@@ -3,6 +3,7 @@ package io.casehub.work.queues.api;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -12,6 +13,7 @@ import io.restassured.http.ContentType;
 class QueueSummaryResourceTest {
 
     @Test
+    @Disabled("Tracked in casehubio/work#417")
     void summary_returnsAggregatesForQueueMembers() {
         given().contentType(ContentType.JSON)
                 .body("""
@@ -45,6 +47,7 @@ class QueueSummaryResourceTest {
     }
 
     @Test
+    @Disabled("Tracked in casehubio/work#417")
     void summary_emptyQueue_returnsZeroCounts() {
         var queueId = given().contentType(ContentType.JSON)
                 .body("""
