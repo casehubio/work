@@ -58,7 +58,7 @@ selects it automatically. Translates WorkItemQuery to MongoDB Document filters.<
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-platform-api</artifactId>
-      <version>${casehub.version}</version>
+      <version>${version.io.casehub}</version>
       <scope>provided</scope>
     </dependency>
 

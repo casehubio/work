@@ -35,7 +35,7 @@ extension is unchanged whether this module is present or not.</description>
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-ledger</artifactId>
-      <version>${casehub.version}</version>
+      <version>${version.io.casehub}</version>
     </dependency>
 
     <!-- CDI, REST, ORM -->
