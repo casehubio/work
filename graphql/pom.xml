@@ -77,7 +77,7 @@ Thin-adapter pattern over WorkItemService and WorkItemStore.</description>
             <path>
               <groupId>io.casehub</groupId>
               <artifactId>casehub-platform-graphql-generator</artifactId>
-              <version>0.3</version>
+              <version>${version.io.casehub}</version>
             </path>
             <path>
               <groupId>io.casehub</groupId>

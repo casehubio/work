@@ -104,7 +104,7 @@ extension is unchanged whether this module is present or not.</description>
             <path>
               <groupId>io.casehub</groupId>
               <artifactId>casehub-platform-graphql-generator</artifactId>
-              <version>0.3</version>
+              <version>${version.io.casehub}</version>
             </path>
           </annotationProcessorPaths>
           <compilerArgs>

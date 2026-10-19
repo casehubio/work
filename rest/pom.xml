@@ -75,7 +75,7 @@ who only need the Java SPI do not pay JAX-RS coupling cost.</description>
             <path>
               <groupId>io.casehub</groupId>
               <artifactId>casehub-platform-graphql-generator</artifactId>
-              <version>0.3</version>
+              <version>${version.io.casehub}</version>
             </path>
             <path>
               <groupId>io.casehub</groupId>
