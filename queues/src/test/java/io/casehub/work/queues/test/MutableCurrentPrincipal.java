@@ -12,15 +12,15 @@ import io.casehub.platform.api.identity.TenancyConstants;
 /**
  * Test-only {@link CurrentPrincipal} with mutable state for tenant isolation tests.
  *
- * <p>{@code @Alternative @Priority(100)} so it wins over
- * {@code TenantScopedPrincipal} (normal-priority) in test contexts.
+ * <p>{@code @Alternative @Priority(200)} so it wins over
+ * {@code TenantScopedPrincipal} ({@code @Priority(150)}) in test contexts.
  *
  * <p>Call {@link #reset()} in {@code @BeforeEach} to avoid state leaking
  * between test methods.
  */
 @ApplicationScoped
 @Alternative
-@Priority(100)
+@Priority(200)
 public class MutableCurrentPrincipal implements CurrentPrincipal {
 
     private String actorId = "test-user";

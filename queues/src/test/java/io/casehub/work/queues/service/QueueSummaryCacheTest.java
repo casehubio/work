@@ -7,7 +7,6 @@ import io.quarkus.cache.CacheManager;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -24,12 +23,11 @@ class QueueSummaryCacheTest {
     @Inject SubjectViewStore viewStore;
 
     @Test
-    @Disabled("Tracked in casehubio/work#417")
     void summarize_calledTwice_returnsCachedResult() {
         var queueId = given().contentType(ContentType.JSON)
                 .body("""
                         {"name":"Cache hit queue","labelPattern":"cache-hit-test/**","scope":"ORG"}""")
-                .post("/queues").then().statusCode(201).extract().path("id");
+                .post("/api/work/queues/create").then().statusCode(201).extract().path("id");
 
         UUID viewId = UUID.fromString(queueId.toString());
         var spec = viewStore.findById(viewId).orElseThrow();
@@ -41,24 +39,23 @@ class QueueSummaryCacheTest {
     }
 
     @Test
-    @Disabled("Tracked in casehubio/work#417")
     void summarize_afterLifecycleEvent_returnsFreshResult() {
         given().contentType(ContentType.JSON)
                 .body("""
                         {"name":"Eviction label rule","scope":"ORG","conditionLanguage":"jexl",
                          "conditionExpression":"true",
                          "actions":[{"type":"Add","label":"eviction-test/items"}]}""")
-                .post("/label-rules").then().statusCode(201);
+                .post("/api/work/label-rules/create").then().statusCode(201);
 
         var queueId = given().contentType(ContentType.JSON)
                 .body("""
                         {"name":"Eviction queue","labelPattern":"eviction-test/**","scope":"ORG"}""")
-                .post("/queues").then().statusCode(201).extract().path("id");
+                .post("/api/work/queues/create").then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                 .body("""
                         {"title":"Eviction item","priority":"HIGH","createdBy":"alice"}""")
-                .post("/workitems").then().statusCode(201);
+                .post("/api/work/items/create").then().statusCode(201);
 
         UUID viewId = UUID.fromString(queueId.toString());
         var spec = viewStore.findById(viewId).orElseThrow();
@@ -69,7 +66,7 @@ class QueueSummaryCacheTest {
         given().contentType(ContentType.JSON)
                 .body("""
                         {"title":"Eviction item 2","priority":"LOW","createdBy":"bob"}""")
-                .post("/workitems").then().statusCode(201);
+                .post("/api/work/items/create").then().statusCode(201);
 
         WorkItemSummary after = membershipService.summarize(spec, Instant.now());
 

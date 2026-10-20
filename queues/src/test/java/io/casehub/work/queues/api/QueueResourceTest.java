@@ -2,7 +2,6 @@ package io.casehub.work.queues.api;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
@@ -16,80 +15,75 @@ import static org.hamcrest.Matchers.notNullValue;
 class QueueResourceTest {
 
     @Test
-    @Disabled("Tracked in casehubio/work#417")
     void createQueueView_returnsId() {
         given().contentType(ContentType.JSON)
                .body("""
                      {"name":"Legal triage","labelPattern":"legal/**",
                       "scope":"TEAM","sortField":"createdAt","sortDirection":"ASC"}""")
-               .post("/queues").then().statusCode(201)
+               .post("/api/work/queues/create").then().statusCode(201)
                .body("id", notNullValue()).body("name", equalTo("Legal triage"));
     }
 
     @Test
-    @Disabled("Tracked in casehubio/work#417")
     void listQueues_returnsCreated() {
         given().contentType(ContentType.JSON)
                .body("""
                      {"name":"List queue test","labelPattern":"intake/**","scope":"ORG"}""")
-               .post("/queues").then().statusCode(201);
-        given().get("/queues").then().statusCode(200).body("name", hasItem("List queue test"));
+               .post("/api/work/queues/create").then().statusCode(201);
+        given().get("/api/work/queues/list").then().statusCode(200).body("name", hasItem("List queue test"));
     }
 
     @Test
-    @org.junit.jupiter.api.Disabled("Platform mismatch: SubjectViewOrchestrator.deleteView calls ViewMembershipTracker.getSubjectsByView which is not on the interface")
     void deleteQueueView_removesIt() {
         var id = given().contentType(ContentType.JSON)
                         .body("""
                               {"name":"Delete me queue","labelPattern":"x/**","scope":"ORG"}""")
-                        .post("/queues").then().statusCode(201).extract().path("id");
-        given().delete("/queues/" + id).then().statusCode(204);
+                        .post("/api/work/queues/create").then().statusCode(201).extract().path("id");
+        given().post("/api/work/queues/delete/" + id).then().statusCode(204);
     }
 
     @Test
-    @Disabled("Tracked in casehubio/work#417")
     void getQueue_returnsWorkItemsMatchingLabel() {
         var queueId = given().contentType(ContentType.JSON)
                              .body("""
                                    {"name":"Queue member test","labelPattern":"priority/**",
                                     "scope":"ORG","sortField":"createdAt","sortDirection":"ASC"}""")
-                             .post("/queues").then().statusCode(201).extract().path("id");
+                             .post("/api/work/queues/create").then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                .body("""
                      {"title":"Queue test member","priority":"HIGH","createdBy":"alice"}""")
-               .post("/workitems").then().statusCode(201);
+               .post("/api/work/items/create").then().statusCode(201);
 
-        given().get("/queues/" + queueId).then().statusCode(200)
+        given().get("/api/work/queues/query/" + queueId).then().statusCode(200)
                .body("title", hasItem("Queue test member"));
     }
 
     @Test
     void getQueueView_unknownId_returns404() {
-        given().get("/queues/00000000-0000-0000-0000-000000000000").then().statusCode(404);
+        given().get("/api/work/queues/query/00000000-0000-0000-0000-000000000000").then().statusCode(404);
     }
 
     @Test
-    @Disabled("Tracked in casehubio/work#417")
     void listQueues_includesSummaryPerQueue() {
         given().contentType(ContentType.JSON)
                .body("""
                      {"name":"Enriched list rule","scope":"ORG","conditionLanguage":"jexl",
                       "conditionExpression":"priority == 'HIGH'",
                       "actions":[{"type":"Add","label":"enriched-test/items"}]}""")
-               .post("/label-rules").then().statusCode(201);
+               .post("/api/work/label-rules/create").then().statusCode(201);
 
         given().contentType(ContentType.JSON)
                .body("""
                      {"name":"Enriched list queue","labelPattern":"enriched-test/**","scope":"ORG"}""")
-               .post("/queues").then().statusCode(201);
+               .post("/api/work/queues/create").then().statusCode(201);
 
         given().contentType(ContentType.JSON)
                .body("""
                      {"title":"Enriched list item","priority":"HIGH","createdBy":"alice"}""")
-               .post("/workitems").then().statusCode(201);
+               .post("/api/work/items/create").then().statusCode(201);
 
-        given().get("/queues").then()
+        given().get("/api/work/queues/list").then()
                .statusCode(200)
                .body("find { it.name == 'Enriched list queue' }.summary.total",
                      greaterThanOrEqualTo(1))
@@ -98,29 +92,28 @@ class QueueResourceTest {
     }
 
     @Test
-    @Disabled("Tracked in casehubio/work#417")
     void getQueue_withAdditionalConditions_filtersToMatchingStatusOnly() {
         var queueId = given().contentType(ContentType.JSON)
                              .body("""
                                    {"name":"Pending only queue","labelPattern":"intake/**",
                                     "additionalConditions":"status.name() == 'PENDING'",
                                     "scope":"ORG"}""")
-                             .post("/queues").then().statusCode(201).extract().path("id");
+                             .post("/api/work/queues/create").then().statusCode(201).extract().path("id");
 
         given().contentType(ContentType.JSON)
                .body("""
                      {"title":"Pending item AC","createdBy":"alice"}""")
-               .post("/workitems").then().statusCode(201);
+               .post("/api/work/items/create").then().statusCode(201);
 
         var assignedId = given().contentType(ContentType.JSON)
                                 .body("""
                                       {"title":"Assigned item AC","createdBy":"alice"}""")
-                                .post("/workitems").then().statusCode(201).extract().path("id");
+                                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
-        given().put("/workitems/" + assignedId + "/claim?claimant=bob")
+        given().post("/api/work/lifecycle/claim/" + assignedId + "?claimant=bob")
                .then().statusCode(200);
 
-        given().get("/queues/" + queueId).then()
+        given().get("/api/work/queues/query/" + queueId).then()
                .statusCode(200)
                .body("title", hasItem("Pending item AC"))
                .body("title", not(hasItem("Assigned item AC")));

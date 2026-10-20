@@ -3,14 +3,12 @@ package io.casehub.work.queues.api;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 
 @QuarkusTest
-@Disabled("Tracked in casehubio/work#417")
 class QueueHealthResourceTest {
 
     @Test
@@ -20,24 +18,24 @@ class QueueHealthResourceTest {
                      {"name":"Health rule","scope":"ORG","conditionLanguage":"jexl",
                       "conditionExpression":"priority == 'HIGH' || priority == 'MEDIUM'",
                       "actions":[{"type":"Add","label":"health-test/items"}]}""")
-               .post("/label-rules").then().statusCode(201);
+               .post("/api/work/label-rules/create").then().statusCode(201);
 
         given().contentType(ContentType.JSON)
                .body("""
                      {"name":"Health test queue","labelPattern":"health-test/**","scope":"ORG"}""")
-               .post("/queues").then().statusCode(201);
+               .post("/api/work/queues/create").then().statusCode(201);
 
         given().contentType(ContentType.JSON)
                .body("""
                      {"title":"Health item 1","priority":"HIGH","createdBy":"alice"}""")
-               .post("/workitems").then().statusCode(201);
+               .post("/api/work/items/create").then().statusCode(201);
 
         given().contentType(ContentType.JSON)
                .body("""
                      {"title":"Health item 2","priority":"MEDIUM","createdBy":"bob"}""")
-               .post("/workitems").then().statusCode(201);
+               .post("/api/work/items/create").then().statusCode(201);
 
-        given().get("/queues/health").then()
+        given().get("/api/work/queues/health").then()
                .statusCode(200)
                .body("key", hasItems("total", "pending", "active", "overdue", "breached"))
                .body("find { it.key == 'total' }.value", greaterThanOrEqualTo(2))
@@ -48,7 +46,7 @@ class QueueHealthResourceTest {
 
     @Test
     void health_returnsAllFiveMetrics() {
-        given().get("/queues/health").then()
+        given().get("/api/work/queues/health").then()
                .statusCode(200)
                .body("key", hasItems("total", "pending", "active", "overdue", "breached"))
                .body("size()", equalTo(5));

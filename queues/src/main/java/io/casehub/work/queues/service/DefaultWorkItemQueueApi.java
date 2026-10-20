@@ -107,10 +107,8 @@ public class DefaultWorkItemQueueApi implements WorkItemQueueApi {
 
     @Override
     public List<WorkItemView> query(UUID queueId, String tenancyId) {
-        var spec = viewStore.findById(queueId).orElse(null);
-        if (spec == null) {
-            return null;
-        }
+        var spec = viewStore.findById(queueId)
+                .orElseThrow(() -> new jakarta.ws.rs.NotFoundException("Queue view not found: " + queueId));
         return membershipService.evaluateMembers(spec).stream()
                 .map(ViewMapper::toView)
                 .toList();

@@ -4,14 +4,12 @@ import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @QuarkusTest
-@Disabled("Tracked in casehubio/work#417")
 class WorkItemQueueEventTest {
 
     @Inject
@@ -34,7 +32,7 @@ class WorkItemQueueEventTest {
                 .body("""
                         {"title":"Queue added test","createdBy":"alice",
                          "labels":[{"path":"qevt-added/case-1","persistence":"MANUAL","appliedBy":"alice"}]}""")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
         final var added = capture.eventsOfType(QueueEventType.ADDED);
         assertThat(added).anyMatch(e -> e.workItemId().toString().equals(itemId) &&
@@ -49,7 +47,7 @@ class WorkItemQueueEventTest {
                         {"name":"QEvt type filter","scope":"ORG","conditionLanguage":"jexl",
                          "conditionExpression":"types.contains('qevt-cat-unique')",
                          "actions":[{"type":"Add","label":"qevt-inferred/cat"}]}""")
-                .post("/label-rules").then().statusCode(201);
+                .post("/api/work/label-rules/create").then().statusCode(201);
 
         final String queueId = createQueue("QEvt Inferred Queue", "qevt-inferred/**");
 
@@ -57,7 +55,7 @@ class WorkItemQueueEventTest {
                 .body("""
                         {"title":"Inferred label added test","createdBy":"alice",
                          "types":["qevt-cat-unique"]}""")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
         final var added = capture.eventsOfType(QueueEventType.ADDED);
         assertThat(added).anyMatch(e -> e.workItemId().toString().equals(itemId) &&
@@ -76,13 +74,13 @@ class WorkItemQueueEventTest {
                 .body("""
                         {"title":"Queue removed test","createdBy":"alice",
                          "labels":[{"path":"qevt-removed/case-1","persistence":"MANUAL","appliedBy":"alice"}]}""")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
         capture.clear(); // ignore the ADDED event from creation
 
         // Remove the label → WorkItem leaves the queue
         given().queryParam("path", "qevt-removed/case-1")
-                .delete("/workitems/" + itemId + "/labels")
+                .post("/api/work/items/remove-label/" + itemId)
                 .then().statusCode(200);
 
         final var removed = capture.eventsOfType(QueueEventType.REMOVED);
@@ -99,7 +97,7 @@ class WorkItemQueueEventTest {
                      {"name":"QEvt stable filter","scope":"ORG","conditionLanguage":"jexl",
                       "conditionExpression":"types.contains('qevt-stable')",
                       "actions":[{"type":"Add","label":"qevt-stable/marker"}]}""")
-               .post("/label-rules").then().statusCode(201);
+               .post("/api/work/label-rules/create").then().statusCode(201);
 
         final String queueId = createQueue("QEvt Stable Queue", "qevt-stable/**");
 
@@ -107,13 +105,13 @@ class WorkItemQueueEventTest {
                                      .body("""
                                            {"title":"Stable membership test","createdBy":"alice",
                                             "types":["qevt-stable"]}""")
-                                     .post("/workitems").then().statusCode(201).extract().path("id");
+                                     .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
         capture.clear();
 
         // Claim the item: triggers lifecycle event → filter strips INFERRED label then re-applies it
         given().queryParam("claimant", "alice")
-               .put("/workitems/" + itemId + "/claim")
+               .post("/api/work/lifecycle/claim/" + itemId)
                .then().statusCode(200);
 
         // REMOVED must NOT fire for THIS queue — the item is still in the queue after re-evaluation
@@ -132,20 +130,20 @@ class WorkItemQueueEventTest {
                      {"name":"QEvt changed filter","scope":"ORG","conditionLanguage":"jexl",
                       "conditionExpression":"types.contains('qevt-changed')",
                       "actions":[{"type":"Add","label":"qevt-changed/marker"}]}""")
-               .post("/label-rules").then().statusCode(201);
+               .post("/api/work/label-rules/create").then().statusCode(201);
 
         final String queueId = createQueue("QEvt Changed Queue", "qevt-changed/**");
 
         final String itemId = given().contentType(ContentType.JSON)
                                      .body("""
                                            {"title":"Changed test","createdBy":"alice","types":["qevt-changed"]}""")
-                                     .post("/workitems").then().statusCode(201).extract().path("id");
+                                     .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
         capture.clear(); // ignore ADDED from creation
 
         // Any lifecycle event triggers re-evaluation: INFERRED label stripped → re-applied → CHANGED
         given().queryParam("claimant", "alice")
-               .put("/workitems/" + itemId + "/claim")
+               .post("/api/work/lifecycle/claim/" + itemId)
                .then().statusCode(200);
 
         final var changed = capture.eventsOfType(QueueEventType.CHANGED);
@@ -164,20 +162,20 @@ class WorkItemQueueEventTest {
                         {"name":"QEvt no-dup filter","scope":"ORG","conditionLanguage":"jexl",
                          "conditionExpression":"types.contains('qevt-nodup')",
                          "actions":[{"type":"Add","label":"qevt-nodup/marker"}]}""")
-                .post("/label-rules").then().statusCode(201);
+                .post("/api/work/label-rules/create").then().statusCode(201);
 
         createQueue("QEvt NoDup Queue", "qevt-nodup/**");
 
         final String itemId = given().contentType(ContentType.JSON)
                 .body("""
                         {"title":"No dup added test","createdBy":"alice","types":["qevt-nodup"]}""")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
         capture.clear();
 
         // Claim → re-evaluation → item still in queue
         given().queryParam("claimant", "alice")
-                .put("/workitems/" + itemId + "/claim")
+                .post("/api/work/lifecycle/claim/" + itemId)
                 .then().statusCode(200);
 
         // ADDED should NOT fire again — item was already in queue (fires CHANGED instead)
@@ -194,7 +192,7 @@ class WorkItemQueueEventTest {
                 .body("""
                         {"title":"No queue match","createdBy":"alice",
                          "labels":[{"path":"orphan/unmatched","persistence":"MANUAL","appliedBy":"alice"}]}""")
-                .post("/workitems").then().statusCode(201);
+                .post("/api/work/items/create").then().statusCode(201);
 
         // No queue matches "orphan/**" (no QueueView with that pattern created in this test)
         // So no queue events for "orphan/unmatched" — other tests may fire events for other patterns
@@ -211,7 +209,7 @@ class WorkItemQueueEventTest {
                 .body(String.format(
                         "{\"name\":\"%s\",\"labelPattern\":\"%s\",\"scope\":\"ORG\"}",
                         name, pattern))
-                .post("/queues")
+                .post("/api/work/queues/create")
                 .then().statusCode(201)
                 .extract().path("id");
     }

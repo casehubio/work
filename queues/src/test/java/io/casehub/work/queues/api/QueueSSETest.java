@@ -3,7 +3,6 @@ package io.casehub.work.queues.api;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -20,10 +19,9 @@ import static io.restassured.RestAssured.given;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration and E2E tests for GET /queues/{id}/events SSE stream.
+ * Integration and E2E tests for queue SSE stream.
  */
 @QuarkusTest
-@Disabled("Tracked in casehubio/work#417")
 class QueueSSETest {
 
     @TestHTTPResource("/")
@@ -32,7 +30,7 @@ class QueueSSETest {
     @Test
     void queueSseEndpoint_returns200_withSseContentType() throws Exception {
         final String queueId = createQueue("SSE test queue", "sse-test/**");
-        final HttpResponse<InputStream> response = connectSse("queues/" + queueId + "/events");
+        final HttpResponse<InputStream> response = connectSse("api/work/queues/stream-queue-events/" + queueId);
         try (InputStream ignored = response.body()) {
             assertThat(response.statusCode()).isEqualTo(200);
             assertThat(response.headers().firstValue("content-type").orElse(""))
@@ -51,7 +49,7 @@ class QueueSSETest {
             try {
                 final HttpClient client = HttpClient.newHttpClient();
                 final HttpRequest req = HttpRequest.newBuilder()
-                                                   .uri(baseUri.resolve("queues/" + queueId + "/events"))
+                                                   .uri(baseUri.resolve("api/work/queues/stream-queue-events/" + queueId))
                                                    .header("Accept", "text/event-stream").build();
                 client.send(req, HttpResponse.BodyHandlers.ofLines())
                       .body()
@@ -67,7 +65,7 @@ class QueueSSETest {
 
         given().contentType(ContentType.JSON)
                .body("{\"title\":\"SSE test item\",\"createdBy\":\"test\",\"priority\":\"HIGH\"}")
-               .post("/workitems").then().statusCode(201);
+               .post("/api/work/items/create").then().statusCode(201);
 
         assertThat(latch.await(4, TimeUnit.SECONDS))
                 .as("Expected ADDED event in queue SSE stream").isTrue();
@@ -79,7 +77,7 @@ class QueueSSETest {
     private String createQueue(final String name, final String pattern) {
         return given().contentType(ContentType.JSON)
                 .body("{\"name\":\"" + name + "\",\"labelPattern\":\"" + pattern + "\",\"scope\":\"ORG\"}")
-                .post("/queues").then().statusCode(201).extract().path("id");
+                .post("/api/work/queues/create").then().statusCode(201).extract().path("id");
     }
 
     private HttpResponse<InputStream> connectSse(final String path) throws Exception {
