@@ -216,7 +216,7 @@ Four composable annotations reduce 15-30 lines of programmatic WorkItem configur
 | `@Escalate` | Escalation policy | `SlaBreachPolicy` SPI |
 | `@SkillMatch` | Routing strategy selection | `WorkerSelectionStrategy` SPI |
 
-**Dual-path execution:** Standalone path generates CDI interceptors via Gizmo at build time (any Quarkus app). Blocks composition path produces `WorkAnnotationsProcessedBuildItem` for blocks-engine-adapter to wire governance interceptors on `@Worker`/`@*Agent` methods.
+**Dual-path execution:** Standalone path generates CDI interceptors via Gizmo at build time (any Quarkus app). Agency composition path produces `WorkAnnotationsProcessedBuildItem` for agency-engine-adapter to wire governance interceptors on `@Worker`/`@*Agent` methods.
 
 **Module structure:** Follows engine-annotations pattern (parent → runtime + deployment). Runtime defines `@interface`s and descriptor records. Deployment provides `WorkAnnotationsProcessor` `@BuildStep` (scan, validate, produce build items).
 
