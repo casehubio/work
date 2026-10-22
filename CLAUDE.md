@@ -205,7 +205,7 @@ Outbound: `QhorusWorkItemLifecycleAdapter` implements `WorkItemObserver`, posts 
 
 ## annotations Module
 
-Annotation-driven human-in-the-loop model (`casehub-work-annotations`, package `io.casehub.work.annotations`). Part of the blocks#115 annotation-driven agent programming model epic (#356).
+Annotation-driven human-in-the-loop model (`casehub-work-annotations`, package `io.casehub.work.annotations`). Part of the agency#115 annotation-driven agent programming model epic (#356).
 
 Four composable annotations reduce 15-30 lines of programmatic WorkItem configuration to 1-4 annotations:
 
