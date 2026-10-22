@@ -22,7 +22,7 @@ Every future app (AML, Clinical) will repeat this structure: extract domain-spec
 - Tests
 
 **Out of scope:**
-- Worker factory template — tracked as casehubio/blocks#293
+- Worker factory template — tracked as casehubio/agency#293
 - Quarkus config-driven corpus selection — constructor parameter is sufficient
 - Concrete strategy implementations — each app provides its own
 
@@ -109,5 +109,5 @@ Where `buildQueryText` returns `RetrievalQuery` instead of `String`. Or, SOC can
 - `rag-api/src/main/java/io/casehub/neocortex/rag/CaseRetriever.java` — underlying SPI
 - SOC `app/src/main/java/io/casehub/soc/engine/rag/SocRagRetrieveService.java` — reference implementation
 - SOC `app/src/main/java/io/casehub/soc/worker/RuleRagRetrievalWorker.java` — worker template reference
-- casehubio/blocks#293 — worker factory follow-up
+- casehubio/agency#293 — worker factory follow-up
 - D1–D5 in `decisions.md` — design decisions

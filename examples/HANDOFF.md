@@ -2,7 +2,7 @@
 
 ## Last Session
 
-Phase 2.7 — live LLM narrator. Built NarratorAgent (stateful class with SummarisationRunner from casehub-blocks), NarratorSummariser (Summariser SPI), ManorEventDispatcher (centralized event fan-out), and wired into ScenarioOrchestrator for AUTONOMOUS mode. Design review (4 dimensions, 45 issues, $37.46) drove ManorEventDispatcher extraction and AUTONOMOUS-only mode. Also shipped blocks#82 epic (7 issues — Compactor SPI, failure recovery, atomic drain, flush(), etc.) and blocks#90 (flush) as narrator prerequisites.
+Phase 2.7 — live LLM narrator. Built NarratorAgent (stateful class with SummarisationRunner from casehub-agency), NarratorSummariser (Summariser SPI), ManorEventDispatcher (centralized event fan-out), and wired into ScenarioOrchestrator for AUTONOMOUS mode. Design review (4 dimensions, 45 issues, $37.46) drove ManorEventDispatcher extraction and AUTONOMOUS-only mode. Also shipped blocks#82 epic (7 issues — Compactor SPI, failure recovery, atomic drain, flush(), etc.) and blocks#90 (flush) as narrator prerequisites.
 
 ## Immediate Next Step
 
@@ -28,8 +28,8 @@ Run the verdict gate: `JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl wa
 
 | Repo | What | Branch |
 |------|------|--------|
-| casehubio/blocks | Epic #82 — Compactor SPI, failure recovery, atomic drain, WindowPolicy factories, EventStreamBus rename, docs (slot 71, merged) | main |
-| casehubio/blocks | #90 — SummarisationRunner.flush() | main |
+| casehubio/agency | Epic #82 — Compactor SPI, failure recovery, atomic drain, WindowPolicy factories, EventStreamBus rename, docs (slot 71, merged) | main |
+| casehubio/agency | #90 — SummarisationRunner.flush() | main |
 | casehubio/examples | Phase 2.7 narrator wiring | feat/wacky-manor-poc (pushed to fork) |
 | mdproctor.github.io | Blog: "When the Narrator Finds Its Voice" | _notes (published) |
 
@@ -47,6 +47,6 @@ Run the verdict gate: `JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn test -pl wa
 - Blog: `~/claude/mdproctor.github.io/_notes/2026-08-03-mdp01-when-the-narrator-finds-its-voice.md`
 - Design review: `~/reviews/casehub-worktrees/narrator-wiring-*` (4 dimensions)
 - Plan: `plans/2026-08-03-narrator-wiring.md`
-- blocks epic: casehubio/blocks#82 (7 issues, all closed)
-- blocks flush: casehubio/blocks#90 (closed)
+- blocks epic: casehubio/agency#82 (7 issues, all closed)
+- blocks flush: casehubio/agency#90 (closed)
 - Deferred issues: casehubio/examples#6 (buffer growth), #7 (per-type EventLevels), #8 (full blocks pipeline)

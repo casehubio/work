@@ -48,11 +48,11 @@
 
 ## D5: Worker template ownership
 
-**Choice:** Out of scope for neocortex — tracked as casehubio/blocks#293
+**Choice:** Out of scope for neocortex — tracked as casehubio/agency#293
 **Alternatives:**
 - Include worker factory in neocortex — would introduce engine/worker API dependency into neocortex, violating its role as a standalone inference/retrieval library
 **Rationale:** Worker is an engine/blocks API. Neocortex provides the retrieval SPI. The worker template is a thin shell (~15 lines) that each app can write, or blocks#293 can provide generically.
 **Trade-offs:** Until blocks#293 ships, each app writes its own thin worker factory. SOC already has one that works.
-**Sources:** SOC `RuleRagRetrievalWorker.java`, casehubio/blocks#293
+**Sources:** SOC `RuleRagRetrievalWorker.java`, casehubio/agency#293
 **Exploration:** quick
 **Status:** captured
