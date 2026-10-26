@@ -54,6 +54,14 @@
             <artifactId>jakarta.validation-api</artifactId>
         </dependency>
 
+        <!-- Quarkus module referenced by spring-generator (filesystem Jandex path) -->
+        <dependency>
+            <groupId>io.casehub</groupId>
+            <artifactId>casehub-work</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
