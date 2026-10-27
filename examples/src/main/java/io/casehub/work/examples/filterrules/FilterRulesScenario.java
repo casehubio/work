@@ -1,5 +1,6 @@
 package io.casehub.work.examples.filterrules;
 
+import io.casehub.work.runtime.repository.LabelRuleStore;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +16,6 @@ import org.jboss.logging.Logger;
 
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.api.AuditEntryResponse;
-import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.runtime.filter.LabelRuleEntity;
 import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.api.WorkItemCreateRequest;
@@ -53,6 +53,9 @@ import io.casehub.work.runtime.service.WorkItemService;
 @Produces(MediaType.APPLICATION_JSON)
 public class FilterRulesScenario {
 
+    @Inject
+    LabelRuleStore labelRuleStore;
+
     private static final Logger LOG = Logger.getLogger(FilterRulesScenario.class);
 
     private static final String SCENARIO_ID = "dynamic-filter-rules";
@@ -89,8 +92,8 @@ public class FilterRulesScenario {
         rule.conditionExpression = "priority == 'HIGH' || priority == 'URGENT'";
         rule.triggerEvents = "ADD";
         rule.actionsJson = "[{\"type\":\"Add\",\"label\":\"urgent\"}]";
-        rule.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        rule.persist();
+
+        labelRuleStore.put(rule);
         steps.add(new StepLog(1, description1, null));
 
         // Step 2: create a HIGH-priority WorkItem — filter should apply "urgent" label
@@ -141,7 +144,7 @@ public class FilterRulesScenario {
         // Step 5: delete the filter rule (clean up — demonstrates no-redeployment disable)
         final String description5 = "procurement-system deletes the auto-label-urgent filter rule";
         LOG.infof("[SCENARIO] Step %d/%d: %s", 5, total, description5);
-        LabelRuleEntity.deleteById(rule.id);
+        labelRuleStore.delete(rule.id);
         steps.add(new StepLog(5, description5, null));
 
         // Collect audit trail across both WorkItems

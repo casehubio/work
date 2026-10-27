@@ -17,11 +17,15 @@ capability of quarkus-work. Each scenario runs via POST /examples/{name}/run,
 logs a narrative to stdout, and returns the full ledger trail as JSON.</description>
 
   <properties>
-    <!-- Tests have pre-existing failures from platform update — tracked by #403 -->
-    <maven.test.skip>true</maven.test.skip>
+    <quarkus.version>3.39.3</quarkus.version>
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-work-rest</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <dependency>
       <groupId>io.casehub</groupId>
       <artifactId>casehub-work</artifactId>

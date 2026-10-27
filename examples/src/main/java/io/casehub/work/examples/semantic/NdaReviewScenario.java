@@ -1,5 +1,6 @@
 package io.casehub.work.examples.semantic;
 
+import io.casehub.work.ai.repository.WorkerSkillProfileStore;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,6 +56,9 @@ import io.casehub.work.runtime.service.WorkItemService;
 @Path("/examples/semantic")
 @Produces(MediaType.APPLICATION_JSON)
 public class NdaReviewScenario {
+
+    @Inject
+    WorkerSkillProfileStore workerSkillProfileStore;
 
     private static final Logger LOG = Logger.getLogger(NdaReviewScenario.class);
 
@@ -146,15 +150,10 @@ public class NdaReviewScenario {
     }
 
     private void upsertProfile(final String workerId, final String narrative) {
-        final WorkerSkillProfile existing = WorkerSkillProfile.findById(workerId);
-        if (existing == null) {
-            final var profile = new WorkerSkillProfile();
-            profile.workerId = workerId;
-            profile.narrative = narrative;
-            profile.tenancyId = io.casehub.platform.api.identity.TenancyConstants.DEFAULT_TENANT_ID;
-            profile.persist();
-        } else {
-            existing.narrative = narrative;
-        }
+        final WorkerSkillProfile profile = workerSkillProfileStore.get(workerId)
+                .orElseGet(WorkerSkillProfile::new);
+        profile.workerId = workerId;
+        profile.narrative = narrative;
+        workerSkillProfileStore.put(profile);
     }
 }

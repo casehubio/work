@@ -19,6 +19,7 @@ import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.ledger.api.model.LedgerEntryType;
 import io.casehub.ledger.runtime.config.LedgerConfig;
 import io.casehub.ledger.api.model.LedgerMerkleFrontier;
+import io.casehub.ledger.api.spi.LedgerMerkleFrontierRepository;
 import io.casehub.ledger.jpa.JpaComplianceSupplement;
 import io.casehub.ledger.jpa.JpaProvenanceSupplement;
 import io.casehub.ledger.core.merkle.LedgerMerkleTree;
@@ -53,6 +54,9 @@ public class LedgerEventCapture {
 
     @Inject
     WorkItemStore workItemStore;
+
+    @Inject
+    LedgerMerkleFrontierRepository frontierRepo;
 
     @Inject
     CurrentPrincipal currentPrincipal;
@@ -170,21 +174,11 @@ public class LedgerEventCapture {
 
         // Update Merkle Mountain Range frontier for this subject
         if (config.hashChain().enabled()) {
-            final java.util.List<LedgerMerkleFrontier> current = em
-                    .createNamedQuery("LedgerMerkleFrontier.findBySubjectId", LedgerMerkleFrontier.class)
-                    .setParameter("subjectId", entry.subjectId)
-                    .setParameter("tenancyId", entry.tenancyId)
-                    .getResultList();
+            final java.util.List<LedgerMerkleFrontier> current = frontierRepo.findBySubjectId(
+                    entry.subjectId, entry.tenancyId);
             final java.util.List<LedgerMerkleFrontier> newFrontier = LedgerMerkleTree.append(entry.digest, current,
                     entry.subjectId);
-            em.createQuery("DELETE FROM LedgerMerkleFrontier f WHERE f.subjectId = :subjectId AND f.tenancyId = :tenancyId")
-                    .setParameter("subjectId", entry.subjectId)
-                    .setParameter("tenancyId", entry.tenancyId)
-                    .executeUpdate();
-            newFrontier.forEach(f -> {
-                f.tenancyId = entry.tenancyId;
-                em.persist(f);
-            });
+            frontierRepo.replace(entry.subjectId, newFrontier, entry.tenancyId);
         }
     }
 

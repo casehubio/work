@@ -15,8 +15,8 @@ import org.jboss.logging.Logger;
 
 import io.casehub.platform.api.identity.ActorType;
 import io.casehub.ledger.api.model.AttestationVerdict;
-import io.casehub.ledger.runtime.model.LedgerAttestation;
-import io.casehub.ledger.runtime.model.supplement.JpaProvenanceSupplement;
+import io.casehub.ledger.jpa.LedgerAttestation;
+import io.casehub.ledger.jpa.JpaProvenanceSupplement;
 import io.casehub.work.examples.ScenarioResponse;
 import io.casehub.work.examples.StepLog;
 import io.casehub.work.ledger.api.LedgerMapper;

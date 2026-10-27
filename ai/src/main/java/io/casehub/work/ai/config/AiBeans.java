@@ -12,13 +12,14 @@ import io.casehub.work.api.spi.SkillMatcher;
 import io.casehub.work.api.spi.SkillProfileProvider;
 import io.casehub.work.api.spi.WorkItemStore;
 import io.casehub.work.core.strategy.LeastLoadedStrategy;
+import io.quarkus.arc.All;
+import io.quarkus.arc.InstanceHandle;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Alternative;
 import jakarta.enterprise.inject.Instance;
 import jakarta.enterprise.inject.Produces;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class AiBeans {
@@ -48,9 +49,12 @@ public class AiBeans {
     @Alternative
     @jakarta.annotation.Priority(2)
     public CompositeSkillProfileProvider compositeSkillProfileProvider(
-            final Instance<SkillProfileProvider> allProviders) {
+            @All final List<InstanceHandle<SkillProfileProvider>> allProviders) {
         return new CompositeSkillProfileProvider(
-                allProviders.stream().collect(Collectors.toList()));
+                allProviders.stream()
+                        .filter(provider -> !provider.getBean().getTypes().contains(CompositeSkillProfileProvider.class))
+                        .map(InstanceHandle::get)
+                        .toList());
     }
 
     @Produces
