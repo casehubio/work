@@ -11,7 +11,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Set;
 
-@Testcontainers
+@Testcontainers(disabledWithoutDocker = true)
 public abstract class MongoStoreTestBase {
 
     @Container
