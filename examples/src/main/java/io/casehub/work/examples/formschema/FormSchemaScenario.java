@@ -1,5 +1,6 @@
 package io.casehub.work.examples.formschema;
 
+import io.casehub.work.runtime.repository.WorkItemTemplateStore;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +24,6 @@ import io.casehub.work.runtime.model.AuditEntry;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.service.WorkItemService;
-import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.runtime.service.WorkItemTemplateService;
 
 /**
@@ -49,6 +49,9 @@ import io.casehub.work.runtime.service.WorkItemTemplateService;
 @Path("/examples/formschema")
 @Produces(MediaType.APPLICATION_JSON)
 public class FormSchemaScenario {
+
+    @Inject
+    WorkItemTemplateStore workItemTemplateStore;
 
     private static final Logger LOG = Logger.getLogger(FormSchemaScenario.class);
 
@@ -105,8 +108,8 @@ public class FormSchemaScenario {
         template.candidateGroups = ACTOR_REVIEWER;
         template.outputDataSchema = OUTPUT_DATA_SCHEMA;
         template.createdBy = ACTOR_ADMIN;
-        template.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        template.persist();
+
+        workItemTemplateStore.put(template);
         steps.add(new StepLog(1, description1, null));
 
         // Step 2: instantiate the template → first WorkItem

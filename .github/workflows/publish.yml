@@ -33,9 +33,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build example prerequisites
+        run: mvn --batch-mode -Pexamples -pl examples -am install -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Test AI composition and examples
+        run: |
+          mvn --batch-mode -f ai/pom.xml test -Dtest=AiBeansTest,CompositeSkillProfileProviderTest
+          mvn --batch-mode -f examples/pom.xml verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish to GitHub Packages
         if: github.event_name != 'pull_request'
-        run: mvn --batch-mode deploy -DskipTests
+        run: mvn --batch-mode -Pexamples deploy -DskipTests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

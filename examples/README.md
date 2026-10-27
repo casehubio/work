@@ -8,13 +8,24 @@ logs a narrative to stdout, and returns the result as JSON.
 
 - Java 26: `export JAVA_HOME=$(/usr/libexec/java_home -v 26)`
 - Maven (not the wrapper): `mvn`
-- Build the parent first: `JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn install -DskipTests`
+- Install the current Platform, Ledger, and Qhorus workspace artifacts first.
+
+From the Work repository root, prepare the example and its prerequisites (including AI):
+
+```bash
+mvn -Pexamples -pl examples -am install -DskipTests
+mvn -f examples/pom.xml verify
+```
+
+The first command compiles production and test sources without running tests. The second
+runs the example's HTTP scenario tests on H2 and packages the application. No LLM service
+or credentials are required. The `examples` profile is opt-in; the normal Work reactor is unchanged.
 
 ## Running
 
 ```bash
 # Start in dev mode (H2 in-memory, auto-restart)
-JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn quarkus:dev -pl examples
+JAVA_HOME=$(/usr/libexec/java_home -v 26) mvn -Pexamples quarkus:dev -pl examples
 ```
 
 Quarkus starts on `http://localhost:8080`. All 17 scenarios are ready immediately.
@@ -76,10 +87,10 @@ but work via the standard WorkItem REST API as well:
 
 ```bash
 # Create and immediately cancel a WorkItem
-ID=$(curl -s -X POST http://localhost:8080/workitems \
+ID=$(curl -s -X POST http://localhost:8080/api/work/items/create \
   -H 'Content-Type: application/json' \
   -d '{"title":"Test cancel","createdBy":"demo"}' | jq -r '.id')
-curl -s -X PUT "http://localhost:8080/workitems/$ID/cancel?actor=admin" \
+curl -s -X POST "http://localhost:8080/api/work/lifecycle/cancel/$ID?actor=admin" \
   -H 'Content-Type: application/json' \
   -d '{"reason":"No longer needed"}' | jq .
 ```

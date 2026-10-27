@@ -1,5 +1,6 @@
 package io.casehub.work.examples.spawn;
 
+import io.casehub.work.runtime.repository.WorkItemTemplateStore;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +16,6 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
-import io.casehub.platform.api.identity.TenancyConstants;
 import io.casehub.work.api.ChildSpec;
 import io.casehub.work.api.SpawnRequest;
 import io.casehub.work.api.SpawnResult;
@@ -45,6 +45,9 @@ import io.casehub.work.runtime.service.WorkItemSpawnService;
 @Path("/examples/spawn")
 @Produces(MediaType.APPLICATION_JSON)
 public class SpawnScenario {
+
+    @Inject
+    WorkItemTemplateStore workItemTemplateStore;
 
     @Inject
     WorkItemService workItemService;
@@ -114,8 +117,8 @@ public class SpawnScenario {
             throw new IllegalStateException("Failed to serialize typePaths", e);
         }
         t.createdBy = "spawn-scenario";
-        t.tenancyId = TenancyConstants.DEFAULT_TENANT_ID;
-        t.persist();
+
+        workItemTemplateStore.put(t);
         return t;
     }
 }

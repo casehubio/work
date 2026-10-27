@@ -13,8 +13,8 @@ import jakarta.ws.rs.core.MediaType;
 
 import org.jboss.logging.Logger;
 
-import io.casehub.ledger.runtime.model.ActorTrustScore;
-import io.casehub.ledger.runtime.repository.ActorTrustScoreRepository;
+import io.casehub.ledger.api.model.ActorTrustScoreBase;
+import io.casehub.ledger.api.spi.ActorTrustScoreRepository;
 import io.casehub.ledger.runtime.service.TrustScoreJob;
 import io.casehub.work.examples.QueueScenarioResponse;
 import io.casehub.work.examples.StepLog;
@@ -268,7 +268,7 @@ public class DocumentQueueScenario {
                 aliceTrust);
     }
 
-    private ActorTrustScoreResponse toResponse(final ActorTrustScore score) {
+    private ActorTrustScoreResponse toResponse(final ActorTrustScoreBase score) {
         return new ActorTrustScoreResponse(
                 score.actorId,
                 score.actorType,
