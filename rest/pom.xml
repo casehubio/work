@@ -127,6 +127,13 @@ who only need the Java SPI do not pay JAX-RS coupling cost.</description>
       </plugin>
 
       <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <forkedProcessTimeoutInSeconds>1200</forkedProcessTimeoutInSeconds>
+        </configuration>
+      </plugin>
+
+      <plugin>
         <artifactId>maven-failsafe-plugin</artifactId>
         <version>${surefire-plugin.version}</version>
         <executions>
