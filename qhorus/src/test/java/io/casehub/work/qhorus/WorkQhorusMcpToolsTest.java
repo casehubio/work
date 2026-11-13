@@ -54,6 +54,7 @@ class WorkQhorusMcpToolsTest {
             @Override public List<Channel> listAll() { return List.of(); }
             @Override public List<Channel> scan(io.casehub.qhorus.api.store.query.ChannelQuery query) { return List.of(); }
             @Override public java.util.List<Channel> findByIds(java.util.Collection<UUID> ids) { return List.of(); }
+            @Override public List<Channel> findByVisibility(io.casehub.qhorus.api.channel.ChannelVisibility visibility) { return List.of(); }
         };
 
         tools.messageDispatcher = dispatch -> {
