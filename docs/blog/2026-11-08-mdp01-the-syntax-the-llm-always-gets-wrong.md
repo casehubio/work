@@ -2,7 +2,7 @@
 layout: post
 title: "The Syntax the LLM Always Gets Wrong"
 date: 2026-11-08
-entry_type: article
+entry_type: note
 subtype: diary
 projects: [casehubio/platform]
 tags: [yaml, playbooks, llm-agents, syntax, api-design, dsl]
