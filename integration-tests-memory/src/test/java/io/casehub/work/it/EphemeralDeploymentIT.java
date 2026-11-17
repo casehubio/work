@@ -31,7 +31,7 @@ class EphemeralDeploymentIT {
                           "createdBy": "ephemeral-test"
                         }
                         """.formatted(title))
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
     }
@@ -47,10 +47,10 @@ class EphemeralDeploymentIT {
                           "createdBy": "system"
                         }
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then()
                 .statusCode(201)
-                .header("Location", containsString("/workitems/"))
+                .header("Location", notNullValue())
                 .body("id", notNullValue())
                 .body("status", equalTo("PENDING"))
                 .body("priority", equalTo("HIGH"))
@@ -63,7 +63,7 @@ class EphemeralDeploymentIT {
     void getById_returnsWorkItemWithAuditTrail() {
         String id = createWorkItem("Get by id ephemeral");
         given()
-                .when().get("/workitems/{id}", id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(id))
@@ -76,7 +76,7 @@ class EphemeralDeploymentIT {
     @Test
     void getById_unknownId_returns404() {
         given()
-                .when().get("/workitems/{id}", "00000000-0000-0000-0000-000000000000")
+                .when().get("/api/work/items/get-by-id/00000000-0000-0000-0000-000000000000")
                 .then()
                 .statusCode(404)
                 .body("error", notNullValue());
@@ -86,28 +86,25 @@ class EphemeralDeploymentIT {
     void listAll_returnsNonEmptyArray() {
         createWorkItem("List test ephemeral");
         given()
-                .when().get("/workitems")
+                .when().get("/api/work/items/list-all")
                 .then()
                 .statusCode(200)
-                .body("size()", greaterThanOrEqualTo(1));
+                .body("items.size()", greaterThanOrEqualTo(1));
     }
 
     @Test
     void fullLifecycle_createClaimStartComplete() {
         String id = createWorkItem("Full lifecycle ephemeral");
 
-        given().queryParam("claimant", "alice")
-                .when().put("/workitems/{id}/claim", id)
+        given().post("/api/work/lifecycle/claim/" + id)
                 .then().statusCode(200).body("status", equalTo("ASSIGNED"));
 
-        given().queryParam("actor", "alice")
-                .when().put("/workitems/{id}/start", id)
+        given().post("/api/work/lifecycle/start/" + id)
                 .then().statusCode(200).body("status", equalTo("IN_PROGRESS"));
 
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "alice")
                 .body("{\"resolution\":\"{\\\"approved\\\":true}\"}")
-                .when().put("/workitems/{id}/complete", id)
+                .post("/api/work/lifecycle/complete/" + id)
                 .then().statusCode(200)
                 .body("status", equalTo("COMPLETED"))
                 .body("resolution", notNullValue());
@@ -116,22 +113,18 @@ class EphemeralDeploymentIT {
     @Test
     void rejectPath() {
         String id = createWorkItem("Reject ephemeral");
-        given().queryParam("claimant", "bob")
-                .when().put("/workitems/{id}/claim", id);
+        given().post("/api/work/lifecycle/claim/" + id);
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "bob")
                 .body("{\"reason\":\"out of scope\"}")
-                .when().put("/workitems/{id}/reject", id)
+                .post("/api/work/lifecycle/reject/" + id)
                 .then().statusCode(200).body("status", equalTo("REJECTED"));
     }
 
     @Test
     void releasePath_returnsToPending() {
         String id = createWorkItem("Release ephemeral");
-        given().queryParam("claimant", "alice")
-                .when().put("/workitems/{id}/claim", id);
-        given().queryParam("actor", "alice")
-                .when().put("/workitems/{id}/release", id)
+        given().post("/api/work/lifecycle/claim/" + id);
+        given().post("/api/work/lifecycle/release/" + id)
                 .then().statusCode(200)
                 .body("status", equalTo("PENDING"))
                 .body("assigneeId", nullValue());
@@ -141,9 +134,8 @@ class EphemeralDeploymentIT {
     void cancelPath() {
         String id = createWorkItem("Cancel ephemeral");
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "admin")
                 .body("{\"reason\":\"no longer needed\"}")
-                .when().put("/workitems/{id}/cancel", id)
+                .post("/api/work/lifecycle/cancel/" + id)
                 .then().statusCode(200).body("status", equalTo("CANCELLED"));
     }
 
@@ -151,21 +143,21 @@ class EphemeralDeploymentIT {
     void inbox_returns200() {
         createWorkItem("Inbox ephemeral");
         given()
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then().statusCode(200);
     }
 
     @Test
     void auditTrail_fourEntriesAfterFullPath() {
         String id = createWorkItem("Audit ephemeral");
-        given().queryParam("claimant", "alice").when().put("/workitems/{id}/claim", id);
-        given().queryParam("actor", "alice").when().put("/workitems/{id}/start", id);
-        given().contentType(ContentType.JSON).queryParam("actor", "alice")
+        given().post("/api/work/lifecycle/claim/" + id);
+        given().post("/api/work/lifecycle/start/" + id);
+        given().contentType(ContentType.JSON)
                 .body("{\"resolution\":\"done\"}")
-                .when().put("/workitems/{id}/complete", id);
+                .post("/api/work/lifecycle/complete/" + id);
 
         given()
-                .when().get("/workitems/{id}", id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .body("auditTrail.size()", equalTo(4))
                 .body("auditTrail[0].event", equalTo("CREATED"))

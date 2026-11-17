@@ -10,6 +10,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+import io.casehub.work.reports.test.MutableCurrentPrincipal;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -18,23 +21,31 @@ import io.restassured.http.ContentType;
 @QuarkusTest
 class ThroughputReportTest {
 
+    @Inject
+    MutableCurrentPrincipal principal;
+
+    @BeforeEach
+    void resetPrincipal() {
+        principal.reset();
+    }
+
     @Test
     void missingFrom_returns400() {
         given().queryParam("to", "2026-04-27T00:00:00Z")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(400);
     }
 
     @Test
     void missingTo_returns400() {
         given().queryParam("from", "2026-04-01T00:00:00Z")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(400);
     }
 
     @Test
     void missingBoth_returns400() {
-        given().get("/workitems/reports/throughput").then().statusCode(400);
+        given().get("/api/work/reports/throughput").then().statusCode(400);
     }
 
     @Test
@@ -42,7 +53,7 @@ class ThroughputReportTest {
         given().queryParam("from", "2026-04-01T00:00:00Z")
                 .queryParam("to", "2026-04-30T00:00:00Z")
                 .queryParam("groupBy", "quarter")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(400);
     }
 
@@ -50,7 +61,7 @@ class ThroughputReportTest {
     void invalidTimestamp_returns400() {
         given().queryParam("from", "not-a-date")
                 .queryParam("to", "2026-04-30T00:00:00Z")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(400);
     }
 
@@ -60,7 +71,7 @@ class ThroughputReportTest {
         final String to = Instant.now().plus(1, ChronoUnit.HOURS).toString();
 
         given().queryParam("from", from).queryParam("to", to)
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(200)
                 .body("from", notNullValue())
                 .body("to", notNullValue())
@@ -72,7 +83,7 @@ class ThroughputReportTest {
     void groupByDay_defaultWhenOmitted() {
         given().queryParam("from", Instant.now().minus(1, ChronoUnit.HOURS).toString())
                 .queryParam("to", Instant.now().plus(1, ChronoUnit.HOURS).toString())
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(200)
                 .body("groupBy", equalTo("day"));
     }
@@ -84,11 +95,11 @@ class ThroughputReportTest {
 
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Throughput Test\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201);
+                .post("/api/work/items/create").then().statusCode(201);
 
         final var resp = given().queryParam("from", from).queryParam("to", to)
                 .queryParam("groupBy", "day")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(200).extract().response();
 
         final List<Integer> created = resp.path("buckets.created");
@@ -99,7 +110,7 @@ class ThroughputReportTest {
     void itemsOutsideRange_excluded() {
         given().queryParam("from", "2000-01-01T00:00:00Z")
                 .queryParam("to", "2000-12-31T23:59:59Z")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(200)
                 .body("buckets", empty());
     }
@@ -108,13 +119,13 @@ class ThroughputReportTest {
     void groupByWeek_returnsBucketWithWeekLabel() {
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Week Test\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201);
+                .post("/api/work/items/create").then().statusCode(201);
 
         final var resp = given()
                 .queryParam("from", Instant.now().minus(1, ChronoUnit.HOURS).toString())
                 .queryParam("to", Instant.now().plus(1, ChronoUnit.HOURS).toString())
                 .queryParam("groupBy", "week")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(200).extract().response();
 
         final List<String> periods = resp.path("buckets.period");
@@ -126,13 +137,13 @@ class ThroughputReportTest {
     void groupByMonth_returnsBucketWithMonthLabel() {
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Month Test\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201);
+                .post("/api/work/items/create").then().statusCode(201);
 
         final var resp = given()
                 .queryParam("from", Instant.now().minus(1, ChronoUnit.HOURS).toString())
                 .queryParam("to", Instant.now().plus(1, ChronoUnit.HOURS).toString())
                 .queryParam("groupBy", "month")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(200).extract().response();
 
         final List<String> periods = resp.path("buckets.period");
@@ -148,11 +159,11 @@ class ThroughputReportTest {
         // create but don't complete
         given().contentType(ContentType.JSON)
                 .body("{\"title\":\"In Flight\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201);
+                .post("/api/work/items/create").then().statusCode(201);
 
         final var resp = given().queryParam("from", from).queryParam("to", to)
                 .queryParam("groupBy", "day")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(200).extract().response();
 
         final List<Integer> created = resp.path("buckets.created");
@@ -166,7 +177,7 @@ class ThroughputReportTest {
     void emptyRange_returnsEmptyBuckets() {
         given().queryParam("from", "2099-01-01T00:00:00Z")
                 .queryParam("to", "2099-12-31T23:59:59Z")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(200)
                 .body("buckets", empty());
     }
@@ -178,15 +189,16 @@ class ThroughputReportTest {
 
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"E2E Throughput\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
-        given().put("/workitems/" + id + "/claim?claimant=actor").then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=actor").then().statusCode(200);
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
+        principal.setActorId("actor");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
-                .put("/workitems/" + id + "/complete?actor=actor").then().statusCode(200);
+                .post("/api/work/lifecycle/complete/" + id).then().statusCode(200);
 
         final var resp = given().queryParam("from", from).queryParam("to", to)
                 .queryParam("groupBy", "day")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(200).extract().response();
 
         final List<Integer> created = resp.path("buckets.created");

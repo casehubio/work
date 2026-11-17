@@ -10,6 +10,9 @@ import static org.hamcrest.Matchers.nullValue;
 import java.util.List;
 import java.util.UUID;
 
+import io.casehub.work.ledger.test.MutableCurrentPrincipal;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.TestTransaction;
@@ -20,7 +23,7 @@ import io.restassured.http.ContentType;
  * REST integration tests for the Ledger endpoints.
  *
  * <p>
- * Tests {@code GET /workitems/{id}/ledger} and the provenance and
+ * Tests {@code GET /api/work/work-ledger/get-ledger/{id}} and the provenance and
  * attestation sub-resources.
  *
  * <p>
@@ -34,6 +37,14 @@ import io.restassured.http.ContentType;
 @QuarkusTest
 @TestTransaction
 class LedgerResourceTest {
+
+    @Inject
+    MutableCurrentPrincipal principal;
+
+    @BeforeEach
+    void resetPrincipal() {
+        principal.reset();
+    }
 
     // -------------------------------------------------------------------------
     // Fixture helpers
@@ -54,7 +65,7 @@ class LedgerResourceTest {
                             "createdBy": "system"
                         }
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
     }
@@ -63,8 +74,9 @@ class LedgerResourceTest {
      * Claims a WorkItem via REST. Asserts 200.
      */
     private void claimWorkItem(final String id, final String claimant) {
+        principal.setActorId(claimant);
         given()
-                .when().put("/workitems/" + id + "/claim?claimant=" + claimant)
+                .when().post("/api/work/lifecycle/claim/" + id)
                 .then().statusCode(200);
     }
 
@@ -72,8 +84,9 @@ class LedgerResourceTest {
      * Starts a WorkItem via REST. Asserts 200.
      */
     private void startWorkItem(final String id, final String actor) {
+        principal.setActorId(actor);
         given()
-                .when().put("/workitems/" + id + "/start?actor=" + actor)
+                .when().post("/api/work/lifecycle/start/" + id)
                 .then().statusCode(200);
     }
 
@@ -81,12 +94,13 @@ class LedgerResourceTest {
      * Completes a WorkItem via REST. Asserts 200.
      */
     private void completeWorkItem(final String id, final String actor) {
+        principal.setActorId(actor);
         given()
                 .contentType(ContentType.JSON)
                 .body("""
                         { "resolution": "Done" }
                         """)
-                .when().put("/workitems/" + id + "/complete?actor=" + actor)
+                .when().post("/api/work/lifecycle/complete/" + id)
                 .then().statusCode(200);
     }
 
@@ -95,7 +109,7 @@ class LedgerResourceTest {
      */
     private String firstLedgerEntryId(final String workItemId) {
         final List<String> ids = given()
-                .when().get("/workitems/" + workItemId + "/ledger")
+                .when().get("/api/work/work-ledger/get-ledger/" + workItemId)
                 .then().statusCode(200)
                 .extract().jsonPath().getList("id");
         assertThat(ids).isNotEmpty();
@@ -103,7 +117,7 @@ class LedgerResourceTest {
     }
 
     // -------------------------------------------------------------------------
-    // GET /workitems/{id}/ledger
+    // GET /api/work/work-ledger/get-ledger/{id}
     // -------------------------------------------------------------------------
 
     @Test
@@ -111,7 +125,7 @@ class LedgerResourceTest {
         final String id = createWorkItem();
 
         given()
-                .when().get("/workitems/" + id + "/ledger")
+                .when().get("/api/work/work-ledger/get-ledger/" + id)
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(1))
@@ -126,7 +140,7 @@ class LedgerResourceTest {
         completeWorkItem(id, "alice");
 
         final List<String> eventTypes = given()
-                .when().get("/workitems/" + id + "/ledger")
+                .when().get("/api/work/work-ledger/get-ledger/" + id)
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(4))
@@ -144,7 +158,7 @@ class LedgerResourceTest {
         final String id = createWorkItem();
 
         given()
-                .when().get("/workitems/" + id + "/ledger")
+                .when().get("/api/work/work-ledger/get-ledger/" + id)
                 .then()
                 .statusCode(200)
                 .body("[0].digest", notNullValue());
@@ -156,7 +170,7 @@ class LedgerResourceTest {
         claimWorkItem(id, "alice");
 
         final List<String> digests = given()
-                .when().get("/workitems/" + id + "/ledger")
+                .when().get("/api/work/work-ledger/get-ledger/" + id)
                 .then()
                 .statusCode(200)
                 .body("$", hasSize(2))
@@ -172,7 +186,7 @@ class LedgerResourceTest {
         final String randomId = UUID.randomUUID().toString();
 
         given()
-                .when().get("/workitems/" + randomId + "/ledger")
+                .when().get("/api/work/work-ledger/get-ledger/" + randomId)
                 .then()
                 .statusCode(404);
     }
@@ -182,7 +196,7 @@ class LedgerResourceTest {
         final String id = createWorkItem();
 
         given()
-                .when().get("/workitems/" + id + "/ledger")
+                .when().get("/api/work/work-ledger/get-ledger/" + id)
                 .then()
                 .statusCode(200)
                 .body("[0].decisionContext", notNullValue());
@@ -193,14 +207,14 @@ class LedgerResourceTest {
         final String id = createWorkItem();
 
         given()
-                .when().get("/workitems/" + id + "/ledger")
+                .when().get("/api/work/work-ledger/get-ledger/" + id)
                 .then()
                 .statusCode(200)
                 .body("[0].previousHash", nullValue());
     }
 
     // -------------------------------------------------------------------------
-    // PUT /workitems/{id}/ledger/provenance
+    // POST /api/work/work-ledger/set-provenance/{id}
     // -------------------------------------------------------------------------
 
     @Test
@@ -216,12 +230,12 @@ class LedgerResourceTest {
                             "sourceEntitySystem": "casehub"
                         }
                         """)
-                .when().put("/workitems/" + id + "/ledger/provenance")
+                .when().post("/api/work/work-ledger/set-provenance/" + id)
                 .then()
-                .statusCode(200);
+                .statusCode(204);
 
         given()
-                .when().get("/workitems/" + id + "/ledger")
+                .when().get("/api/work/work-ledger/get-ledger/" + id)
                 .then()
                 .statusCode(200)
                 .body("[0].sourceEntityId", equalTo("case-1"))
@@ -242,13 +256,13 @@ class LedgerResourceTest {
                             "sourceEntitySystem": "s"
                         }
                         """)
-                .when().put("/workitems/" + randomId + "/ledger/provenance")
+                .when().post("/api/work/work-ledger/set-provenance/" + randomId)
                 .then()
                 .statusCode(404);
     }
 
     // -------------------------------------------------------------------------
-    // POST /workitems/{id}/ledger/{entryId}/attestations
+    // POST /api/work/work-ledger/post-attestation/{id}/{entryId}
     // -------------------------------------------------------------------------
 
     @Test
@@ -266,7 +280,7 @@ class LedgerResourceTest {
                             "confidence": 0.9
                         }
                         """)
-                .when().post("/workitems/" + id + "/ledger/" + entryId + "/attestations")
+                .when().post("/api/work/work-ledger/post-attestation/" + id + "/" + entryId)
                 .then()
                 .statusCode(201);
     }
@@ -286,12 +300,12 @@ class LedgerResourceTest {
                             "confidence": 0.9
                         }
                         """)
-                .when().post("/workitems/" + id + "/ledger/" + entryId + "/attestations")
+                .when().post("/api/work/work-ledger/post-attestation/" + id + "/" + entryId)
                 .then()
                 .statusCode(201);
 
         given()
-                .when().get("/workitems/" + id + "/ledger")
+                .when().get("/api/work/work-ledger/get-ledger/" + id)
                 .then()
                 .statusCode(200)
                 .body("[0].attestations", hasSize(1))
@@ -314,7 +328,7 @@ class LedgerResourceTest {
                             "confidence": 0.9
                         }
                         """)
-                .when().post("/workitems/" + id + "/ledger/" + randomEntryId + "/attestations")
+                .when().post("/api/work/work-ledger/post-attestation/" + id + "/" + randomEntryId)
                 .then()
                 .statusCode(404);
     }
@@ -334,7 +348,7 @@ class LedgerResourceTest {
                             "confidence": 0.9
                         }
                         """)
-                .when().post("/workitems/" + id + "/ledger/" + entryId + "/attestations")
+                .when().post("/api/work/work-ledger/post-attestation/" + id + "/" + entryId)
                 .then()
                 .statusCode(400);
     }

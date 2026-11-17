@@ -42,7 +42,7 @@ class WorkItemNativeIT {
                           "createdBy": "native-test"
                         }
                         """.formatted(title))
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().path("id");
     }
@@ -62,10 +62,10 @@ class WorkItemNativeIT {
                           "createdBy": "system"
                         }
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then()
                 .statusCode(201)
-                .header("Location", containsString("/workitems/"))
+                .header("Location", notNullValue())
                 .body("id", notNullValue())
                 .body("status", equalTo("PENDING"))
                 .body("priority", equalTo("HIGH"))
@@ -82,7 +82,7 @@ class WorkItemNativeIT {
                 .body("""
                         {"title":"Default expiry test","priority":"MEDIUM","createdBy":"system"}
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then()
                 .statusCode(201)
                 .body("expiresAt", notNullValue());
@@ -100,7 +100,7 @@ class WorkItemNativeIT {
                           "createdBy": "system"
                         }
                         """)
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then()
                 .statusCode(201)
                 .body("candidateGroups", equalTo("finance,leads"));
@@ -114,17 +114,17 @@ class WorkItemNativeIT {
     void listAll_returnsNonNullArray() {
         createWorkItem("List test native");
         given()
-                .when().get("/workitems")
+                .when().get("/api/work/items/list-all")
                 .then()
                 .statusCode(200)
-                .body("size()", greaterThanOrEqualTo(1));
+                .body("items.size()", greaterThanOrEqualTo(1));
     }
 
     @Test
     void getById_returnsWorkItemWithAuditTrail() {
         String id = createWorkItem("Get by id native");
         given()
-                .when().get("/workitems/{id}", id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then()
                 .statusCode(200)
                 .body("id", equalTo(id))
@@ -137,7 +137,7 @@ class WorkItemNativeIT {
     @Test
     void getById_unknownId_returns404WithErrorBody() {
         given()
-                .when().get("/workitems/{id}", "00000000-0000-0000-0000-000000000000")
+                .when().get("/api/work/items/get-by-id/00000000-0000-0000-0000-000000000000")
                 .then()
                 .statusCode(404)
                 .body("error", notNullValue())
@@ -152,21 +152,15 @@ class WorkItemNativeIT {
     void fullHappyPath_createClaimStartComplete() {
         String id = createWorkItem("Full lifecycle native");
 
-        // claim
-        given().queryParam("claimant", "alice")
-                .when().put("/workitems/{id}/claim", id)
+        given().post("/api/work/lifecycle/claim/" + id)
                 .then().statusCode(200).body("status", equalTo("ASSIGNED"));
 
-        // start
-        given().queryParam("actor", "alice")
-                .when().put("/workitems/{id}/start", id)
+        given().post("/api/work/lifecycle/start/" + id)
                 .then().statusCode(200).body("status", equalTo("IN_PROGRESS"));
 
-        // complete
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "alice")
                 .body("{\"resolution\":\"{\\\"approved\\\":true}\"}")
-                .when().put("/workitems/{id}/complete", id)
+                .post("/api/work/lifecycle/complete/" + id)
                 .then().statusCode(200)
                 .body("status", equalTo("COMPLETED"))
                 .body("resolution", notNullValue());
@@ -175,24 +169,20 @@ class WorkItemNativeIT {
     @Test
     void rejectPath_claimThenReject() {
         String id = createWorkItem("Reject native");
-        given().queryParam("claimant", "bob")
-                .when().put("/workitems/{id}/claim", id);
+        given().post("/api/work/lifecycle/claim/" + id);
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "bob")
                 .body("{\"reason\":\"out of scope\"}")
-                .when().put("/workitems/{id}/reject", id)
+                .post("/api/work/lifecycle/reject/" + id)
                 .then().statusCode(200).body("status", equalTo("REJECTED"));
     }
 
     @Test
     void delegatePath_claimThenDelegate() {
         String id = createWorkItem("Delegate native");
-        given().queryParam("claimant", "alice")
-                .when().put("/workitems/{id}/claim", id);
+        given().post("/api/work/lifecycle/claim/" + id);
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "alice")
                 .body("{\"to\":\"bob\"}")
-                .when().put("/workitems/{id}/delegate", id)
+                .post("/api/work/lifecycle/delegate/" + id)
                 .then().statusCode(200)
                 .body("status", equalTo("DELEGATED"))
                 .body("assigneeId", equalTo("bob"));
@@ -201,10 +191,8 @@ class WorkItemNativeIT {
     @Test
     void releasePath_claimThenRelease() {
         String id = createWorkItem("Release native");
-        given().queryParam("claimant", "alice")
-                .when().put("/workitems/{id}/claim", id);
-        given().queryParam("actor", "alice")
-                .when().put("/workitems/{id}/release", id)
+        given().post("/api/work/lifecycle/claim/" + id);
+        given().post("/api/work/lifecycle/release/" + id)
                 .then().statusCode(200)
                 .body("status", equalTo("PENDING"))
                 .body("assigneeId", nullValue());
@@ -213,18 +201,14 @@ class WorkItemNativeIT {
     @Test
     void suspendResumePath_fullCycle() {
         String id = createWorkItem("Suspend resume native");
-        given().queryParam("claimant", "alice")
-                .when().put("/workitems/{id}/claim", id);
-        given().queryParam("actor", "alice")
-                .when().put("/workitems/{id}/start", id);
+        given().post("/api/work/lifecycle/claim/" + id);
+        given().post("/api/work/lifecycle/start/" + id);
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "alice")
                 .body("{\"reason\":\"blocked\"}")
-                .when().put("/workitems/{id}/suspend", id)
+                .post("/api/work/lifecycle/suspend/" + id)
                 .then().statusCode(200).body("status", equalTo("SUSPENDED"));
 
-        given().queryParam("actor", "alice")
-                .when().put("/workitems/{id}/resume", id)
+        given().post("/api/work/lifecycle/resume/" + id)
                 .then().statusCode(200).body("status", equalTo("IN_PROGRESS"));
     }
 
@@ -232,9 +216,8 @@ class WorkItemNativeIT {
     void cancelPath_cancelFromPending() {
         String id = createWorkItem("Cancel native");
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "admin")
                 .body("{\"reason\":\"no longer needed\"}")
-                .when().put("/workitems/{id}/cancel", id)
+                .post("/api/work/lifecycle/cancel/" + id)
                 .then().statusCode(200).body("status", equalTo("CANCELLED"));
     }
 
@@ -246,7 +229,7 @@ class WorkItemNativeIT {
     void inbox_noParams_returns200() {
         createWorkItem("Inbox native");
         given()
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then().statusCode(200);
     }
 
@@ -262,11 +245,11 @@ class WorkItemNativeIT {
                           "createdBy": "system"
                         }
                         """)
-                .when().post("/workitems");
+                .when().post("/api/work/items/create");
 
         List<String> ids = given()
                 .queryParam("candidateGroup", "native-team")
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then().statusCode(200)
                 .extract().jsonPath().getList("id");
 
@@ -278,7 +261,7 @@ class WorkItemNativeIT {
         createWorkItem("Inbox status native");
         given()
                 .queryParam("status", "PENDING")
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then().statusCode(200);
     }
 
@@ -287,11 +270,11 @@ class WorkItemNativeIT {
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"title\":\"High prio native\",\"priority\":\"HIGH\",\"createdBy\":\"system\"}")
-                .when().post("/workitems");
+                .when().post("/api/work/items/create");
 
         given()
                 .queryParam("priority", "HIGH")
-                .when().get("/workitems/inbox")
+                .when().get("/api/work/items/inbox")
                 .then().statusCode(200);
     }
 
@@ -302,10 +285,8 @@ class WorkItemNativeIT {
     @Test
     void claimAlreadyAssigned_returns409WithErrorBody() {
         String id = createWorkItem("409 native");
-        given().queryParam("claimant", "alice")
-                .when().put("/workitems/{id}/claim", id);
-        given().queryParam("claimant", "bob")
-                .when().put("/workitems/{id}/claim", id)
+        given().post("/api/work/lifecycle/claim/" + id);
+        given().post("/api/work/lifecycle/claim/" + id)
                 .then()
                 .statusCode(409)
                 .body("error", notNullValue());
@@ -315,9 +296,8 @@ class WorkItemNativeIT {
     void completePendingItem_returns409() {
         String id = createWorkItem("409 complete native");
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "alice")
                 .body("{\"resolution\":\"done\"}")
-                .when().put("/workitems/{id}/complete", id)
+                .post("/api/work/lifecycle/complete/" + id)
                 .then().statusCode(409);
     }
 
@@ -331,7 +311,7 @@ class WorkItemNativeIT {
 
     @Test
     void reports_slaBreaches_returns200() {
-        given().get("/workitems/reports/sla-breaches")
+        given().get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", notNullValue())
                 .body("summary", notNullValue());
@@ -339,7 +319,7 @@ class WorkItemNativeIT {
 
     @Test
     void reports_actorPerformance_returns200() {
-        given().get("/workitems/reports/actors/smoke-actor")
+        given().get("/api/work/reports/actor-performance/smoke-actor")
                 .then().statusCode(200)
                 .body("actorId", equalTo("smoke-actor"))
                 .body("totalCompleted", notNullValue());
@@ -348,7 +328,7 @@ class WorkItemNativeIT {
     @Test
     void reports_throughput_missingFrom_returns400() {
         given().queryParam("to", "2026-04-27T00:00:00Z")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(400);
     }
 
@@ -357,14 +337,14 @@ class WorkItemNativeIT {
         given().queryParam("from", "2026-01-01T00:00:00Z")
                 .queryParam("to", "2026-12-31T23:59:59Z")
                 .queryParam("groupBy", "month")
-                .get("/workitems/reports/throughput")
+                .get("/api/work/reports/throughput")
                 .then().statusCode(200)
                 .body("buckets", notNullValue());
     }
 
     @Test
     void reports_queueHealth_returns200() {
-        given().get("/workitems/reports/queue-health")
+        given().get("/api/work/reports/queue-health")
                 .then().statusCode(200)
                 .body("timestamp", notNullValue())
                 .body("overdueCount", notNullValue())
@@ -376,17 +356,17 @@ class WorkItemNativeIT {
         final String expiresAt = Instant.now().minus(2, ChronoUnit.MINUTES).toString();
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"IT Breach\",\"expiresAt\":\"" + expiresAt + "\",\"createdBy\":\"it\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
-        given().put("/workitems/" + id + "/claim?claimant=it-actor").then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=it-actor").then().statusCode(200);
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
-                .put("/workitems/" + id + "/complete?actor=it-actor").then().statusCode(200);
+                .post("/api/work/lifecycle/complete/" + id).then().statusCode(200);
 
         // Use a `from` param to get a distinct cache key — the unfiltered endpoint
         // is cached at production TTL and may return a stale 0 from the smoke test above.
         final String from = Instant.now().minus(5, ChronoUnit.MINUTES).toString();
         final int totalBreached = given().queryParam("from", from)
-                .get("/workitems/reports/sla-breaches")
+                .get("/api/work/reports/sla-breaches")
                 .then().statusCode(200).extract().path("summary.totalBreached");
         assertThat(totalBreached).isGreaterThanOrEqualTo(1);
     }
@@ -398,14 +378,14 @@ class WorkItemNativeIT {
     @Test
     void auditTrailHasFourEntriesAfterFullPath() {
         String id = createWorkItem("Audit native");
-        given().queryParam("claimant", "alice").when().put("/workitems/{id}/claim", id);
-        given().queryParam("actor", "alice").when().put("/workitems/{id}/start", id);
-        given().contentType(ContentType.JSON).queryParam("actor", "alice")
+        given().post("/api/work/lifecycle/claim/" + id);
+        given().post("/api/work/lifecycle/start/" + id);
+        given().contentType(ContentType.JSON)
                 .body("{\"resolution\":\"done\"}")
-                .when().put("/workitems/{id}/complete", id);
+                .post("/api/work/lifecycle/complete/" + id);
 
         given()
-                .when().get("/workitems/{id}", id)
+                .when().get("/api/work/items/get-by-id/" + id)
                 .then().statusCode(200)
                 .body("auditTrail.size()", equalTo(4))
                 .body("auditTrail[0].event", equalTo("CREATED"))
@@ -421,11 +401,11 @@ class WorkItemNativeIT {
     @Test
     void escalate_pendingToNewGroup() {
         String id = createWorkItem("Escalate native");
-        given().contentType(ContentType.JSON).queryParam("actor", "manager")
+        given().contentType(ContentType.JSON)
                 .body("""
                         {"targetGroup":"senior-team","reason":"complex case"}
                         """)
-                .when().put("/workitems/{id}/escalate", id)
+                .post("/api/work/lifecycle/escalate/" + id)
                 .then().statusCode(200)
                 .body("status", equalTo("PENDING"))
                 .body("candidateGroups", equalTo("senior-team"))
@@ -435,12 +415,12 @@ class WorkItemNativeIT {
     @Test
     void escalate_assignedToNewGroup() {
         String id = createWorkItem("Escalate assigned");
-        given().queryParam("claimant", "alice").when().put("/workitems/{id}/claim", id);
-        given().contentType(ContentType.JSON).queryParam("actor", "manager")
+        given().post("/api/work/lifecycle/claim/" + id);
+        given().contentType(ContentType.JSON)
                 .body("""
                         {"targetGroup":"tier-2","reason":"needs specialist"}
                         """)
-                .when().put("/workitems/{id}/escalate", id)
+                .post("/api/work/lifecycle/escalate/" + id)
                 .then().statusCode(200)
                 .body("status", equalTo("PENDING"))
                 .body("candidateGroups", equalTo("tier-2"))
@@ -450,15 +430,14 @@ class WorkItemNativeIT {
     @Test
     void escalate_terminalItem_returns409() {
         String id = createWorkItem("Escalate terminal");
-        given().queryParam("actor", "system")
+        given().contentType(ContentType.JSON)
                 .body("{\"reason\":\"cancelled\"}")
-                .contentType(ContentType.JSON)
-                .when().put("/workitems/{id}/cancel", id);
-        given().contentType(ContentType.JSON).queryParam("actor", "manager")
+                .post("/api/work/lifecycle/cancel/" + id);
+        given().contentType(ContentType.JSON)
                 .body("""
                         {"targetGroup":"senior-team","reason":"too late"}
                         """)
-                .when().put("/workitems/{id}/escalate", id)
+                .post("/api/work/lifecycle/escalate/" + id)
                 .then().statusCode(409)
                 .body("error", containsString("Cannot escalate"));
     }

@@ -8,6 +8,9 @@ import static org.hamcrest.Matchers.nullValue;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+import io.casehub.work.reports.test.MutableCurrentPrincipal;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -16,9 +19,17 @@ import io.restassured.http.ContentType;
 @QuarkusTest
 class QueueHealthReportTest {
 
+    @Inject
+    MutableCurrentPrincipal principal;
+
+    @BeforeEach
+    void resetPrincipal() {
+        principal.reset();
+    }
+
     @Test
     void report_returns200_withExpectedStructure() {
-        given().get("/workitems/reports/queue-health")
+        given().get("/api/work/reports/queue-health")
                 .then().statusCode(200)
                 .body("timestamp", notNullValue())
                 .body("overdueCount", notNullValue())
@@ -34,7 +45,7 @@ class QueueHealthReportTest {
         createItem(type, null, null);
 
         final int count = given().queryParam("type", type)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().path("pendingCount");
         assertThat(count).isGreaterThanOrEqualTo(2);
     }
@@ -43,13 +54,14 @@ class QueueHealthReportTest {
     void pendingCount_excludesCompletedItems() {
         final String type = "pend-excl-" + System.nanoTime();
         final String id = createItem(type, null, null);
-        given().put("/workitems/" + id + "/claim?claimant=actor").then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=actor").then().statusCode(200);
+        principal.setActorId("actor");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
-                .put("/workitems/" + id + "/complete?actor=actor").then().statusCode(200);
+                .post("/api/work/lifecycle/complete/" + id).then().statusCode(200);
 
         final int count = given().queryParam("type", type)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().path("pendingCount");
         assertThat(count).isZero();
     }
@@ -60,7 +72,7 @@ class QueueHealthReportTest {
         createItem(type, Instant.now().minus(5, ChronoUnit.MINUTES).toString(), null);
 
         final int overdue = given().queryParam("type", type)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(overdue).isGreaterThanOrEqualTo(1);
     }
@@ -69,13 +81,14 @@ class QueueHealthReportTest {
     void overdueCount_excludesCompletedItems() {
         final String type = "overdue-compl-" + System.nanoTime();
         final String id = createItem(type, Instant.now().minus(5, ChronoUnit.MINUTES).toString(), null);
-        given().put("/workitems/" + id + "/claim?claimant=a").then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=a").then().statusCode(200);
+        principal.setActorId("a");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
-                .put("/workitems/" + id + "/complete?actor=a").then().statusCode(200);
+                .post("/api/work/lifecycle/complete/" + id).then().statusCode(200);
 
         final int overdue = given().queryParam("type", type)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(overdue).isZero();
     }
@@ -86,7 +99,7 @@ class QueueHealthReportTest {
         createItem(type, Instant.now().plus(1, ChronoUnit.HOURS).toString(), null);
 
         final int overdue = given().queryParam("type", type)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(overdue).isZero();
     }
@@ -99,7 +112,7 @@ class QueueHealthReportTest {
         createItem(type, past, "MEDIUM");
 
         final var resp = given().queryParam("type", type)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().response();
 
         final int overdue = resp.path("overdueCount");
@@ -114,7 +127,7 @@ class QueueHealthReportTest {
         createItem(type, null, null);
 
         final int age = given().queryParam("type", type)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().path("avgPendingAgeSeconds");
         assertThat(age).isGreaterThanOrEqualTo(0);
     }
@@ -122,7 +135,7 @@ class QueueHealthReportTest {
     @Test
     void oldestUnclaimedCreatedAt_isNullWhenNoPendingItems() {
         given().queryParam("type", "empty-queue-" + System.nanoTime())
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200)
                 .body("oldestUnclaimedCreatedAt", nullValue());
     }
@@ -133,7 +146,7 @@ class QueueHealthReportTest {
         createItem(type, null, null);
 
         given().queryParam("type", type)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200)
                 .body("oldestUnclaimedCreatedAt", notNullValue());
     }
@@ -147,12 +160,12 @@ class QueueHealthReportTest {
         createItem(typeB, past, null);
 
         final int overdueA = given().queryParam("type", typeA)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(overdueA).isGreaterThanOrEqualTo(1);
 
         final int overdueB = given().queryParam("type", typeB)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(overdueB).isGreaterThanOrEqualTo(1);
     }
@@ -165,7 +178,7 @@ class QueueHealthReportTest {
         createItem(type, past, "LOW");
 
         final int highOverdue = given().queryParam("type", type).queryParam("priority", "HIGH")
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().path("overdueCount");
         assertThat(highOverdue).isEqualTo(1);
     }
@@ -173,7 +186,7 @@ class QueueHealthReportTest {
     @Test
     void invalidPriority_returns400() {
         given().queryParam("priority", "ULTRA")
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(400);
     }
 
@@ -181,13 +194,14 @@ class QueueHealthReportTest {
     void allItemsCompleted_allCountsZero() {
         final String type = "allcompl-" + System.nanoTime();
         final String id = createItem(type, null, null);
-        given().put("/workitems/" + id + "/claim?claimant=a").then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=a").then().statusCode(200);
+        principal.setActorId("a");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
-                .put("/workitems/" + id + "/complete?actor=a").then().statusCode(200);
+                .post("/api/work/lifecycle/complete/" + id).then().statusCode(200);
 
         final var resp = given().queryParam("type", type)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().response();
 
         assertThat((Integer) resp.path("pendingCount")).isZero();
@@ -205,13 +219,14 @@ class QueueHealthReportTest {
         createItem(type, null, null); // pending, not overdue
 
         final String doneId = createItem(type, null, null);
-        given().put("/workitems/" + doneId + "/claim?claimant=a").then().statusCode(200);
-        given().put("/workitems/" + doneId + "/start?actor=a").then().statusCode(200);
+        principal.setActorId("a");
+        given().post("/api/work/lifecycle/claim/" + doneId).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + doneId).then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
-                .put("/workitems/" + doneId + "/complete?actor=a").then().statusCode(200);
+                .post("/api/work/lifecycle/complete/" + doneId).then().statusCode(200);
 
         final var resp = given().queryParam("type", type)
-                .get("/workitems/reports/queue-health")
+                .get("/api/work/reports/queue-health")
                 .then().statusCode(200).extract().response();
 
         assertThat((Integer) resp.path("pendingCount")).isGreaterThanOrEqualTo(2);
@@ -232,6 +247,6 @@ class QueueHealthReportTest {
         }
         body.append("}");
         return given().contentType(ContentType.JSON).body(body.toString())
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
     }
 }

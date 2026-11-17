@@ -13,6 +13,9 @@ import static org.hamcrest.Matchers.notNullValue;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+import io.casehub.work.reports.test.MutableCurrentPrincipal;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -21,11 +24,19 @@ import io.restassured.http.ContentType;
 @QuarkusTest
 class SlaBreachReportTest {
 
+    @Inject
+    MutableCurrentPrincipal principal;
+
+    @BeforeEach
+    void resetPrincipal() {
+        principal.reset();
+    }
+
     // ── Structure ─────────────────────────────────────────────────────────────
 
     @Test
     void report_returns200_withExpectedStructure() {
-        given().get("/workitems/reports/sla-breaches")
+        given().get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", notNullValue())
                 .body("summary", notNullValue())
@@ -43,7 +54,7 @@ class SlaBreachReportTest {
         final String id = createWithExpiry("Breached WI", type, expiresAt);
         claimStartComplete(id, "reviewer");
 
-        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items.workItemId", hasItem(id));
     }
@@ -55,7 +66,7 @@ class SlaBreachReportTest {
         final String id = createWithExpiry("On-time WI", type, expiresAt);
         claimStartComplete(id, "reviewer");
 
-        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", empty());
     }
@@ -67,7 +78,7 @@ class SlaBreachReportTest {
         createWithExpiry("Open Past Deadline", type, expiresAt);
         // leave open — still a breach
 
-        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items.workItemId", notNullValue());
     }
@@ -79,10 +90,10 @@ class SlaBreachReportTest {
         final String type = "no-expiry-" + System.nanoTime();
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"No Expiry\",\"types\":[\"" + type + "\"],\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
         claimStartComplete(id, "reviewer");
 
-        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", empty());
     }
@@ -95,7 +106,7 @@ class SlaBreachReportTest {
         final String id = createWithExpiry("Boundary WI", type, expiresAt);
         claimStartComplete(id, "reviewer");
 
-        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", empty());
     }
@@ -110,7 +121,7 @@ class SlaBreachReportTest {
         claimStartComplete(id, "reviewer");
 
         given().queryParam("from", "2099-01-01T00:00:00Z")
-                .get("/workitems/reports/sla-breaches")
+                .get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", empty());
     }
@@ -124,7 +135,7 @@ class SlaBreachReportTest {
 
         given().queryParam("to", "2000-01-01T00:00:00Z")
                 .queryParam("type", type)
-                .get("/workitems/reports/sla-breaches")
+                .get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", empty());
     }
@@ -139,7 +150,7 @@ class SlaBreachReportTest {
         claimStartComplete(idA, "r");
         claimStartComplete(idB, "r");
 
-        given().queryParam("type", typeA).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", typeA).get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items.workItemId", hasItem(idA))
                 .body("items.workItemId", not(hasItem(idB)));
@@ -155,7 +166,7 @@ class SlaBreachReportTest {
         claimStartComplete(lowId, "r");
 
         given().queryParam("priority", "HIGH").queryParam("type", type)
-                .get("/workitems/reports/sla-breaches")
+                .get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items.workItemId", hasItem(highId))
                 .body("items.workItemId", not(hasItem(lowId)));
@@ -164,14 +175,14 @@ class SlaBreachReportTest {
     @Test
     void invalidPriority_returns400() {
         given().queryParam("priority", "SUPER_URGENT")
-                .get("/workitems/reports/sla-breaches")
+                .get("/api/work/reports/sla-breaches")
                 .then().statusCode(400);
     }
 
     @Test
     void invalidTimestamp_returns400() {
         given().queryParam("from", "not-a-date")
-                .get("/workitems/reports/sla-breaches")
+                .get("/api/work/reports/sla-breaches")
                 .then().statusCode(400);
     }
 
@@ -184,7 +195,7 @@ class SlaBreachReportTest {
         final String id = createWithExpiry("Fields Test", type, expiresAt);
         claimStartComplete(id, "reviewer");
 
-        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", hasSize(1))
                 .body("items[0].workItemId", equalTo(id))
@@ -205,7 +216,7 @@ class SlaBreachReportTest {
         createWithExpiry("S2", type, expiresAt);
 
         final int total = given().queryParam("type", type)
-                .get("/workitems/reports/sla-breaches")
+                .get("/api/work/reports/sla-breaches")
                 .then().statusCode(200).extract().path("summary.totalBreached");
         assertThat(total).isGreaterThanOrEqualTo(2);
     }
@@ -218,7 +229,7 @@ class SlaBreachReportTest {
         claimStartComplete(id, "reviewer");
 
         final float avg = given().queryParam("type", type)
-                .get("/workitems/reports/sla-breaches")
+                .get("/api/work/reports/sla-breaches")
                 .then().statusCode(200).extract().path("summary.avgBreachDurationMinutes");
         assertThat(avg).isGreaterThan(0f);
     }
@@ -234,7 +245,7 @@ class SlaBreachReportTest {
 
         // Use `from` to get a unique cache key — the no-filter key is shared with the structure test
         final var resp = given().queryParam("from", "2020-01-01T00:00:00Z")
-                .get("/workitems/reports/sla-breaches")
+                .get("/api/work/reports/sla-breaches")
                 .then().statusCode(200).extract().response();
         assertThat((Object) resp.path("summary.byType." + typeX)).isNotNull();
         assertThat((Object) resp.path("summary.byType." + typeY)).isNotNull();
@@ -245,7 +256,7 @@ class SlaBreachReportTest {
     @Test
     void noBreaches_returns200_withEmptyItems() {
         given().queryParam("from", "2099-01-01T00:00:00Z")
-                .get("/workitems/reports/sla-breaches")
+                .get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items", empty())
                 .body("summary.totalBreached", equalTo(0));
@@ -266,7 +277,7 @@ class SlaBreachReportTest {
         claimStartComplete(b2, "r");
         claimStartComplete(ok, "r");
 
-        given().queryParam("type", type).get("/workitems/reports/sla-breaches")
+        given().queryParam("type", type).get("/api/work/reports/sla-breaches")
                 .then().statusCode(200)
                 .body("items.workItemId", hasItem(b1))
                 .body("items.workItemId", hasItem(b2))
@@ -280,7 +291,7 @@ class SlaBreachReportTest {
         return given().contentType(ContentType.JSON)
                 .body("{\"title\":\"" + title + "\",\"types\":[\"" + type
                         + "\"],\"expiresAt\":\"" + expiresAt + "\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
     }
 
     private String createWithExpiryAndPriority(final String title, final String type,
@@ -289,13 +300,14 @@ class SlaBreachReportTest {
                 .body("{\"title\":\"" + title + "\",\"types\":[\"" + type
                         + "\"],\"priority\":\"" + priority
                         + "\",\"expiresAt\":\"" + expiresAt + "\",\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
     }
 
     private void claimStartComplete(final String id, final String actor) {
-        given().put("/workitems/" + id + "/claim?claimant=" + actor).then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=" + actor).then().statusCode(200);
+        principal.setActorId(actor);
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
-                .put("/workitems/" + id + "/complete?actor=" + actor).then().statusCode(200);
+                .post("/api/work/lifecycle/complete/" + id).then().statusCode(200);
     }
 }

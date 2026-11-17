@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
+import io.casehub.work.reports.test.MutableCurrentPrincipal;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -13,10 +16,18 @@ import io.restassured.http.ContentType;
 @QuarkusTest
 class ActorPerformanceReportTest {
 
+    @Inject
+    MutableCurrentPrincipal principal;
+
+    @BeforeEach
+    void resetPrincipal() {
+        principal.reset();
+    }
+
     @Test
     void report_returns200_withExpectedStructure() {
         final String actor = "struct-" + System.nanoTime();
-        given().get("/workitems/reports/actors/" + actor)
+        given().get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200)
                 .body("actorId", equalTo(actor))
                 .body("totalAssigned", notNullValue())
@@ -28,7 +39,7 @@ class ActorPerformanceReportTest {
     @Test
     void unknownActor_returns200_withZeroCounts() {
         final String actor = "nobody-" + System.nanoTime();
-        given().get("/workitems/reports/actors/" + actor)
+        given().get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200)
                 .body("totalAssigned", equalTo(0))
                 .body("totalCompleted", equalTo(0))
@@ -40,10 +51,11 @@ class ActorPerformanceReportTest {
         final String actor = "assigned-" + System.nanoTime();
         final String id1 = createWorkItem("cat1");
         final String id2 = createWorkItem("cat1");
-        given().put("/workitems/" + id1 + "/claim?claimant=" + actor).then().statusCode(200);
-        given().put("/workitems/" + id2 + "/claim?claimant=" + actor).then().statusCode(200);
+        principal.setActorId(actor);
+        given().post("/api/work/lifecycle/claim/" + id1).then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + id2).then().statusCode(200);
 
-        final int assigned = given().get("/workitems/reports/actors/" + actor)
+        final int assigned = given().get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200).extract().path("totalAssigned");
         assertThat(assigned).isGreaterThanOrEqualTo(2);
     }
@@ -54,7 +66,7 @@ class ActorPerformanceReportTest {
         claimStartComplete(createWorkItem("cc"), actor);
         claimStartComplete(createWorkItem("cc"), actor);
 
-        final int completed = given().get("/workitems/reports/actors/" + actor)
+        final int completed = given().get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200).extract().path("totalCompleted");
         assertThat(completed).isGreaterThanOrEqualTo(2);
     }
@@ -63,12 +75,13 @@ class ActorPerformanceReportTest {
     void totalRejected_incrementsPerRejection() {
         final String actor = "rej-" + System.nanoTime();
         final String id = createWorkItem("rc");
-        given().put("/workitems/" + id + "/claim?claimant=" + actor).then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=" + actor).then().statusCode(200);
+        principal.setActorId(actor);
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
         given().contentType(ContentType.JSON).body("{\"reason\":\"blocked\"}")
-                .put("/workitems/" + id + "/reject?actor=" + actor).then().statusCode(200);
+                .post("/api/work/lifecycle/reject/" + id).then().statusCode(200);
 
-        final int rejected = given().get("/workitems/reports/actors/" + actor)
+        final int rejected = given().get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200).extract().path("totalRejected");
         assertThat(rejected).isGreaterThanOrEqualTo(1);
     }
@@ -76,9 +89,10 @@ class ActorPerformanceReportTest {
     @Test
     void avgCompletionMinutes_isNull_forActorWithNoCompletions() {
         final String actor = "nocomp-" + System.nanoTime();
-        given().put("/workitems/" + createWorkItem("nc") + "/claim?claimant=" + actor).then().statusCode(200);
+        principal.setActorId(actor);
+        given().post("/api/work/lifecycle/claim/" + createWorkItem("nc")).then().statusCode(200);
 
-        final Object avg = given().get("/workitems/reports/actors/" + actor)
+        final Object avg = given().get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200).extract().path("avgCompletionMinutes");
         assertThat(avg).isNull();
     }
@@ -88,7 +102,7 @@ class ActorPerformanceReportTest {
         final String actor = "avgactor-" + System.nanoTime();
         claimStartComplete(createWorkItem("ac"), actor);
 
-        final float avg = given().get("/workitems/reports/actors/" + actor)
+        final float avg = given().get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200).extract().path("avgCompletionMinutes");
         assertThat(avg).isGreaterThanOrEqualTo(0f);
     }
@@ -102,7 +116,7 @@ class ActorPerformanceReportTest {
         claimStartComplete(createWorkItem(typeA), actor);
         claimStartComplete(createWorkItem(typeB), actor);
 
-        final var resp = given().get("/workitems/reports/actors/" + actor)
+        final var resp = given().get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200).extract().response();
         assertThat((Integer) resp.path("byType." + typeA)).isGreaterThanOrEqualTo(2);
         assertThat((Integer) resp.path("byType." + typeB)).isGreaterThanOrEqualTo(1);
@@ -114,7 +128,7 @@ class ActorPerformanceReportTest {
         claimStartComplete(createWorkItem("fc"), actor);
 
         final int completed = given().queryParam("from", "2099-01-01T00:00:00Z")
-                .get("/workitems/reports/actors/" + actor)
+                .get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200).extract().path("totalCompleted");
         assertThat(completed).isZero();
     }
@@ -125,7 +139,7 @@ class ActorPerformanceReportTest {
         claimStartComplete(createWorkItem("tc"), actor);
 
         final int completed = given().queryParam("to", "2000-01-01T00:00:00Z")
-                .get("/workitems/reports/actors/" + actor)
+                .get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200).extract().path("totalCompleted");
         assertThat(completed).isZero();
     }
@@ -139,7 +153,7 @@ class ActorPerformanceReportTest {
         claimStartComplete(createWorkItem(typeB), actor);
 
         final int inA = given().queryParam("type", typeA)
-                .get("/workitems/reports/actors/" + actor)
+                .get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200).extract().path("totalCompleted");
         assertThat(inA).isEqualTo(1);
     }
@@ -153,15 +167,16 @@ class ActorPerformanceReportTest {
         claimStartComplete(createWorkItem(type), actor);
 
         final String rejId = createWorkItem(type);
-        given().put("/workitems/" + rejId + "/claim?claimant=" + actor).then().statusCode(200);
-        given().put("/workitems/" + rejId + "/start?actor=" + actor).then().statusCode(200);
+        principal.setActorId(actor);
+        given().post("/api/work/lifecycle/claim/" + rejId).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + rejId).then().statusCode(200);
         given().contentType(ContentType.JSON).body("{\"reason\":\"blocked\"}")
-                .put("/workitems/" + rejId + "/reject?actor=" + actor).then().statusCode(200);
+                .post("/api/work/lifecycle/reject/" + rejId).then().statusCode(200);
 
         final String inFlightId = createWorkItem(type);
-        given().put("/workitems/" + inFlightId + "/claim?claimant=" + actor).then().statusCode(200);
+        given().post("/api/work/lifecycle/claim/" + inFlightId).then().statusCode(200);
 
-        final var resp = given().get("/workitems/reports/actors/" + actor)
+        final var resp = given().get("/api/work/reports/actor-performance/" + actor)
                 .then().statusCode(200).extract().response();
         assertThat((Integer) resp.path("totalCompleted")).isGreaterThanOrEqualTo(2);
         assertThat((Integer) resp.path("totalRejected")).isGreaterThanOrEqualTo(1);
@@ -173,13 +188,14 @@ class ActorPerformanceReportTest {
     private String createWorkItem(final String type) {
         return given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Perf Test\",\"types\":[\"" + type + "\"],\"createdBy\":\"test\"}")
-                .post("/workitems").then().statusCode(201).extract().path("id");
+                .post("/api/work/items/create").then().statusCode(201).extract().path("id");
     }
 
     private void claimStartComplete(final String id, final String actor) {
-        given().put("/workitems/" + id + "/claim?claimant=" + actor).then().statusCode(200);
-        given().put("/workitems/" + id + "/start?actor=" + actor).then().statusCode(200);
+        principal.setActorId(actor);
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
         given().contentType(ContentType.JSON).body("{}")
-                .put("/workitems/" + id + "/complete?actor=" + actor).then().statusCode(200);
+                .post("/api/work/lifecycle/complete/" + id).then().statusCode(200);
     }
 }
