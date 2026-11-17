@@ -9,7 +9,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WorkItemClientTest {
 
@@ -33,54 +34,53 @@ class WorkItemClientTest {
 
     @Test
     void claimReturnsSuccessOn200() {
-        server.createContext("/workitems/abc/claim", exchange -> {
-            assertEquals("PUT", exchange.getRequestMethod());
-            assertTrue(exchange.getRequestURI().getQuery().contains("claimant=user1"));
+        server.createContext("/api/work/lifecycle/claim/abc", exchange -> {
+            assertEquals("POST", exchange.getRequestMethod());
             exchange.sendResponseHeaders(200, 2);
             exchange.getResponseBody().write("{}".getBytes());
             exchange.getResponseBody().close();
         });
 
-        var response = client.claim(baseUrl, "abc", "user1", "token123");
+        var response = client.claim(baseUrl, "abc", "token123");
         assertTrue(response.isSuccess());
         assertEquals(200, response.statusCode());
     }
 
     @Test
     void claimReturnsConflictOn409() {
-        server.createContext("/workitems/abc/claim", exchange -> {
+        server.createContext("/api/work/lifecycle/claim/abc", exchange -> {
             exchange.sendResponseHeaders(409, 2);
             exchange.getResponseBody().write("{}".getBytes());
             exchange.getResponseBody().close();
         });
 
-        var response = client.claim(baseUrl, "abc", "user1", null);
+        var response = client.claim(baseUrl, "abc", null);
         assertTrue(response.isConflict());
     }
 
     @Test
     void returnsUnavailableOn500() {
-        server.createContext("/workitems/abc/claim", exchange -> {
+        server.createContext("/api/work/lifecycle/claim/abc", exchange -> {
             exchange.sendResponseHeaders(500, 2);
             exchange.getResponseBody().write("{}".getBytes());
             exchange.getResponseBody().close();
         });
 
-        var response = client.claim(baseUrl, "abc", "user1", null);
+        var response = client.claim(baseUrl, "abc", null);
         assertTrue(response.isUnavailable());
     }
 
     @Test
     void returnsUnavailableOnConnectionRefused() {
         server.stop(0);
-        var response = client.claim("http://localhost:1", "abc", "user1", null);
+        var response = client.claim("http://localhost:1", "abc", null);
         assertTrue(response.isUnavailable());
         assertEquals(503, response.statusCode());
     }
 
     @Test
     void sendsAuthorizationHeader() {
-        server.createContext("/workitems/abc/claim", exchange -> {
+        server.createContext("/api/work/lifecycle/claim/abc", exchange -> {
             String auth = exchange.getRequestHeaders().getFirst("Authorization");
             assertEquals("Bearer my-token", auth);
             exchange.sendResponseHeaders(200, 2);
@@ -88,6 +88,6 @@ class WorkItemClientTest {
             exchange.getResponseBody().close();
         });
 
-        client.claim(baseUrl, "abc", "user1", "my-token");
+        client.claim(baseUrl, "abc", "my-token");
     }
 }

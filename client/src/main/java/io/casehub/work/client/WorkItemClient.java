@@ -23,59 +23,52 @@ public class WorkItemClient {
         this.timeout = timeout;
     }
 
-    public ClientResponse claim(String baseUrl, String workItemId, String claimantId, String bearerToken) {
-        String url = baseUrl + "/workitems/" + workItemId + "/claim?claimant=" + claimantId;
-        return executePut(url, bearerToken);
+    public ClientResponse claim(String baseUrl, String workItemId, String bearerToken) {
+        String url = baseUrl + "/api/work/lifecycle/claim/" + workItemId;
+        return executePost(url, null, bearerToken);
     }
 
-    public ClientResponse complete(String baseUrl, String workItemId, String actorId,
+    public ClientResponse complete(String baseUrl, String workItemId,
                                    String resolution, String outcome, String bearerToken) {
-        String url  = baseUrl + "/workitems/" + workItemId + "/complete";
+        String url  = baseUrl + "/api/work/lifecycle/complete/" + workItemId;
         var    body = objectMapper.createObjectNode();
-        body.put("actorId", actorId);
         body.put("resolution", resolution);
         body.put("outcome", outcome);
         return executePost(url, body.toString(), bearerToken);
     }
 
-    public ClientResponse reject(String baseUrl, String workItemId, String actorId,
+    public ClientResponse reject(String baseUrl, String workItemId,
                                  String reason, String outcome, String bearerToken) {
-        String url  = baseUrl + "/workitems/" + workItemId + "/reject";
+        String url  = baseUrl + "/api/work/lifecycle/reject/" + workItemId;
         var    body = objectMapper.createObjectNode();
-        body.put("actorId", actorId);
         body.put("reason", reason);
         body.put("outcome", outcome);
         return executePost(url, body.toString(), bearerToken);
     }
 
-    public ClientResponse delegate(String baseUrl, String workItemId, String actorId,
-                                    String toAssigneeId, String bearerToken) {
-        String url = baseUrl + "/workitems/" + workItemId + "/delegate?actorId=" + actorId + "&to=" + toAssigneeId;
-        return executePut(url, bearerToken);
+    public ClientResponse delegate(String baseUrl, String workItemId,
+                                   String toAssigneeId, String bearerToken) {
+        String url  = baseUrl + "/api/work/lifecycle/delegate/" + workItemId;
+        var    body = objectMapper.createObjectNode();
+        body.put("to", toAssigneeId);
+        return executePost(url, body.toString(), bearerToken);
     }
 
-    public ClientResponse release(String baseUrl, String workItemId, String actorId, String bearerToken) {
-        String url = baseUrl + "/workitems/" + workItemId + "/release?actorId=" + actorId;
-        return executePut(url, bearerToken);
-    }
-
-    private ClientResponse executePut(String url, String bearerToken) {
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .PUT(HttpRequest.BodyPublishers.noBody())
-                .timeout(timeout);
-        if (bearerToken != null) {
-            builder.header("Authorization", "Bearer " + bearerToken);
-        }
-        return execute(builder.build());
+    public ClientResponse release(String baseUrl, String workItemId, String bearerToken) {
+        String url = baseUrl + "/api/work/lifecycle/release/" + workItemId;
+        return executePost(url, null, bearerToken);
     }
 
     private ClientResponse executePost(String url, String body, String bearerToken) {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .timeout(timeout);
+                                                 .uri(URI.create(url))
+                                                 .timeout(timeout);
+        if (body != null) {
+            builder.header("Content-Type", "application/json")
+                   .POST(HttpRequest.BodyPublishers.ofString(body));
+        } else {
+            builder.POST(HttpRequest.BodyPublishers.noBody());
+        }
         if (bearerToken != null) {
             builder.header("Authorization", "Bearer " + bearerToken);
         }
