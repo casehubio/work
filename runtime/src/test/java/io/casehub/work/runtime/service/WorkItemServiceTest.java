@@ -436,11 +436,11 @@ class WorkItemServiceTest {
         assertThat(trail.get(1).actor).isEqualTo("alice");
     }
 // -------------------------------------------------------------------------
-// Candidate check on claim (#425)
+// Candidate check on claim (#425) — R1-R7
 // -------------------------------------------------------------------------
 
     @Test
-    void claim_withCandidateUsers_allowsListedUser() {
+    void claim_R1_candidateUser_allowed() {
         WorkItemCreateRequest req = WorkItemCreateRequest.builder()
                                                          .title("Candidate users item")
                                                          .priority(WorkItemPriority.MEDIUM)
@@ -458,7 +458,7 @@ class WorkItemServiceTest {
     }
 
     @Test
-    void claim_withCandidateUsers_rejectsNonListedUser() {
+    void claim_R2_nonCandidateUser_rejected() {
         WorkItemCreateRequest req = WorkItemCreateRequest.builder()
                                                          .title("Candidate users item")
                                                          .priority(WorkItemPriority.MEDIUM)
@@ -476,7 +476,7 @@ class WorkItemServiceTest {
     }
 
     @Test
-    void claim_withCandidateGroups_allowsMemberOfGroup() {
+    void claim_R3_candidateGroupMember_allowed() {
         when(currentPrincipal.groups()).thenReturn(Set.of("team-a", "team-c"));
 
         WorkItemCreateRequest req = WorkItemCreateRequest.builder()
@@ -492,7 +492,7 @@ class WorkItemServiceTest {
     }
 
     @Test
-    void claim_withCandidateGroups_rejectsNonMember() {
+    void claim_R4_nonCandidateGroupMember_rejected() {
         when(currentPrincipal.groups()).thenReturn(Set.of("team-c"));
 
         WorkItemCreateRequest req = WorkItemCreateRequest.builder()
@@ -510,7 +510,7 @@ class WorkItemServiceTest {
     }
 
     @Test
-    void claim_withBothEmpty_allowsAnyClaim() {
+    void claim_R5_openPool_allowsAnyone() {
         // Open pool — no candidateUsers, no candidateGroups
         WorkItem wi = service.create(basicRequest());
         wi = service.claim(wi.id(), "anyone");
@@ -518,7 +518,7 @@ class WorkItemServiceTest {
     }
 
     @Test
-    void claim_withCandidateUsers_auditsBlockedAttempt() {
+    void claim_R6_blockedClaim_audited() {
         WorkItemCreateRequest req = WorkItemCreateRequest.builder()
                                                          .title("Audit test")
                                                          .priority(WorkItemPriority.MEDIUM)
@@ -538,7 +538,7 @@ class WorkItemServiceTest {
     }
 
     @Test
-    void claim_withCandidateUsersAndGroups_allowsViaGroupWhenNotInUsers() {
+    void claim_R7_groupFallback_allowedWhenNotInUsers() {
         when(currentPrincipal.groups()).thenReturn(Set.of("team-a"));
 
         WorkItemCreateRequest req = WorkItemCreateRequest.builder()
@@ -584,7 +584,9 @@ class WorkItemServiceTest {
         service.claim(wi.id(), "alice");
         service.start(wi.id(), "alice");
         List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
-        assertThat(trail.get(trail.size() - 1).event).isEqualTo("STARTED");
+        AuditEntry       last  = trail.get(trail.size() - 1);
+        assertThat(last.event).isEqualTo("STARTED");
+        assertThat(last.actor).isEqualTo("alice");
     }
 
     // -------------------------------------------------------------------------
@@ -617,7 +619,9 @@ class WorkItemServiceTest {
         service.start(wi.id(), "alice");
         service.complete(wi.id(), "alice", "Done", null);
         List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
-        assertThat(trail.get(trail.size() - 1).event).isEqualTo("COMPLETED");
+        AuditEntry       last  = trail.get(trail.size() - 1);
+        assertThat(last.event).isEqualTo("COMPLETED");
+        assertThat(last.actor).isEqualTo("alice");
     }
 
     // -------------------------------------------------------------------------
@@ -656,7 +660,9 @@ class WorkItemServiceTest {
         service.claim(wi.id(), "alice");
         service.reject(wi.id(), "alice", "Not applicable", null);
         List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
-        assertThat(trail.get(trail.size() - 1).event).isEqualTo("REJECTED");
+        AuditEntry       last  = trail.get(trail.size() - 1);
+        assertThat(last.event).isEqualTo("REJECTED");
+        assertThat(last.actor).isEqualTo("alice");
     }
 
     // -------------------------------------------------------------------------
@@ -935,7 +941,9 @@ class WorkItemServiceTest {
         service.claim(wi.id(), "alice");
         service.release(wi.id(), "alice");
         List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
-        assertThat(trail.get(trail.size() - 1).event).isEqualTo("RELEASED");
+        AuditEntry       last  = trail.get(trail.size() - 1);
+        assertThat(last.event).isEqualTo("RELEASED");
+        assertThat(last.actor).isEqualTo("alice");
     }
 
     // -------------------------------------------------------------------------
@@ -975,7 +983,9 @@ class WorkItemServiceTest {
         service.claim(wi.id(), "alice");
         service.suspend(wi.id(), "alice", "blocked");
         List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
-        assertThat(trail.get(trail.size() - 1).event).isEqualTo("SUSPENDED");
+        AuditEntry       last  = trail.get(trail.size() - 1);
+        assertThat(last.event).isEqualTo("SUSPENDED");
+        assertThat(last.actor).isEqualTo("alice");
     }
 
     // -------------------------------------------------------------------------
@@ -1007,7 +1017,9 @@ class WorkItemServiceTest {
         service.suspend(wi.id(), "alice", "wait");
         service.resume(wi.id(), "alice");
         List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
-        assertThat(trail.get(trail.size() - 1).event).isEqualTo("RESUMED");
+        AuditEntry       last  = trail.get(trail.size() - 1);
+        assertThat(last.event).isEqualTo("RESUMED");
+        assertThat(last.actor).isEqualTo("alice");
     }
 
     @Test
@@ -1947,86 +1959,95 @@ class WorkItemServiceTest {
 
 
 // -------------------------------------------------------------------------
-// Assignee check — actor must equal assigneeId (#426)
+// Assignee check — actor must equal assigneeId (#426) — R1-R9
 // -------------------------------------------------------------------------
 
     @Test
-    void start_nonAssignee_throws() {
+    void start_R1_nonAssignee_rejected() {
         WorkItem wi = service.create(basicRequest());
         service.claim(wi.id(), "alice");
         assertThatThrownBy(() -> service.start(wi.id(), "mallory"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not the assignee");
+        assertThat(service.findById(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
     @Test
-    void complete_nonAssignee_throws() {
+    void complete_R2_nonAssignee_rejected() {
         WorkItem wi = service.create(basicRequest());
         service.claim(wi.id(), "alice");
         service.start(wi.id(), "alice");
         assertThatThrownBy(() -> service.complete(wi.id(), "mallory", "done", null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not the assignee");
+        assertThat(service.findById(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.IN_PROGRESS);
     }
 
     @Test
-    void complete_withRationale_nonAssignee_throws() {
+    void complete_R3_nonAssigneeWithRationale_rejected() {
         WorkItem wi = service.create(basicRequest());
         service.claim(wi.id(), "alice");
         service.start(wi.id(), "alice");
         assertThatThrownBy(() -> service.complete(wi.id(), "mallory", "done", null, null, null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not the assignee");
+        assertThat(service.findById(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.IN_PROGRESS);
     }
 
     @Test
-    void reject_nonAssignee_throws() {
+    void reject_R4_nonAssignee_rejected() {
         WorkItem wi = service.create(basicRequest());
         service.claim(wi.id(), "alice");
         assertThatThrownBy(() -> service.reject(wi.id(), "mallory", "nope", null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not the assignee");
+        assertThat(service.findById(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
     @Test
-    void reject_withRationale_nonAssignee_throws() {
+    void reject_R5_nonAssigneeWithRationale_rejected() {
         WorkItem wi = service.create(basicRequest());
         service.claim(wi.id(), "alice");
         assertThatThrownBy(() -> service.reject(wi.id(), "mallory", "nope", null, null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not the assignee");
+        assertThat(service.findById(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
     @Test
-    void suspend_nonAssignee_throws() {
+    void suspend_R6_nonAssignee_rejected() {
         WorkItem wi = service.create(basicRequest());
         service.claim(wi.id(), "alice");
         assertThatThrownBy(() -> service.suspend(wi.id(), "mallory", "blocked"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not the assignee");
+        assertThat(service.findById(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ASSIGNED);
     }
 
     @Test
-    void resume_nonAssignee_throws() {
+    void resume_R7_nonAssignee_rejected() {
         WorkItem wi = service.create(basicRequest());
         service.claim(wi.id(), "alice");
         service.suspend(wi.id(), "alice", "blocked");
         assertThatThrownBy(() -> service.resume(wi.id(), "mallory"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not the assignee");
+        assertThat(service.findById(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.SUSPENDED);
     }
 
     @Test
-    void release_nonAssignee_throws() {
+    void release_R8_nonAssignee_rejected() {
         WorkItem wi = service.create(basicRequest());
         service.claim(wi.id(), "alice");
         assertThatThrownBy(() -> service.release(wi.id(), "mallory"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not the assignee");
+        assertThat(service.findById(wi.id()).orElseThrow().status()).isEqualTo(WorkItemStatus.ASSIGNED);
+        assertThat(service.findById(wi.id()).orElseThrow().assigneeId()).isEqualTo("alice");
     }
 
     @Test
-    void start_nonAssignee_auditsBlockedAttempt() {
+    void start_R9_nonAssignee_audited() {
         WorkItem wi = service.create(basicRequest());
         service.claim(wi.id(), "alice");
         try {service.start(wi.id(), "mallory");} catch (IllegalStateException ignored) {}
