@@ -1,5 +1,6 @@
 package io.casehub.work.runtime.service;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.platform.api.preferences.MapPreferences;
 import io.casehub.platform.expression.DefaultExpressionEngineRegistry;
 import io.casehub.platform.expression.JexlExpressionEngine;
@@ -30,6 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,6 +42,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class WorkItemServiceTest {
 
@@ -261,12 +264,15 @@ class WorkItemServiceTest {
 
     private TestWorkItemRepo repo;
     private TestAuditRepo auditStore;
+    private CurrentPrincipal currentPrincipal;
     private WorkItemService service;
 
     @BeforeEach
     void setUp() {
         repo = new TestWorkItemRepo();
         auditStore = new TestAuditRepo();
+        currentPrincipal = mock(CurrentPrincipal.class);
+        when(currentPrincipal.groups()).thenReturn(Set.of());
         final io.casehub.platform.api.routing.StrategyResolver assignmentResolver =
                 org.mockito.Mockito.mock(io.casehub.platform.api.routing.StrategyResolver.class);
         final io.casehub.work.api.spi.WorkerSelectionStrategy noOpStrategy =
@@ -299,6 +305,8 @@ class WorkItemServiceTest {
                 mock(WorkItemTimerService.class));
         // Empty preferences → DeclineTarget.POOL by default
         service.preferenceProvider = scope -> new MapPreferences(Map.of());
+        // Wire CurrentPrincipal — @Inject field, used for candidateGroups check
+        service.currentPrincipal = currentPrincipal;
         // Wire OutcomeValidator — @Inject field, not in constructor
         service.outcomeValidator = new OutcomeValidator(
                 new DefaultExpressionEngineRegistry(List.of(new JexlExpressionEngine())));
@@ -427,6 +435,128 @@ class WorkItemServiceTest {
         assertThat(trail.get(1).event).isEqualTo("ASSIGNED");
         assertThat(trail.get(1).actor).isEqualTo("alice");
     }
+// -------------------------------------------------------------------------
+// Candidate check on claim (#425)
+// -------------------------------------------------------------------------
+
+    @Test
+    void claim_withCandidateUsers_allowsListedUser() {
+        WorkItemCreateRequest req = WorkItemCreateRequest.builder()
+                                                         .title("Candidate users item")
+                                                         .priority(WorkItemPriority.MEDIUM)
+                                                         .candidateUsers("alice,bob")
+                                                         .createdBy("system")
+                                                         .build();
+        WorkItem wi = service.create(req);
+        // Force back to PENDING (assignment strategy may pre-assign)
+        wi = wi.toBuilder().status(WorkItemStatus.PENDING).assigneeId(null).build();
+        repo.put(wi);
+
+        wi = service.claim(wi.id(), "alice");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.ASSIGNED);
+        assertThat(wi.assigneeId()).isEqualTo("alice");
+    }
+
+    @Test
+    void claim_withCandidateUsers_rejectsNonListedUser() {
+        WorkItemCreateRequest req = WorkItemCreateRequest.builder()
+                                                         .title("Candidate users item")
+                                                         .priority(WorkItemPriority.MEDIUM)
+                                                         .candidateUsers("alice,bob")
+                                                         .createdBy("system")
+                                                         .build();
+        WorkItem wi = service.create(req);
+        wi = wi.toBuilder().status(WorkItemStatus.PENDING).assigneeId(null).build();
+        repo.put(wi);
+
+        final UUID id = wi.id();
+        assertThatThrownBy(() -> service.claim(id, "charlie"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not a candidate");
+    }
+
+    @Test
+    void claim_withCandidateGroups_allowsMemberOfGroup() {
+        when(currentPrincipal.groups()).thenReturn(Set.of("team-a", "team-c"));
+
+        WorkItemCreateRequest req = WorkItemCreateRequest.builder()
+                                                         .title("Candidate groups item")
+                                                         .priority(WorkItemPriority.MEDIUM)
+                                                         .candidateGroups("team-a,team-b")
+                                                         .createdBy("system")
+                                                         .build();
+        WorkItem wi = service.create(req);
+
+        wi = service.claim(wi.id(), "dave");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.ASSIGNED);
+    }
+
+    @Test
+    void claim_withCandidateGroups_rejectsNonMember() {
+        when(currentPrincipal.groups()).thenReturn(Set.of("team-c"));
+
+        WorkItemCreateRequest req = WorkItemCreateRequest.builder()
+                                                         .title("Candidate groups item")
+                                                         .priority(WorkItemPriority.MEDIUM)
+                                                         .candidateGroups("team-a,team-b")
+                                                         .createdBy("system")
+                                                         .build();
+        WorkItem wi = service.create(req);
+
+        final UUID id = wi.id();
+        assertThatThrownBy(() -> service.claim(id, "dave"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not a candidate");
+    }
+
+    @Test
+    void claim_withBothEmpty_allowsAnyClaim() {
+        // Open pool — no candidateUsers, no candidateGroups
+        WorkItem wi = service.create(basicRequest());
+        wi = service.claim(wi.id(), "anyone");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.ASSIGNED);
+    }
+
+    @Test
+    void claim_withCandidateUsers_auditsBlockedAttempt() {
+        WorkItemCreateRequest req = WorkItemCreateRequest.builder()
+                                                         .title("Audit test")
+                                                         .priority(WorkItemPriority.MEDIUM)
+                                                         .candidateUsers("alice")
+                                                         .createdBy("system")
+                                                         .build();
+        WorkItem wi = service.create(req);
+        wi = wi.toBuilder().status(WorkItemStatus.PENDING).assigneeId(null).build();
+        repo.put(wi);
+
+        final UUID id = wi.id();
+        assertThatThrownBy(() -> service.claim(id, "charlie"))
+                .isInstanceOf(IllegalStateException.class);
+
+        List<AuditEntry> trail = auditStore.findByWorkItemId(id);
+        assertThat(trail).anyMatch(e -> "CLAIM_NOT_CANDIDATE".equals(e.event) && "charlie".equals(e.actor));
+    }
+
+    @Test
+    void claim_withCandidateUsersAndGroups_allowsViaGroupWhenNotInUsers() {
+        when(currentPrincipal.groups()).thenReturn(Set.of("team-a"));
+
+        WorkItemCreateRequest req = WorkItemCreateRequest.builder()
+                                                         .title("Both candidates")
+                                                         .priority(WorkItemPriority.MEDIUM)
+                                                         .candidateUsers("alice")
+                                                         .candidateGroups("team-a")
+                                                         .createdBy("system")
+                                                         .build();
+        WorkItem wi = service.create(req);
+        wi = wi.toBuilder().status(WorkItemStatus.PENDING).assigneeId(null).build();
+        repo.put(wi);
+
+        wi = service.claim(wi.id(), "dave");
+        assertThat(wi.status()).isEqualTo(WorkItemStatus.ASSIGNED);
+        assertThat(wi.assigneeId()).isEqualTo("dave");
+    }
+
 
     // -------------------------------------------------------------------------
     // Happy paths — start
@@ -1756,7 +1886,7 @@ class WorkItemServiceTest {
     void compensate_compensatingWorkItem_throws() {
         WorkItem original = createCompletedWorkItem();
         WorkItemCreateRequest compReq = WorkItemCreateRequest.builder()
-                                                             .title("Compensate").candidateGroups("g").createdBy("op").tenancyId("test-tenant").build();
+                                                             .title("Compensate").createdBy("op").tenancyId("test-tenant").build();
         WorkItem compensating = service.compensate(original.id(), compReq, "op", "reason");
 
         service.claim(compensating.id(), "bob");

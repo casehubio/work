@@ -46,9 +46,13 @@ class WorkItemGroupLifecycleEventTest {
     @Inject
     EntityManager em;
 
+    @Inject
+    io.casehub.work.runtime.test.MutableCurrentPrincipal mutablePrincipal;
+
     @BeforeEach
     void clearCapture() {
         capture.clear();
+        mutablePrincipal.setGroups(java.util.Set.of("g"));
     }
 
     @Test

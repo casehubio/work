@@ -1,5 +1,6 @@
 package io.casehub.work.runtime.service;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.platform.api.path.Path;
 import io.casehub.platform.api.preferences.PreferenceProvider;
 import io.casehub.platform.api.preferences.Preferences;
@@ -15,6 +16,7 @@ import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemQuery;
+import io.casehub.work.api.WorkItemRelationType;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.spi.BusinessCalendar;
 import io.casehub.work.api.spi.ClaimSlaPolicy;
@@ -25,7 +27,6 @@ import io.casehub.work.core.strategy.CapabilityValidator;
 import io.casehub.work.runtime.config.WorkItemsConfig;
 import io.casehub.work.runtime.event.WorkItemLifecycleEmitter;
 import io.casehub.work.runtime.model.AuditEntry;
-import io.casehub.work.api.WorkItemRelationType;
 import io.casehub.work.runtime.model.WorkItemSpawnGroup;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.WorkItemRelationStore;
@@ -81,6 +82,8 @@ public class WorkItemService implements WorkItemOperations {
     PreferenceProvider preferenceProvider;
     @Inject
     TenantContextRunner tenantContextRunner;
+    @Inject
+    CurrentPrincipal currentPrincipal;
 
     @Inject
     WorkItemOperations self;
@@ -259,6 +262,7 @@ public class WorkItemService implements WorkItemOperations {
             blockedAuditService.record(item.id(), "CLAIM_DENIED", claimantId, claimDecision.reason());
             throw new IllegalStateException(claimDecision.reason());
         }
+        checkCandidateEligibility(item, claimantId);
         final Instant now     = Instant.now();
         var           builder = item.toBuilder();
         if (item.lastReturnedToPoolAt() != null) {
@@ -955,6 +959,35 @@ public class WorkItemService implements WorkItemOperations {
 
     public Optional<io.casehub.work.api.WorkItem> findActiveByCallerRef(final String callerRef) {
         return workItemStore.findActiveByCallerRef(callerRef);
+    }
+
+
+    private void checkCandidateEligibility(final io.casehub.work.api.WorkItem item, final String claimantId) {
+        final boolean hasCandidateUsers  = item.candidateUsers() != null && !item.candidateUsers().isBlank();
+        final boolean hasCandidateGroups = item.candidateGroups() != null && !item.candidateGroups().isBlank();
+        if (!hasCandidateUsers && !hasCandidateGroups) {
+            return;
+        }
+        if (hasCandidateUsers) {
+            for (final String candidate : item.candidateUsers().split(",")) {
+                if (candidate.trim().equals(claimantId)) {
+                    return;
+                }
+            }
+        }
+        if (hasCandidateGroups) {
+            final java.util.Set<String> claimantGroups = currentPrincipal.groups();
+            if (claimantGroups != null) {
+                for (final String group : item.candidateGroups().split(",")) {
+                    if (claimantGroups.contains(group.trim())) {
+                        return;
+                    }
+                }
+            }
+        }
+        blockedAuditService.record(item.id(), "CLAIM_NOT_CANDIDATE", claimantId,
+                                   "Claimant is not a candidate user or member of a candidate group");
+        throw new IllegalStateException("Claimant '" + claimantId + "' is not a candidate for WorkItem " + item.id());
     }
 
     private ClaimSlaContext buildClaimSlaContext(final io.casehub.work.api.WorkItem item, final Instant now) {

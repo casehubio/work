@@ -23,6 +23,9 @@ class WorkItemSchemaValidationTest {
     @Inject
     EntityManager em;
 
+    @Inject
+    io.casehub.work.rest.test.MutableCurrentPrincipal principal;
+
     private static final String OUTPUT_SCHEMA =
             "{\"type\":\"object\",\"required\":[\"decision\"]," +
             "\"properties\":{\"decision\":{\"type\":\"string\"}},\"additionalProperties\":false}";
@@ -35,6 +38,7 @@ class WorkItemSchemaValidationTest {
     @Transactional
     void clearTemplates() {
         em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
+        principal.setGroups(java.util.Set.of("ops", "reviewers"));
     }
 
     // ── outputDataSchema (resolution validation) ─────────────────────────────

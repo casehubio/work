@@ -1,13 +1,13 @@
 package io.casehub.work.runtime.service;
 
+import io.casehub.platform.api.identity.TenancyConstants;
+import io.quarkus.arc.Unremovable;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
-
-import io.quarkus.arc.Unremovable;
-
-import io.casehub.platform.api.identity.TenancyConstants;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+
+import java.util.Set;
 
 /**
  * Request-scoped holder for the active tenant identity.
@@ -28,6 +28,7 @@ public class TenantHolder {
 
     private String tenancyId;
     private String actorId = "system";
+    private Set<String> groups = Set.of();
 
     @PostConstruct
     void init() {
@@ -49,4 +50,13 @@ public class TenantHolder {
     public void setActorId(String actorId) {
         this.actorId = actorId;
     }
+
+    public Set<String> getGroups() {
+        return groups;
+    }
+
+    public void setGroups(Set<String> groups) {
+        this.groups = groups != null ? groups : Set.of();
+    }
+
 }

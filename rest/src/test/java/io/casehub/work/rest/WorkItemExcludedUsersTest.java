@@ -32,6 +32,7 @@ class WorkItemExcludedUsersTest {
     @Transactional
     void clearTemplates() {
         em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
+        principal.setGroups(java.util.Set.of("reviewers", "ops"));
     }
 
     // ── Template CRUD + snapshot ────────────────────────────────────────────

@@ -7,6 +7,8 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
@@ -14,6 +16,14 @@ import io.restassured.http.ContentType;
 
 @QuarkusTest
 class WorkItemCloneTest {
+
+    @Inject
+    io.casehub.work.rest.test.MutableCurrentPrincipal principal;
+
+    @BeforeEach
+    void setUpGroups() {
+        principal.setGroups(java.util.Set.of("team-a"));
+    }
 
     @Test
     void clone_returns201_withNewId() {

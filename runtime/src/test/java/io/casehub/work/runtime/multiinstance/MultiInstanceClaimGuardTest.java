@@ -34,10 +34,14 @@ class MultiInstanceClaimGuardTest {
     @Inject
     EntityManager em;
 
+    @Inject
+    io.casehub.work.runtime.test.MutableCurrentPrincipal mutablePrincipal;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
         em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
+        mutablePrincipal.setGroups(java.util.Set.of("reviewers"));
     }
 
     private UUID createGroupAndGetParentId(final boolean allowSameAssignee) {

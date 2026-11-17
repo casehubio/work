@@ -40,10 +40,14 @@ class MultiInstanceCoordinatorTest {
     @Inject
     EntityManager em;
 
+    @Inject
+    io.casehub.work.runtime.test.MutableCurrentPrincipal mutablePrincipal;
+
     @BeforeEach
     @Transactional
     void clearTemplates() {
         em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
+        mutablePrincipal.setGroups(java.util.Set.of("testers"));
     }
 
     private UUID createGroupAndGetParentId(int instanceCount, int requiredCount) {

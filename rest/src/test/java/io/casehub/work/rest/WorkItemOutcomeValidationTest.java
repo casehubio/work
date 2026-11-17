@@ -39,6 +39,7 @@ class WorkItemOutcomeValidationTest {
         em.createQuery("DELETE FROM AuditEntry").executeUpdate();
         em.createQuery("DELETE FROM WorkItemEntity").executeUpdate();
         em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
+        principal.setGroups(java.util.Set.of("reviewers", "ops"));
     }
 
     /** Create a template with outcomes, instantiate, claim, start — returns the workItem id. */

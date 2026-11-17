@@ -43,6 +43,7 @@ class WorkCloudEventRoundTripTest {
     @Inject WorkItemStore workItemStore;
     @Inject Event<CloudEvent> cloudEventBus;
     @Inject EntityManager em;
+    @Inject io.casehub.work.runtime.test.MutableCurrentPrincipal mutablePrincipal;
 
     private UUID templateId;
 
@@ -50,6 +51,7 @@ class WorkCloudEventRoundTripTest {
     @Transactional
     void setUp() {
         cloudEventCapture.clear();
+        mutablePrincipal.setGroups(java.util.Set.of("test-group"));
         em.createQuery("DELETE FROM WorkItemTemplate").executeUpdate();
         em.createQuery("DELETE FROM WorkItemEntity").executeUpdate();
 

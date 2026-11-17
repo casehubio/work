@@ -39,7 +39,7 @@ public class TenantScopedPrincipal implements CurrentPrincipal {
 
     @Override
     public Set<String> groups() {
-        return Set.of();
+        return holder.getGroups();
     }
 
     @Override
