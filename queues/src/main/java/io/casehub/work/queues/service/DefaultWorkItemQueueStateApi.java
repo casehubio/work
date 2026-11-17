@@ -6,6 +6,7 @@ import java.util.UUID;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemLifecycleEvent;
 import io.casehub.work.api.WorkItemStatus;
@@ -35,8 +36,12 @@ public class DefaultWorkItemQueueStateApi implements WorkItemQueueStateApi {
     @Inject
     WorkItemLifecycleEmitter lifecycleEmitter;
 
+    @Inject
+    CurrentPrincipal currentPrincipal;
+
     @Override
-    public WorkItemView pickup(UUID workItemId, String claimant, String tenancyId) {
+    public WorkItemView pickup(UUID workItemId, String tenancyId) {
+        final String claimant = currentPrincipal.actorId();
         final WorkItem wi = workItemStore.get(workItemId).orElse(null);
         if (wi == null) {
             return null;

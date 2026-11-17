@@ -7,6 +7,7 @@ import java.util.UUID;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.api.spi.WorkItemBulkApi;
 import io.casehub.work.api.spi.WorkItemOperations;
 import io.casehub.work.api.view.BulkItemResult;
@@ -19,6 +20,9 @@ public class DefaultWorkItemBulkApi implements WorkItemBulkApi {
 
     @Inject
     WorkItemOperations workItemOperations;
+
+    @Inject
+    CurrentPrincipal currentPrincipal;
 
     @Override
     public List<BulkItemResult> bulk(BulkOperationRequest request, String tenancyId) {
@@ -38,7 +42,7 @@ public class DefaultWorkItemBulkApi implements WorkItemBulkApi {
                     "unknown operation '" + request.operation() + "'; supported: claim, cancel");
         }
 
-        final String actor = request.actorId() != null ? request.actorId() : "unknown";
+        final String actor = currentPrincipal.actorId();
         final List<BulkItemResult> results = new ArrayList<>();
 
         for (final String idStr : request.workItemIds()) {

@@ -5,7 +5,7 @@ import java.util.UUID;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
-import io.casehub.work.api.WorkItem;
+import io.casehub.platform.api.identity.CurrentPrincipal;
 import io.casehub.work.api.WorkItemCreateRequest;
 import io.casehub.work.api.spi.WorkItemLifecycleApi;
 import io.casehub.work.api.spi.WorkItemOperations;
@@ -28,97 +28,100 @@ public class DefaultWorkItemLifecycleApi implements WorkItemLifecycleApi {
     @Inject
     WorkItemOperations workItemOperations;
 
+    @Inject
+    CurrentPrincipal currentPrincipal;
+
     @Override
-    public WorkItemView claim(UUID workItemId, String claimant, String tenancyId) {
-        return ViewMapper.toView(workItemOperations.claim(workItemId, claimant));
+    public WorkItemView claim(UUID workItemId, String tenancyId) {
+        return ViewMapper.toView(workItemOperations.claim(workItemId, currentPrincipal.actorId()));
     }
 
     @Override
-    public WorkItemView start(UUID workItemId, String actor, String tenancyId) {
-        return ViewMapper.toView(workItemOperations.start(workItemId, actor));
+    public WorkItemView start(UUID workItemId, String tenancyId) {
+        return ViewMapper.toView(workItemOperations.start(workItemId, currentPrincipal.actorId()));
     }
 
     @Override
-    public WorkItemView complete(UUID workItemId, String actor, CompleteRequest body, String tenancyId) {
+    public WorkItemView complete(UUID workItemId, CompleteRequest body, String tenancyId) {
         String resolution = body != null ? body.resolution() : null;
         String outcome = body != null ? body.outcome() : null;
-        return ViewMapper.toView(workItemOperations.complete(workItemId, actor, resolution, outcome));
+        return ViewMapper.toView(workItemOperations.complete(workItemId, currentPrincipal.actorId(), resolution, outcome));
     }
 
     @Override
-    public WorkItemView reject(UUID workItemId, String actor, RejectRequest body, String tenancyId) {
+    public WorkItemView reject(UUID workItemId, RejectRequest body, String tenancyId) {
         String reason = body != null ? body.reason() : null;
         String outcome = body != null ? body.outcome() : null;
-        return ViewMapper.toView(workItemOperations.reject(workItemId, actor, reason, outcome));
+        return ViewMapper.toView(workItemOperations.reject(workItemId, currentPrincipal.actorId(), reason, outcome));
     }
 
     @Override
-    public WorkItemView delegate(UUID workItemId, String actor, DelegateRequest body, String tenancyId) {
+    public WorkItemView delegate(UUID workItemId, DelegateRequest body, String tenancyId) {
         return ViewMapper.toView(
-                workItemOperations.delegate(workItemId, actor, body.to(), body.declineTarget()));
+                workItemOperations.delegate(workItemId, currentPrincipal.actorId(), body.to(), body.declineTarget()));
     }
 
     @Override
-    public WorkItemView acceptDelegation(UUID workItemId, String claimant, String tenancyId) {
-        return ViewMapper.toView(workItemOperations.acceptDelegation(workItemId, claimant));
+    public WorkItemView acceptDelegation(UUID workItemId, String tenancyId) {
+        return ViewMapper.toView(workItemOperations.acceptDelegation(workItemId, currentPrincipal.actorId()));
     }
 
     @Override
-    public WorkItemView declineDelegation(UUID workItemId, String actor, String tenancyId) {
-        return ViewMapper.toView(workItemOperations.declineDelegation(workItemId, actor));
+    public WorkItemView declineDelegation(UUID workItemId, String tenancyId) {
+        return ViewMapper.toView(workItemOperations.declineDelegation(workItemId, currentPrincipal.actorId()));
     }
 
     @Override
-    public WorkItemView release(UUID workItemId, String actor, String tenancyId) {
-        return ViewMapper.toView(workItemOperations.release(workItemId, actor));
+    public WorkItemView release(UUID workItemId, String tenancyId) {
+        return ViewMapper.toView(workItemOperations.release(workItemId, currentPrincipal.actorId()));
     }
 
     @Override
-    public WorkItemView suspend(UUID workItemId, String actor, SuspendRequest body, String tenancyId) {
+    public WorkItemView suspend(UUID workItemId, SuspendRequest body, String tenancyId) {
         String reason = body != null ? body.reason() : null;
-        return ViewMapper.toView(workItemOperations.suspend(workItemId, actor, reason));
+        return ViewMapper.toView(workItemOperations.suspend(workItemId, currentPrincipal.actorId(), reason));
     }
 
     @Override
-    public WorkItemView resume(UUID workItemId, String actor, String tenancyId) {
-        return ViewMapper.toView(workItemOperations.resume(workItemId, actor));
+    public WorkItemView resume(UUID workItemId, String tenancyId) {
+        return ViewMapper.toView(workItemOperations.resume(workItemId, currentPrincipal.actorId()));
     }
 
     @Override
-    public WorkItemView cancel(UUID workItemId, String actor, CancelRequest body, String tenancyId) {
+    public WorkItemView cancel(UUID workItemId, CancelRequest body, String tenancyId) {
         String reason = body != null ? body.reason() : null;
-        return ViewMapper.toView(workItemOperations.cancel(workItemId, actor, reason));
+        return ViewMapper.toView(workItemOperations.cancel(workItemId, currentPrincipal.actorId(), reason));
     }
 
     @Override
     public WorkItemView fault(UUID workItemId, FaultRequest body, String tenancyId) {
         return ViewMapper.toView(
-                workItemOperations.fault(workItemId, body.actor(), body.errorDetail()));
+                workItemOperations.fault(workItemId, currentPrincipal.actorId(), body.errorDetail()));
     }
 
     @Override
     public WorkItemView obsolete(UUID workItemId, ObsoleteRequest body, String tenancyId) {
         return ViewMapper.toView(
-                workItemOperations.obsolete(workItemId, body.actor(), body.reason()));
+                workItemOperations.obsolete(workItemId, currentPrincipal.actorId(), body.reason()));
     }
 
     @Override
-    public WorkItemView escalate(UUID workItemId, String actor, EscalateRequest body, String tenancyId) {
+    public WorkItemView escalate(UUID workItemId, EscalateRequest body, String tenancyId) {
         return ViewMapper.toView(
-                workItemOperations.escalate(workItemId, actor, body.targetGroup(), body.reason()));
+                workItemOperations.escalate(workItemId, currentPrincipal.actorId(), body.targetGroup(), body.reason()));
     }
 
     @Override
-    public WorkItemView extend(UUID workItemId, String actor, ExtendRequest body, String tenancyId) {
+    public WorkItemView extend(UUID workItemId, ExtendRequest body, String tenancyId) {
         return ViewMapper.toView(
-                workItemOperations.extend(workItemId, body != null ? body.newExpiresAt() : null, actor));
+                workItemOperations.extend(workItemId, body != null ? body.newExpiresAt() : null, currentPrincipal.actorId()));
     }
 
     @Override
-    public WorkItemView updateDeadline(UUID workItemId, String actor, UpdateDeadlineRequest body,
+    public WorkItemView updateDeadline(UUID workItemId, UpdateDeadlineRequest body,
                                        String tenancyId) {
         return ViewMapper.toView(
-                workItemOperations.updateDeadline(workItemId, body != null ? body.newDeadline() : null, actor));
+                workItemOperations.updateDeadline(workItemId, body != null ? body.newDeadline() : null, currentPrincipal.actorId()));
     }
 
     @Override
@@ -126,9 +129,9 @@ public class DefaultWorkItemLifecycleApi implements WorkItemLifecycleApi {
         WorkItemCreateRequest request = WorkItemCreateRequest.builder()
                 .title(body.title())
                 .candidateGroups(body.candidateGroups())
-                .createdBy(body.actor())
+                .createdBy(currentPrincipal.actorId())
                 .build();
         return ViewMapper.toView(
-                workItemOperations.compensate(workItemId, request, body.actor(), body.reason()));
+                workItemOperations.compensate(workItemId, request, currentPrincipal.actorId(), body.reason()));
     }
 }
