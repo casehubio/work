@@ -1945,4 +1945,92 @@ class WorkItemServiceTest {
         verify(tenantContextRunner).runInTenantContext(eq("test-tenant-ctx"), any(Runnable.class));
     }
 
+
+// -------------------------------------------------------------------------
+// Assignee check — actor must equal assigneeId (#426)
+// -------------------------------------------------------------------------
+
+    @Test
+    void start_nonAssignee_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id(), "alice");
+        assertThatThrownBy(() -> service.start(wi.id(), "mallory"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not the assignee");
+    }
+
+    @Test
+    void complete_nonAssignee_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        assertThatThrownBy(() -> service.complete(wi.id(), "mallory", "done", null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not the assignee");
+    }
+
+    @Test
+    void complete_withRationale_nonAssignee_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id(), "alice");
+        service.start(wi.id(), "alice");
+        assertThatThrownBy(() -> service.complete(wi.id(), "mallory", "done", null, null, null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not the assignee");
+    }
+
+    @Test
+    void reject_nonAssignee_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id(), "alice");
+        assertThatThrownBy(() -> service.reject(wi.id(), "mallory", "nope", null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not the assignee");
+    }
+
+    @Test
+    void reject_withRationale_nonAssignee_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id(), "alice");
+        assertThatThrownBy(() -> service.reject(wi.id(), "mallory", "nope", null, null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not the assignee");
+    }
+
+    @Test
+    void suspend_nonAssignee_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id(), "alice");
+        assertThatThrownBy(() -> service.suspend(wi.id(), "mallory", "blocked"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not the assignee");
+    }
+
+    @Test
+    void resume_nonAssignee_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id(), "alice");
+        service.suspend(wi.id(), "alice", "blocked");
+        assertThatThrownBy(() -> service.resume(wi.id(), "mallory"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not the assignee");
+    }
+
+    @Test
+    void release_nonAssignee_throws() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id(), "alice");
+        assertThatThrownBy(() -> service.release(wi.id(), "mallory"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not the assignee");
+    }
+
+    @Test
+    void start_nonAssignee_auditsBlockedAttempt() {
+        WorkItem wi = service.create(basicRequest());
+        service.claim(wi.id(), "alice");
+        try {service.start(wi.id(), "mallory");} catch (IllegalStateException ignored) {}
+        List<AuditEntry> trail = auditStore.findByWorkItemId(wi.id());
+        assertThat(trail).anyMatch(e -> "TRANSITION_NOT_ASSIGNEE".equals(e.event) && "mallory".equals(e.actor));
+    }
 }

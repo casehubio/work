@@ -1,15 +1,17 @@
 package io.casehub.work.rest;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasSize;
+import io.casehub.work.rest.test.MutableCurrentPrincipal;
+import io.quarkus.test.junit.QuarkusTest;
+import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 
-import org.junit.jupiter.api.Test;
-
-import io.quarkus.test.junit.QuarkusTest;
-import io.restassured.http.ContentType;
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 
 /**
  * Integration tests for filter parameters on {@code GET /workitems/inbox}.
@@ -20,6 +22,14 @@ import io.restassured.http.ContentType;
  */
 @QuarkusTest
 class InboxFilterTest {
+
+    @Inject
+    MutableCurrentPrincipal principal;
+
+    @BeforeEach
+    void resetPrincipal() {
+        principal.reset();
+    }
 
     private String uniqueUser() {
         return "filter-test-" + UUID.randomUUID();
@@ -62,36 +72,37 @@ class InboxFilterTest {
     @Test
     void inbox_outcomeFilter_returnsCompletedItemMatchingOutcome() {
         final String user = uniqueUser();
+        principal.setActorId(user);
         final String workItemId = given().contentType(ContentType.JSON)
-                .body("""
-                        {"title":"Outcome item","createdBy":"test",\
-                        "candidateUsers":"%s","assigneeId":"%s"}
-                        """.formatted(user, user))
-                .post("/api/work/items/create")
-                .then().statusCode(201).extract().path("id");
+                                         .body("""
+                                               {"title":"Outcome item","createdBy":"test",\
+                                               "candidateUsers":"%s","assigneeId":"%s"}
+                                               """.formatted(user, user))
+                                         .post("/api/work/items/create")
+                                         .then().statusCode(201).extract().path("id");
 
-        given().post("/api/work/lifecycle/start/" + workItemId + "?actor=" + user).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + workItemId).then().statusCode(200);
         given().contentType(ContentType.JSON)
-                .body("{\"outcome\":\"approved\"}")
-                .post("/api/work/lifecycle/complete/" + workItemId + "?actor=" + user)
-                .then().statusCode(200);
+               .body("{\"outcome\":\"approved\"}")
+               .post("/api/work/lifecycle/complete/" + workItemId)
+               .then().statusCode(200);
 
-        // completed item IS returned when filtering by its outcome
+// completed item IS returned when filtering by its outcome
         given().queryParam("assignee", user)
-                .queryParam("outcome", "approved")
-                .get("/api/work/items/inbox")
-                .then()
-                .statusCode(200)
-                .body("$", hasSize(1))
-                .body("[0].workItem.outcome", equalTo("approved"));
+               .queryParam("outcome", "approved")
+               .get("/api/work/items/inbox")
+               .then()
+               .statusCode(200)
+               .body("$", hasSize(1))
+               .body("[0].workItem.outcome", equalTo("approved"));
 
-        // completed item is NOT returned when filtering by a different outcome
+// completed item is NOT returned when filtering by a different outcome
         given().queryParam("assignee", user)
-                .queryParam("outcome", "rejected")
-                .get("/api/work/items/inbox")
-                .then()
-                .statusCode(200)
-                .body("$", hasSize(0));
+               .queryParam("outcome", "rejected")
+               .get("/api/work/items/inbox")
+               .then()
+               .statusCode(200)
+               .body("$", hasSize(0));
     }
 
     @Test

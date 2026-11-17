@@ -280,6 +280,7 @@ public class WorkItemService implements WorkItemOperations {
     @Transactional
     public io.casehub.work.api.WorkItem start(final UUID id, final String actorId) {
         final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        requireAssignee(item, actorId);
         if (item.status() != WorkItemStatus.ASSIGNED) {
             throw new IllegalStateException("Cannot start WorkItem in status: " + item.status());
         }
@@ -330,6 +331,7 @@ public class WorkItemService implements WorkItemOperations {
     public io.casehub.work.api.WorkItem complete(final UUID id, final String actorId, final String resolution,
                                                  final String outcome) {
         final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        requireAssignee(item, actorId);
         if (item.status() != WorkItemStatus.IN_PROGRESS) {
             throw new IllegalStateException("Cannot complete WorkItem in status: " + item.status());
         }
@@ -357,6 +359,7 @@ public class WorkItemService implements WorkItemOperations {
     @Transactional
     public io.casehub.work.api.WorkItem reject(final UUID id, final String actorId, final String reason, final String outcome) {
         final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        requireAssignee(item, actorId);
         if (item.status() != WorkItemStatus.ASSIGNED && item.status() != WorkItemStatus.IN_PROGRESS) {
             throw new IllegalStateException("Cannot reject WorkItem in status: " + item.status());
         }
@@ -378,6 +381,7 @@ public class WorkItemService implements WorkItemOperations {
     public io.casehub.work.api.WorkItem complete(final UUID id, final String actorId, final String resolution,
                                                  final String outcome, final String rationale, final String planRef) {
         final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        requireAssignee(item, actorId);
         if (item.status() != WorkItemStatus.IN_PROGRESS) {
             throw new IllegalStateException("Cannot complete WorkItem in status: " + item.status());
         }
@@ -407,6 +411,7 @@ public class WorkItemService implements WorkItemOperations {
     public io.casehub.work.api.WorkItem reject(final UUID id, final String actorId, final String reason,
                                                final String outcome, final String rationale) {
         final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        requireAssignee(item, actorId);
         if (item.status() != WorkItemStatus.ASSIGNED && item.status() != WorkItemStatus.IN_PROGRESS) {
             throw new IllegalStateException("Cannot reject WorkItem in status: " + item.status());
         }
@@ -551,6 +556,7 @@ public class WorkItemService implements WorkItemOperations {
     @Transactional
     public io.casehub.work.api.WorkItem release(final UUID id, final String actorId) {
         io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        requireAssignee(item, actorId);
         if (item.status() != WorkItemStatus.ASSIGNED) {
             throw new IllegalStateException("Cannot release WorkItem in status: " + item.status());
         }
@@ -576,6 +582,7 @@ public class WorkItemService implements WorkItemOperations {
     @Transactional
     public io.casehub.work.api.WorkItem suspend(final UUID id, final String actorId, final String reason) {
         final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        requireAssignee(item, actorId);
         if (item.status() != WorkItemStatus.ASSIGNED && item.status() != WorkItemStatus.IN_PROGRESS) {
             throw new IllegalStateException("Cannot suspend WorkItem in status: " + item.status());
         }
@@ -595,6 +602,7 @@ public class WorkItemService implements WorkItemOperations {
     @Transactional
     public io.casehub.work.api.WorkItem resume(final UUID id, final String actorId) {
         final io.casehub.work.api.WorkItem item = requireWorkItem(id);
+        requireAssignee(item, actorId);
         if (item.status() != WorkItemStatus.SUSPENDED) {
             throw new IllegalStateException("Cannot resume WorkItem in status: " + item.status());
         }
@@ -997,6 +1005,16 @@ public class WorkItemService implements WorkItemOperations {
         final Duration accumulated = Duration.ofSeconds(item.accumulatedUnclaimedSeconds());
         final Instant  submitted   = item.createdAt() != null ? item.createdAt() : now;
         return new ClaimSlaContext(submitted, totalPoolSla, accumulated, now);
+    }
+
+
+    private void requireAssignee(final io.casehub.work.api.WorkItem item, final String actorId) {
+        if (item.assigneeId() == null || !item.assigneeId().equals(actorId)) {
+            blockedAuditService.record(item.id(), "TRANSITION_NOT_ASSIGNEE", actorId,
+                                       "Actor '" + actorId + "' is not the assignee '" + item.assigneeId() + "'");
+            throw new IllegalStateException(
+                    "Actor '" + actorId + "' is not the assignee of WorkItem " + item.id());
+        }
     }
 
     private io.casehub.work.api.WorkItem requireWorkItem(final UUID id) {
