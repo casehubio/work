@@ -1,4 +1,4 @@
 package io.casehub.work.api.view;
 
-public record FaultRequest(String actor, String errorDetail) {
+public record FaultRequest(String errorDetail) {
 }

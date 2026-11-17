@@ -14,7 +14,7 @@ import io.casehub.work.api.view.WorkItemView;
 public interface WorkItemQueueStateApi {
 
     @PlatformMutation("Pick up a work item from a queue")
-    WorkItemView pickup(@PathParam UUID workItemId, String claimant,
+    WorkItemView pickup(@PathParam UUID workItemId,
                         @ContextParam("tenancyId") String tenancyId);
 
     @PlatformMutation("Set relinquishable flag on a work item")

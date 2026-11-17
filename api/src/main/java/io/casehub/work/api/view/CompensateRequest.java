@@ -1,4 +1,4 @@
 package io.casehub.work.api.view;
 
-public record CompensateRequest(String title, String candidateGroups, String actor, String reason) {
+public record CompensateRequest(String title, String candidateGroups, String reason) {
 }

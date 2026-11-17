@@ -1,4 +1,4 @@
 package io.casehub.work.api.view;
 
-public record ObsoleteRequest(String actor, String reason) {
+public record ObsoleteRequest(String reason) {
 }
