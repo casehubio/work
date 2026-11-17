@@ -9,11 +9,14 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.rest.test.MutableCurrentPrincipal;
 import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
 
 /**
  * Integration and E2E tests for GET /audit — cross-WorkItem audit history query.
@@ -27,6 +30,14 @@ import io.restassured.http.ContentType;
  */
 @QuarkusTest
 class AuditResourceTest {
+
+    @Inject
+    MutableCurrentPrincipal principal;
+
+    @BeforeEach
+    void resetPrincipal() {
+        principal.reset();
+    }
 
     // ── GET /audit — unfiltered ───────────────────────────────────────────────
 
@@ -330,14 +341,16 @@ class AuditResourceTest {
     }
 
     private void claimAndStart(final String id, final String actor) {
-        given().post("/api/work/lifecycle/claim/" + id + "?claimant=" + actor).then().statusCode(200);
-        given().post("/api/work/lifecycle/start/" + id + "?actor=" + actor).then().statusCode(200);
+        principal.setActorId(actor);
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
     }
 
     private void completeWorkItem(final String id, final String actor) {
+        principal.setActorId(actor);
         given().contentType(ContentType.JSON)
                 .body("{\"resolution\":null}")
-                .post("/api/work/lifecycle/complete/" + id + "?actor=" + actor)
+                .post("/api/work/lifecycle/complete/" + id)
                 .then().statusCode(200);
     }
 }

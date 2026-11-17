@@ -6,9 +6,11 @@ import static org.hamcrest.Matchers.nullValue;
 
 import org.junit.jupiter.api.Test;
 
+import io.casehub.work.rest.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
 
 /**
  * REST integration tests for delegation lifecycle endpoints.
@@ -16,6 +18,9 @@ import io.restassured.http.ContentType;
 @QuarkusTest
 @TestTransaction
 class WorkItemDelegationTest {
+
+    @Inject
+    MutableCurrentPrincipal principal;
 
     private String createAndClaimItem(final String claimant) {
         final String id = given()
@@ -27,27 +32,30 @@ class WorkItemDelegationTest {
                 .then().statusCode(201)
                 .extract().path("id");
 
+        principal.setActorId(claimant);
         given().contentType(ContentType.JSON)
-                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=" + claimant)
+                .when().post("/api/work/lifecycle/claim/" + id)
                 .then().statusCode(200);
 
         return id;
     }
 
     private void delegate(final String id, final String actor, final String to) {
+        principal.setActorId(actor);
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"to\":\"" + to + "\"}")
-                .when().post("/api/work/lifecycle/delegate/" + id + "?actor=" + actor)
+                .when().post("/api/work/lifecycle/delegate/" + id)
                 .then().statusCode(200);
     }
 
     private void delegateWithTarget(final String id, final String actor, final String to,
             final String declineTarget) {
+        principal.setActorId(actor);
         given()
                 .contentType(ContentType.JSON)
                 .body("{\"to\":\"" + to + "\",\"declineTarget\":\"" + declineTarget + "\"}")
-                .when().post("/api/work/lifecycle/delegate/" + id + "?actor=" + actor)
+                .when().post("/api/work/lifecycle/delegate/" + id)
                 .then().statusCode(200);
     }
 
@@ -101,8 +109,9 @@ class WorkItemDelegationTest {
         final String id = createAndClaimItem("alice");
         delegate(id, "alice", "bob");
 
+        principal.setActorId("bob");
         given()
-                .when().post("/api/work/lifecycle/accept-delegation/" + id + "?claimant=bob")
+                .when().post("/api/work/lifecycle/accept-delegation/" + id)
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("ASSIGNED"))
@@ -114,8 +123,9 @@ class WorkItemDelegationTest {
         final String id = createAndClaimItem("alice");
         delegateWithTarget(id, "alice", "bob", "DELEGATOR");
 
+        principal.setActorId("bob");
         given()
-                .when().post("/api/work/lifecycle/accept-delegation/" + id + "?claimant=bob")
+                .when().post("/api/work/lifecycle/accept-delegation/" + id)
                 .then()
                 .statusCode(200)
                 .body("delegationDeclineTarget", nullValue());
@@ -126,8 +136,9 @@ class WorkItemDelegationTest {
         final String id = createAndClaimItem("alice");
         delegate(id, "alice", "bob");
 
+        principal.setActorId("charlie");
         given()
-                .when().post("/api/work/lifecycle/accept-delegation/" + id + "?claimant=charlie")
+                .when().post("/api/work/lifecycle/accept-delegation/" + id)
                 .then().statusCode(409);
     }
 
@@ -136,8 +147,9 @@ class WorkItemDelegationTest {
         final String id = createAndClaimItem("alice");
 
         // Item is ASSIGNED, not DELEGATED
+        principal.setActorId("alice");
         given()
-                .when().post("/api/work/lifecycle/accept-delegation/" + id + "?claimant=alice")
+                .when().post("/api/work/lifecycle/accept-delegation/" + id)
                 .then().statusCode(409);
     }
 
@@ -148,8 +160,9 @@ class WorkItemDelegationTest {
         final String id = createAndClaimItem("alice");
         delegateWithTarget(id, "alice", "bob", "POOL");
 
+        principal.setActorId("bob");
         given()
-                .when().post("/api/work/lifecycle/decline-delegation/" + id + "?actor=bob")
+                .when().post("/api/work/lifecycle/decline-delegation/" + id)
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("PENDING"))
@@ -163,8 +176,9 @@ class WorkItemDelegationTest {
         final String id = createAndClaimItem("alice");
         delegateWithTarget(id, "alice", "bob", "DELEGATOR");
 
+        principal.setActorId("bob");
         given()
-                .when().post("/api/work/lifecycle/decline-delegation/" + id + "?actor=bob")
+                .when().post("/api/work/lifecycle/decline-delegation/" + id)
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("ASSIGNED"))
@@ -178,8 +192,9 @@ class WorkItemDelegationTest {
         final String id = createAndClaimItem("alice");
         delegate(id, "alice", "bob");
 
+        principal.setActorId("charlie");
         given()
-                .when().post("/api/work/lifecycle/decline-delegation/" + id + "?actor=charlie")
+                .when().post("/api/work/lifecycle/decline-delegation/" + id)
                 .then().statusCode(409);
     }
 
@@ -187,8 +202,9 @@ class WorkItemDelegationTest {
     void declineDelegation_notDelegated_returns409() {
         final String id = createAndClaimItem("alice");
 
+        principal.setActorId("alice");
         given()
-                .when().post("/api/work/lifecycle/decline-delegation/" + id + "?actor=alice")
+                .when().post("/api/work/lifecycle/decline-delegation/" + id)
                 .then().statusCode(409);
     }
 }

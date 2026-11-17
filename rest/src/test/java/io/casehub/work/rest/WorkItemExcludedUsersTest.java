@@ -9,6 +9,7 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
+import io.casehub.work.rest.test.MutableCurrentPrincipal;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
@@ -23,6 +24,9 @@ class WorkItemExcludedUsersTest {
 
     @Inject
     EntityManager em;
+
+    @Inject
+    MutableCurrentPrincipal principal;
 
     @BeforeEach
     @Transactional
@@ -111,14 +115,16 @@ class WorkItemExcludedUsersTest {
     @Test
     void claim_byExcludedUser_returns409() {
         final String id = workItemWithExcludedUser("alice");
-        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
+        principal.setActorId("alice");
+        given().post("/api/work/lifecycle/claim/" + id)
                 .then().statusCode(409);
     }
 
     @Test
     void claim_byNonExcludedUser_returns200() {
         final String id = workItemWithExcludedUser("alice");
-        given().post("/api/work/lifecycle/claim/" + id + "?claimant=bob")
+        principal.setActorId("bob");
+        given().post("/api/work/lifecycle/claim/" + id)
                 .then().statusCode(200);
     }
 
@@ -149,10 +155,11 @@ class WorkItemExcludedUsersTest {
     @Test
     void delegate_toExcludedUser_returns400() {
         final String id = workItemWithExcludedUser("alice");
-        given().post("/api/work/lifecycle/claim/" + id + "?claimant=bob").then().statusCode(200);
+        principal.setActorId("bob");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
         given().contentType(ContentType.JSON)
                 .body("{\"to\":\"alice\"}")
-                .post("/api/work/lifecycle/delegate/" + id + "?actor=bob")
+                .post("/api/work/lifecycle/delegate/" + id)
                 .then()
                 .statusCode(400);
     }
@@ -160,10 +167,11 @@ class WorkItemExcludedUsersTest {
     @Test
     void delegate_toNonExcludedUser_returns200() {
         final String id = workItemWithExcludedUser("alice");
-        given().post("/api/work/lifecycle/claim/" + id + "?claimant=bob").then().statusCode(200);
+        principal.setActorId("bob");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
         given().contentType(ContentType.JSON)
                 .body("{\"to\":\"carol\"}")
-                .post("/api/work/lifecycle/delegate/" + id + "?actor=bob")
+                .post("/api/work/lifecycle/delegate/" + id)
                 .then()
                 .statusCode(200);
     }
@@ -210,7 +218,8 @@ class WorkItemExcludedUsersTest {
     @Test
     void claim_byExcludedUser_createsClaimDeniedAuditEntry() {
         final String id = workItemWithExcludedUser("alice");
-        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
+        principal.setActorId("alice");
+        given().post("/api/work/lifecycle/claim/" + id)
                 .then().statusCode(409);
 
         given().get("/api/work/items/get-by-id/" + id)
@@ -223,7 +232,8 @@ class WorkItemExcludedUsersTest {
     void claim_byExcludedUser_auditEntryPersistsDespiteRejection() {
         // Verifies the blocked attempt audit entry is durably persisted and readable after a rejected claim.
         final String id = workItemWithExcludedUser("alice");
-        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice").then().statusCode(409);
+        principal.setActorId("alice");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(409);
 
         // WorkItem must still be PENDING (claim was rejected)
         given().get("/api/work/items/get-by-id/" + id)
@@ -235,11 +245,12 @@ class WorkItemExcludedUsersTest {
     @Test
     void delegate_toExcludedUser_createsDelegateDeniedAuditEntry() {
         final String id = workItemWithExcludedUser("alice");
-        given().post("/api/work/lifecycle/claim/" + id + "?claimant=bob").then().statusCode(200);
+        principal.setActorId("bob");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
 
         given().contentType(ContentType.JSON)
                 .body("{\"to\":\"alice\"}")
-                .post("/api/work/lifecycle/delegate/" + id + "?actor=bob")
+                .post("/api/work/lifecycle/delegate/" + id)
                 .then().statusCode(400);
 
         given().get("/api/work/items/get-by-id/" + id)

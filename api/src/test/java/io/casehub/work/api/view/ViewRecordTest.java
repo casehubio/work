@@ -174,12 +174,11 @@ class ViewRecordTest {
         var suspend = new SuspendRequest("waiting for info");
         assertEquals("waiting for info", suspend.reason());
 
-        var fault = new FaultRequest("system", "timeout");
-        assertEquals("system", fault.actor());
+        var fault = new FaultRequest("timeout");
         assertEquals("timeout", fault.errorDetail());
 
-        var obsolete = new ObsoleteRequest("system", "superseded");
-        assertEquals("system", obsolete.actor());
+        var obsolete = new ObsoleteRequest("superseded");
+        assertEquals("superseded", obsolete.reason());
 
         var escalate = new EscalateRequest("managers", "urgent");
         assertEquals("managers", escalate.targetGroup());
@@ -190,7 +189,7 @@ class ViewRecordTest {
         var deadline = new UpdateDeadlineRequest(Instant.parse("2026-12-31T00:00:00Z"));
         assertNotNull(deadline.newDeadline());
 
-        var compensate = new CompensateRequest("Comp task", "group1", "actor1", "fix error");
+        var compensate = new CompensateRequest("Comp task", "group1", "fix error");
         assertEquals("Comp task", compensate.title());
         assertEquals("group1", compensate.candidateGroups());
     }

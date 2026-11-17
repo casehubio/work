@@ -3,6 +3,7 @@ package io.casehub.work.rest;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 
+import io.casehub.work.rest.test.MutableCurrentPrincipal;
 import io.casehub.work.runtime.model.WorkItemEntity;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -28,6 +29,9 @@ class WorkItemOutcomeValidationTest {
 
     @Inject
     EntityManager em;
+
+    @Inject
+    MutableCurrentPrincipal principal;
 
     @BeforeEach
     @Transactional
@@ -142,12 +146,13 @@ class WorkItemOutcomeValidationTest {
                 .post("/api/work/templates/instantiate/" + templateId)
                 .then().statusCode(201).extract().path("id");
 
-        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice").then().statusCode(200);
-        given().post("/api/work/lifecycle/start/" + id + "?actor=alice").then().statusCode(200);
+        principal.setActorId("alice");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
 
         given().contentType(ContentType.JSON)
                 .body("{\"outcome\":\"approved\"}")
-                .post("/api/work/lifecycle/complete/" + id + "?actor=alice")
+                .post("/api/work/lifecycle/complete/" + id)
                 .then()
                 .statusCode(200)
                 .body("outcome", org.hamcrest.Matchers.equalTo("approved"));

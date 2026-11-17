@@ -6,11 +6,16 @@ import static org.hamcrest.Matchers.*;
 
 import org.junit.jupiter.api.Test;
 
+import io.casehub.work.queues.test.MutableCurrentPrincipal;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
 
 @QuarkusTest
 class QueueStateResourceTest {
+
+    @Inject
+    MutableCurrentPrincipal principal;
 
     @Test
     void setRelinquishable_true_succeeds() {
@@ -57,7 +62,8 @@ class QueueStateResourceTest {
                         {"title":"Pickup pending test","createdBy":"alice"}""")
                 .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
-        given().post("/api/work/queue-state/pickup/" + id + "?claimant=bob")
+        principal.setActorId("bob");
+        given().post("/api/work/queue-state/pickup/" + id)
                 .then().statusCode(200)
                 .body("assigneeId", equalTo("bob"))
                 .body("status", equalTo("ASSIGNED"));
@@ -71,7 +77,8 @@ class QueueStateResourceTest {
                         {"title":"Pickup relinquishable test","createdBy":"alice"}""")
                 .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
-        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice").then().statusCode(200);
+        principal.setActorId("alice");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
 
         // Mark as relinquishable
         given().contentType(ContentType.JSON)
@@ -80,14 +87,16 @@ class QueueStateResourceTest {
                 .post("/api/work/queue-state/set-relinquishable/" + id).then().statusCode(200);
 
         // Bob picks it up from the queue
-        given().post("/api/work/queue-state/pickup/" + id + "?claimant=bob")
+        principal.setActorId("bob");
+        given().post("/api/work/queue-state/pickup/" + id)
                 .then().statusCode(200)
                 .body("assigneeId", equalTo("bob"))
                 .body("status", equalTo("ASSIGNED"));
 
         // Flag is now cleared after bob's pickup — charlie cannot immediately take it
         // (bob has not set relinquishable, so the flag is false)
-        given().post("/api/work/queue-state/pickup/" + id + "?claimant=charlie")
+        principal.setActorId("charlie");
+        given().post("/api/work/queue-state/pickup/" + id)
                 .then().statusCode(409); // relinquishable was cleared on bob's pickup
     }
 
@@ -98,16 +107,19 @@ class QueueStateResourceTest {
                         {"title":"Non-relinquishable test","createdBy":"alice"}""")
                 .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
-        given().post("/api/work/lifecycle/claim/" + id + "?claimant=alice").then().statusCode(200);
+        principal.setActorId("alice");
+        given().post("/api/work/lifecycle/claim/" + id).then().statusCode(200);
 
         // No relinquishable flag set — pickup should be rejected
-        given().post("/api/work/queue-state/pickup/" + id + "?claimant=bob")
+        principal.setActorId("bob");
+        given().post("/api/work/queue-state/pickup/" + id)
                 .then().statusCode(409);
     }
 
     @Test
     void pickup_unknownWorkItem_returns404() {
-        given().post("/api/work/queue-state/pickup/00000000-0000-0000-0000-000000000000?claimant=bob")
+        principal.setActorId("bob");
+        given().post("/api/work/queue-state/pickup/00000000-0000-0000-0000-000000000000")
                 .then().statusCode(404);
     }
 }

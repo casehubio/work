@@ -14,14 +14,19 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import io.casehub.work.rest.test.MutableCurrentPrincipal;
 import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
+import jakarta.inject.Inject;
 
 @QuarkusTest
 @TestTransaction
 class WorkItemResourceTest {
+
+    @Inject
+    MutableCurrentPrincipal principal;
 
     // -------------------------------------------------------------------------
     // POST /api/work/items/create — create
@@ -178,10 +183,11 @@ class WorkItemResourceTest {
     @Test
     void inbox_filterByAssignee_afterClaim() {
         String id = WorkItemTestFixture.createWorkItem();
+        principal.setActorId("alice");
 
         given()
                 .contentType(ContentType.JSON)
-                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id)
                 .then().statusCode(200);
 
         // Inbox returns WorkItemRootView — item id is nested under "workItem.id"
@@ -227,10 +233,11 @@ class WorkItemResourceTest {
         // Inbox now requires identity context (assignee or candidateGroup) to return items.
         // Use assignee-based visibility: create item, claim it, then query by assignee.
         String id = WorkItemTestFixture.createWorkItem();
+        principal.setActorId("bob-pending-test");
 
         given()
                 .contentType(ContentType.JSON)
-                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=bob-pending-test")
+                .when().post("/api/work/lifecycle/claim/" + id)
                 .then().statusCode(200);
 
         List<String> ids = given()
@@ -284,10 +291,11 @@ class WorkItemResourceTest {
     @Test
     void claim_returns200WithAssignedStatus() {
         String id = WorkItemTestFixture.createWorkItem();
+        principal.setActorId("alice");
 
         given()
                 .contentType(ContentType.JSON)
-                .when().post("/api/work/lifecycle/claim/" + id + "?claimant=alice")
+                .when().post("/api/work/lifecycle/claim/" + id)
                 .then()
                 .statusCode(200)
                 .body("status", equalTo("ASSIGNED"))
