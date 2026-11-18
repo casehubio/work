@@ -10,8 +10,11 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class FederationProxyServiceTest {
 
@@ -28,20 +31,20 @@ class FederationProxyServiceTest {
 
     @Test
     void claimOnShadowProxiesToOwner() {
-        UUID id = UUID.randomUUID();
+        UUID     id     = UUID.randomUUID();
         WorkItem shadow = shadow(id);
         when(delegate.findById(id)).thenReturn(Optional.of(shadow));
-        when(proxy.claim(shadow, "user1")).thenReturn(shadow);
+        when(proxy.claim(shadow)).thenReturn(shadow);
 
         proxyService.claim(id, "user1");
 
-        verify(proxy).claim(shadow, "user1");
+        verify(proxy).claim(shadow);
         verify(delegate, never()).claim(any(), any());
     }
 
     @Test
     void claimOnLocalDelegatesToService() {
-        UUID id = UUID.randomUUID();
+        UUID     id    = UUID.randomUUID();
         WorkItem local = local(id);
         when(delegate.findById(id)).thenReturn(Optional.of(local));
         when(delegate.claim(id, "user1")).thenReturn(local);
@@ -49,31 +52,31 @@ class FederationProxyServiceTest {
         proxyService.claim(id, "user1");
 
         verify(delegate).claim(id, "user1");
-        verify(proxy, never()).claim(any(), any());
+        verify(proxy, never()).claim(any());
     }
 
     @Test
     void completeOnShadowProxiesToOwner() {
-        UUID id = UUID.randomUUID();
+        UUID     id     = UUID.randomUUID();
         WorkItem shadow = shadow(id);
         when(delegate.findById(id)).thenReturn(Optional.of(shadow));
-        when(proxy.complete(shadow, "actor", "done", "approved")).thenReturn(shadow);
+        when(proxy.complete(shadow, "done", "approved")).thenReturn(shadow);
 
         proxyService.complete(id, "actor", "done", "approved");
 
-        verify(proxy).complete(shadow, "actor", "done", "approved");
+        verify(proxy).complete(shadow, "done", "approved");
     }
 
     @Test
     void rejectOnShadowProxiesToOwner() {
-        UUID id = UUID.randomUUID();
+        UUID     id     = UUID.randomUUID();
         WorkItem shadow = shadow(id);
         when(delegate.findById(id)).thenReturn(Optional.of(shadow));
-        when(proxy.reject(shadow, "actor", "nope", "denied")).thenReturn(shadow);
+        when(proxy.reject(shadow, "nope", "denied")).thenReturn(shadow);
 
         proxyService.reject(id, "actor", "nope", "denied");
 
-        verify(proxy).reject(shadow, "actor", "nope", "denied");
+        verify(proxy).reject(shadow, "nope", "denied");
     }
 
     @Test

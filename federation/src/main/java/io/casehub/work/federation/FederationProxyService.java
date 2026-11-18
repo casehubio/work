@@ -36,50 +36,50 @@ public class FederationProxyService implements WorkItemOperations {
     @Override
     public WorkItem claim(UUID id, String claimantId) {
         return findShadow(id)
-                .map(shadow -> proxy.claim(shadow, claimantId))
-                .orElseGet(() -> delegate.claim(id, claimantId));
+                       .map(shadow -> proxy.claim(shadow))
+                       .orElseGet(() -> delegate.claim(id, claimantId));
     }
 
     @Override
     public WorkItem complete(UUID id, String actorId, String resolution, String outcome) {
         return findShadow(id)
-                .map(shadow -> proxy.complete(shadow, actorId, resolution, outcome))
-                .orElseGet(() -> delegate.complete(id, actorId, resolution, outcome));
+                       .map(shadow -> proxy.complete(shadow, resolution, outcome))
+                       .orElseGet(() -> delegate.complete(id, actorId, resolution, outcome));
     }
 
     @Override
     public WorkItem complete(UUID id, String actorId, String resolution, String outcome, String rationale, String planRef) {
         return findShadow(id)
-                .map(shadow -> proxy.complete(shadow, actorId, resolution, outcome))
-                .orElseGet(() -> delegate.complete(id, actorId, resolution, outcome, rationale, planRef));
+                       .map(shadow -> proxy.complete(shadow, resolution, outcome))
+                       .orElseGet(() -> delegate.complete(id, actorId, resolution, outcome, rationale, planRef));
     }
 
     @Override
     public WorkItem reject(UUID id, String actorId, String reason, String outcome) {
         return findShadow(id)
-                .map(shadow -> proxy.reject(shadow, actorId, reason, outcome))
-                .orElseGet(() -> delegate.reject(id, actorId, reason, outcome));
+                       .map(shadow -> proxy.reject(shadow, reason, outcome))
+                       .orElseGet(() -> delegate.reject(id, actorId, reason, outcome));
     }
 
     @Override
     public WorkItem reject(UUID id, String actorId, String reason, String outcome, String rationale) {
         return findShadow(id)
-                .map(shadow -> proxy.reject(shadow, actorId, reason, outcome))
-                .orElseGet(() -> delegate.reject(id, actorId, reason, outcome, rationale));
+                       .map(shadow -> proxy.reject(shadow, reason, outcome))
+                       .orElseGet(() -> delegate.reject(id, actorId, reason, outcome, rationale));
     }
 
     @Override
     public WorkItem delegate(UUID id, String actorId, String toAssigneeId, DeclineTarget declineTarget) {
         return findShadow(id)
-                .map(shadow -> proxy.delegate(shadow, actorId, toAssigneeId))
-                .orElseGet(() -> delegate.delegate(id, actorId, toAssigneeId, declineTarget));
+                       .map(shadow -> proxy.delegate(shadow, toAssigneeId))
+                       .orElseGet(() -> delegate.delegate(id, actorId, toAssigneeId, declineTarget));
     }
 
     @Override
     public WorkItem release(UUID id, String actorId) {
         return findShadow(id)
-                .map(shadow -> proxy.release(shadow, actorId))
-                .orElseGet(() -> delegate.release(id, actorId));
+                       .map(shadow -> proxy.release(shadow))
+                       .orElseGet(() -> delegate.release(id, actorId));
     }
 
     // All other methods delegate transparently
