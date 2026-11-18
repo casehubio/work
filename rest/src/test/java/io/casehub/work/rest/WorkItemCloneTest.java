@@ -18,7 +18,7 @@ import io.restassured.http.ContentType;
 class WorkItemCloneTest {
 
     @Inject
-    io.casehub.work.rest.test.MutableCurrentPrincipal principal;
+    io.casehub.work.test.MutableCurrentPrincipal principal;
 
     @BeforeEach
     void setUpGroups() {

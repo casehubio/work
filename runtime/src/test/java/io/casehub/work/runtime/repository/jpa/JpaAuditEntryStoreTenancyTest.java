@@ -20,7 +20,7 @@ import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.AuditEntryStore;
 import io.casehub.work.runtime.repository.AuditQuery;
 import io.casehub.work.api.spi.WorkItemStore;
-import io.casehub.work.runtime.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 

@@ -12,6 +12,7 @@ import com.mongodb.client.MongoDatabase;
 import io.quarkus.test.junit.QuarkusTest;
 
 import io.casehub.work.core.strategy.RoutingCursorStore;
+import io.casehub.work.test.MutableCurrentPrincipal;
 
 /**
  * Tests for {@link MongoRoutingCursorStore}.

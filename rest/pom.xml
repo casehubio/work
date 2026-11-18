@@ -64,6 +64,12 @@ who only need the Java SPI do not pay JAX-RS coupling cost.</description>
       <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-work-test-support</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

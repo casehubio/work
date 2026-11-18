@@ -17,6 +17,7 @@ import com.mongodb.client.MongoDatabase;
 import io.casehub.work.issuetracker.model.WorkItemIssueLink;
 import io.casehub.work.issuetracker.repository.IssueLinkStore;
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.test.MutableCurrentPrincipal;
 
 @QuarkusTest
 class MongoIssueLinkStoreTest {

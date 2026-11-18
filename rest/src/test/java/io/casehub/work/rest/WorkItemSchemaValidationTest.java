@@ -24,7 +24,7 @@ class WorkItemSchemaValidationTest {
     EntityManager em;
 
     @Inject
-    io.casehub.work.rest.test.MutableCurrentPrincipal principal;
+    io.casehub.work.test.MutableCurrentPrincipal principal;
 
     private static final String OUTPUT_SCHEMA =
             "{\"type\":\"object\",\"required\":[\"decision\"]," +

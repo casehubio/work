@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.WorkItemTemplateStore;
-import io.casehub.work.runtime.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 

@@ -93,6 +93,12 @@ extension is unchanged whether this module is present or not.</description>
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>io.casehub</groupId>
+      <artifactId>casehub-work-test-support</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>

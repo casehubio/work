@@ -16,6 +16,7 @@ import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.casehub.work.runtime.repository.WorkItemTemplateStore;
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.test.MutableCurrentPrincipal;
 
 @QuarkusTest
 class MongoWorkItemTemplateStoreTest {

@@ -16,6 +16,7 @@ import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelVocabulary;
 import io.casehub.work.runtime.repository.LabelVocabularyStore;
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.test.MutableCurrentPrincipal;
 
 @QuarkusTest
 class MongoLabelVocabularyStoreTest {

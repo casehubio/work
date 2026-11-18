@@ -43,7 +43,7 @@ class WorkCloudEventRoundTripTest {
     @Inject WorkItemStore workItemStore;
     @Inject Event<CloudEvent> cloudEventBus;
     @Inject EntityManager em;
-    @Inject io.casehub.work.runtime.test.MutableCurrentPrincipal mutablePrincipal;
+    @Inject io.casehub.work.test.MutableCurrentPrincipal mutablePrincipal;
 
     private UUID templateId;
 

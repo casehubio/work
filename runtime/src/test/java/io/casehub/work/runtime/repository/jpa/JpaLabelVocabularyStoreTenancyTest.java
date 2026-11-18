@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import io.casehub.platform.api.path.Path;
 import io.casehub.work.runtime.model.LabelVocabulary;
 import io.casehub.work.runtime.repository.LabelVocabularyStore;
-import io.casehub.work.runtime.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 

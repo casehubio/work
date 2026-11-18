@@ -13,7 +13,7 @@ import static org.hamcrest.Matchers.notNullValue;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-import io.casehub.work.reports.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

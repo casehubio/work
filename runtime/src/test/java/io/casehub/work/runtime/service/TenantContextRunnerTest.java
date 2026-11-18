@@ -104,7 +104,7 @@ class TenantContextRunnerTest {
         public Map<String, String> getConfigOverrides() {
             return Map.of(
                     "quarkus.arc.exclude-types",
-                    "io.casehub.work.runtime.test.MutableCurrentPrincipal");
+                    "io.casehub.work.test.MutableCurrentPrincipal");
         }
     }
 }

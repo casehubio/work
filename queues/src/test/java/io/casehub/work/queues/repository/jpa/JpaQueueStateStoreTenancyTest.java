@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import io.casehub.work.queues.model.WorkItemQueueState;
 import io.casehub.work.queues.repository.QueueStateStore;
-import io.casehub.work.queues.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.casehub.work.api.WorkItem;
 import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;

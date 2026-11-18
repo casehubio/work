@@ -3,6 +3,7 @@ package io.casehub.work.rest.test;
 import io.quarkus.arc.Arc;
 import io.quarkus.test.junit.callback.QuarkusTestBeforeEachCallback;
 import io.quarkus.test.junit.callback.QuarkusTestMethodContext;
+import io.casehub.work.test.MutableCurrentPrincipal;
 
 public class MutablePrincipalResetCallback implements QuarkusTestBeforeEachCallback {
 

@@ -13,7 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
-import io.casehub.work.rest.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;

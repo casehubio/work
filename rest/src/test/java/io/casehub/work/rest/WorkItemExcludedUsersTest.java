@@ -9,7 +9,7 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
-import io.casehub.work.rest.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.casehub.work.runtime.model.WorkItemTemplate;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;

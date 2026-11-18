@@ -17,6 +17,7 @@ import com.mongodb.client.MongoDatabase;
 import io.casehub.work.runtime.model.WorkItemNote;
 import io.casehub.work.runtime.repository.WorkItemNoteStore;
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.test.MutableCurrentPrincipal;
 
 @QuarkusTest
 class MongoWorkItemNoteStoreTest {

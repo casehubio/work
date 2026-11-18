@@ -35,7 +35,7 @@ class MultiInstanceClaimGuardTest {
     EntityManager em;
 
     @Inject
-    io.casehub.work.runtime.test.MutableCurrentPrincipal mutablePrincipal;
+    io.casehub.work.test.MutableCurrentPrincipal mutablePrincipal;
 
     @BeforeEach
     @Transactional

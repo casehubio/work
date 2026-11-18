@@ -19,6 +19,7 @@ import com.mongodb.client.MongoDatabase;
 import io.casehub.work.runtime.model.WorkItemSchedule;
 import io.casehub.work.runtime.repository.WorkItemScheduleStore;
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.test.MutableCurrentPrincipal;
 
 @QuarkusTest
 class MongoWorkItemScheduleStoreTest {

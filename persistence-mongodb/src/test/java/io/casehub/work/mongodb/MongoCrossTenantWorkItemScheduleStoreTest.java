@@ -16,6 +16,7 @@ import io.casehub.work.mongodb.core.doc.MongoWorkItemScheduleDocument;
 import io.casehub.work.runtime.model.WorkItemSchedule;
 import io.casehub.work.runtime.repository.CrossTenantWorkItemScheduleStore;
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.test.MutableCurrentPrincipal;
 
 @QuarkusTest
 class MongoCrossTenantWorkItemScheduleStoreTest {

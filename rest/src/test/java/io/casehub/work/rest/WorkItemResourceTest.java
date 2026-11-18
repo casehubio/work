@@ -14,7 +14,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.rest.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.casehub.work.rest.test.WorkItemTestFixture;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;

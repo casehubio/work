@@ -1,4 +1,4 @@
-package io.casehub.work.reports.test;
+package io.casehub.work.test;
 
 import java.util.Set;
 

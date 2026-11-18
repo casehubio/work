@@ -19,6 +19,7 @@ import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.runtime.repository.CrossTenant;
 import io.casehub.work.api.spi.CrossTenantWorkItemStore;
 import io.quarkus.test.junit.QuarkusTest;
+import io.casehub.work.test.MutableCurrentPrincipal;
 
 @QuarkusTest
 class MongoCrossTenantWorkItemStoreTest {

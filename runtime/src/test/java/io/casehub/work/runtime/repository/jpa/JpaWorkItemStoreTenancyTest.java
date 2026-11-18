@@ -19,7 +19,7 @@ import io.casehub.work.api.WorkItemPriority;
 import io.casehub.work.api.WorkItemStatus;
 import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.api.spi.WorkItemStore;
-import io.casehub.work.runtime.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 

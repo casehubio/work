@@ -10,7 +10,7 @@ import static org.hamcrest.Matchers.nullValue;
 import java.util.List;
 import java.util.UUID;
 
-import io.casehub.work.ledger.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

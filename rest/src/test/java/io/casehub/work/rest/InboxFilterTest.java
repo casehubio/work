@@ -1,6 +1,6 @@
 package io.casehub.work.rest;
 
-import io.casehub.work.rest.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 import jakarta.inject.Inject;

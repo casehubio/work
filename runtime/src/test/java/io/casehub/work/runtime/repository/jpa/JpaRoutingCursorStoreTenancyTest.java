@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import io.casehub.work.core.strategy.RoutingCursorStore;
 import io.casehub.work.runtime.model.RoutingCursor;
 import io.casehub.work.runtime.model.RoutingCursorId;
-import io.casehub.work.runtime.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import jakarta.persistence.EntityManager;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;

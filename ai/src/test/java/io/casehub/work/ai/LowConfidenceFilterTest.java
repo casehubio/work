@@ -3,7 +3,7 @@ package io.casehub.work.ai;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
-import io.casehub.work.ai.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

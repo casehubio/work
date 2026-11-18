@@ -6,7 +6,7 @@ import static org.hamcrest.Matchers.nullValue;
 
 import org.junit.jupiter.api.Test;
 
-import io.casehub.work.rest.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;

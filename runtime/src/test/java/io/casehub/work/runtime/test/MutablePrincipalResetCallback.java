@@ -1,5 +1,6 @@
 package io.casehub.work.runtime.test;
 
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.quarkus.arc.Arc;
 import io.quarkus.test.junit.callback.QuarkusTestBeforeEachCallback;
 import io.quarkus.test.junit.callback.QuarkusTestMethodContext;

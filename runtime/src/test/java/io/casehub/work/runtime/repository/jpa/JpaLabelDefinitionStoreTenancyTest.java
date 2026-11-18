@@ -16,7 +16,7 @@ import io.casehub.work.runtime.model.LabelDefinition;
 import io.casehub.work.runtime.model.LabelVocabulary;
 import io.casehub.work.runtime.repository.LabelDefinitionStore;
 import io.casehub.work.runtime.repository.LabelVocabularyStore;
-import io.casehub.work.runtime.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 

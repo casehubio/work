@@ -24,7 +24,7 @@ import io.casehub.work.api.WorkItemQuery;
 import io.casehub.work.runtime.repository.CrossTenant;
 import io.casehub.work.api.spi.CrossTenantWorkItemStore;
 import io.casehub.work.api.spi.WorkItemStore;
-import io.casehub.work.runtime.test.MutableCurrentPrincipal;
+import io.casehub.work.test.MutableCurrentPrincipal;
 import io.quarkus.test.junit.QuarkusTest;
 
 /**
