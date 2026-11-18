@@ -1,7 +1,6 @@
 package io.casehub.work.deployment;
 
 import io.quarkus.arc.deployment.AdditionalBeanBuildItem;
-import io.quarkus.arc.deployment.ExcludedTypeBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.deployment.annotations.BuildStep;
 import io.quarkus.deployment.builditem.FeatureBuildItem;
@@ -13,11 +12,6 @@ import io.quarkus.deployment.builditem.nativeimage.NativeImageResourcePatternsBu
  * and WorkItemsMigrationCustomizer as an unremovable CDI bean.
  */
 class WorkItemsProcessor {
-
-    @BuildStep
-    ExcludedTypeBuildItem excludePlatformMockGroupMembershipProvider() {
-        return new ExcludedTypeBuildItem("io.casehub.platform.mock.MockGroupMembershipProvider");
-    }
 
     private static final String FEATURE = "workitems";
 
