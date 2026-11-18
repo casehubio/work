@@ -6,28 +6,21 @@
 
 ## Fields
 
-### `actor` (`java.lang.String`)
-
 ### `errorDetail` (`java.lang.String`)
 
 ## Record Components
-
-### `actor` (`java.lang.String`)
 
 ### `errorDetail` (`java.lang.String`)
 
 ## Constructors
 
-### `public FaultRequest(java.lang.String actor, java.lang.String errorDetail)`
+### `public FaultRequest(java.lang.String errorDetail)`
 
 #### Parameters
 
-- `actor` (`java.lang.String`)
 - `errorDetail` (`java.lang.String`)
 
 ## Methods
-
-### `public java.lang.String actor()`
 
 ### `public final boolean equals(java.lang.Object o)`
 

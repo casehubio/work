@@ -6,28 +6,21 @@
 
 ## Fields
 
-### `actor` (`java.lang.String`)
-
 ### `reason` (`java.lang.String`)
 
 ## Record Components
-
-### `actor` (`java.lang.String`)
 
 ### `reason` (`java.lang.String`)
 
 ## Constructors
 
-### `public ObsoleteRequest(java.lang.String actor, java.lang.String reason)`
+### `public ObsoleteRequest(java.lang.String reason)`
 
 #### Parameters
 
-- `actor` (`java.lang.String`)
 - `reason` (`java.lang.String`)
 
 ## Methods
-
-### `public java.lang.String actor()`
 
 ### `public final boolean equals(java.lang.Object o)`
 

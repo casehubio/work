@@ -6,8 +6,6 @@
 
 ## Fields
 
-### `actor` (`java.lang.String`)
-
 ### `candidateGroups` (`java.lang.String`)
 
 ### `reason` (`java.lang.String`)
@@ -15,8 +13,6 @@
 ### `title` (`java.lang.String`)
 
 ## Record Components
-
-### `actor` (`java.lang.String`)
 
 ### `candidateGroups` (`java.lang.String`)
 
@@ -26,18 +22,15 @@
 
 ## Constructors
 
-### `public CompensateRequest(java.lang.String title, java.lang.String candidateGroups, java.lang.String actor, java.lang.String reason)`
+### `public CompensateRequest(java.lang.String title, java.lang.String candidateGroups, java.lang.String reason)`
 
 #### Parameters
 
 - `title` (`java.lang.String`)
 - `candidateGroups` (`java.lang.String`)
-- `actor` (`java.lang.String`)
 - `reason` (`java.lang.String`)
 
 ## Methods
-
-### `public java.lang.String actor()`
 
 ### `public java.lang.String candidateGroups()`
 
