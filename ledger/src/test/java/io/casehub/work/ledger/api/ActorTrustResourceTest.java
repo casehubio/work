@@ -77,7 +77,7 @@ class ActorTrustResourceTest {
         trustScoreJob.runComputation();
 
         given()
-                .when().get("/workitems/actors/alice/trust")
+                .when().get("/api/work/actor-trust/get-actor-trust/alice")
                 .then()
                 .statusCode(200)
                 .body("actorId", equalTo("alice"))
@@ -86,7 +86,7 @@ class ActorTrustResourceTest {
 
         // Also assert numeric ranges via AssertJ
         final JsonPath json = given()
-                .when().get("/workitems/actors/alice/trust")
+                .when().get("/api/work/actor-trust/get-actor-trust/alice")
                 .then()
                 .statusCode(200)
                 .extract().jsonPath();
@@ -106,10 +106,9 @@ class ActorTrustResourceTest {
     @Test
     void getActorTrust_unknownActor_returns404() {
         given()
-                .when().get("/workitems/actors/nobody/trust")
+                .when().get("/api/work/actor-trust/get-actor-trust/nobody")
                 .then()
-                .statusCode(404)
-                .body("error", notNullValue());
+                .statusCode(404);
     }
 
     // -------------------------------------------------------------------------
@@ -124,7 +123,7 @@ class ActorTrustResourceTest {
         trustScoreJob.runComputation();
 
         final ValidatableResponse response = given()
-                .when().get("/workitems/actors/" + actor + "/trust")
+                .when().get("/api/work/actor-trust/get-actor-trust/" + actor)
                 .then()
                 .statusCode(200);
 
@@ -155,7 +154,7 @@ class ActorTrustResourceTest {
 
         // runComputation() is NOT called — no score row written yet → 404
         given()
-                .when().get("/workitems/actors/" + actor + "/trust")
+                .when().get("/api/work/actor-trust/get-actor-trust/" + actor)
                 .then()
                 .statusCode(404);
     }

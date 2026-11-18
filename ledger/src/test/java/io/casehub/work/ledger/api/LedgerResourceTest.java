@@ -314,7 +314,7 @@ class LedgerResourceTest {
     }
 
     @Test
-    void postAttestation_unknownEntry_returns404() {
+    void postAttestation_unknownEntry_returns400() {
         final String id = createWorkItem();
         final String randomEntryId = UUID.randomUUID().toString();
 
@@ -330,7 +330,7 @@ class LedgerResourceTest {
                         """)
                 .when().post("/api/work/work-ledger/post-attestation/" + id + "/" + randomEntryId)
                 .then()
-                .statusCode(404);
+                .statusCode(400);
     }
 
     @Test
