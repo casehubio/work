@@ -1,6 +1,7 @@
 package io.casehub.work.runtime.service;
 
 import java.util.Map;
+import java.util.Set;
 
 import jakarta.inject.Inject;
 
@@ -65,6 +66,34 @@ class TenantContextRunnerTest {
         assertThat(result[1]).isEqualTo("worker-bot");
     }
 
+
+    @Test
+    void runInTenantContext_with_groups() {
+        var result = new Object[1];
+        tenantContextRunner.runInTenantContext("tenant-g", "agent-1",
+                Set.of("legal-team", "reviewers"), () -> {
+            CurrentPrincipal principal = Arc.container()
+                    .instance(CurrentPrincipal.class).get();
+            result[0] = principal.groups();
+        });
+        @SuppressWarnings("unchecked")
+        Set<String> groups = (Set<String>) result[0];
+        assertThat(groups).containsExactlyInAnyOrder("legal-team", "reviewers");
+    }
+
+    @Test
+    void runInTenantContext_without_groups_defaults_to_empty() {
+        var result = new Object[1];
+        tenantContextRunner.runInTenantContext("tenant-h", "agent-2", () -> {
+            CurrentPrincipal principal = Arc.container()
+                    .instance(CurrentPrincipal.class).get();
+            result[0] = principal.groups();
+        });
+        @SuppressWarnings("unchecked")
+        Set<String> groups = (Set<String>) result[0];
+        assertThat(groups).isEmpty();
+    }
+
     /**
      * Test profile that excludes {@code MutableCurrentPrincipal} so
      * {@link TenantScopedPrincipal} is the resolved {@code CurrentPrincipal}.
@@ -75,8 +104,7 @@ class TenantContextRunnerTest {
         public Map<String, String> getConfigOverrides() {
             return Map.of(
                     "quarkus.arc.exclude-types",
-                    "io.casehub.platform.mock.MockGroupMembershipProvider,"
-                            + "io.casehub.work.runtime.test.MutableCurrentPrincipal");
+                    "io.casehub.work.runtime.test.MutableCurrentPrincipal");
         }
     }
 }

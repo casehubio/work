@@ -1,6 +1,8 @@
 package io.casehub.work.runtime.service;
 
 
+import java.util.Set;
+
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.ManagedContext;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -45,6 +47,19 @@ public class TenantContextRunner {
      * @param work       the unit of work to execute
      */
     public void runInTenantContext(String tenancyId, String actorId, Runnable work) {
+        runInTenantContext(tenancyId, actorId, Set.of(), work);
+    }
+
+    /**
+     * Run {@code work} in a request context scoped to the given tenant, actor, and groups.
+     *
+     * @param tenancyId  the tenant identity to establish
+     * @param actorId    the actor identity to establish
+     * @param groups     the group memberships to establish
+     * @param work       the unit of work to execute
+     */
+    public void runInTenantContext(String tenancyId, String actorId,
+                                   Set<String> groups, Runnable work) {
         ManagedContext requestContext = Arc.container().requestContext();
         boolean alreadyActive = requestContext.isActive();
 
@@ -55,15 +70,18 @@ public class TenantContextRunner {
             TenantHolder holder = Arc.container().instance(TenantHolder.class).get();
             String previousTenancyId = alreadyActive ? holder.getTenancyId() : null;
             String previousActorId = alreadyActive ? holder.getActorId() : null;
+            Set<String> previousGroups = alreadyActive ? holder.getGroups() : null;
 
             holder.setTenancyId(tenancyId);
             holder.setActorId(actorId);
+            holder.setGroups(groups);
             try {
                 work.run();
             } finally {
                 if (alreadyActive) {
                     holder.setTenancyId(previousTenancyId);
                     holder.setActorId(previousActorId);
+                    holder.setGroups(previousGroups);
                 }
             }
         } finally {
