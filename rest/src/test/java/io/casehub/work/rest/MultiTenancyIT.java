@@ -99,15 +99,13 @@ class MultiTenancyIT {
         // Full lifecycle as tenant A
         principal.setTenancyId(TENANT_A);
         final String actor = "mt-alice-" + System.nanoTime();
+        principal.setActorId(actor);
         final String id = createWorkItem("Lifecycle isolation item");
-        given().queryParam("claimant", actor)
-                .post("/api/work/lifecycle/claim/{id}", id)
+        given().post("/api/work/lifecycle/claim/{id}", id)
                 .then().statusCode(200);
-        given().queryParam("actor", actor)
-                .post("/api/work/lifecycle/start/{id}", id)
+        given().post("/api/work/lifecycle/start/{id}", id)
                 .then().statusCode(200);
         given().contentType(ContentType.JSON)
-                .queryParam("actor", actor)
                 .body("{\"resolution\":\"done\"}")
                 .post("/api/work/lifecycle/complete/{id}", id)
                 .then().statusCode(200)
@@ -132,8 +130,8 @@ class MultiTenancyIT {
         // Create + claim as tenant A
         principal.setTenancyId(TENANT_A);
         final String id = createWorkItem("Cross-tenant lifecycle check");
-        given().queryParam("claimant", "mt-bob")
-                .post("/api/work/lifecycle/claim/{id}", id)
+        principal.setActorId("mt-bob");
+        given().post("/api/work/lifecycle/claim/{id}", id)
                 .then().statusCode(200);
 
         // Tenant A can see the ASSIGNED item
@@ -221,14 +219,14 @@ class MultiTenancyIT {
 
         // Attempt claim as tenant B → 404 (item not found in tenant B's scope)
         principal.setTenancyId(TENANT_B);
-        given().queryParam("claimant", "mt-mallory")
-                .post("/api/work/lifecycle/claim/{id}", id)
+        principal.setActorId("mt-mallory");
+        given().post("/api/work/lifecycle/claim/{id}", id)
                 .then().statusCode(404);
 
         // Original tenant A can still claim it
         principal.setTenancyId(TENANT_A);
-        given().queryParam("claimant", "mt-alice")
-                .post("/api/work/lifecycle/claim/{id}", id)
+        principal.setActorId("mt-alice");
+        given().post("/api/work/lifecycle/claim/{id}", id)
                 .then().statusCode(200)
                 .body("status", equalTo("ASSIGNED"));
     }
@@ -238,14 +236,13 @@ class MultiTenancyIT {
         // Create + claim as tenant A
         principal.setTenancyId(TENANT_A);
         final String id = createWorkItem("Cross-tenant start prevention");
-        given().queryParam("claimant", "mt-alice")
-                .post("/api/work/lifecycle/claim/{id}", id)
+        principal.setActorId("mt-alice");
+        given().post("/api/work/lifecycle/claim/{id}", id)
                 .then().statusCode(200);
 
         // Attempt start as tenant B → 404
         principal.setTenancyId(TENANT_B);
-        given().queryParam("actor", "mt-alice")
-                .post("/api/work/lifecycle/start/{id}", id)
+        given().post("/api/work/lifecycle/start/{id}", id)
                 .then().statusCode(404);
     }
 
@@ -254,25 +251,23 @@ class MultiTenancyIT {
         // Create + claim + start as tenant A
         principal.setTenancyId(TENANT_A);
         final String id = createWorkItem("Cross-tenant complete prevention");
-        given().queryParam("claimant", "mt-alice")
-                .post("/api/work/lifecycle/claim/{id}", id)
+        principal.setActorId("mt-alice");
+        given().post("/api/work/lifecycle/claim/{id}", id)
                 .then().statusCode(200);
-        given().queryParam("actor", "mt-alice")
-                .post("/api/work/lifecycle/start/{id}", id)
+        given().post("/api/work/lifecycle/start/{id}", id)
                 .then().statusCode(200);
 
         // Attempt complete as tenant B → 404
         principal.setTenancyId(TENANT_B);
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "mt-alice")
                 .body("{\"resolution\":\"stolen\"}")
                 .post("/api/work/lifecycle/complete/{id}", id)
                 .then().statusCode(404);
 
         // Original tenant A can complete
         principal.setTenancyId(TENANT_A);
+        principal.setActorId("mt-alice");
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "mt-alice")
                 .body("{\"resolution\":\"done\"}")
                 .post("/api/work/lifecycle/complete/{id}", id)
                 .then().statusCode(200)
@@ -286,8 +281,8 @@ class MultiTenancyIT {
 
         // Attempt cancel as tenant B → 404
         principal.setTenancyId(TENANT_B);
+        principal.setActorId("mt-admin");
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "mt-admin")
                 .body("{\"reason\":\"malicious cancel\"}")
                 .post("/api/work/lifecycle/cancel/{id}", id)
                 .then().statusCode(404);
@@ -298,14 +293,13 @@ class MultiTenancyIT {
         // Create + claim as tenant A
         principal.setTenancyId(TENANT_A);
         final String id = createWorkItem("Cross-tenant delegate prevention");
-        given().queryParam("claimant", "mt-alice")
-                .post("/api/work/lifecycle/claim/{id}", id)
+        principal.setActorId("mt-alice");
+        given().post("/api/work/lifecycle/claim/{id}", id)
                 .then().statusCode(200);
 
         // Attempt delegate as tenant B → 404
         principal.setTenancyId(TENANT_B);
         given().contentType(ContentType.JSON)
-                .queryParam("actor", "mt-alice")
                 .body("{\"to\":\"mt-mallory\"}")
                 .post("/api/work/lifecycle/delegate/{id}", id)
                 .then().statusCode(404);

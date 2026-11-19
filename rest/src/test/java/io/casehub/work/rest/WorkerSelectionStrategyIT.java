@@ -3,20 +3,24 @@ package io.casehub.work.rest;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
+import io.casehub.work.test.MutableCurrentPrincipal;
+import jakarta.inject.Inject;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
 
-/**
- * Integration and E2E tests for WorkerSelectionStrategy wired into WorkItem lifecycle.
- * Tests use dynamic actor IDs (nanoTime suffix) to avoid cross-test interference.
- * Issues #115/#116, Epics #100/#102.
- */
 @QuarkusTest
 class WorkerSelectionStrategyIT {
 
-    // ── Least-loaded (default) — pre-assignment ───────────────────────────────
+    @Inject
+    MutableCurrentPrincipal principal;
+
+    @BeforeEach
+    void resetPrincipal() {
+        principal.reset();
+    }
 
     @Test
     void leastLoaded_preAssigns_toCandidateUser_withLowestActiveCount() {
@@ -78,8 +82,8 @@ class WorkerSelectionStrategyIT {
                 .body("status", equalTo("ASSIGNED"))
                 .body("assigneeId", equalTo(actor));
 
-        // Can start immediately
-        given().post("/api/work/lifecycle/start/" + id + "?actor=" + actor)
+        principal.setActorId(actor);
+        given().post("/api/work/lifecycle/start/" + id)
                 .then().statusCode(200)
                 .body("status", equalTo("IN_PROGRESS"));
     }
@@ -135,8 +139,10 @@ class WorkerSelectionStrategyIT {
         createAndStartWorkItem(bob);
         createAndStartWorkItem(bob);
 
-        // Release → strategy re-fires → alice should win (fewer active)
-        given().post("/api/work/lifecycle/release/" + id + "?actor=" + alice).then().statusCode(200)
+        final String assignee = given().get("/api/work/items/get-by-id/" + id).then()
+                .extract().path("assigneeId");
+        principal.setActorId(assignee);
+        given().post("/api/work/lifecycle/release/" + id).then().statusCode(200)
                 .body("assigneeId", equalTo(alice))
                 .body("status", equalTo("ASSIGNED"));
     }
@@ -155,20 +161,19 @@ class WorkerSelectionStrategyIT {
                 .post("/api/work/items/create").then().statusCode(201)
                 .extract().path("id");
 
-        // Start it (required to delegate)
         final String assignee = given().get("/api/work/items/get-by-id/" + id).then().statusCode(200)
                 .extract().path("assigneeId");
-        given().post("/api/work/lifecycle/start/" + id + "?actor=" + assignee).then().statusCode(200);
+        principal.setActorId(assignee);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
 
         // Give bob 3 active items, carol 0
         createAndStartWorkItem(bob);
         createAndStartWorkItem(bob);
         createAndStartWorkItem(bob);
 
-        // Delegate → strategy re-fires → carol should win (0 active)
         given().contentType(ContentType.JSON)
                 .body("{\"to\":\"" + carol + "\"}")
-                .post("/api/work/lifecycle/delegate/" + id + "?actor=" + assignee)
+                .post("/api/work/lifecycle/delegate/" + id)
                 .then().statusCode(200)
                 .body("assigneeId", equalTo(carol));
     }
@@ -194,13 +199,12 @@ class WorkerSelectionStrategyIT {
                 .body("confidenceScore", equalTo(0.9f))
                 .extract().path("id");
 
-        // Bob starts immediately (no claim step)
-        given().post("/api/work/lifecycle/start/" + id + "?actor=" + bob)
+        principal.setActorId(bob);
+        given().post("/api/work/lifecycle/start/" + id)
                 .then().statusCode(200).body("status", equalTo("IN_PROGRESS"));
 
-        // Bob completes
         given().contentType(ContentType.JSON).body("{\"resolution\":null}")
-                .post("/api/work/lifecycle/complete/" + id + "?actor=" + bob)
+                .post("/api/work/lifecycle/complete/" + id)
                 .then().statusCode(200)
                 .body("status", equalTo("COMPLETED"))
                 .body("assigneeId", equalTo(bob));
@@ -219,8 +223,7 @@ class WorkerSelectionStrategyIT {
                         "\"candidateUsers\":\"" + actor + "\"}")
                 .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
-        // Pre-assigned to actor by least-loaded (only candidate) → ASSIGNED
-        // Start to put in IN_PROGRESS (counted as active)
-        given().post("/api/work/lifecycle/start/" + id + "?actor=" + actor).then().statusCode(200);
+        principal.setActorId(actor);
+        given().post("/api/work/lifecycle/start/" + id).then().statusCode(200);
     }
 }
