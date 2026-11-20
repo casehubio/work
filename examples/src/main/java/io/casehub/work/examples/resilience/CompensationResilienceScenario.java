@@ -161,16 +161,16 @@ public class CompensationResilienceScenario {
         });
 
         QuarkusTransaction.requiringNew().run(() -> {
-            workItemService.resume(lifecycleCompId, "senior-doctor");
+            workItemService.resume(lifecycleCompId, "clinic-admin");
             statusTrail.add(workItemService.findById(lifecycleCompId).orElseThrow().status().name());
-            steps.add(new StepLog(12, "senior-doctor resumes the compensating WorkItem", lifecycleCompId));
+            steps.add(new StepLog(12, "clinic-admin resumes the compensating WorkItem", lifecycleCompId));
         });
 
         QuarkusTransaction.requiringNew().run(() -> {
-            workItemService.complete(lifecycleCompId, "senior-doctor",
+            workItemService.complete(lifecycleCompId, "clinic-admin",
                     "Referral recalled — patient redirected to Neurosurgery", "RECALLED");
             statusTrail.add(workItemService.findById(lifecycleCompId).orElseThrow().status().name());
-            steps.add(new StepLog(13, "senior-doctor completes — original auto-COMPENSATED", lifecycleCompId));
+            steps.add(new StepLog(13, "clinic-admin completes — original auto-COMPENSATED", lifecycleCompId));
         });
 
         final LifecycleResult lifecycleResult = QuarkusTransaction.requiringNew().call(() -> {

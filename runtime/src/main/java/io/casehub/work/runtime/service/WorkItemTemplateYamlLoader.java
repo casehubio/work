@@ -123,8 +123,9 @@ public class WorkItemTemplateYamlLoader {
         if (existing.isPresent()) {
             LOG.warnf("WorkItemTemplate '%s' already exists (id=%s) — overwriting from %s",
                       template.name, existing.get().id, sourceUrl);
-            template.id      = existing.get().id;
-            template.version = existing.get().version;
+            template.id        = existing.get().id;
+            template.version   = existing.get().version;
+            template.createdAt = existing.get().createdAt;
         }
         em.merge(template);
         em.flush();
