@@ -28,6 +28,21 @@ All 10 tasks for #413 (Broaden SPI interfaces for chart, map, and graph componen
 - **SPI Broadening** (`examples/samples/Charts/SPI Broadening.dash.yaml`) — 5 tabs: Graph Canvas, Shared Properties, Per-Chart Series, Cartesian Axis, Escape Hatches
 - **Graph Editing** — 3 showcases fixed: `pages-graph-canvas` → `graph-canvas-core` (open + close tags)
 
+## Cross-Repo Commits (from soredium session, 2026-11-23)
+
+Committed to engine, eidos, and agency as part of Hortora/soredium#627 (CI fork divergence fix):
+
+| Repo | Branch | Commit | What |
+|------|--------|--------|------|
+| engine | issue-1351-agent-task-dispatch-test | c415ec2ac | fix(ci): gate API docs generation on repository owner |
+| eidos | issue-266-cross-unit-evidence-threshold | f89da1e | fix(ci): gate API docs generation on repository owner |
+| agency | main | b5b33429 | fix(ci): gate API docs generation on repository owner |
+
+These add `if: github.repository_owner == 'casehubio'` to `generate-api-docs.yml` to prevent the CI action from committing to forks, which was creating parallel commits that broke mirror pushes.
+
+**Note:** engine and eidos commits landed on working branches (not main). They need to be landed via work-end or cherry-picked to main to take effect on GitHub.
+
 ## What's Next
 
 - Merge `issue-413-broaden-spi-interfaces` to main via work-end
+- Land the CI fix commits on engine and eidos (currently on working branches)
