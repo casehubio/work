@@ -29,11 +29,11 @@ class WorkerSkillProfileResourceTest {
         given()
                 .contentType("application/json")
                 .body("{\"workerId\": \"alice\", \"narrative\": \"NDA specialist, GDPR expert\"}")
-                .when().post("/worker-skill-profiles")
+                .when().post("/api/work/skill-profiles/upsert")
                 .then().statusCode(201);
 
         given()
-                .when().get("/worker-skill-profiles/alice")
+                .when().get("/api/work/skill-profiles/get/alice")
                 .then()
                 .statusCode(200)
                 .body("workerId", equalTo("alice"))
@@ -43,7 +43,7 @@ class WorkerSkillProfileResourceTest {
     @Test
     void get_notFound_returns404() {
         given()
-                .when().get("/worker-skill-profiles/unknown")
+                .when().get("/api/work/skill-profiles/get/unknown")
                 .then().statusCode(404);
     }
 
@@ -51,13 +51,13 @@ class WorkerSkillProfileResourceTest {
     void create_upsert_replacesNarrative() {
         given().contentType("application/json")
                 .body("{\"workerId\": \"bob\", \"narrative\": \"original\"}")
-                .when().post("/worker-skill-profiles").then().statusCode(201);
+                .when().post("/api/work/skill-profiles/upsert").then().statusCode(201);
 
         given().contentType("application/json")
                 .body("{\"workerId\": \"bob\", \"narrative\": \"updated\"}")
-                .when().post("/worker-skill-profiles").then().statusCode(201);
+                .when().post("/api/work/skill-profiles/upsert").then().statusCode(201);
 
-        given().when().get("/worker-skill-profiles/bob")
+        given().when().get("/api/work/skill-profiles/get/bob")
                 .then().statusCode(200).body("narrative", equalTo("updated"));
     }
 
@@ -65,12 +65,12 @@ class WorkerSkillProfileResourceTest {
     void listAll_returnsAllProfiles() {
         given().contentType("application/json")
                 .body("{\"workerId\": \"alice\", \"narrative\": \"legal\"}")
-                .when().post("/worker-skill-profiles").then().statusCode(201);
+                .when().post("/api/work/skill-profiles/upsert").then().statusCode(201);
         given().contentType("application/json")
                 .body("{\"workerId\": \"bob\", \"narrative\": \"finance\"}")
-                .when().post("/worker-skill-profiles").then().statusCode(201);
+                .when().post("/api/work/skill-profiles/upsert").then().statusCode(201);
 
-        given().when().get("/worker-skill-profiles")
+        given().when().get("/api/work/skill-profiles/list-all")
                 .then().statusCode(200).body("size()", equalTo(2));
     }
 
@@ -78,26 +78,26 @@ class WorkerSkillProfileResourceTest {
     void delete_existingProfile_returns204() {
         given().contentType("application/json")
                 .body("{\"workerId\": \"carol\", \"narrative\": \"ops\"}")
-                .when().post("/worker-skill-profiles").then().statusCode(201);
+                .when().post("/api/work/skill-profiles/upsert").then().statusCode(201);
 
-        given().when().delete("/worker-skill-profiles/carol")
+        given().when().post("/api/work/skill-profiles/delete/carol")
                 .then().statusCode(204);
 
-        given().when().get("/worker-skill-profiles/carol")
+        given().when().get("/api/work/skill-profiles/get/carol")
                 .then().statusCode(404);
     }
 
     @Test
-    void delete_notFound_returns404() {
-        given().when().delete("/worker-skill-profiles/nobody")
-                .then().statusCode(404);
+    void delete_notFound_returns400() {
+        given().when().post("/api/work/skill-profiles/delete/nobody")
+                .then().statusCode(400);
     }
 
     @Test
     void create_missingWorkerId_returns400() {
         given().contentType("application/json")
                 .body("{\"narrative\": \"legal\"}")
-                .when().post("/worker-skill-profiles")
+                .when().post("/api/work/skill-profiles/upsert")
                 .then().statusCode(400);
     }
 }

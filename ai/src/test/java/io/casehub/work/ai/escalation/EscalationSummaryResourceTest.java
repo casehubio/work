@@ -51,14 +51,14 @@ class EscalationSummaryResourceTest {
         final Response create = given()
                 .contentType("application/json")
                 .body("{\"title\":\"Review contract\",\"types\":[\"legal\"],\"createdBy\":\"system\"}")
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().response();
 
         final String id = create.jsonPath().getString("id");
 
         final Response list = given()
-                .when().get("/workitems/" + id + "/escalation-summaries")
+                .when().get("/api/work/escalations/list/" + id)
                 .then().statusCode(200)
                 .extract().response();
 
@@ -85,7 +85,7 @@ class EscalationSummaryResourceTest {
 
         // Allow the AFTER_SUCCESS observer transaction to commit by calling GET
         final Response list = given()
-                .when().get("/workitems/" + wi.id() + "/escalation-summaries")
+                .when().get("/api/work/escalations/list/" + wi.id())
                 .then().statusCode(200)
                 .extract().response();
 

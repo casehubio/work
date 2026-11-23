@@ -57,7 +57,7 @@ class SemanticRoutingTest {
                         + "\"category\": \"legal\", "
                         + "\"candidateUsers\": \"alice,bob\", "
                         + "\"createdBy\": \"agent-001\"}")
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().response();
 
@@ -75,18 +75,18 @@ class SemanticRoutingTest {
     void createWorkerProfile_thenCreateWorkItem_profileStoredCorrectly() {
         given().contentType("application/json")
                 .body("{\"workerId\": \"alice\", \"narrative\": \"NDA specialist, legal contracts expert\"}")
-                .when().post("/worker-skill-profiles")
+                .when().post("/api/work/skill-profiles/upsert")
                 .then().statusCode(201);
 
         given().contentType("application/json")
                 .body("{\"workerId\": \"bob\", \"narrative\": \"finance accounting budget analysis\"}")
-                .when().post("/worker-skill-profiles")
+                .when().post("/api/work/skill-profiles/upsert")
                 .then().statusCode(201);
 
         // Verify profiles stored
-        given().when().get("/worker-skill-profiles/alice")
+        given().when().get("/api/work/skill-profiles/get/alice")
                 .then().statusCode(200);
-        given().when().get("/worker-skill-profiles/bob")
+        given().when().get("/api/work/skill-profiles/get/bob")
                 .then().statusCode(200);
 
         // Create work item — profiles exist but no EmbeddingModel, so noChange() returned
@@ -96,7 +96,7 @@ class SemanticRoutingTest {
                         + "\"category\": \"legal\", "
                         + "\"candidateUsers\": \"alice,bob\", "
                         + "\"createdBy\": \"agent-001\"}")
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201);
     }
 
@@ -107,7 +107,7 @@ class SemanticRoutingTest {
                 .body("{\"title\": \"Open task\", "
                         + "\"category\": \"legal\", "
                         + "\"createdBy\": \"agent-001\"}")
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201);
     }
 }

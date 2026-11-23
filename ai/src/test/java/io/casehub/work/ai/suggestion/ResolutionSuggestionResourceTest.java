@@ -31,7 +31,7 @@ class ResolutionSuggestionResourceTest {
                 .body("{\"title\":\"Review supplier contract\","
                         + "\"category\":\"procurement\","
                         + "\"createdBy\":\"test-agent\"}")
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().response();
 
@@ -39,7 +39,7 @@ class ResolutionSuggestionResourceTest {
 
         // Call the suggestion endpoint
         final Response suggestion = given()
-                .when().get("/workitems/" + id + "/resolution-suggestion")
+                .when().get("/api/work/suggestions/suggest/" + id)
                 .then().statusCode(200)
                 .extract().response();
 
@@ -52,7 +52,7 @@ class ResolutionSuggestionResourceTest {
     @Test
     void suggest_unknownWorkItem_returns404() {
         given()
-                .when().get("/workitems/" + UUID.randomUUID() + "/resolution-suggestion")
+                .when().get("/api/work/suggestions/suggest/" + UUID.randomUUID())
                 .then().statusCode(404);
     }
 
@@ -63,14 +63,14 @@ class ResolutionSuggestionResourceTest {
                 .body("{\"title\":\"Approve leave request\","
                         + "\"category\":\"hr\","
                         + "\"createdBy\":\"hr-system\"}")
-                .when().post("/workitems")
+                .when().post("/api/work/items/create")
                 .then().statusCode(201)
                 .extract().response();
 
         final String id = create.jsonPath().getString("id");
 
         final Response suggestion = given()
-                .when().get("/workitems/" + id + "/resolution-suggestion")
+                .when().get("/api/work/suggestions/suggest/" + id)
                 .then().statusCode(200)
                 .extract().response();
 

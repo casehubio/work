@@ -63,7 +63,7 @@ class LowConfidenceFilterTest {
 
     @Test
     void lowConfidenceFilter_appearsInPermanentFilterList() {
-        given().get("/label-rules").then().statusCode(200)
+        given().get("/api/work/label-rules/list").then().statusCode(200)
                 .body("findAll { it.source == 'permanent' }.name", hasItem("ai/low-confidence"));
     }
 
@@ -78,7 +78,7 @@ class LowConfidenceFilterTest {
     void e2e_aiAgentCreatesLowConfidenceItem_reviewerSeeItInInbox() {
         final String id = given().contentType(ContentType.JSON)
                 .body("{\"title\":\"Uncertain Decision\",\"types\":[\"risk\"]," +
-                        "\"candidateGroups\":\"analysts\",\"createdBy\":\"agent:risk-ai\"," +
+                        "\"createdBy\":\"agent:risk-ai\"," +
                         "\"confidenceScore\":0.42}")
                 .post("/api/work/items/create").then().statusCode(201).extract().path("id");
 
