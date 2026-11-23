@@ -2,14 +2,13 @@ package io.casehub.work.runtime.service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SpecVersion;
-import com.networknt.schema.ValidationMessage;
+import com.networknt.schema.Error;
+import com.networknt.schema.Schema;
+import com.networknt.schema.SchemaRegistry;
+import com.networknt.schema.SpecificationVersion;
 
 /**
  * Pure JSON Schema validation service.
@@ -30,8 +29,8 @@ import com.networknt.schema.ValidationMessage;
 public class FormSchemaValidationService {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final JsonSchemaFactory FACTORY = JsonSchemaFactory
-            .getInstance(SpecVersion.VersionFlag.V7);
+    private static final SchemaRegistry REGISTRY = SchemaRegistry
+            .withDefaultDialect(SpecificationVersion.DRAFT_7);
 
     /**
      * Validate {@code json} against the given JSON Schema draft-07 definition.
@@ -46,16 +45,16 @@ public class FormSchemaValidationService {
         }
 
         try {
-            final JsonSchema schema = FACTORY.getSchema(schemaDefinition);
+            final Schema schema = REGISTRY.getSchema(schemaDefinition);
             final JsonNode node = MAPPER.readTree(json);
-            final Set<ValidationMessage> messages = schema.validate(node);
+            final List<Error> messages = schema.validate(node);
 
             if (messages.isEmpty()) {
                 return List.of();
             }
 
             final List<String> violations = new ArrayList<>(messages.size());
-            for (final ValidationMessage msg : messages) {
+            for (final Error msg : messages) {
                 violations.add(msg.getMessage());
             }
             return violations;

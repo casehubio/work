@@ -1,17 +1,20 @@
 package io.casehub.work.progress.validation;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SpecVersion;
-import com.networknt.schema.ValidationMessage;
+import com.networknt.schema.Error;
+import com.networknt.schema.Schema;
+import com.networknt.schema.SchemaRegistry;
+import com.networknt.schema.SpecificationVersion;
 
+import java.util.List;
 import java.util.Set;
 
 public class CustomShapeValidator implements ShapeValidator {
 
     private static final int MAX_SCHEMA_SIZE = 65536;
     private static final Set<String> NUMERIC_TYPES = Set.of("number", "integer");
+    private static final SchemaRegistry SCHEMA_REGISTRY =
+            SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_7);
 
     @Override
     public String shapeType() {
@@ -31,9 +34,8 @@ public class CustomShapeValidator implements ShapeValidator {
 
         validateRollbackConfig(definition, schemaNode);
 
-        JsonSchemaFactory factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7);
-        JsonSchema schema = factory.getSchema(schemaNode);
-        Set<ValidationMessage> errors = schema.validate(state);
+        Schema schema = SCHEMA_REGISTRY.getSchema(schemaNode);
+        List<Error> errors = schema.validate(state);
         if (!errors.isEmpty()) {
             throw new IllegalArgumentException("State does not conform to schema: " + errors.iterator().next().getMessage());
         }
