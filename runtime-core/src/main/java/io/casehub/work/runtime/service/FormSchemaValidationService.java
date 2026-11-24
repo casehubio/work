@@ -2,14 +2,13 @@ package io.casehub.work.runtime.service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SpecVersion;
-import com.networknt.schema.ValidationMessage;
+import com.networknt.schema.Error;
+import com.networknt.schema.Schema;
+import com.networknt.schema.SchemaRegistry;
+import com.networknt.schema.SpecificationVersion;
 
 /**
  * Pure JSON Schema validation service.
@@ -30,8 +29,8 @@ import com.networknt.schema.ValidationMessage;
 public class FormSchemaValidationService {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private static final JsonSchemaFactory FACTORY = JsonSchemaFactory
-            .getInstance(SpecVersion.VersionFlag.V7);
+    private static final SchemaRegistry REGISTRY =
+            SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_7);
 
     /**
      * Validate {@code json} against the given JSON Schema draft-07 definition.
@@ -46,17 +45,18 @@ public class FormSchemaValidationService {
         }
 
         try {
-            final JsonSchema schema = FACTORY.getSchema(schemaDefinition);
+            final JsonNode schemaNode = MAPPER.readTree(schemaDefinition);
+            final Schema schema = REGISTRY.getSchema(schemaNode);
             final JsonNode node = MAPPER.readTree(json);
-            final Set<ValidationMessage> messages = schema.validate(node);
+            final java.util.Collection<Error> errors = schema.validate(node);
 
-            if (messages.isEmpty()) {
+            if (errors.isEmpty()) {
                 return List.of();
             }
 
-            final List<String> violations = new ArrayList<>(messages.size());
-            for (final ValidationMessage msg : messages) {
-                violations.add(msg.getMessage());
+            final List<String> violations = new ArrayList<>(errors.size());
+            for (final Error err : errors) {
+                violations.add(err.getMessage());
             }
             return violations;
         } catch (final Exception e) {
