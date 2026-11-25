@@ -24,20 +24,27 @@ Aho-Corasick multi-pattern scanning with alias handling, word-boundary
 filtering, and canonical forms. It's pure Java, zero deps, already maintained
 by `SurfaceFormTrieManager` from MindMap entity data.
 
-**Change:** Add `entity-token` as an optional dependency of
-`mindmap-intelligence`. Use `Instance<SurfaceFormTrie>` for graceful
-degradation. Wire it into:
+**Change:** `entity-token` is already a dependency of
+`mindmap-intelligence` (non-optional; RetokenisationPhase already uses it).
+New consumers use `Instance<SurfaceFormTrie>` to share the CDI-managed trie
+from `SurfaceFormTrieManager` (entity-token-cdi) when available, falling
+back to per-call trie construction otherwise. Wire it into:
 
 - **SubThoughtExtractor** — scan sub-thought text for entity mentions after
   type classification. Fall back to parent experience SUBJECT attribute. (D1, D9)
-- **MindMapExtractor** — trie-first lookup before FuzzyNodeResolver. Scope
-  fuzzy resolution to the relevant subgraph instead of null/all. (D10)
+- **MindMapExtractor** — trie-first lookup before FuzzyNodeResolver. Two-tier
+  scoped fuzzy resolution: attempt within subgraph first, then fall back to
+  global fuzzy at a higher threshold (0.95 instead of 0.85) if no scoped
+  match is found. This catches genuine cross-subgraph typos without the
+  false-positive risk of unrestricted global search at 0.85. (D10)
 - **MergeDetectionPhase** — when entities have distinct EntityIdentity
   entries, block merge regardless of name similarity. (D7)
 
 **Limitation:** SurfaceFormTrie only recognizes entities already in the
 MindMap. Novel entities are picked up in future ticks after MindMapExtractor
-creates them and the trie rebuilds.
+creates them and the trie rebuilds. Within a single consolidation tick,
+entities created by early phases are not visible to later phases using the
+trie (trie staleness window). Self-correcting on next tick.
 
 ### 2. Tenant-scoped consolidation state
 
@@ -75,7 +82,9 @@ permanent.
 - **MergeDetectionPhase** (F11): Require minimum 2 shared neighbors for
   auto-merge. Single-neighbor Jaccard is unreliable — one shared neighbor
   between two nodes yields Jaccard 1.0 if each has only one neighbor, inflating
-  the blended score. Add SurfaceFormTrie guard per principle 1. (D7)
+  the blended score. Exception: zero-neighbor nodes with JW >= 0.95 are still
+  eligible (newly extracted duplicates before edges are added). Add
+  SurfaceFormTrie guard per principle 1. (D7)
 
 - **GoalResolutionPhase** (F11): Add word-token Jaccard as secondary check.
   Pure JW at 0.90 cannot distinguish "Write chapter 1" from "Write chapter 2"
@@ -86,7 +95,9 @@ permanent.
 - **ConversationBridge** (F19): Change default ConfidenceOrigin from STATED
   (1.0) to INFERRED (0.7). Conversation text is the system's interpretation,
   not stated fact. Callers with genuinely stated facts (biographical import)
-  already pass STATED explicitly. (D5)
+  already pass STATED explicitly. Existing STATED nodes are legacy —
+  decay does not normalize them (uniform half-life preserves the 1.43× ratio
+  permanently). A one-time backfill is a future option. (D5)
 
 ## Individual Fixes
 
@@ -101,10 +112,14 @@ GoalResolutionPhase. (D8)
 **Watermark cursor:** Track the lowest unresolved (corroboration-blocked)
 memory ID during the scan. Set the persistent cursor to
 `min(lastProcessedId, lowestUnresolvedId - 1)`. Blocked memories are always
-re-evaluated in future ticks. (D3)
+re-evaluated in future ticks. Memory IDs are monotonically increasing
+(enforced since commit adad3278). (D3)
 
-The re-scan window is bounded by the number of blocked memories, which is
-small relative to total memory count.
+**TTL escape hatch:** After a configurable number of ticks without
+corroboration (default 10), abandon the blocked memory and advance the
+cursor past it, logging the abandoned entry. Without this, a single
+uncorroborable entity permanently anchors the watermark and forces every
+subsequent tick to re-scan from that point.
 
 ### F7: Action/outcome subjects
 
@@ -128,29 +143,27 @@ descriptive node names via type-based templates: (D4)
 | judgment | `Judgment: {result} — {text≤60}` |
 | formative-experience | `Formative: {text≤80}` |
 
-Fall back to current truncation when classification metadata is absent.
+Fall back to current truncation for unknown cognitive kinds.
 
 ### F16: Community summary phase disabled
 
-Gate behind `@IfBuildProperty(name = "casehub.mindmap.consolidation.community-summary.enabled", stringValue = "true", enableIfMissing = false)`. (D6)
+Gate execution behind a runtime config check
+(`casehub.mindmap.consolidation.community-summary.enabled`, default false).
+The bean stays live; `run()` returns early when disabled. (D6)
 
 The phase creates Summary-trait nodes that no consumer reads. The
 infrastructure (k-core detection, hash invalidation, stale cleanup) is
-preserved for future use. When enabled, the phase should use
-`sessionPipeline` (already wired but unused) for real LLM summaries.
+preserved at full fidelity — a runtime gate keeps the bean alive for
+future activation via config change + restart, without requiring a rebuild.
+When enabled, the phase should use `sessionPipeline` (already wired but
+unused) for real LLM summaries.
 
 ## Dependency Changes
 
-```
-mindmap-intelligence/pom.xml:
-  + <dependency>
-  +   <groupId>io.casehub</groupId>
-  +   <artifactId>casehub-neocortex-entity-token</artifactId>
-  +   <optional>true</optional>
-  + </dependency>
-```
-
-No new transitive dependencies. `entity-token` is pure Java, zero deps.
+None. `entity-token` is already a non-optional dependency of
+`mindmap-intelligence` (RetokenisationPhase uses it). New consumers
+use `Instance<SurfaceFormTrie>` to share the CDI-managed trie when
+available.
 
 ## Test Strategy
 
@@ -165,15 +178,15 @@ Each fix requires both unit tests and verification that existing tests
 | F3 (drain) | 1 | signals() drains after copy |
 | F3 (tenant key) | 2 | Multi-tenant signal isolation, correct tenantId on briefing |
 | F5 | 2 | Per-tenant swapAndReset, non-processed tenants retain significance |
-| F7 (cursor) | 2 | Watermark stays behind blocked memory, re-evaluation on next tick |
+| F7 (cursor) | 3 | Watermark stays behind blocked memory, re-evaluation on next tick, TTL abandonment after N ticks |
 | F7 (names) | 3 | Template per cognitive kind, fallback, metadata-absent case |
-| F11 (merge) | 3 | Min-neighbor guard, word-Jaccard for goals, null-domain block |
+| F11 (merge) | 4 | Min-neighbor guard, zero-neighbor exemption at JW>=0.95, word-Jaccard for goals, null-domain block |
 | F16 | 1 | Phase disabled when property absent |
 | F17 | 1 | Dynamic tenant registration via ExperienceRecorded |
 | F19 (confidence) | 1 | Default INFERRED when origin null |
-| F19 (fuzzy) | 2 | Trie-first lookup, subgraph-scoped fuzzy |
+| F19 (fuzzy) | 3 | Trie-first lookup, scoped fuzzy within subgraph, global fuzzy fallback at 0.95 |
 
-**~21 new tests total.**
+**~24 new tests total.**
 
 Existing test suites to verify green: SubThoughtExtractorTest (8),
 SubThoughtConsolidationPhaseTest (9), ExperienceConsolidationPhaseTest (18),

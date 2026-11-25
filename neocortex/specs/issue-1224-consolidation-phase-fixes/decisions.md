@@ -1,12 +1,13 @@
 ## D1: Entity resolution via SurfaceFormTrie as cross-cutting infrastructure
 
-**Choice:** Wire `SurfaceFormTrie` (from entity-token) into SubThoughtExtractor, MindMapExtractor, and MergeDetectionPhase as the primary entity recognition mechanism. Add `entity-token` as an optional dependency of `mindmap-intelligence` (pure Java, zero transitive deps). Use `Instance<SurfaceFormTrie>` for graceful degradation.
+**Choice:** Wire `SurfaceFormTrie` (from entity-token, already a dependency of mindmap-intelligence) into SubThoughtExtractor, MindMapExtractor, and MergeDetectionPhase as the primary entity recognition mechanism. Use `Instance<SurfaceFormTrie>` for graceful degradation when no CDI-managed trie is available.
 **Alternatives:**
 - Build per-component entity matching — duplicates logic, inconsistent quality across paths
 - Use MindMapExtractor's LLM-based extraction for everything — too slow for sub-thought classification, overkill for name matching
 - Use SubThoughtClassifier.containsWord() — primitive, no alias handling, no canonical forms
-**Rationale:** Entity recognition in text is a cross-cutting concern. SurfaceFormTrie already solves it (Aho-Corasick, aliases, word boundaries, canonical forms). Three separate findings (F6, F11, F19) are all building ad-hoc weak entity recognition where this strong one already exists. Reuse eliminates three classes of bug simultaneously.
-**Trade-offs:** Adds an optional module dependency from mindmap-intelligence → entity-token. SurfaceFormTrie only recognizes entities already in the MindMap — truly novel entities won't be found until MindMapExtractor creates them and the trie rebuilds.
+- Embedding-based entity similarity — catches semantic matches (e.g., "Dr. Robert Smith" ↔ "Bob Smith") but too expensive per consolidation tick; consider as a future complement for merge detection confirmation only
+**Rationale:** Entity recognition in text is a cross-cutting concern. SurfaceFormTrie already solves it (Aho-Corasick, aliases, word boundaries, canonical forms). Three separate findings (F6, F11, F19) are all building ad-hoc weak entity recognition where this strong one already exists. Reuse eliminates three classes of bug simultaneously. The entity-token dependency already exists in mindmap-intelligence (non-optional); RetokenisationPhase already builds per-call tries via `buildTrieFromGraph()`. New consumers should use `Instance<SurfaceFormTrie>` to share the CDI-managed trie from `SurfaceFormTrieManager` (entity-token-cdi) when available, falling back to per-call trie construction otherwise.
+**Trade-offs:** SurfaceFormTrie only recognizes entities already in the MindMap — truly novel entities won't be found until MindMapExtractor creates them and the trie rebuilds. Within a single consolidation tick, entities created by early phases are not visible to later phases using the trie (trie staleness window). Self-correcting on next tick.
 **Sources:** entity-token/SurfaceFormTrie.java, entity-token-cdi/SurfaceFormTrieManager.java, SubThoughtExtractor.java:49, MindMapExtractor.java:418, MergeDetectionPhase.java:145
 **Exploration:** deep-analysis
 **Status:** captured
@@ -25,20 +26,20 @@
 
 ## D3: Watermark cursor for experience graduation
 
-**Choice:** Track the lowest unresolved (corroboration-blocked) memory ID. Set the persistent cursor to `min(lastProcessedId, lowestUnresolvedId - 1)` so blocked memories are always re-evaluated in future ticks.
+**Choice:** Track the lowest unresolved (corroboration-blocked) memory ID. Set the persistent cursor to `min(lastProcessedId, lowestUnresolvedId - 1)` so blocked memories are always re-evaluated in future ticks. Add a TTL escape hatch: after a configurable number of ticks without corroboration (default 10), abandon the blocked memory and advance the cursor past it, logging the abandoned entry. Memory IDs are monotonically increasing (enforced since commit adad3278).
 **Alternatives:**
 - Separate blocked list — additional state to persist and manage, risk of list growing unboundedly
 - Two-pass cursor (process all, then re-scan blocked) — doubles scan cost per tick
 - Bitmap of processed IDs — space-inefficient for large memory stores
-**Rationale:** This is a classic watermark problem (TCP acknowledgement semantics). The cursor means "everything up to here is fully resolved." When a blocked memory sits at position N and a later one at N+5 graduates, the cursor stays at N-1. Simple, correct, no additional state structures.
-**Trade-offs:** Re-scans memories between the watermark and the actual frontier on each tick. Acceptable — the scan window is bounded by the number of blocked memories, which is small relative to total memory count.
+**Rationale:** This is a classic watermark problem (TCP acknowledgement semantics). The cursor means "everything up to here is fully resolved." When a blocked memory sits at position N and a later one at N+5 graduates, the cursor stays at N-1. Simple, correct, no additional state structures. The TTL escape hatch prevents a permanently-blocked watermark from an uncorroborable entity (hallucinated or one-off mention) — without it, the watermark is stuck and every subsequent tick re-scans from that point forward.
+**Trade-offs:** Re-scans memories between the watermark and the actual frontier on each tick. The scan window is bounded by the number of blocked memories plus the TTL window. Abandoned memories lose their chance at corroboration-based graduation, but would never have graduated anyway.
 **Sources:** ExperienceConsolidationPhase.java:173-179,223
 **Exploration:** quick
 **Status:** captured
 
 ## D4: Type-based node naming for graduated experiences
 
-**Choice:** Use classification info from DefaultGraduationClassifier to generate descriptive node names. Templates: "Belief: {subject} — {truncated text}" for observations, "Intention: {capability} — {truncated text}" for actions, "Judgment: {result} — {truncated text}" for outcomes. Fall back to current truncation when classification metadata is absent.
+**Choice:** Use classification info from DefaultGraduationClassifier to generate descriptive node names. Templates: "Belief: {subject} — {text≤60}" for observations, "Intention: {capability} — {text≤60}" for actions, "Judgment: {result} — {text≤60}" for outcomes, "Formative: {text≤80}" for formative experiences. Fall back to current truncation for unknown cognitive kinds.
 **Alternatives:**
 - LLM summarization — too expensive for every graduation, adds latency to consolidation tick
 - Raw text truncation (current) — produces verbose, non-descriptive names that are useless for graph navigation
@@ -55,18 +56,19 @@
 - Make it configurable per invocation only — already parameterized, the issue is the default
 - Use a lower value like SPECULATED (0.5) — too aggressive; conversation text has moderate reliability
 **Rationale:** Conversation text is not stated fact — it's the system's interpretation of what was said. INFERRED (0.7) accurately reflects this. Biographical import callers already pass STATED explicitly, so changing the default only affects conversation processing.
-**Trade-offs:** Existing nodes created before this change retain STATED 1.0. No migration needed — confidence decay normalizes over time.
+**Trade-offs:** Existing nodes created before this change retain STATED 1.0 and are permanently privileged over new INFERRED nodes of the same age (decay is multiplicative with uniform half-life — the STATED/INFERRED ratio is constant at 1.43× regardless of elapsed time). This is acceptable: existing conversation nodes are legacy; going forward all conversation nodes will be INFERRED. A one-time backfill (query nodes with provenance="conversation-bridge" and origin=STATED, update to INFERRED) is a future option but not part of this fix batch.
 **Sources:** ConversationBridge.java:62-63, MindMapConfidenceDefaults
 **Exploration:** quick
 **Status:** captured
 
 ## D6: Disable CommunitySummaryPhase by default
 
-**Choice:** Gate CommunitySummaryPhase behind `@IfBuildProperty(name = "casehub.mindmap.consolidation.community-summary.enabled", stringValue = "true", enableIfMissing = false)`. No consumer exists for Summary-trait nodes. When enabled in future, the phase should use sessionPipeline (already wired) for real LLM summaries instead of placeholder text.
+**Choice:** Gate CommunitySummaryPhase execution behind a runtime config check (`casehub.mindmap.consolidation.community-summary.enabled`, default false). The bean stays live (no `@IfBuildProperty`); `run()` returns early when disabled. No consumer exists for Summary-trait nodes. When enabled in future, the phase should use sessionPipeline (already wired) for real LLM summaries instead of placeholder text.
 **Alternatives:**
 - Remove the phase entirely — loses the k-core detection infrastructure which has value for future community analysis
 - Generate real LLM summaries now — no consumer exists, so this produces better noise instead of placeholder noise
-**Rationale:** Generating placeholder text that nothing reads is worse than generating nothing. The phase infrastructure (k-core detection, hash-based invalidation, stale cleanup) is worth preserving for when a consumer is built. Disabling via config preserves the code while eliminating runtime waste.
+- `@IfBuildProperty` gate — removes the bean at build time, requiring a rebuild to re-enable. Too heavy-handed for a capability worth preserving for future activation.
+**Rationale:** Generating placeholder text that nothing reads is worse than generating nothing. The phase infrastructure (k-core detection, hash-based invalidation, stale cleanup) is worth preserving for when a consumer is built. A runtime config check preserves the bean and its infrastructure at higher fidelity than a build-time gate — enabling is a config change + restart, not a rebuild.
 **Trade-offs:** Loses community detection as a side effect of consolidation. Acceptable — no downstream consumer means this side effect has no value today.
 **Sources:** CommunitySummaryPhase.java:169-177, MergeDetectionPhase.java (excludes Summary-trait)
 **Exploration:** quick
@@ -74,7 +76,7 @@
 
 ## D7: Safer merge thresholds with structural guards
 
-**Choice:** Three changes: (1) MergeDetectionPhase: require minimum 2 shared neighbors for auto-merge — single-neighbor Jaccard is unreliable. (2) GoalResolutionPhase: add word-token Jaccard as secondary check alongside JW, and treat null contentDomain as incompatible (strict, not permissive). (3) Both phases: when entity-token is on classpath, check SurfaceFormTrie for distinct EntityIdentity entries — explicitly registered separate entities block merge regardless of name similarity.
+**Choice:** Four changes: (1) MergeDetectionPhase: require minimum 2 shared neighbors for auto-merge — single-neighbor Jaccard is unreliable. Exception: zero-neighbor nodes with JW >= 0.95 are still eligible (newly extracted duplicates before edges are added). (2) GoalResolutionPhase: add word-token Jaccard as secondary check alongside JW, and treat null contentDomain as incompatible (strict, not permissive). (3) Both phases: when entity-token is on classpath, check SurfaceFormTrie for distinct EntityIdentity entries — explicitly registered separate entities block merge regardless of name similarity. (4) MindMapExtractor fuzzy resolution: two-tier scoping — attempt scoped fuzzy within subgraph first, then fall back to global fuzzy at a higher threshold (0.95 instead of 0.85) if no scoped match is found.
 **Alternatives:**
 - Raise thresholds only — addresses symptoms, doesn't prevent category errors (similar names that are genuinely different)
 - Make merge reversible — substantial complexity (undo log, edge restoration, property reconciliation) for a problem better solved by not merging incorrectly
@@ -103,7 +105,7 @@
 - Require entity for storage — loses type/text classification data for genuinely novel entities
 - Text-similarity grouping for entityless sub-thoughts — overengineering; the SurfaceFormTrie + SUBJECT fallback covers the vast majority of cases
 **Rationale:** Two-tier resolution (trie first, subject fallback) maximizes entity coverage without adding complexity. Novel entities are picked up in future ticks after MindMapExtractor creates them and the trie rebuilds.
-**Trade-offs:** Entityless sub-thoughts accumulate until their entity appears in the graph. Bounded by memory retention policies.
+**Trade-offs:** The SUBJECT fallback is a best-guess heuristic that mis-attributes multi-entity experiences (e.g., "Alice discussed the project with Bob" — Bob sub-thoughts get attributed to Alice). Acceptable — the trie-first path handles multi-entity cases correctly when entities are known; the fallback is a last resort. Entityless sub-thoughts accumulate until their entity appears in the graph, bounded by memory hygiene retention policies (MemoryHygieneOrchestrator eviction).
 **Depends on:** D1 (SurfaceFormTrie integration)
 **Sources:** SubThoughtExtractor.java:49, SubThoughtConsolidationPhase.java:124, ExperienceAttributeKeys.SUBJECT
 **Exploration:** quick
